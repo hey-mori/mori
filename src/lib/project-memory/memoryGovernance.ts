@@ -32,35 +32,42 @@ export const DEFAULT_MEMORY_GOVERNANCE_MODE: MemoryGovernanceMode = "auto";
 
 /**
  * What a proposal kind *is*, independent of the mode:
- *  - `durable`:   belongs in long-term memory (decisions, evidence, a
- *                 genuinely recurring issue, a standing risk).
+ *  - `durable`:   a reusable knowledge asset (a decision, a genuinely
+ *                 recurring issue, a standing risk).
  *  - `lifecycle`: acts on an existing memory (contradiction, staleness); a
  *                 mutation, so it always needs a human.
  *  - `activity`:  current project state / next actions, not durable memory.
+ *  - `evidence`:  a pointer to a source / session. Evidence, not a distilled
+ *                 memory asset; it lives in the Evidence layer, never memory.
  */
-export type MemoryProposalDurability = "durable" | "lifecycle" | "activity";
+export type MemoryProposalDurability = "durable" | "lifecycle" | "activity" | "evidence";
 
 export const MEMORY_PROPOSAL_DURABILITY: Record<MemoryProposalKind, MemoryProposalDurability> = {
   promotedDecision: "durable",
-  keyEvidence: "durable",
   recurringIssue: "durable",
   unresolvedRisk: "durable",
+  // Evidence, not memory: a source/session pointer, kept in the Evidence layer.
+  keyEvidence: "evidence",
   contradiction: "lifecycle",
   staleMemory: "lifecycle",
   nextSessionRecommendation: "activity",
 };
 
 /**
- * Durable kinds that may land automatically as provisional memory when the
- * mode is `auto` and confidence is high enough. Additive, low-stakes kinds
- * only: a standing risk (`unresolvedRisk`) is durable but always gets a human
- * glance, so it is intentionally absent here.
+ * The kinds that auto-organize into provisional memory (mode `auto`, high
+ * confidence). Kept deliberately narrow to what is unambiguously a durable,
+ * high-quality asset: a **decision**. A recurring issue is durable memory too,
+ * but its cross-session detection still mislabels single-session issues, so it
+ * goes to review until that is trustworthy; a standing risk always gets a
+ * human glance. Everything else is review, evidence, activity, or lifecycle.
  */
-const AUTO_ELIGIBLE_KINDS = new Set<MemoryProposalKind>([
-  "promotedDecision",
-  "keyEvidence",
-  "recurringIssue",
-]);
+export const AUTO_MEMORY_KINDS = new Set<MemoryProposalKind>(["promotedDecision"]);
+
+/** Whether a memory kind is one the policy auto-organizes. Used to reconcile
+ *  provisional memory created by an earlier, broader policy. */
+export function isAutoMemoryKind(kind: MemoryProposalKind): boolean {
+  return AUTO_MEMORY_KINDS.has(kind);
+}
 
 /** Confidence at or above this auto-accepts (matches the "high" label floor). */
 export const AUTO_ACCEPT_CONFIDENCE_MIN = 0.75;
@@ -96,6 +103,9 @@ export function classifyProposalDisposition(
   }
 
   const durability = MEMORY_PROPOSAL_DURABILITY[proposal.kind];
+  if (durability === "evidence") {
+    return { disposition: "skip", reason: "evidence-not-memory" };
+  }
   if (durability === "activity") {
     return { disposition: "skip", reason: "not-durable-memory" };
   }
@@ -110,7 +120,7 @@ export function classifyProposalDisposition(
   if (context.conflictsWithExisting) {
     return { disposition: "review", reason: "conflicts-with-existing" };
   }
-  if (!AUTO_ELIGIBLE_KINDS.has(proposal.kind)) {
+  if (!AUTO_MEMORY_KINDS.has(proposal.kind)) {
     return { disposition: "review", reason: "needs-glance" };
   }
   if (proposal.confidence < AUTO_ACCEPT_CONFIDENCE_MIN) {

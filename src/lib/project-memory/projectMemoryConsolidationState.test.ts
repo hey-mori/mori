@@ -236,7 +236,8 @@ describe("buildProjectMemoryConsolidationState", () => {
     const state = buildProjectMemoryConsolidationState(base());
     expect(state.proposalCounts.promotedDecision).toBe(1);
     expect(state.proposalCounts.recurringIssue).toBe(1);
-    expect(state.proposalCounts.keyEvidence).toBe(1);
+    // Key evidence is evidence, not memory: no longer a proposal.
+    expect(state.proposalCounts.keyEvidence).toBe(0);
     expect(state.proposalCounts.unresolvedRisk).toBe(1);
     expect(state.proposalCounts.nextSessionRecommendation).toBe(1);
   });

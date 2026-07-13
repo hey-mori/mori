@@ -18,6 +18,7 @@
  *   - pure: no IO, no clock, no id randomness unless the caller injects them.
  */
 import type { MemoryProposal } from "./consolidationProposals";
+import { isAutoMemoryKind } from "./memoryGovernance";
 import type {
   StoredAcceptedProjectMemory,
   StoredAcceptedProjectMemoryConfidence,
@@ -84,6 +85,56 @@ export function buildProvisionalMemoriesFromProposals(
   }
 
   return { memoriesToSave, reviewActionsToAppend, alreadyKnownCount };
+}
+
+export type ProvisionalReconcileResult = {
+  memoriesToSave: StoredAcceptedProjectMemory[];
+  reviewActionsToAppend: StoredMemoryReviewAction[];
+};
+
+/**
+ * Retire provisional memory that a broader earlier policy created but the
+ * current policy no longer auto-organizes (e.g. key-evidence pointers that
+ * were never a durable asset). Only touches `provisional` records, never
+ * user-confirmed memory, and retires rather than deletes, so the change is
+ * audited and reversible. This is how the store heals itself after the policy
+ * is tightened, so the user is not left staring at junk they never chose.
+ */
+export function buildProvisionalReconcileRetires(input: {
+  existingMemories: readonly StoredAcceptedProjectMemory[];
+  at: string;
+  idFactory?: (purpose: "memory" | "action", seed: string) => string;
+}): ProvisionalReconcileResult {
+  const idFactory = input.idFactory ?? defaultIdFactory(input.at);
+  const memoriesToSave: StoredAcceptedProjectMemory[] = [];
+  const reviewActionsToAppend: StoredMemoryReviewAction[] = [];
+  for (const memory of input.existingMemories) {
+    if (memory.status !== "provisional") continue;
+    if (isAutoMemoryKind(memory.kind)) continue;
+    const action: StoredMemoryReviewAction = {
+      id: idFactory("action", `${memory.id}:reconcile-retire`),
+      projectId: memory.projectId,
+      actionType: "autoOrganize",
+      actor: "auto-policy",
+      timestamp: input.at,
+      sourceProposalId: undefined,
+      targetMemoryIds: [memory.id],
+      before: { title: memory.title, status: "provisional" },
+      after: { title: memory.title, status: "retired" },
+      note: "정책 변경: 이 종류는 더 이상 자동 메모리가 아닙니다.",
+      reversible: true,
+      schemaVersion: 1,
+      adapter: "browser-local-storage",
+    };
+    memoriesToSave.push({
+      ...memory,
+      status: "retired",
+      updatedAt: input.at,
+      reviewActionIds: [...memory.reviewActionIds, action.id],
+    });
+    reviewActionsToAppend.push(action);
+  }
+  return { memoriesToSave, reviewActionsToAppend };
 }
 
 function buildProvisionalMemory(args: {

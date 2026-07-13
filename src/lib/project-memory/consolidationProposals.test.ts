@@ -192,18 +192,12 @@ describe("buildProjectMemoryConsolidationPreview", () => {
     expect(issue!.proposedAction).toBe("keepWatching");
   });
 
-  it("derives a key-evidence proposal that cites source + session, never raw text", () => {
+  it("does not derive key-evidence as a memory proposal (evidence is not memory)", () => {
     const preview = buildProjectMemoryConsolidationPreview(base());
-    const evidence = preview.proposals.find((p) => p.kind === "keyEvidence");
-    expect(evidence).toBeDefined();
-    expect(evidence!.title).toBe("Claude transcript on auth");
-    expect(evidence!.evidenceRefs.find((ref) => ref.kind === "source")).toEqual({
-      kind: "source",
-      sessionId: "s-cur",
-      sourceId: "src-claude",
-    });
-    // Summary is structural, never the raw event text.
-    expect(evidence!.summary).not.toContain("transcript on auth — full text");
+    // A source/session pointer belongs to the Evidence layer, not memory, so
+    // it is never surfaced as a memory proposal.
+    expect(preview.proposals.some((p) => p.kind === "keyEvidence")).toBe(false);
+    expect(preview.proposalCounts.keyEvidence).toBe(0);
   });
 
   it("derives an unresolved-risk proposal with keepWatching default", () => {
@@ -316,7 +310,8 @@ describe("buildProjectMemoryConsolidationPreview", () => {
     const preview = buildProjectMemoryConsolidationPreview(base());
     expect(preview.proposalCounts.promotedDecision).toBe(1);
     expect(preview.proposalCounts.recurringIssue).toBe(1);
-    expect(preview.proposalCounts.keyEvidence).toBe(1);
+    // Key evidence is no longer a memory proposal (it is evidence, not memory).
+    expect(preview.proposalCounts.keyEvidence).toBe(0);
     expect(preview.proposalCounts.unresolvedRisk).toBe(1);
     expect(preview.proposalCounts.nextSessionRecommendation).toBe(1);
     // No contradictions / stale memories produced by Phase 2.0.
@@ -328,9 +323,9 @@ describe("buildProjectMemoryConsolidationPreview", () => {
     const preview = buildProjectMemoryConsolidationPreview(base());
     const kinds: MemoryProposalKind[] = preview.proposals.map((p) => p.kind);
     // The high-importance promoted decision and recurring issue should land
-    // before the medium-importance evidence/next-session rows.
+    // before the medium-importance next-session row.
     const firstIndex = (kind: MemoryProposalKind) => kinds.indexOf(kind);
-    expect(firstIndex("promotedDecision")).toBeLessThan(firstIndex("keyEvidence"));
-    expect(firstIndex("recurringIssue")).toBeLessThan(firstIndex("keyEvidence"));
+    expect(firstIndex("promotedDecision")).toBeLessThan(firstIndex("nextSessionRecommendation"));
+    expect(firstIndex("recurringIssue")).toBeLessThan(firstIndex("nextSessionRecommendation"));
   });
 });

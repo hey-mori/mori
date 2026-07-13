@@ -22,7 +22,6 @@
 import type {
   ProjectMemoryDataBasis,
   ProjectMemoryKeyDecision,
-  ProjectMemoryKeyEvidence,
   ProjectMemoryRecurringIssue,
   ProjectMemoryUnresolvedRisk,
   ProjectMemoryViewModel,
@@ -108,9 +107,12 @@ export function buildProjectMemoryConsolidationPreview(
   for (const issue of memory.recurringIssues) {
     proposals.push(buildRecurringIssueProposal(issue));
   }
-  for (const evidence of memory.keyEvidence) {
-    proposals.push(buildKeyEvidenceProposal(evidence));
-  }
+  // Key evidence is NOT durable memory: it is a pointer to a source / session
+  // (its title is the source title, its summary is "<kind> · N linked events").
+  // That belongs to the Evidence layer, not memory. Surfacing it as a memory
+  // proposal produced session-bookmark "memories" titled by the user's prompt.
+  // The evidence itself is still preserved as a source; it just no longer
+  // masquerades as a distilled memory asset.
   for (const risk of memory.unresolvedRisks) {
     proposals.push(buildUnresolvedRiskProposal(risk));
   }
@@ -193,41 +195,6 @@ function buildRecurringIssueProposal(issue: ProjectMemoryRecurringIssue): Memory
     status: "proposed",
     createdAt: nowFallback(),
     updatedAt: nowFallback(),
-  };
-}
-
-function buildKeyEvidenceProposal(evidence: ProjectMemoryKeyEvidence): MemoryProposal {
-  // Trust + linked-event count drives the confidence score.
-  const trustWeight =
-    evidence.source.trustLevel === "verified" ? 0.3 :
-    evidence.source.trustLevel === "observed" ? 0.15 : 0;
-  const eventWeight = Math.min(0.3, evidence.relatedEventCount * 0.05);
-  const confidence = Math.min(0.95, 0.4 + trustWeight + eventWeight);
-  const importance: MemoryProposal["importance"] =
-    evidence.relatedDecisionCount > 0 ? "high" :
-    evidence.relatedIssueCount > 0 ? "medium" : "low";
-  const evidenceRefs: MemoryEvidenceRef[] = [
-    { kind: "source", sessionId: evidence.sessionId, sourceId: evidence.source.id },
-    { kind: "session", sessionId: evidence.sessionId, sessionTitle: evidence.sessionTitle },
-  ];
-  const rationale = `Linked to ${evidence.relatedEventCount} timeline events, ${evidence.relatedIssueCount} issues, ${evidence.relatedDecisionCount} decisions.`;
-  return {
-    id: makeProposalId("keyEvidence", evidence.source.id, evidence.sessionId),
-    kind: "keyEvidence",
-    // Source title is already user-curated metadata; safe to surface.
-    title: evidence.source.title,
-    summary: `${evidence.source.kind} · ${evidence.relatedEventCount} linked events`,
-    rationale,
-    confidence,
-    importance,
-    evidenceRefs,
-    sourceSessionIds: [evidence.sessionId],
-    relatedIssueIds: [],
-    relatedDecisionIds: [],
-    proposedAction: "promote",
-    status: "proposed",
-    createdAt: evidence.source.capturedAt,
-    updatedAt: evidence.source.capturedAt,
   };
 }
 

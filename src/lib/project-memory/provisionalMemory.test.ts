@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { MemoryProposal } from "./consolidationProposals";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
-import { buildProvisionalMemoriesFromProposals } from "./provisionalMemory";
+import {
+  buildProvisionalMemoriesFromProposals,
+  buildProvisionalReconcileRetires,
+} from "./provisionalMemory";
 
 function proposal(id: string): MemoryProposal {
   return {
@@ -62,5 +65,38 @@ describe("buildProvisionalMemoriesFromProposals", () => {
     });
     expect(second.memoriesToSave.map((m) => m.originProposalIds[0])).toEqual(["prop-2"]);
     expect(second.alreadyKnownCount).toBe(1);
+  });
+});
+
+describe("buildProvisionalReconcileRetires", () => {
+  function stored(
+    id: string,
+    kind: StoredAcceptedProjectMemory["kind"],
+    status: StoredAcceptedProjectMemory["status"],
+  ): StoredAcceptedProjectMemory {
+    return {
+      id, projectId: "p-1", kind, title: `t-${id}`, summary: "s", status,
+      importance: "high", confidence: { label: "high", score: 0.9 },
+      evidenceRefs: [], sourceSessionIds: [], originProposalIds: [`op-${id}`],
+      relatedIssueIds: [], relatedDecisionIds: [], proposedAction: "promote",
+      sensitivity: "normal", resumeEligible: false, reportEligibility: "excluded",
+      createdAt: AT, updatedAt: AT, acceptedAt: AT, acceptedBy: "local-user",
+      reviewActionIds: [], schemaVersion: 1, adapter: "browser-local-storage",
+    };
+  }
+
+  it("retires provisional memory of kinds the policy no longer auto-organizes", () => {
+    const { memoriesToSave, reviewActionsToAppend } = buildProvisionalReconcileRetires({
+      existingMemories: [
+        stored("ev", "keyEvidence", "provisional"), // evidence pointer → retire
+        stored("iss", "recurringIssue", "provisional"), // review-only kind → retire
+        stored("dec", "promotedDecision", "provisional"), // still auto → keep
+        stored("conf", "keyEvidence", "accepted"), // user-confirmed → untouched
+      ],
+      at: AT,
+    });
+    expect(memoriesToSave.map((m) => m.id).sort()).toEqual(["ev", "iss"]);
+    expect(memoriesToSave.every((m) => m.status === "retired")).toBe(true);
+    expect(reviewActionsToAppend.every((a) => a.actor === "auto-policy" && a.reversible)).toBe(true);
   });
 });

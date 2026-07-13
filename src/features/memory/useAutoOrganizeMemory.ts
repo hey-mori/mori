@@ -21,7 +21,10 @@ import {
   partitionProposalsByGovernance,
   type MemoryGovernanceMode,
 } from "../../lib/project-memory/memoryGovernance";
-import { buildProvisionalMemoriesFromProposals } from "../../lib/project-memory/provisionalMemory";
+import {
+  buildProvisionalMemoriesFromProposals,
+  buildProvisionalReconcileRetires,
+} from "../../lib/project-memory/provisionalMemory";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
 
 export type AutoOrganizeResult = {
@@ -49,8 +52,9 @@ export function useAutoOrganizeMemory(args: {
   useEffect(() => {
     if (mode !== "auto") return;
     const { auto } = partitionProposalsByGovernance(proposals, { mode });
-    if (auto.length === 0) return;
 
+    // Run when there are new safe proposals OR when memory changed (so the
+    // reconcile pass can retire provisional junk left by an earlier policy).
     const key = `${projectId}::${memoriesRevision}::${auto.map((p) => p.id).join(",")}`;
     if (lastRunKey.current === key || running.current) return;
 
@@ -61,19 +65,28 @@ export function useAutoOrganizeMemory(args: {
         const repository = getAcceptedMemoryRepository();
         const existing = await repository.listAcceptedProjectMemories(projectId);
         if (cancelled) return;
+        const at = new Date().toISOString();
+        // Retire provisional memory the current policy no longer auto-organizes
+        // (e.g. evidence pointers), then add the safe new proposals.
+        const reconcile = buildProvisionalReconcileRetires({ existingMemories: existing.data, at });
         const built = buildProvisionalMemoriesFromProposals({
           projectId,
           proposals: auto,
-          at: new Date().toISOString(),
+          at,
           existingMemories: existing.data,
         });
         lastRunKey.current = key;
-        if (built.memoriesToSave.length === 0) {
+        const memoriesToSave = [...reconcile.memoriesToSave, ...built.memoriesToSave];
+        const actionsToAppend = [
+          ...reconcile.reviewActionsToAppend,
+          ...built.reviewActionsToAppend,
+        ];
+        if (memoriesToSave.length === 0) {
           setOrganizedCount(0);
           return;
         }
-        await repository.saveAcceptedProjectMemories(projectId, built.memoriesToSave);
-        await repository.appendMemoryReviewActions(projectId, built.reviewActionsToAppend);
+        await repository.saveAcceptedProjectMemories(projectId, memoriesToSave);
+        await repository.appendMemoryReviewActions(projectId, actionsToAppend);
         if (cancelled) return;
         setOrganizedCount(built.memoriesToSave.length);
         onOrganized();

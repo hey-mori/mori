@@ -31,10 +31,20 @@ function proposal(
 }
 
 describe("classifyProposalDisposition", () => {
-  it("auto-accepts safe, additive, high-confidence durable proposals", () => {
+  it("auto-accepts a safe, high-confidence decision", () => {
     expect(classifyProposalDisposition(proposal("promotedDecision", 0.9)).disposition).toBe("auto");
-    expect(classifyProposalDisposition(proposal("keyEvidence", 0.8)).disposition).toBe("auto");
-    expect(classifyProposalDisposition(proposal("recurringIssue", 0.75)).disposition).toBe("auto");
+  });
+
+  it("treats key evidence as evidence, not memory", () => {
+    const result = classifyProposalDisposition(proposal("keyEvidence", 0.9));
+    expect(result.disposition).toBe("skip");
+    expect(result.reason).toBe("evidence-not-memory");
+  });
+
+  it("routes a recurring issue to review until its detection is trustworthy", () => {
+    const result = classifyProposalDisposition(proposal("recurringIssue", 0.9));
+    expect(result.disposition).toBe("review");
+    expect(result.reason).toBe("needs-glance");
   });
 
   it("sends low-confidence durable proposals to review", () => {
@@ -82,12 +92,14 @@ describe("partitionProposalsByGovernance", () => {
       proposal("promotedDecision", 0.9, "a"),
       proposal("nextSessionRecommendation", 0.9, "b"),
       proposal("contradiction", 0.9, "c"),
-      proposal("keyEvidence", 0.4, "d"),
+      proposal("keyEvidence", 0.9, "d"),
       proposal("recurringIssue", 0.8, "e"),
     ];
     const { auto, review, skipped } = partitionProposalsByGovernance(proposals);
-    expect(auto.map((p) => p.id)).toEqual(["a", "e"]);
-    expect(review.map((p) => p.id)).toEqual(["c", "d"]);
-    expect(skipped.map((p) => p.id)).toEqual(["b"]);
+    // Only the decision auto-organizes. The recurring issue and contradiction
+    // go to review; the next action and the evidence pointer are skipped.
+    expect(auto.map((p) => p.id)).toEqual(["a"]);
+    expect(review.map((p) => p.id)).toEqual(["c", "e"]);
+    expect(skipped.map((p) => p.id)).toEqual(["b", "d"]);
   });
 });
