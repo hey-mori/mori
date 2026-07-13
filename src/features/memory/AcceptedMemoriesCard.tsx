@@ -60,13 +60,17 @@ export function AcceptedMemoriesCard({
   /** Route to the Consolidation review (the empty-state CTA). */
   onOpenConsolidation?: () => void;
 }) {
+  // "확정 메모리" is confirmed memory only. Provisional memory is auto-created
+  // and unconfirmed, so it does not belong here (and must never be counted as
+  // 관찰 중); it lives in the global 메모리 hub under its own 잠정 segment.
+  const confirmed = memories.filter((memory) => memory.status !== "provisional");
   // Show current memory first and archived memory last so a bounded
   // preview never buries guidance-bearing records under retired ones.
-  const ordered = [...memories].sort(
+  const ordered = [...confirmed].sort(
     (a, b) => memoryLifecycleSortWeight(a.status) - memoryLifecycleSortWeight(b.status),
   );
   const recent = ordered.slice(0, 6);
-  const lifecycle = summarizeMemoryLifecycle(memories.map((memory) => memory.status));
+  const lifecycle = summarizeMemoryLifecycle(confirmed.map((memory) => memory.status));
   return (
     <BaseSection
       className="memory-accepted"
@@ -82,14 +86,14 @@ export function AcceptedMemoriesCard({
         </span>
       }
       actions={
-        <BaseStatusBadge tone={memories.length > 0 ? "success" : "neutral"}>
-          {memories.length}건
+        <BaseStatusBadge tone={confirmed.length > 0 ? "success" : "neutral"}>
+          {confirmed.length}건
         </BaseStatusBadge>
       }
     >
-      {loading && memories.length === 0 ? (
+      {loading && confirmed.length === 0 ? (
         <MemoryListSkeleton />
-      ) : memories.length === 0 ? (
+      ) : confirmed.length === 0 ? (
         <MemoryLoopEmpty onOpenConsolidation={onOpenConsolidation} />
       ) : (
         <>
