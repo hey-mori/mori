@@ -143,7 +143,7 @@ repo; these descriptions are the durable record.
    운동/프로젝트 기록).
 3. **프로젝트 상세 (MORI).** Hero: icon, name, one-liner, status chips
    (진행 중 · 로컬 우선 · Tauri · Knowledge Workspace), stat tiles (최근
-   활동 168 · 연결된 지식 54 · 결정 18 · 문서 27), 공유 action. Body: 
+   활동 168 · 연결된 지식 54 · 결정 18 · 문서 27), 공유 action. Body:
    프로젝트 히스토리 (dated activity timeline, each row with 연결 N개 and
    tag chips), 핵심 결정 as ADR cards (배경/결정/영향 + ADR-005 ids),
    연결된 지식 list, 산출물/포트폴리오 후보 (generated portfolio draft +
