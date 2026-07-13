@@ -225,7 +225,7 @@ export function LiveSessionView() {
         </span>
       </button>
       {sessionsOpen ? (
-        <Popover align="start" onClose={() => setSessionsOpen(false)}>
+        <Popover align="end" onClose={() => setSessionsOpen(false)}>
           <div className="lsv-pop-title">실시간 세션 {snapshot.activeCount}</div>
           {sessionRows.length === 0 ? (
             <p className="lsv-pop-empty">활성 세션이 없습니다</p>
@@ -318,7 +318,7 @@ export function LiveSessionView() {
 
   if (!available) {
     return (
-      <PageShell maxWidth="full" actionBar={<ActionBar label="라이브 세션" start={statusEl} />}>
+      <PageShell maxWidth="full" actionBar={<ActionBar label="라이브 세션" end={statusEl} />}>
         <EmptyState
           icon={Radio}
           title="라이브 세션은 데스크톱 앱에서만 동작합니다"
@@ -331,7 +331,17 @@ export function LiveSessionView() {
   return (
     <PageShell
       maxWidth="full"
-      actionBar={<ActionBar label="라이브 세션 컨트롤" start={statusEl} end={controls} />}
+      actionBar={
+        <ActionBar
+          label="라이브 세션 컨트롤"
+          end={
+            <>
+              {statusEl}
+              {controls}
+            </>
+          }
+        />
+      }
     >
       <div className="lsv">
         {snapshot.lastError ? (

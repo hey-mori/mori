@@ -2359,7 +2359,9 @@ td a {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--base-space-4);
-  margin: var(--base-space-4) var(--page-shell-inset) 0;
+  /* Match the shared session-tab pane top inset so 분석 lands level with 개요 ·
+     활동 · 공유 below the tab bar. */
+  margin: var(--base-space-7) var(--page-shell-inset) 0;
 }
 
 .analysis-section-switch {
@@ -4037,7 +4039,7 @@ td a {
 /* Match the shared top inset so the empty-state banner lands at the same
    y-coordinate as the other tabs; keep the tighter bottom for this short pane. */
 .reports-embedded .session-tab-split {
-  padding-top: var(--base-space-5);
+  padding-top: var(--base-space-7);
   padding-bottom: var(--base-space-6);
 }
 

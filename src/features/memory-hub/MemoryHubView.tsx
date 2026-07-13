@@ -27,13 +27,9 @@ import {
   InspectorSection,
 } from "../../components/ui/BaseInspectorPanel";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
-import { SearchField } from "../../components/ui/SearchField";
+import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { useAppStore } from "../../app/store";
-import {
-  describeAcceptedMemoryStorageSource,
-  getAcceptedMemoryRepository,
-  type AcceptedMemoryStorageSource,
-} from "../../lib/project-memory/acceptedMemoryRepository";
+import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
 import {
   classifyMemoryLifecycle,
   describeMemoryLifecycleGroup,
@@ -82,8 +78,6 @@ export function MemoryHubView() {
   const openAcceptedMemory = useAppStore((state) => state.openAcceptedMemory);
 
   const [memories, setMemories] = useState<StoredAcceptedProjectMemory[]>([]);
-  const [storageSource, setStorageSource] = useState<AcceptedMemoryStorageSource | null>(null);
-  const [fellBack, setFellBack] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [query, setQuery] = useState("");
@@ -98,8 +92,6 @@ export function MemoryHubView() {
       .then((result) => {
         if (cancelled) return;
         setMemories(result.data);
-        setStorageSource(result.source);
-        setFellBack(result.fellBack);
         setLoading(false);
       })
       .catch(() => {
@@ -163,15 +155,40 @@ export function MemoryHubView() {
     [visible, selectedId],
   );
 
-  const storageNote = storageSource ? (
-    <span className="memhub-storage">
-      {describeAcceptedMemoryStorageSource(storageSource)}
-      {fellBack ? " · 대체 저장소" : ""}
-    </span>
+  const hasMemories = !loading && memories.length > 0;
+
+  const searchEl = hasMemories ? (
+    <ToolbarSearch
+      value={query}
+      onChange={setQuery}
+      placeholder="기억을 검색"
+      ariaLabel="메모리 검색"
+    />
+  ) : undefined;
+
+  const segmentsEl = hasMemories ? (
+    <div className="memhub-segments" role="tablist" aria-label="상태 필터">
+      {LIFECYCLE_SEGMENTS.map((segment) => (
+        <button
+          key={segment.key}
+          type="button"
+          role="tab"
+          aria-selected={lifecycle === segment.key}
+          className={`memhub-seg${lifecycle === segment.key ? " is-active" : ""}`}
+          onClick={() => setLifecycle(segment.key)}
+        >
+          {segment.label}
+          <span className="memhub-seg-count">{lifecycleCounts[segment.key]}</span>
+        </button>
+      ))}
+    </div>
   ) : undefined;
 
   return (
-    <PageShell maxWidth="full" actionBar={<ActionBar label="메모리" end={storageNote} />}>
+    <PageShell
+      maxWidth="full"
+      actionBar={<ActionBar label="메모리" start={searchEl} end={segmentsEl} />}
+    >
       {loading ? null : memories.length === 0 ? (
         <EmptyState
           icon={Brain}
@@ -181,30 +198,6 @@ export function MemoryHubView() {
       ) : (
         <div className={`memhub${selected ? " has-inspector" : ""}`}>
           <div className="memhub-main">
-            <div className="memhub-controls">
-              <SearchField
-                className="memhub-search"
-                value={query}
-                onChange={setQuery}
-                placeholder="기억을 검색"
-                ariaLabel="메모리 검색"
-              />
-              <div className="memhub-segments" role="tablist" aria-label="상태 필터">
-                {LIFECYCLE_SEGMENTS.map((segment) => (
-                  <button
-                    key={segment.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={lifecycle === segment.key}
-                    className={`memhub-seg${lifecycle === segment.key ? " is-active" : ""}`}
-                    onClick={() => setLifecycle(segment.key)}
-                  >
-                    {segment.label}
-                    <span className="memhub-seg-count">{lifecycleCounts[segment.key]}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
             {scopes.length > 1 ? (
               <div className="memhub-scopes" role="group" aria-label="범위 필터">
                 <button

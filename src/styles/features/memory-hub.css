@@ -18,20 +18,6 @@
   min-width: 0;
 }
 
-.memhub-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.memhub-search {
-  flex: 1;
-  min-width: 220px;
-  max-width: 420px;
-}
-
 .memhub-segments {
   display: inline-flex;
   gap: 2px;
@@ -192,11 +178,6 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-
-.memhub-storage {
-  font-size: 11px;
-  color: var(--muted-2);
 }
 
 .memhub-open-project {
