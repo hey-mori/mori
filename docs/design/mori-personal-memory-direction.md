@@ -174,11 +174,28 @@ decision informed · not built.
 source-appropriate surface beyond the evidence tab, and what it looks like,
 from observed friction.
 
-## 8. Memory governance (hypothesis, refined)
+## 8. Memory governance (partially shipped 2026-07-13)
 
-Unchanged three-mode model (항상 확인 · 자동 저장 · 수집만) with the fixed
-always-ask exceptions (mutations of existing memory, sensitive items,
-contradictions) and `provisional` status. Added visibility requirements:
+Three-mode model (자동 저장 · 항상 확인 · 수집만) with fixed always-ask
+exceptions (mutations of existing memory, sensitive items, contradictions)
+and a `provisional` status.
+
+**Shipped (commit bf0b24d):** the default flipped from review-first to
+**auto**. A pure policy (`memoryGovernance.ts`) separates durable memory from
+activity (a next-session recommendation is no longer a memory proposal) and
+lifecycle mutations, then routes safe · additive · high-confidence · durable
+proposals to `auto` and everything else to review. The `auto` bucket is
+written as `provisional` memory (`provisionalMemory.ts`) when a project's
+memory is viewed (`useAutoOrganizeMemory`, idempotent), so memory accumulates
+without clearing a queue. Provisional is recallable + marked, never resume/
+report eligible, reversible, audited (`autoOrganize` / `auto-policy`). The
+global hub shows a distinct 잠정 segment. **Deferred:** a governance-mode
+setting (the mode is default-auto in code, not yet user-settable); reframing
+the consolidation screen as the exception queue; the session-end "Mori가
+정리한 내용" summary; Ask Mori disclosing provisional reliance; verifying the
+auto-trigger against real desktop proposals (demo mode disables consolidation).
+
+The rest of this section records the still-relevant visibility rules. Added visibility requirements:
 
 - provisional items are visibly marked wherever they appear
 - Ask Mori and search disclose when an answer depends on provisional memory
