@@ -1,5 +1,16 @@
 # Mori as a personal context workspace · direction
 
+> **Superseded in part (same day):** the user rejected the conservative
+> execution stance in §4.2 and §5 (instant-save shortcut for user text,
+> workout-only pilot framing, memory-screen "narrow and keep" pre-decision,
+> one-line storage answer). The revised architecture, with the corrected
+> capture-vs-interpretation policy, the generic Record/Schema kernel, the
+> Reuse/Adapt/Deprecate/Remove classification, the storage and `.mori` ADRs,
+> and the 12-scenario validation, is
+> [`mori-context-workspace-architecture.md`](mori-context-workspace-architecture.md).
+> Sections 1-3 of this doc (user intent, ChatGPT digest, mockups) remain the
+> canonical record of the conversation.
+
 Status: **direction conversation captured 2026-07-14.** The user relayed a
 long ChatGPT exchange (three rounds: YouTube-summary feasibility → activity
 vs memory correction → Record/Evidence/Obsidian reframe) plus five
