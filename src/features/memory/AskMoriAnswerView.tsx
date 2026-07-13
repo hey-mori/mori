@@ -22,12 +22,24 @@ export function AskMoriAnswerView({
   /** Jump to a cited timeline event. */
   onNavigateEvent?: (eventId: string) => void;
 }) {
+  const provisionalCount = answer.citations.filter((citation) => citation.provisional).length;
   return (
     <div className="ask-mori-answer-block">
       <div className="ask-mori-answer-head">
         <Badge tone={basisTone(answer.basis)}>{basisLabel(answer.basis)}</Badge>
-        {answer.containsNonCurrent ? <Badge tone="gray">비현재 근거 포함</Badge> : null}
+        {answer.containsProvisional ? (
+          <Badge tone="orange">잠정 기억 참고</Badge>
+        ) : answer.containsNonCurrent ? (
+          <Badge tone="gray">비현재 근거 포함</Badge>
+        ) : null}
       </div>
+
+      {answer.containsProvisional ? (
+        <p className="ask-mori-provisional-note">
+          이 답변은 아직 확정되지 않은 잠정 기억 {provisionalCount}건을 참고했습니다. 확정 전이라
+          정확하지 않을 수 있습니다.
+        </p>
+      ) : null}
 
       <p className="ask-mori-answer">{answer.text}</p>
 
@@ -62,8 +74,10 @@ export function AskMoriAnswerView({
                       ) : (
                         <Badge tone="blue">{citationKindLabel(citation.kind)}</Badge>
                       )}
-                      <Badge tone={citation.isCurrent ? "green" : "gray"}>
-                        {citation.isCurrent ? "현재" : "비현재"}
+                      <Badge
+                        tone={citation.provisional ? "orange" : citation.isCurrent ? "green" : "gray"}
+                      >
+                        {citation.provisional ? "잠정" : citation.isCurrent ? "현재" : "비현재"}
                       </Badge>
                     </span>
                   </header>

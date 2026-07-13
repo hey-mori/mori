@@ -89,6 +89,7 @@ Rules:
 - Use ONLY the provided memory items. Never invent facts, files, or decisions.
 - Cite the tags you relied on inline, e.g. "...로 결정했습니다 [M1]".
 - Items tagged "(non-current)" are stale, contradicted, or unconfirmed references. Do not present them as settled guidance; mention the caveat if you use them.
+- Items tagged "(잠정)" are memory Mori organized automatically but the user has not confirmed. If you rely on one, say so plainly (e.g. "아직 확정되지 않은 잠정 기억 기준입니다").
 - If the provided memory does not answer the question, say "관련된 검토 메모리에서 답을 찾지 못했습니다." and stop. Do not guess.
 - Output prose only. No JSON, no markdown fences.`;
 
@@ -98,7 +99,10 @@ export function buildAskMoriContext(input: AskMoriContextInput): AskMoriContext 
   const memoryLines: string[] = [];
   input.memoryResults.forEach((result, index) => {
     const tag = `M${index + 1}`;
-    const flag = result.isCurrent ? "" : " (non-current)";
+    const provisional = result.status === "provisional";
+    // Mark provisional distinctly from other non-current memory so an LLM
+    // answer can hedge on it, and the UI can disclose it precisely.
+    const flag = provisional ? " (잠정)" : result.isCurrent ? "" : " (non-current)";
     memoryLines.push(
       `[${tag}]${flag} ${result.kind}: ${result.title}\n  ${result.snippet}`,
     );
@@ -109,6 +113,7 @@ export function buildAskMoriContext(input: AskMoriContextInput): AskMoriContext 
       label: result.title,
       snippet: result.snippet,
       isCurrent: result.isCurrent,
+      provisional,
       contextLabel: result.kind,
     });
   });
@@ -131,6 +136,7 @@ export function buildAskMoriContext(input: AskMoriContextInput): AskMoriContext 
       label: reference.title,
       snippet: reference.snippet,
       isCurrent: false,
+      provisional: false,
       contextLabel,
     });
   });

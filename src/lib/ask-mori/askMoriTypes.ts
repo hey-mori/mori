@@ -41,6 +41,14 @@ export type AskMoriCitation = {
    * caller never presents them as settled guidance.
    */
   isCurrent: boolean;
+  /**
+   * True when the cited memory is provisional: auto-organized by the
+   * governance policy and not yet user-confirmed. Distinct from the broader
+   * `isCurrent === false` (which also covers stale / watching / references),
+   * so the surface can disclose specifically that an answer leaned on
+   * unconfirmed automatic memory.
+   */
+  provisional: boolean;
   /** Short context label: memory kind, event type, source kind, action. */
   contextLabel: string;
 };
@@ -73,6 +81,9 @@ export type AskMoriAnswer = {
   llmFailed: boolean;
   /** True when at least one citation is non-current (stale / reference). */
   containsNonCurrent: boolean;
+  /** True when the answer leaned on at least one provisional (auto-organized,
+   *  unconfirmed) memory, so the surface can disclose it honestly. */
+  containsProvisional: boolean;
   /** Honest one-line description of what was searched and how answered. */
   dataBasis: string;
 };

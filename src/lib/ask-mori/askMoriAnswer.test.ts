@@ -59,6 +59,24 @@ describe("answerFromMemory", () => {
     expect(answer.text).toContain("인증 방식 결정");
   });
 
+  it("discloses when the answer leaned on provisional memory", async () => {
+    const answer = await answerFromMemory({
+      question: "인증은 어떻게 했지?",
+      acceptedMemories: [
+        memory("a", { title: "인증 방식 결정", summary: "JWT 채택", status: "provisional" }),
+      ],
+    });
+    expect(answer.containsProvisional).toBe(true);
+    expect(answer.citations[0]?.provisional).toBe(true);
+    // A confirmed memory does not trip the provisional flag.
+    const confirmed = await answerFromMemory({
+      question: "인증은 어떻게 했지?",
+      acceptedMemories: [memory("b", { title: "인증 방식 결정", summary: "JWT 채택" })],
+    });
+    expect(confirmed.containsProvisional).toBe(false);
+    expect(confirmed.citations[0]?.provisional).toBe(false);
+  });
+
   it("uses the injected LLM and returns its prose as an llm answer", async () => {
     const llm = vi.fn().mockResolvedValue("JWT 기반으로 결정했습니다 [M1]");
     const answer = await answerFromMemory(

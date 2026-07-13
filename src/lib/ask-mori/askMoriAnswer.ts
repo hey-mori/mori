@@ -85,6 +85,7 @@ export async function answerFromMemory(
       usedLlm: false,
       llmFailed: false,
       containsNonCurrent: false,
+      containsProvisional: false,
       dataBasis: `${input.acceptedMemories.length} accepted memories searched · local-only · no match.`,
     };
   }
@@ -95,6 +96,7 @@ export async function answerFromMemory(
     references,
   });
   const containsNonCurrent = citations.some((citation) => !citation.isCurrent);
+  const containsProvisional = citations.some((citation) => citation.provisional);
 
   let llmFailed = false;
   if (deps.llm) {
@@ -109,6 +111,7 @@ export async function answerFromMemory(
         usedLlm: true,
         llmFailed: false,
         containsNonCurrent,
+        containsProvisional,
         dataBasis: dataBasisLine(memoryResults.length, references.length, "llm"),
       };
     } catch {
@@ -126,6 +129,7 @@ export async function answerFromMemory(
     usedLlm: false,
     llmFailed,
     containsNonCurrent,
+    containsProvisional,
     dataBasis: dataBasisLine(memoryResults.length, references.length, "deterministicFallback"),
   };
 }
