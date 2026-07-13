@@ -14,6 +14,14 @@ Companion reading: [`mori-project-goal.md`](../mori-project-goal.md),
 (Now / Next / Later, plus the legacy audit) lives in the execution roadmap,
 [`mori-memory-roadmap.md`](mori-memory-roadmap.md); this doc stays the model.
 
+**2026-07-14 update:** the direction conversation went one level deeper and
+named the product center: the user's activity ledger, not the AI session.
+See
+[`mori-personal-context-workspace-direction.md`](mori-personal-context-workspace-direction.md)
+for the captured intent, the Record/Activity model, the assessment, and the
+phased plan. That doc extends this one; where they disagree, the newer doc
+wins.
+
 ## 1. The product problem (restated)
 
 Mori today is structurally excellent at one thing: turning AI coding sessions
