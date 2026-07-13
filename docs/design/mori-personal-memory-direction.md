@@ -85,6 +85,10 @@ project" without a schema migration, and cross-scope recall already works
 
 ## 5. Jobs and information architecture (hypothesis)
 
+The concrete shell plan (diagnosis, navigation, screens, flows, migration
+stages) lives in [`mori-product-shell-ia.md`](mori-product-shell-ia.md);
+this section keeps only the job model.
+
 Users think in jobs, not source families. The shell should map to jobs; the
 current shell already mostly does:
 
