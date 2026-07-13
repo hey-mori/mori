@@ -1,5 +1,15 @@
 # Mori Production Program
 
+> **Doctrine status (2026-07-14): to be re-baselined.** This program
+> predates the identity rewrite (personal context workspace, record
+> ledger center). Gates G1 (installable) and G2 (trustworthy with real
+> data) remain valid concerns; the competitive framing and moat
+> narrative assumed the AI-session-memory product and must be redone
+> after K2 of
+> [`design/mori-context-workspace-architecture.md`](design/mori-context-workspace-architecture.md)
+> §14, which is the governing execution sequence. Do not sequence new
+> work from this file.
+
 The roadmap for turning the current repo into a shippable, trustworthy,
 competitive product. This is the entry point for "what does Mori need
 to become a real product"; it sequences the work, names the open

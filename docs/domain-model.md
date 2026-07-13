@@ -1,5 +1,15 @@
 # Domain Model
 
+> **Doctrine status (2026-07-14): legacy model, superseded as target.**
+> This file describes the session-centric domain (Project / Session /
+> Source / Event ...) that the code implements today. The **target**
+> kernel is Record / SchemaDefinition / Context / Entity / Relation /
+> Source / SourceLink / Derivation / Revision / Rule, defined in
+> [`design/mori-context-workspace-architecture.md`](design/mori-context-workspace-architecture.md)
+> §3. Sessions become `agent-session` records via adapters (§18 there);
+> new capabilities build on the kernel, not on this shape. Keep this
+> file for reading the existing code until the kernel lands.
+
 The current TypeScript domain model lives in `src/domain/types.ts`. This document describes the product data model Mori should use as it grows from prototype into a local-first desktop app.
 
 ## Core Objects

@@ -1,5 +1,15 @@
 # Mori product shell and information architecture · proposal
 
+> **Doctrine status (2026-07-14): superseded as the target IA.** The
+> target navigation is now 홈 · 오늘 · 캘린더 · 프로젝트 · 지식 ·
+> 트래커 · 에이전트 · 인박스 · 검색 (+ 연결 in 설정), per
+> [`mori-context-workspace-architecture.md`](mori-context-workspace-architecture.md)
+> §8. What survives from this doc: the one-sidebar/two-zone structure,
+> the ContextNavigator component boundary (shipped), and the
+> discoverability doctrine (menu count is not a principle). The 메모리
+> nav debate this doc settles is moot: the hub is on the deprecation
+> track.
+
 Status: **proposal, 2026-07-13**, the layout plan for the accepted
 personal-memory direction ([`mori-personal-memory-direction.md`](mori-personal-memory-direction.md)).
 Marked per section: **fact** (current code), **proposal**, **deferred**.

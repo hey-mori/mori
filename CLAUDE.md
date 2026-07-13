@@ -5,11 +5,16 @@ Read these before changing code or committing.
 ## Always
 
 - Read [`docs/mori-project-goal.md`](docs/mori-project-goal.md) for product
-  direction and what is implemented vs planned.
+  identity and what is implemented vs planned, then
+  [`docs/design/mori-context-workspace-architecture.md`](docs/design/mori-context-workspace-architecture.md),
+  the governing architecture (record kernel, pipeline, apply policy, IA,
+  storage ADR, decision authority order, K1-K4 execution sequence).
+  Existing Mori is material for future Mori, not its boundary; judge
+  conflicts by that doc's §16 authority order.
 - Read [`docs/mori-autonomous-loop.md`](docs/mori-autonomous-loop.md) for how
   the development loop runs.
-- Read [`docs/production-program.md`](docs/production-program.md) for the
-  governing production roadmap (readiness gates G1–G4 and workstreams).
+- [`docs/production-program.md`](docs/production-program.md) is marked
+  to-be-re-baselined; do not sequence new work from it.
 - Read [`docs/design/mori-brand-identity-reference.md`](docs/design/mori-brand-identity-reference.md)
   before any brand / icon / colour change.
 - Read [`docs/frontend-architecture.md`](docs/frontend-architecture.md) before

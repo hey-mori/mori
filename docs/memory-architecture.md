@@ -1,5 +1,16 @@
 # Mori Memory Architecture
 
+> **Doctrine status (2026-07-14): implementation reference, no longer
+> identity.** The identity sentence below is superseded: Mori is a
+> local-first personal context workspace centered on the user's record
+> ledger, per
+> [`design/mori-context-workspace-architecture.md`](design/mori-context-workspace-architecture.md)
+> and the rewritten [`mori-project-goal.md`](mori-project-goal.md) §1.
+> The layer map in this file stays accurate as a description of the
+> implemented engine, which becomes the Distill stage (extraction →
+> Understand/Propose, aggregation → Aggregate, consolidation →
+> Distill). Do not cite this file for product direction.
+
 Mori is a **local-first AI work memory app for evidence-based
 session reconstruction and continuation**. The durable unit of
 value is not a memory snippet — it is a reviewed, source-linked

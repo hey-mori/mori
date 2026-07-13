@@ -3,15 +3,30 @@
 Canonical project goal and working guide for Mori. Future AI coding
 sessions should read this file first, then inspect the current repo,
 then propose the smallest next milestone. This document is durable
-guidance — it intentionally uses capability-based names instead of
-phase numbers, and it is honest about what is implemented today versus
-what is still designed or planned.
+guidance. It is honest about what is implemented today versus what is
+designed or planned.
+
+**2026-07-14 identity rewrite.** Mori's center moved from the AI-agent
+session to the user's record ledger (personal context workspace). The
+governing design for this direction, the domain kernel, pipeline, apply
+policy, IA, storage ADR, legacy audit, and migration plan, is
+[design/mori-context-workspace-architecture.md](design/mori-context-workspace-architecture.md).
+Where an older doc conflicts with that architecture or with this file,
+the newer doctrine wins; conflicting docs carry explicit historical /
+superseded banners per the architecture doc §20. **Existing Mori is
+material for future Mori, not its boundary.**
 
 Companion docs (read these before changing code):
 
+- [design/mori-context-workspace-architecture.md](design/mori-context-workspace-architecture.md)
+  · the governing architecture: kernel (§3), pipeline (§4), apply policy
+  (§5), IA (§8), Reuse/Adapt/Deprecate/Remove (§9), storage ADR (§10),
+  `.mori` v1 (§11), migration (§12), decision authority (§16), legacy
+  audit (§17).
 - [memory-architecture.md](memory-architecture.md) — layer-by-layer
-  memory map (capture → evidence → review → timeline → project memory
-  → query / output → storage).
+  map of the **implemented legacy pipeline** (capture → evidence →
+  review → timeline → project memory → query / output → storage); the
+  engine it describes becomes the Distill stage.
 - [project-memory.md](project-memory.md) — Project Memory live
   aggregation contract and data-basis honesty flag.
 - [project-memory-consolidation.md](project-memory-consolidation.md) —
@@ -40,151 +55,127 @@ Companion docs (read these before changing code):
 
 ## 1. Product Identity
 
-Mori is a **local-first AI work memory app for evidence-based session
-reconstruction and continuation.** The durable unit of value is not a
-memory snippet — it is a reviewed, source-linked understanding of
-*what happened*, *why it mattered*, *what evidence supports it*, *what
-was decided*, *what remains unresolved*, and *what should be carried
-into the next session*. Mori is not a note app, not a task manager,
-not a wiki, not an autonomous coding agent, and not a surveillance
-tool. It is a quiet, local-only memory layer that lets the user
-explicitly import work evidence from Claude / Codex / ChatGPT / CLI /
-Git / notes / URLs, review every AI interpretation, accumulate durable
-project memory, and produce a continuation prompt or report when it is
-time to resume.
+Mori is a **local-first personal context workspace.** The user throws
+traces at it, free text and memos, URLs, files, pasted conversations,
+Git history, AI-agent sessions, or sources connected for automatic sync
+within an approved scope, and Mori turns those traces into a structured,
+connected **ledger of records**: what the user did, learned, decided,
+felt, and produced, anchored to the time it actually happened and the
+contexts it belongs to. It discovers repetition and structure (routines,
+work episodes, patterns), learns the user's vocabulary and preferences,
+and gives everything back when needed: recall, daily and project
+history, continuation, review, reports, portfolio, tracker insight, and
+agent context.
 
-**The session unit — an AI-agent work session.** A Mori *session* is one
-**AI-agent work session**, not a free-floating bundle of unrelated
-sources. It has a single **spine**: one AI coding conversation in one
-agent — Claude *or* Codex *or* OpenCode. Around that spine attach the
-**ribs**: the Git diffs, terminal runs, files, notes, and URLs produced
-during *that same piece of work*. So "one Claude conversation = one Mori
-session" and "a session is a unit of work" are the same statement — the
-conversation is the anchor, the surrounding evidence hangs off it. This
-resolves an earlier ambiguity where importing a conversation produced a
-per-conversation session while the Work Bundle implied a session was an
-arbitrary merge of many sources. Consequences that follow from this
-definition:
+Three consequences of that identity:
 
-- **Agents anchor; everything else is evidence.** Claude / Codex /
-  OpenCode are session anchors. Git, terminal, documents, notes, URLs,
-  IDE, and browser sources are evidence you attach to a session — never
-  a session of their own. The source hub presents this split (agent
-  families first, evidence families second).
-- **The canonical way to start a session is to import / continue an AI
-  conversation.** A hand-made empty session is a secondary container.
-- **Attaching surrounding evidence is auto-*association*, never
-  auto-*capture*.** Mori may group already-captured evidence (hook JSONL
-  from the same window, a Git diff the user fetched) onto a session's
-  spine, but it never captures new evidence in the background or watches
-  the machine. Association is automatic; capture stays explicit
-  (Product Principle: explicit import / capture, no hidden capture).
-- **The Work Bundle is the manual fallback, not the model.** Hand-pasting
-  several sources into one bundle is the rare path for when no
-  auto-detected conversation exists; the composite preview / per-source
-  provenance engine is unchanged, but it is no longer presented as the
-  primary way to form a session.
+- **The center is the record ledger, not any single source kind.** An
+  AI-agent session is one trace among many; so is a Git log; so is a
+  one-line memo. The earlier definition, "one AI conversation = one
+  Mori session, the spine with evidence ribs", is **superseded** (it
+  was an implementation choice of the 2026-05 session-centric era, see
+  architecture doc §17.3). A session is an `agent-session` record plus
+  a `Source`; sessions remain the deep unit *inside the agent world*,
+  never the center of the product.
+- **Agents and input channels are two different axes.** Agents
+  (Claude / Codex / OpenCode / ...) form a world of live work: sessions
+  to follow, continue, and mine for activity. Input channels (text,
+  URL, file, paste, Git, connected sources) are how traces arrive. They
+  never share one screen model.
+- **Origin is a relationship, not a unit.** Every record carries origin
+  links (`Source` + `SourceLink` roles) shown on demand; provenance is
+  enforced internally; there is no evidence destination for the user to
+  manage.
+
+What Mori is not: a chat archive, an evidence manager, a surveillance
+tool, a cloud service, or an autonomous memory-writer. Earlier "not a
+note app, not a task manager, not a wiki" phrasing is retired: Mori
+hosts notes, tasks, trackers, and knowledge as record schemas. What
+stays true is that Mori is not primarily a manual editor; its identity
+is turning casual traces into structured, reusable context with the
+least ceremony possible (architecture doc §16.3).
 
 ## 2. Core User Problem
 
-Users work across Claude, Codex, ChatGPT, CLI tools, Git, terminal,
-documents, notes, and browsers. The work becomes fragmented across
-tools and sessions. Hours or days later, the same user — or another
-collaborator — needs to remember:
+A person's life and work leave traces everywhere: AI conversations,
+Git history, documents, articles read, videos studied, meetings,
+memos, workouts, language study, investment notes. The traces are
+fragmented across tools and none of them answers, days or months
+later:
 
-- *what happened* during the last session,
-- *why* decisions were made (rationale, alternatives, trade-offs,
-  consequences),
-- *what evidence* supports each claim (transcripts, diffs, notes),
-- *what remains unresolved* (open issues, risks, in-progress work),
-- *what to do next* (concrete actions, blocked items, follow-ups),
-- *how to continue* — what prompt or context belongs in the next AI
-  session, the next CLI run, the next pairing call.
+- *그때 뭘 했더라*: what did I actually do that day / that week?
+- *이 프로젝트를 어떻게 진행했더라*: how did this work unfold, what
+  was decided and why, what remains open?
+- *뭘 배웠지*: what did I learn from that article / video / study
+  session, and where is it now?
+- *뭐가 반복되고 있지*: which routines, patterns, and recurring
+  problems am I not seeing?
+- *이걸 어디에 다시 쓰지*: how do I turn past work into a portfolio,
+  a report, a resume line, or context for the next AI session?
 
 Existing tools either lose this context (chat history scrolls away,
-terminal scrollback is wiped, AI tools do not share memory across
-products) or try to capture it autonomously (always-on watchers,
-account scraping, cloud sync) at the cost of trust. Mori takes the
-middle path: explicit user-driven capture, evidence-linked memory,
-review-before-apply gates, and durable but reviewable project memory.
+notes go stale, AI tools do not share memory), demand heavy manual
+curation the user will not sustain, or capture autonomously at the
+cost of trust. Mori's stance: capture with the least ceremony
+possible, structure automatically under a graded apply policy,
+preserve origins for re-derivation, and keep every automated change
+visible and reversible.
 
-## 3. Target Product Loop
+## 3. Target Product Pipeline
 
 ```
-   Claude / Codex / ChatGPT / CLI / Git / terminal work
-                          │
-                          ▼
-                Capture / Import (explicit)
-                          │
-                          ▼
-                     Preview
-                          │
-                          ▼
-                  Import Review
-                          │
-                          ▼
-              Timeline / Evidence Hub
-                          │
-                          ▼
-                  Project Memory
-                          │
-                          ▼
-              Consolidation Review
-                          │
-                          ▼
-                 Accepted Memory
-                          │
-                          ▼
-           Resume Prompt / Reports
-                          │
-                          ▼
-                   continue work
+  free text · URL · file · paste · Git · agent session · connected source
+        │
+        ▼
+     Capture      raw trace preserved immediately, always (§16.4 of the
+        │         architecture doc: originals kept for re-derivation)
+        ▼
+     Parse        deterministic structure: metadata, dates, segments
+        ▼
+     Understand   engine seam (rule-based / Ollama / OpenAI-compatible)
+        ▼
+     Propose      typed record candidates with confidence + derivation
+        ▼
+     Resolve      entities · contexts · duplicates · repetition · conflicts
+        ▼
+     Apply        per-candidate policy: auto / provisional / confirm
+        ▼
+     Aggregate    day summaries · work episodes · routines · project state
+        ▼
+     Distill      long-lived knowledge / decisions / preferences
+        │         (the governance engine: lifecycle + audit + provisional)
+        ▼
+     Reuse        검색 · 오늘 · 캘린더 · 프로젝트 · 지식 · 트래커 ·
+                  resume · reports · portfolio · agent context
 ```
 
-Step meanings:
+The apply policy is a function of six factors (interpretation
+confidence, mutates-existing?, new-entity?, sensitivity, per-schema
+automation level, reversibility), never of "who wrote the input". Raw
+capture is instant and lossless; interpretation is a separate act.
+Review ceremonies are the exception path, not the pipeline. Full detail:
+architecture doc §4-§5.
 
-- **Capture / Import.** The user explicitly pastes or selects work
-  evidence: an AI transcript, a Connector JSONL file, a Git diff, a
-  manual note, a URL. Mori does not watch folders, scrape accounts, or
-  monitor processes.
-- **Preview.** The relevant import pane parses the input, surfaces a
-  source-level re-import summary (`new` / `partialReimport` /
-  `duplicateOnly` / `historyUnavailable` / `invalidOnly`), shows
-  duplicate counts, and flags suspected secrets. Nothing is persisted
-  yet.
-- **Import Review.** Every captured event lands in Import Review as a
-  candidate — accept, discard, or edit per event. Apply requires an
-  explicit click; raw text never reaches the session store on its own.
-- **Timeline / Evidence Hub.** Applied events become a navigable
-  Timeline and a per-source Evidence Hub. Each row carries trust
-  level, redaction status, raw-data retention policy, and connector
-  provenance.
-- **Project Memory.** A live cross-session aggregation
-  (`ProjectMemoryViewModel`) of key decisions, recurring issues, key
-  evidence, unresolved risks, re-import history, and a recommended
-  next session. Carries a typed `dataBasis` flag so the page never
-  overclaims its reach.
-- **Consolidation Review.** A user-triggered surface that turns live
-  aggregation rows into typed `MemoryProposal[]`. The user reviews
-  each proposal — accept / edit / discard / keep-watching / defer —
-  and clicks Apply.
-- **Accepted Memory.** Approved proposals persist as durable
-  `StoredAcceptedProjectMemory` rows with an append-only audit trail.
-  Today this lives in browser localStorage; SQLite mirroring and
-  `.mori v0` export are designed but not implemented.
-- **Resume Prompt / Reports.** A continuation prompt (audience- and
-  privacy-aware) and Markdown / `.mori v0` reports are generated from
-  the active session today and from accepted memory once the Resume
-  and Report Memory Integration capability lands.
-- **continue work.** The user pastes the prompt into Claude / Codex /
-  ChatGPT, hands the report to a teammate, or starts the next CLI
-  run. The loop repeats.
+The implemented legacy loop (explicit import → Import Review → Timeline
+/ Evidence Hub → Project Memory → Consolidation Review → Accepted
+Memory → Resume / Reports) is a working special case of this pipeline
+and remains accurate as a description of today's code (Section 4). Its
+stages map onto Parse / Apply-confirm / Aggregate / Distill / Reuse and
+are being re-rooted per the architecture doc §9 and §12.
 
 ## 4. Implemented Capabilities
 
 This section is verified against the repository at the time of writing
 and reflects what is real today. Where the implementation is partial,
 that is called out.
+
+> **Reading note (2026-07-14).** Everything below was built under the
+> session-centric architecture and remains real, working code. The
+> architecture doc §9 classifies each element Reuse / Adapt / Deprecate
+> / Remove; deprecated surfaces (Evidence Hub, 메모리 hub,
+> Consolidation Review screen, the mixed 연동 grid) keep working until
+> the §21 removal criteria hold. Do not build *new* capabilities on the
+> session-centric shape; build them on the record kernel.
 
 **Import and Evidence Foundation**
 
@@ -633,48 +624,58 @@ against the repository.
 
 ## 6. Product Principles
 
-Non-negotiable. These hold across every feature in every milestone. If
-a feature would violate one of them, it does not ship as-is — it goes
-back to design first.
+Rules are not all the same strength. The architecture doc §17 audits
+every legacy rule into invariant / policy / implementation choice /
+obsolete; this section states the two user-facing tiers. If a feature
+would violate an **invariant**, it does not ship, ever. A **policy**
+may change when the product direction demands it, deliberately and in
+writing.
+
+**Invariants (identity-level, hold forever):**
 
 - **Local-first.** No cloud sync by default, no OAuth, no external
-  account reading, no remote authority over the user's memory.
-- **Explicit import / capture.** Every artifact enters Mori through a
-  user action: paste, click, or explicit file pick. No hidden background
-  watcher, no scheduled job. The one narrow exception is the opt-in,
-  transparent, review-gated background reader of explicitly-connected
-  logs (the "B" surface in the Surveillance line note); it still never
-  makes memory durable without review.
-- **Review-before-apply.** Import Review and Consolidation Review are
-  non-bypassable gates. AI may propose; only the user can make memory
-  durable.
-- **Evidence is the source of truth.** Imported `SourceRef`s and
-  `TimelineEvent`s are ground truth. Everything else (Quick Pass
-  issues / decisions, Project Memory aggregations, consolidated
-  memories, Resume Prompts) is a reviewable proposal layered on top.
-- **AI interpretation is a proposal.** AI output is editable,
-  discardable, deferable, and never silently authoritative.
-- **Provenance preservation.** Every derived item carries an evidence
-  reference back to the originating `sourceEventIds` /
-  `relatedSourceIds` / `connectorEventId`.
-- **User correction is first-class.** The user can accept, edit,
-  discard, defer, keep-watching, mark-stale, supersede, or split /
-  merge any AI-derived item.
-- **Honest implementation status.** Docs, UI, and code clearly
-  distinguish Implemented / Partial / Planned / Unavailable /
-  Reference-only. No fake connected states. No fake "AI thinking"
-  spinners while nothing runs.
-- **Privacy-aware defaults.** Secret-pattern detection at import,
-  `rawDataPolicy` per source, redaction-aware Resume Prompt modes,
-  and a "what never enters durable memory" list (raw credentials,
-  API keys, passwords, private keys, OAuth tokens, session cookies,
-  unredacted PII, full raw transcripts without retention policy,
-  confidential client details not marked client-safe, AI claims
-  without an evidence link).
-- **No hidden capture.** No screen recording, no keylogger, no
-  app-database scraping, no browser-history reading, no automatic
-  external account reading, no reading the screen / filesystem / app
-  storage the user never connected.
+  account reading, no remote authority over the user's ledger.
+- **No hidden capture (the A-ban).** No screen recording, keylogging,
+  camera, app-database scraping, browser-history reading, or reading
+  any source the user never connected.
+- **Origin and interpretation stay distinguishable.** Every derived
+  record carries its `Source` links and `Derivation`; AI output is
+  never silently authoritative and never masquerades as the user's
+  words.
+- **No data loss, no silent overwrite.** Raw inputs are preserved by
+  default for re-derivation (including the user's own memos;
+  architecture doc §16.4). Migrations are lossless. External edits are
+  detected, never absorbed or clobbered silently.
+- **Automated changes are visible and reversible.** Anything Mori
+  applies automatically is disclosed ("Mori가 정리함"), carries a
+  `Revision`, and can be undone.
+- **Never fabricate.** Unknown dates stay unknown (`timeBasis:
+  unknown` is first-class); no invented facts, no fake connected
+  states, no fake progress spinners.
+- **User correction is first-class.** The user can edit, discard,
+  rename, re-scope, or revert any AI-derived item, and corrections
+  accumulate into personalization rules rather than evaporating.
+- **Honest implementation status.** Docs, UI, and code distinguish
+  Implemented / Partial / Planned / Unavailable / Reference-only.
+- **Privacy-aware defaults.** Secret-pattern detection at capture,
+  per-source retention policy, redaction-aware external outputs, and
+  the "never enters durable output" list (credentials, keys, tokens,
+  unredacted PII, client-confidential content not marked safe).
+
+**Policies (current, changeable in writing; changed 2026-07-14):**
+
+- **Graded apply, not universal pre-review.** The old "every AI
+  interpretation is reviewed before apply" is replaced by the
+  six-factor apply matrix (auto / provisional / confirm). Review is
+  the exception path for mutations, new entities at low confidence,
+  and sensitive content. Provisional records never cross external
+  outputs (reports / `.mori` / client-safe) until confirmed.
+- **Approved-scope sync, not explicit-import-only.** Sources the user
+  explicitly connected may sync automatically within the approved
+  scope, under the three rails (scope · review-gate-for-interpretation
+  · transparency). The A-ban above is untouched by this.
+- **Internal vocabulary stays internal.** 잠정 / 확정 / 통합 / 승격 /
+  trust levels are engine terms; surfaces speak plain language.
 
 ### Surveillance line: invasive capture (A) vs connected-source reading (B)
 
@@ -714,8 +715,16 @@ review-gated, off by default.
 
 ## 7. Capture Strategy
 
-**Immediate realistic path.** Add a Local Connector Capture Bridge
-that turns live Claude / Codex / Git / CLI work into reviewable
+**Target model.** Capture is many channels feeding one pipeline: quick
+text and memos, URL fetch, file drop, pasted conversations, Git
+history, agent-session mining, and connected sources syncing within an
+approved scope (per-connection scope / pause / history / delete,
+always-visible state). The inbox is the capture surface; the Apply
+policy decides what needs the user's eyes. See architecture doc §4-§5
+and §8.
+
+**Implemented today (legacy, still real).** The Local Connector Capture
+Bridge turns live Claude / Codex / Git / CLI work into reviewable
 evidence without surveillance:
 
 - The user installs a small template script (Claude Code hook,
@@ -751,6 +760,15 @@ monitoring, screen capture, keylogging, automatic cloud sync,
 scheduled consolidation jobs.
 
 ## 8. Memory Strategy
+
+> **Reading note (2026-07-14).** This section describes the implemented
+> engine, which the architecture doc reclassifies: extraction becomes
+> the Understand / Propose stages, aggregation becomes Aggregate, and
+> the consolidation + accepted-memory machinery (lifecycle, audit,
+> provisional, governance) becomes the **Distill** stage over the record
+> ledger. The engine is Reused; the standalone memory surfaces are on
+> the deprecation track (§8.3 of the architecture doc). "Durable memory"
+> is the distilled layer of the ledger, not a separate product.
 
 **Quick Pass extracts from a session.** Quick Pass runs against the
 active session's imported events and sources, producing
@@ -813,6 +831,15 @@ section. See Section 4 for the `isResumeGuidanceMemory` and
 
 ## 9. Data and Storage Strategy
 
+**Target (decided, architecture doc §10):** SQLite-canonical record
+kernel first, with a deterministic, always-current Markdown workspace
+folder (Obsidian-openable) and external-edit detection; then split
+ownership, where user-authored prose (지식 노트, 저널) becomes
+file-canonical while structured / derived records stay SQLite-canonical.
+`.mori` v1 is the versioned workspace package (backup / selective share);
+v0 becomes import-only. The list below describes today's implemented
+storage, which the kernel tables will join additively (§12 migration).
+
 - **Browser localStorage fallback.** The current default storage
   backend for drafts, session imports, analysis results, durable
   memory bodies, repository settings, Quick Pass settings, `.mori v0`
@@ -847,6 +874,16 @@ section. See Section 4 for the `isResumeGuidanceMemory` and
   passwords, API keys.
 
 ## 10. UI / UX Direction
+
+**Target IA (architecture doc §8):** 홈 (ambient canvas + ⌘K, doctrine
+unchanged) · 오늘 · 캘린더 · 프로젝트 · 지식 · 트래커 · 에이전트 ·
+인박스 · 검색, with 연결 (agents + input channels + auto-sync scope)
+living in 설정. The standalone 메모리 hub and Consolidation Review
+screens are on the deprecation track; their jobs redistribute (search →
+검색, knowledge → 지식, exception review → 인박스, audit → record
+history). Screens are derived from user jobs, never from where legacy
+components could move (§16.2). Today's shipped navigation (Section 4)
+predates this and transitions per surface.
 
 Mori is a calm productivity app. The product feel target:
 
@@ -959,17 +996,33 @@ guardrails, not preferences.
 
 ## 13. Near-Term Roadmap
 
-**The governing roadmap is now
-[production-program.md](production-program.md)** (2026-07-12): four
-readiness gates (Installable / Trustworthy with real data /
-Competitive at first glance / The moat is the headline) built from the
-production-readiness audit and the competitive-landscape synthesis.
-The capability buckets below remain valid but are sequenced behind the
-program's gates.
+**The governing sequence is now the architecture doc §14:**
 
-Capability-based buckets. Order is suggested; the user has the final
-say. Each bucket should be verified against the current repo state
-before starting.
+- **K1 · Kernel.** Record / Schema / Context / Entity / Relation /
+  Source / Derivation / Revision / Rule tables + TS domain + schema
+  registry (schemas as data, ≥5 system schemas, 1 user-defined schema
+  exercised in tests) + FTS. Converters for projects → contexts begin.
+- **K2 · Capture + Apply + 인박스 + 오늘.** Quick capture (text / URL /
+  paste), the six-factor apply matrix with per-schema automation
+  settings, inbox confirm cards, the 오늘 view. Pilot schemas: workout ·
+  study · note · url-document.
+- **K3 · Agent re-root + discovery.** Session pipeline emits activity
+  candidates; episode / routine proposers; 캘린더; project context
+  pages over the ledger; personalization rules v1.
+- **K4 · Knowledge + storage stage 2 + `.mori` v1.** File-canonical
+  prose class + watcher; Obsidian export; `.mori` v1 with round-trip
+  tests; portfolio derivation; memory-surface deprecation completes.
+
+[production-program.md](production-program.md) (2026-07-12 readiness
+gates) predates the identity rewrite: its gates G1 (installable) and G2
+(trustworthy with real data) remain valid concerns, but its
+competitive framing assumed the AI-session-memory product and must be
+re-baselined after K2. It is marked accordingly.
+
+The legacy capability buckets below remain historically accurate.
+Before starting any milestone, verify it is the smallest valuable next
+step **on the kernel path**, not an extension of the session-centric
+shape.
 
 **Shipped (verified in Section 4):**
 
@@ -1026,54 +1079,64 @@ explicitly reprioritises them:
 
 - Invasive background surveillance: screen recording, keylogging,
   camera access, or watching the screen / filesystem / app storage the
-  user never connected. (This is the "A" ban in Section 6. It does not,
-  by itself, forbid a transparent, opt-in, review-gated background reader
-  of explicitly-connected agent logs, the "B" surface; see the
-  Surveillance line note.)
+  user never connected. (The "A" ban, an invariant. It does not forbid
+  approved-scope sync of explicitly-connected sources, the "B"
+  surface; see the Surveillance line note.)
 - Account scraping (OAuth, API-key access to Claude / ChatGPT /
   Codex / external services).
-- Cloud sync by default. Cross-device memory is `.mori v0`
+- Cloud sync by default. Cross-device data moves via `.mori` package
   export / import only.
 - Automatic external account reading.
 - Reading Claude Desktop SQLite, ChatGPT browser storage, arbitrary
   Cursor app data outside the explicit composer-chat exception, or any
   third-party app's private storage. The Cursor exception is narrow:
-  user-invoked, read-only, `composerData:*` chat rows only, and still
-  review-before-apply.
-- Unreviewed memory writes. AI proposes; user disposes.
-- Autonomous agent daemon that makes memory durable or takes action
-  without review ("Mori figures it out for you in the background"). A
-  background process that only reads explicitly-connected logs and
-  surfaces a notification, with review-before-apply intact, is the "B"
-  surface in Section 6, not this.
+  user-invoked, read-only, `composerData:*` chat rows only.
+- Silent, un-attributed, irreversible writes. Auto-apply is allowed by
+  the apply policy, but every automated write is disclosed, carries a
+  Derivation + Revision, and can be undone; distilled long-term memory
+  keeps its lifecycle gate. What stays banned is Mori changing the
+  ledger in ways the user cannot see, trace, or reverse.
+- Financial advice. Investment records capture the user's own
+  judgments, emotions, and history; Mori never recommends trades.
 - Full browser extension. Browser context is paste / URL today.
-- Team / shared memory beyond explicit `.mori v0` export.
-- Embeddings / vector DB as the source of truth. Mori uses
-  structured evidence-linked memory. Vector retrieval can return as
-  an optional research layer over accepted memory, never as the
-  primary store.
-- Google ADK / Gemini / cloud-LLM hard dependency. Local LLM
-  (Ollama / LM Studio / OpenAI-compatible) is optional.
-- Multimodal ingestion (image / audio / video / PDF) as a core
-  capability. Text + structured connector events are enough today.
-- Session Canvas / Workroom UI, unless explicitly reprioritised.
-  The data model would still come from existing `TimelineEvent` /
-  `SourceRef` / `Review` / connector-import-history records, but no
-  UI ships today.
+- Team / shared memory beyond explicit `.mori` package export.
+- Embeddings / vector DB as the source of truth. Vector retrieval may
+  return as an optional recall layer, never as the primary store.
+- Cloud-LLM hard dependency. Local LLM (Ollama / LM Studio /
+  OpenAI-compatible) stays optional and swappable.
+- Multimodal ingestion (image / audio / video / PDF parsing) as a core
+  capability today. Text-first: transcripts, pasted text, and
+  structured events. (Whisper-based local transcription of user-owned
+  media is a planned capture channel, staged in the architecture doc;
+  it enters as text.)
 - Pixel-agent UI / game-like surfaces for core work.
-- Always-on memory writes triggered by a timer.
+
+Retired non-goals (2026-07-14): "not a note app / task manager / wiki"
+(Mori hosts notes, tasks, trackers as record schemas); "unreviewed
+memory writes" in its absolute form (replaced by the graded apply
+policy + the silent-write ban above); "scheduled consolidation jobs"
+in its absolute form (aggregation may run automatically; distillation
+keeps its gate).
 
 ## 15. How Future Sessions Should Use This Document
 
 When a new AI coding session opens against Mori:
 
-1. **Read this document first.** It is the canonical project goal,
-   working rules, validation policy, and capability roadmap.
+1. **Read this document first, then the architecture doc.** This file
+   is the canonical identity, working rules, and validation policy;
+   [design/mori-context-workspace-architecture.md](design/mori-context-workspace-architecture.md)
+   is the governing design. Judge every conflict by its §16 decision
+   authority order: the user's problem and the target product outrank
+   existing code, docs, and tests. **Existing Mori is material for
+   future Mori, not its boundary.** Do not fall back to the
+   session-centric shape because it is what the code does today.
 2. **Inspect current repo state.** Run `git status --short`,
    `git log --oneline -10`, and read the docs and source files
    relevant to the proposed task. Verify the Implemented /
    Current Gaps sections above against reality and update them if
-   they have drifted.
+   they have drifted. When doctrine and a legacy test disagree, the
+   test is rewritten with the code it guards (architecture doc §20),
+   never the feature distorted to keep it green.
 3. **Propose the smallest next milestone.** Match the proposal to a
    capability bucket in the Near-Term Roadmap or call out why a
    different bucket is more valuable now.

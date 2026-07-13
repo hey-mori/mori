@@ -1,5 +1,14 @@
 # Mori Redesign — Session-Centric Product Plan
 
+> **Doctrine status (2026-07-14): historical.** The session-centric
+> center this plan established ("one AI conversation = one session, the
+> spine") is superseded by the record-ledger identity in
+> [`mori-context-workspace-architecture.md`](mori-context-workspace-architecture.md)
+> and the rewritten [`mori-project-goal.md`](../mori-project-goal.md).
+> Sessions remain the deep unit inside the agent world only. Keep this
+> document as the record of the 2026-05 reset; do not follow it for new
+> work.
+
 This is the durable plan for the 2026-05 redesign. It supersedes the
 scattered, page-per-feature shape Mori grew into. Future passes follow this
 document; update it when a decision actually changes, not speculatively.

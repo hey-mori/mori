@@ -1,5 +1,15 @@
 # Mori memory-system roadmap · execution plan
 
+> **Doctrine status (2026-07-14): superseded for sequencing.** The
+> governing execution order is now K1-K4 in
+> [`mori-context-workspace-architecture.md`](mori-context-workspace-architecture.md)
+> §14. Items here are re-scoped by that plan: the 메모리 hub and
+> consolidation surfaces this roadmap improves are on the deprecation
+> track (§8.3 / §9 there), so invest in the engine (governance,
+> provisional, lifecycle · Reused as Distill), not in those screens.
+> N2 (real-data validation) and diagnostics remain valid and fold into
+> the K1-K2 validation work.
+
 Last validated against code at commit `d410727` (2026-07-13).
 
 This is the single **execution view** of the remaining work for Mori as a
