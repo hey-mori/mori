@@ -58,13 +58,14 @@ confirmed on real desktop data) · **partial** · **planned**.
 
 ## 2. Now · make the current loop coherent and trustworthy
 
-**N1 · Provisional reads honestly everywhere.** Value: provisional memory
-shows as "관찰 중" in the project MemoryView (`AcceptedMemoriesCard` /
-`AcceptedMemoryDetailDrawer` use lifecycle grouping; the global hub is the
-only surface that says 잠정). The user saw this exact wrong label. State:
-legacy inconsistency. Smallest step: label `status === "provisional"` as 잠정
-in the project card + drawer. Done when both surfaces call it 잠정, not 관찰 중.
-No decision. *(fix now)*
+**N1 · Provisional reads honestly. *(shipped, this pass)*** The project
+"확정 메모리" card counted/listed provisional memory and its lifecycle strip
+showed it as 관찰 중. Fixed: provisional is filtered out of the confirmed-memory
+card (list, count, strip, empty state), since 확정 = confirmed; provisional
+stays fully visible in the global hub under 잠정. Remaining edge: the detail
+drawer's lifecycle label still defaults provisional to 관찰 중 if a provisional
+memory is deep-linked (it no longer reaches the drawer from the card) — minor,
+deferred.
 
 **N2 · Validate the memory hub + auto-organize on real SQLite.** Value: the
 whole governance fix is `shipped·unvalidated` (demo disables consolidation, so
@@ -153,7 +154,7 @@ enumeration (shipped). Mostly falls out of X3.
 
 | Finding | Class |
 | --- | --- |
-| Provisional shown as 관찰 중 in project MemoryView (N1) | **fix now** |
+| ~~Provisional shown as 관찰 중 in project MemoryView~~ (N1, fixed this pass) | **done** |
 | 5-button consolidation review vs exception queue (N5) | **migrate later** (needs decision) |
 | `featureStatus.ts` has no rows for provisional / auto-organize / memoryHub / Understand | **migrate later** (update registry) |
 | `roadmap.md` still describes the 4-tab 홈·소스·대시보드·워크벤치 nav (superseded by the shipped shell) | **fix** (mark superseded, point to shell-ia) |
