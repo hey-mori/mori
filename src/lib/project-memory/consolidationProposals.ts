@@ -105,6 +105,12 @@ export function buildProjectMemoryConsolidationPreview(
     proposals.push(buildPromotedDecisionProposal(decision));
   }
   for (const issue of memory.recurringIssues) {
+    // A "recurring" issue must actually recur: it has to appear across more
+    // than one session. A single-session issue is just an open issue in that
+    // session (it lives in the session's own analysis), not durable project
+    // memory. Emitting it as a recurring-issue memory produced the
+    // "Single-session issue" mislabel the user saw.
+    if (!issue.crossSession) continue;
     proposals.push(buildRecurringIssueProposal(issue));
   }
   // Key evidence is NOT durable memory: it is a pointer to a source / session
@@ -116,8 +122,10 @@ export function buildProjectMemoryConsolidationPreview(
   for (const risk of memory.unresolvedRisks) {
     proposals.push(buildUnresolvedRiskProposal(risk));
   }
-  const nextSession = buildNextSessionProposal(memory);
-  if (nextSession) proposals.push(nextSession);
+  // A next-session recommendation is a next action, not durable memory: it is
+  // relevant now and stale by the next session. Its live home is the resume
+  // prompt (`recommendedNextSession`), not the memory store, so it is no
+  // longer emitted as a memory proposal.
 
   const deduped = dedupeProposals(proposals);
 
@@ -221,47 +229,6 @@ function buildUnresolvedRiskProposal(risk: ProjectMemoryUnresolvedRisk): MemoryP
     relatedIssueIds: [risk.issueId],
     relatedDecisionIds: [],
     proposedAction: "keepWatching",
-    status: "proposed",
-    createdAt: nowFallback(),
-    updatedAt: nowFallback(),
-  };
-}
-
-function buildNextSessionProposal(memory: ProjectMemoryViewModel): MemoryProposal | null {
-  const topic = memory.recommendedNextSession?.trim();
-  if (!topic) return null;
-  if (topic === "현재 세션 메모리를 검토하고 다음 작업 범위를 결정") {
-    // Generic fallback string from the view-model — not worth promoting.
-    return null;
-  }
-  // Heuristic confidence: higher when the recommendation came from a
-  // cross-session recurring issue, lower when it came from a generic
-  // open in-progress fallback.
-  const looksLikeRecurringDrivenTopic = /반복|recurring/i.test(topic);
-  const confidence = looksLikeRecurringDrivenTopic ? 0.7 : 0.5;
-  const evidenceSessions = memory.recentSessions
-    .filter((session) => session.isCurrent || session.loadStatus === "loaded")
-    .slice(0, 3);
-  const evidenceRefs: MemoryEvidenceRef[] = evidenceSessions.map((session) => ({
-    kind: "session",
-    sessionId: session.sessionId,
-    sessionTitle: session.title,
-  }));
-  return {
-    id: makeProposalId("nextSessionRecommendation", topic),
-    kind: "nextSessionRecommendation",
-    title: topic,
-    summary: topic,
-    rationale: looksLikeRecurringDrivenTopic
-      ? "Recommended because a recurring issue appears across multiple sessions."
-      : "Recommended from the active session's open risks / next-actions.",
-    confidence,
-    importance: looksLikeRecurringDrivenTopic ? "high" : "medium",
-    evidenceRefs,
-    sourceSessionIds: evidenceSessions.map((session) => session.sessionId),
-    relatedIssueIds: [],
-    relatedDecisionIds: [],
-    proposedAction: "scheduleNextSession",
     status: "proposed",
     createdAt: nowFallback(),
     updatedAt: nowFallback(),

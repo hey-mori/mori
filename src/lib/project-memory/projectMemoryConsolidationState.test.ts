@@ -239,7 +239,8 @@ describe("buildProjectMemoryConsolidationState", () => {
     // Key evidence is evidence, not memory: no longer a proposal.
     expect(state.proposalCounts.keyEvidence).toBe(0);
     expect(state.proposalCounts.unresolvedRisk).toBe(1);
-    expect(state.proposalCounts.nextSessionRecommendation).toBe(1);
+    // A next-session recommendation is a next action, not memory.
+    expect(state.proposalCounts.nextSessionRecommendation).toBe(0);
   });
 
   it("never copies raw source content into the state object", () => {

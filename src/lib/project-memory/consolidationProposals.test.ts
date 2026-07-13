@@ -167,7 +167,7 @@ describe("buildProjectMemoryConsolidationPreview", () => {
     expect(issue!.sourceSessionIds.sort()).toEqual(["s-cur", "s-old"]);
   });
 
-  it("single-session recurring issues are kept-watching, not promoted", () => {
+  it("does not emit a recurring-issue proposal for a single-session issue", () => {
     const preview = buildProjectMemoryConsolidationPreview(
       base({
         recurringIssues: [
@@ -188,8 +188,9 @@ describe("buildProjectMemoryConsolidationPreview", () => {
         ],
       }),
     );
-    const issue = preview.proposals.find((p) => p.kind === "recurringIssue");
-    expect(issue!.proposedAction).toBe("keepWatching");
+    // A single-session issue never recurred, so it is not durable project
+    // memory and produces no recurring-issue proposal.
+    expect(preview.proposals.some((p) => p.kind === "recurringIssue")).toBe(false);
   });
 
   it("does not derive key-evidence as a memory proposal (evidence is not memory)", () => {
@@ -207,19 +208,11 @@ describe("buildProjectMemoryConsolidationPreview", () => {
     expect(risk!.proposedAction).toBe("keepWatching");
   });
 
-  it("derives a nextSessionRecommendation proposal when the topic is meaningful", () => {
+  it("does not derive a next-session recommendation as memory (it is a next action)", () => {
     const preview = buildProjectMemoryConsolidationPreview(base());
-    const next = preview.proposals.find((p) => p.kind === "nextSessionRecommendation");
-    expect(next).toBeDefined();
-    expect(next!.proposedAction).toBe("scheduleNextSession");
-    expect(next!.title).toMatch(/반복 이슈 해소/);
-  });
-
-  it("suppresses the next-session proposal when the topic is the generic fallback", () => {
-    const preview = buildProjectMemoryConsolidationPreview(
-      base({ recommendedNextSession: "현재 세션 메모리를 검토하고 다음 작업 범위를 결정" }),
-    );
-    expect(preview.proposals.find((p) => p.kind === "nextSessionRecommendation")).toBeUndefined();
+    // A next-session recommendation lives in the resume prompt, not memory.
+    expect(preview.proposals.some((p) => p.kind === "nextSessionRecommendation")).toBe(false);
+    expect(preview.proposalCounts.nextSessionRecommendation).toBe(0);
   });
 
   it("warns when basis is activeSessionOnly that consolidation reach is narrow", () => {
@@ -313,19 +306,44 @@ describe("buildProjectMemoryConsolidationPreview", () => {
     // Key evidence is no longer a memory proposal (it is evidence, not memory).
     expect(preview.proposalCounts.keyEvidence).toBe(0);
     expect(preview.proposalCounts.unresolvedRisk).toBe(1);
-    expect(preview.proposalCounts.nextSessionRecommendation).toBe(1);
+    // A next-session recommendation is a next action, not memory.
+    expect(preview.proposalCounts.nextSessionRecommendation).toBe(0);
     // No contradictions / stale memories produced by Phase 2.0.
     expect(preview.proposalCounts.contradiction).toBe(0);
     expect(preview.proposalCounts.staleMemory).toBe(0);
   });
 
-  it("ranks proposals so high-importance / high-confidence rows surface first", () => {
-    const preview = buildProjectMemoryConsolidationPreview(base());
-    const kinds: MemoryProposalKind[] = preview.proposals.map((p) => p.kind);
-    // The high-importance promoted decision and recurring issue should land
-    // before the medium-importance next-session row.
-    const firstIndex = (kind: MemoryProposalKind) => kinds.indexOf(kind);
-    expect(firstIndex("promotedDecision")).toBeLessThan(firstIndex("nextSessionRecommendation"));
-    expect(firstIndex("recurringIssue")).toBeLessThan(firstIndex("nextSessionRecommendation"));
+  it("ranks proposals so high-importance rows surface first", () => {
+    const preview = buildProjectMemoryConsolidationPreview(
+      base({
+        keyDecisions: [
+          {
+            decisionId: "d-low",
+            sessionId: "s-cur",
+            sessionTitle: "Current",
+            sessionIsActive: true,
+            title: "Minor tweak",
+            detail: "x",
+            importance: "low",
+            confirmed: true,
+            createdAt: "2026-05-10T10:00:00Z",
+          },
+          {
+            decisionId: "d-high",
+            sessionId: "s-cur",
+            sessionTitle: "Current",
+            sessionIsActive: true,
+            title: "Big architectural call",
+            detail: "y",
+            importance: "high",
+            confirmed: true,
+            createdAt: "2026-05-10T10:00:00Z",
+          },
+        ],
+      }),
+    );
+    const decisions = preview.proposals.filter((p) => p.kind === "promotedDecision");
+    expect(decisions[0].importance).toBe("high");
+    expect(decisions[1].importance).toBe("low");
   });
 });
