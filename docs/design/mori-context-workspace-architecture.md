@@ -28,6 +28,13 @@ What the user corrected, in order (all accepted here):
 9. Record types are schemas-as-data, never a growing hardcoded enum (§3.2).
 10. The whole pipeline is redefined (§4).
 
+**Round 3 additions (same day, condition of the D0 go-ahead):** §16-§21
+codify the meta-principles the user required before the canonical rewrite:
+decision authority order, the legacy assumption audit, the target-vs-
+transition split, the risk treatment policy, test/doc migration, and legacy
+removal criteria. Two direct user additions are folded in: the **raw-input
+retention invariant** (§16.4) and **low-ceremony use** (§16.3).
+
 ## 1. Product identity (revised statement)
 
 > Mori is a local-first **personal context workspace**. The user throws
@@ -576,5 +583,174 @@ decision lists: this doc **decides** (a) storage = §10.3 staged A→B;
 (b) memory hub + consolidation screens = deprecate per §8.3; (c) `.mori` =
 v1 redesign + v0 import-only; (d) nav set = §8.1; (e) pilot schema set =
 workout + study + note + url-document; (f) record types = schemas as data.
-The single remaining gate is D0: approving this architecture as the basis
-for the canonical goal rewrite.
+D0 was approved 2026-07-14 conditional on §16-§21 below.
+
+## 16. Decision authority order
+
+When designs conflict, judge in this order. A lower item never overrides a
+higher one:
+
+1. The user's real problem and product intent
+2. A long-term coherent user experience
+3. An extensible domain model and data structure
+4. Privacy, data integrity, transparency, reversibility
+5. Migration and existing-user-data compatibility
+6. Reusability of current code and docs
+7. Short-term implementation convenience and change cost
+
+**Existing Mori is material for future Mori, not its boundary.** (기존
+MORI는 미래 MORI를 위한 재료이지, 미래 MORI의 경계가 아니다.) The wrong
+order is: existing code and rules → compute the feasible envelope → shrink
+the new product into it. The right order is: the user's problem → the
+target product → the ideal domain and information structure → safety and
+integrity → then decide which existing assets serve that, and plan the
+migration. Implementation convenience or keeping legacy tests green never
+overrides a product decision; a test that encodes old doctrine is rewritten
+with the doctrine (§20).
+
+### 16.1 Product vs safeguard
+
+Evidence, provenance, review, audit, revisions are not the product's
+purpose; they are what makes the product trustworthy. SQLite, Markdown,
+`.mori`, FTS, SourceLink are not what the user comes for; they are means.
+What the user must see is: 오늘 무엇을 했는가 · 프로젝트가 어떻게
+진행됐는가 · 무엇을 배우고 생각했는가 · 어떤 결정을 했는가 · 무엇이
+반복되고 있는가 · 앞으로 무엇을 해야 하는가 · 과거 기록을 지금 일에
+어떻게 다시 쓰는가. Internal structure never dictates surface vocabulary
+or screen existence.
+
+### 16.2 UI is derived from jobs, not from legacy screens
+
+When designing a surface: do not start from "where do the existing
+components move". Define what the user is trying to do, prove each
+screen's reason to exist against the new IA, and actually remove screens
+that fail the proof. Provenance / revision / lifecycle / audit may live on
+internally without the user managing them under those names.
+
+### 16.3 Low-ceremony use (user addition)
+
+The default experience is: capture → Mori organizes → the user glances.
+Approval ceremonies are the **exception path**, reserved for the §5.2
+matrix's confirm outcomes (mutating existing records, new entities at low
+confidence, sensitive content). A user who never opens the inbox must
+still get a well-organized ledger from auto + provisional outcomes, with
+undo. Extensibility must not cost complexity: a new life domain arrives as
+a schema (data), never as a new surface, new nav item, or new concept the
+user must learn first.
+
+### 16.4 Raw-input retention (user addition, new invariant)
+
+Whenever Mori derives records from an input, including the user's own
+memos, the original input is preserved as a `Source` by default: locally,
+with sensitivity redaction still applied, under user-controllable
+retention. It need not be shown prominently, but it must exist, because
+re-derivation (better models, new schemas, corrected rules) always reads
+the **raw source**, never a previous interpretation. Deleting raw sources
+is a user action with a clear consequence note ("재분석 불가"), never a
+silent policy.
+
+## 17. Legacy assumption audit
+
+Not all current rules have the same strength. Every existing rule is one
+of four classes; the class decides how it is treated during the rewrite.
+
+### 17.1 Invariants (keep; identity-level)
+
+| Rule | Why it arose | Still valid? |
+| --- | --- | --- |
+| No covert capture (camera/screen/keylog/unconnected apps, the A-ban) | Trust identity of the product | Yes, unconditionally |
+| Origin and AI interpretation always distinguishable | Anti-hallucination honesty | Yes; enforced by Source/Derivation |
+| No data loss, no silent overwrite | User owns the ledger | Yes; §12, §19 |
+| Automated changes are visible and reversible | Same | Yes; Revision + undo + disclosure |
+| Never fabricate unknown dates or facts | Honesty | Yes; `timeBasis: unknown` is first-class |
+| Local-first, no cloud default | Trust + ownership | Yes |
+| Raw-input retention for re-derivation | §16.4, this round | Yes (new) |
+
+### 17.2 Policies (legitimate to change with product direction; now changed)
+
+| Old policy | Why it arose | New policy |
+| --- | --- | --- |
+| Every AI interpretation is pre-reviewed | Early trust-building; no policy engine existed | Six-factor apply matrix (§5.2); review is one outcome, not the pipeline |
+| Explicit import only, nothing automatic | Surveillance fears before the A/B line was drawn | Approved-scope auto-sync inside the three rails (scope · review-gate-for-interpretation · transparency) |
+| Import Review screen gates all input | Only one input path existed | Apply confirm mode, only where the matrix demands |
+| 잠정/확정/통합 shown to users | Internal model leaked to surfaces | Internal-only; surfaces speak plain language |
+
+### 17.3 Implementation choices (came from the old architecture, not from principle)
+
+| Choice | Why it arose | Verdict |
+| --- | --- | --- |
+| AI conversation = session spine | 2026-05 session-centric redesign needed an anchor | Superseded by the record ledger (§1) |
+| A Source must belong to a Session | Only sessions existed as containers | Removed: `Source` + `SourceLink` are session-free |
+| Evidence Hub as a destination | Evidence-as-object thinking | Deprecated (§9) |
+| Project Memory as the final aggregation layer | Memory was the only output | Replaced by ledger → aggregate → distill |
+| Session schema at the center of SQLite | First persistence milestone | Kernel tables become the center; session tables feed adapters |
+| `.mori` v0 as the exchange format | Shaped by what existed (sessions + accepted memory) | v1 workspace package (§11) |
+
+### 17.4 Obsolete (high removal likelihood)
+
+Memory hub + consolidation review screens; evidence-centric user
+vocabulary; the mixed 연동 screen; treating the session-centric data flow
+as the universal model. Each follows the §21 removal criteria, not an
+immediate delete.
+
+## 18. Target vs transition architecture
+
+**Target architecture** (§1-§8, §10.3 end state, §11): designed as if no
+legacy existed. **Transition architecture** (§9 verdicts, §12 migration):
+adapters over existing tables, read-compat layers, converters, dual-run
+windows, feature flags, palette-reachable deprecated screens, the v0
+import shim.
+
+The hard rule: **transition concepts never leak into the target.** The
+`Record` kernel must not depend on `Session`; adapters convert sessions
+into `agent-session` records, never the reverse; no kernel field exists
+solely to satisfy a legacy table or test. Every transition artifact
+carries an explicit removal condition (§21) at the moment it is created,
+so temporary things cannot quietly become permanent.
+
+## 19. Risk treatment policy
+
+Risk is a design input, not a veto. "위험하다 / 복잡하다 / 되돌리기
+어렵다" alone never shrinks a direction. For a promising-but-risky
+capability (example: two-way Markdown editing), first design the solution
+space: ownership model, change detection, conflict representation,
+revisions, diff, merge, source of truth, recovery. Then judge by: user
+value · long-term product fit · technical solvability · data-loss
+potential · reversibility · migration cost · long-term debt ·
+recoverability on failure. And symmetrically: "the old way is safer" is
+itself a risk claim to evaluate, because an old way that pins the product
+to the wrong center is the more expensive failure. Where §10.3 stages
+two-way editing, that is a sequencing decision under this policy, not a
+refusal; stage 2 is committed, not hypothetical.
+
+## 20. Test and documentation migration
+
+Tests encode doctrine. When doctrine changes: tests that verify old
+product concepts (mandatory Import Review for all input, session-spine
+invariants, evidence-hub flows) are rewritten or deleted **together with
+the code they guard**; a new feature is never distorted to keep a legacy
+test green. Kernel logic ships with colocated tests from day one
+(existing rule, unchanged). Documentation: every doc that conflicts with
+the new doctrine gets exactly one status, **rewritten** (brought to the
+new model) / **historical** (kept as record, banner says so) /
+**superseded** (banner + pointer to the replacement) / **deleted** (adds
+nothing). No doc may remain ambiguously canonical; a future agent must
+not be able to cite an old doc against the new center in good faith.
+
+## 21. Legacy removal criteria
+
+A deprecated screen, table, adapter, or term is actually removed when all
+hold:
+
+1. Its user jobs are demonstrably served by the new surfaces (per-surface
+   checklist, §8.3 style).
+2. Its data has migrated losslessly and the converter is idempotent,
+   verified against real desktop data with observable diagnostics.
+3. No code path writes to it anymore.
+4. One full validation cycle has passed with the new path as the default.
+5. The removal lands as a normal reviewed commit with migration notes.
+
+Palette-reachability is a transition state with an expiry condition, not a
+retirement home. (This operationalizes the revised retire-don't-delete
+rule: retire is a migration tactic; removal is the intended end state
+once the criteria hold.)
