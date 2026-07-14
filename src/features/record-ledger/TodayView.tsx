@@ -18,6 +18,7 @@ import { useAppStore } from "../../app/store";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
+import { RecordInspector } from "./RecordInspector";
 import { displayTime, schemaLabel, statusBadge } from "./recordPresentation";
 
 /** Records that belong on the ledger: applied work, newest first. Candidates
@@ -35,11 +36,16 @@ export function TodayView() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const ledger = useMemo(() => ledgerRecords(records), [records]);
   const candidateCount = useMemo(
     () => records.filter((record) => record.status === "candidate").length,
     [records],
+  );
+  const selected = useMemo(
+    () => ledger.find((record) => record.id === selectedId) ?? null,
+    [ledger, selectedId],
   );
 
   const submit = async () => {
@@ -64,7 +70,8 @@ export function TodayView() {
 
   return (
     <PageShell maxWidth="full" actionBar={<ActionBar label="오늘" end={inboxAction} />}>
-      <div className="ledger">
+      <div className={`ledger${selected ? " has-inspector" : ""}`}>
+        <div className="ledger-main">
         <form
           className="ledger-capture"
           onSubmit={(event) => {
@@ -120,25 +127,41 @@ export function TodayView() {
               const badge = statusBadge(record.status);
               const time = displayTime(record);
               return (
-                <li key={record.id} className="ledger-row">
-                  <div className="ledger-row-head">
-                    <span className="ledger-row-kind">{schemaLabel(record, registry)}</span>
-                    <span className="ledger-row-title">{record.title}</span>
-                    {badge ? (
-                      <BaseStatusBadge tone={badge.tone}>{badge.label}</BaseStatusBadge>
-                    ) : null}
-                  </div>
-                  <div className="ledger-row-meta">
-                    <span>
-                      {time.isCaptureFallback ? "기록함 " : ""}
-                      {formatClaudeRelativeKo(time.iso)}
-                    </span>
-                  </div>
+                <li key={record.id}>
+                  <button
+                    type="button"
+                    className={`ledger-row${record.id === selectedId ? " is-selected" : ""}`}
+                    onClick={() =>
+                      setSelectedId((current) => (current === record.id ? null : record.id))
+                    }
+                  >
+                    <div className="ledger-row-head">
+                      <span className="ledger-row-kind">{schemaLabel(record, registry)}</span>
+                      <span className="ledger-row-title">{record.title}</span>
+                      {badge ? (
+                        <BaseStatusBadge tone={badge.tone}>{badge.label}</BaseStatusBadge>
+                      ) : null}
+                    </div>
+                    <div className="ledger-row-meta">
+                      <span>
+                        {time.isCaptureFallback ? "기록함 " : ""}
+                        {formatClaudeRelativeKo(time.iso)}
+                      </span>
+                    </div>
+                  </button>
                 </li>
               );
             })}
           </ul>
         )}
+        </div>
+        {selected ? (
+          <RecordInspector
+            record={selected}
+            registry={registry}
+            onClose={() => setSelectedId(null)}
+          />
+        ) : null}
       </div>
     </PageShell>
   );

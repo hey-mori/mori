@@ -225,6 +225,17 @@ export class KernelRepository {
     }
   }
 
+  async getSource(id: string): Promise<KernelResult<KernelSource | null>> {
+    if (!this.isDesktop()) {
+      return browserResult(this.store().getSource(id));
+    }
+    const listed = await this.listObjects<KernelSource>("source", () => {
+      const source = this.store().getSource(id);
+      return source ? [source] : [];
+    });
+    return { ...listed, data: listed.data.find((source) => source.id === id) ?? null };
+  }
+
   async listSourceLinksForRecord(recordId: string): Promise<KernelResult<SourceLink[]>> {
     if (!this.isDesktop()) {
       return browserResult(this.store().listSourceLinksForRecord(recordId));
