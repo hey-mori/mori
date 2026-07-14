@@ -175,14 +175,27 @@ function flattenProviders(groups: ReturnType<typeof buildSourceProviderGroups>):
   return [...groups.agents, ...groups.evidence, ...groups.planned];
 }
 
-export function SourcesView() {
+export function SourcesView({ embedded = false }: { embedded?: boolean } = {}) {
   const draft = useSessionStore((state) => state.draft);
   const sessionView = useSessionStore(selectSessionView);
-  const requestEvidenceImport = useAppStore((state) => state.requestEvidenceImport);
+  const requestEvidenceImportRaw = useAppStore((state) => state.requestEvidenceImport);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
-  const requestStartRecords = useAppStore((state) => state.requestStartRecords);
+  const closeSettingsSheet = useAppStore((state) => state.closeSettingsSheet);
+  const requestStartRecordsRaw = useAppStore((state) => state.requestStartRecords);
   const desktop = isTauriRuntime();
   const hasActiveSession = Boolean(draft);
+
+  // When embedded in the settings sheet, any action that routes to another
+  // surface (import flow, records browser) must first close the sheet so the
+  // destination is not hidden behind the overlay.
+  const requestEvidenceImport: typeof requestEvidenceImportRaw = (kind) => {
+    if (embedded) closeSettingsSheet();
+    requestEvidenceImportRaw(kind);
+  };
+  const requestStartRecords: typeof requestStartRecordsRaw = (agentId) => {
+    if (embedded) closeSettingsSheet();
+    requestStartRecordsRaw(agentId);
+  };
 
   const workspace = useMemo(
     () => buildSourceWorkspace({ isDesktop: desktop, hasActiveSession }),
@@ -355,86 +368,97 @@ export function SourcesView() {
     }
   }
 
+  const search = (
+    <ToolbarSearch
+      value={query}
+      onChange={setQuery}
+      placeholder=""
+      ariaLabel="소스 검색"
+    />
+  );
+
+  const inspector =
+    selectedProvider && selectedMethod ? (
+      <SourceInspector
+        provider={selectedProvider}
+        method={selectedMethod}
+        recordsSelected={recordsSelected}
+        connectStatus={
+          connectModels
+            ? findConnectStatusForProvider(selectedProvider.id, connectModels)
+            : null
+        }
+        inboxAvailable={desktop}
+        inboxFamilies={selectedInboxFamilies}
+        inboxHint={selectedInboxHint}
+        inboxBusy={connectorInboxBusy}
+        inboxStatus={connectorInboxStatus}
+        inboxFreshnessByPath={inboxFreshnessByPath}
+        onReloadConnectStatus={reloadConnectStatus}
+        onRefreshInbox={() => void refreshConnectorInbox()}
+        onCheckInboxFile={(file) => void checkConnectorInboxFile(file)}
+        onOpenConnectorImport={() => requestEvidenceImport("connector")}
+        onSelectMethod={(id) => {
+          setSelectedId(id);
+          setRecordsMode(false);
+        }}
+        onSelectRecords={providerIsAnchor ? () => setRecordsMode(true) : undefined}
+        onAction={() => runSourceAction(selectedMethod.source)}
+        onBrowseRecords={
+          providerIsAnchor
+            ? // providerIsAnchor guarantees the id is an anchor agent id
+              // (ANCHOR_AGENT_IDS = the agent registry), so the start view
+              // opens the records browser scoped to the picked agent.
+              () => requestStartRecords(selectedProvider.id as AgentWorkAgentId)
+            : undefined
+        }
+      />
+    ) : null;
+
+  const groupsBody = hasResults ? (
+    <>
+      <RoleGroup
+        title="에이전트"
+        providers={filtered.agents}
+        selectedId={selectedMethod?.source.id ?? ""}
+        onSelect={selectProvider}
+      />
+      <RoleGroup
+        title="자료"
+        providers={filtered.evidence}
+        selectedId={selectedMethod?.source.id ?? ""}
+        onSelect={selectProvider}
+      />
+      <PlannedRow
+        providers={filtered.planned}
+        selectedId={selectedMethod?.source.id ?? ""}
+        onSelect={selectProvider}
+      />
+    </>
+  ) : (
+    <p className="sources-empty">검색 결과가 없습니다.</p>
+  );
+
+  if (embedded) {
+    return (
+      <div className="sources-embedded">
+        <div className="sources-embedded-search">{search}</div>
+        <div className={`sources-embedded-panes${inspector ? " has-aside" : ""}`}>
+          <div className="sources-embedded-list">{groupsBody}</div>
+          {inspector ? <div className="sources-embedded-aside">{inspector}</div> : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <PageShell
       className="sources-page"
       maxWidth="full"
-      actionBar={
-        <ActionBar
-          label="연동"
-          start={
-            <ToolbarSearch
-              value={query}
-              onChange={setQuery}
-              placeholder=""
-              ariaLabel="소스 검색"
-            />
-          }
-        />
-      }
-      aside={
-        selectedProvider && selectedMethod ? (
-          <SourceInspector
-            provider={selectedProvider}
-            method={selectedMethod}
-            recordsSelected={recordsSelected}
-            connectStatus={
-              connectModels
-                ? findConnectStatusForProvider(selectedProvider.id, connectModels)
-                : null
-            }
-            inboxAvailable={desktop}
-            inboxFamilies={selectedInboxFamilies}
-            inboxHint={selectedInboxHint}
-            inboxBusy={connectorInboxBusy}
-            inboxStatus={connectorInboxStatus}
-            inboxFreshnessByPath={inboxFreshnessByPath}
-            onReloadConnectStatus={reloadConnectStatus}
-            onRefreshInbox={() => void refreshConnectorInbox()}
-            onCheckInboxFile={(file) => void checkConnectorInboxFile(file)}
-            onOpenConnectorImport={() => requestEvidenceImport("connector")}
-            onSelectMethod={(id) => {
-              setSelectedId(id);
-              setRecordsMode(false);
-            }}
-            onSelectRecords={providerIsAnchor ? () => setRecordsMode(true) : undefined}
-            onAction={() => runSourceAction(selectedMethod.source)}
-            onBrowseRecords={
-              providerIsAnchor
-                ? // providerIsAnchor guarantees the id is an anchor agent id
-                  // (ANCHOR_AGENT_IDS = the agent registry), so the start view
-                  // opens the records browser scoped to the picked agent.
-                  () => requestStartRecords(selectedProvider.id as AgentWorkAgentId)
-                : undefined
-            }
-          />
-        ) : null
-      }
+      actionBar={<ActionBar label="연동" start={search} />}
+      aside={inspector}
     >
-      {hasResults ? (
-        <>
-          <RoleGroup
-            title="에이전트"
-            providers={filtered.agents}
-            selectedId={selectedMethod?.source.id ?? ""}
-            onSelect={selectProvider}
-          />
-          <RoleGroup
-            title="자료"
-            providers={filtered.evidence}
-            selectedId={selectedMethod?.source.id ?? ""}
-            onSelect={selectProvider}
-          />
-          <PlannedRow
-            providers={filtered.planned}
-            selectedId={selectedMethod?.source.id ?? ""}
-            onSelect={selectProvider}
-          />
-        </>
-      ) : (
-        <p className="sources-empty">검색 결과가 없습니다.</p>
-      )}
-
+      {groupsBody}
     </PageShell>
   );
 }

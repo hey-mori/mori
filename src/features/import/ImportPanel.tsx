@@ -92,6 +92,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
   const addImport = useSessionStore((state) => state.addImport);
   const removeImport = useSessionStore((state) => state.removeImport);
   const setCurrentView = useAppStore((state) => state.setCurrentView);
+  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
   const beginPendingReview = useSessionStore((state) => state.beginPendingReview);
 
@@ -175,7 +176,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
           이 화면에 실제로 누적됩니다.
         </p>
         <div className="import-actions">
-          <Button variant="primary" icon={Plus} onClick={() => setCurrentView("connections")}>
+          <Button variant="primary" icon={Plus} onClick={() => openSettingsSheet("connections")}>
             소스에서 가져오기
           </Button>
           <Button variant="secondary" icon={Plus} onClick={() => setCurrentView("start")}>

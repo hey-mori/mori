@@ -341,6 +341,10 @@ export const useAppStore = create<AppState>((set) => ({
             settingsSheetOpen: true,
             settingsTab: view === "profile" ? "profile" : "localAi",
           };
+        case "connections":
+          // 연동 is no longer a standalone screen: connection management lives
+          // in the settings sheet. Every "연동 열기" entry point opens it there.
+          return { settingsSheetOpen: true, settingsTab: "connections" };
         default:
           return { currentView: view };
       }

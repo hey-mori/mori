@@ -102,6 +102,7 @@ export function TimelineView({
   const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
   const setHoveredEventId = useAppStore((state) => state.setHoveredEventId);
   const setCurrentView = useAppStore((state) => state.setCurrentView);
+  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
   const focusTimelineEvent = useAppStore((state) => state.focusTimelineEvent);
   const toggleFilter = useAppStore((state) => state.toggleFilter);
@@ -429,7 +430,7 @@ export function TimelineView({
         <TimelineEmptyState
           variant={model.emptyVariant}
           onStartSession={() => setCurrentView("start")}
-          onOpenSources={() => setCurrentView("connections")}
+          onOpenSources={() => openSettingsSheet("connections")}
           onRunQuickPass={() => runQuickPass()}
           canRunQuickPass={analysisStatus !== "running"}
         />

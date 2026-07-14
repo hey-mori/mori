@@ -23,7 +23,7 @@ import { DemoModeCard } from "./DemoModeCard";
 import { DatabaseRecoveryCard } from "./DatabaseRecoveryCard";
 import { NotificationsCard } from "./NotificationsCard";
 import { SettingsSection } from "./SettingsPrimitives";
-import { ConnectionsCard } from "./ConnectionsCard";
+import { SourcesView } from "../sources/SourcesView";
 import { AboutCard } from "./AboutCard";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
@@ -69,7 +69,11 @@ export function SettingsView() {
   }, [loadAnalysisRunHistory, analysis?.runId, initialized]);
 
   return (
-    <div className="settings-content-stack settings-page">
+    <div
+      className={`settings-content-stack settings-page${
+        activeTab === "connections" ? " settings-content-stack--wide" : ""
+      }`}
+    >
       <div className="settings-main">
         {activeTab === "localAi" ? (
           <>
@@ -82,7 +86,7 @@ export function SettingsView() {
             <BackgroundWatchCard />
           </>
         ) : null}
-        {activeTab === "connections" ? <ConnectionsCard /> : null}
+        {activeTab === "connections" ? <SourcesView embedded /> : null}
         {activeTab === "storage" ? (
           <>
             <DatabaseRecoveryCard />

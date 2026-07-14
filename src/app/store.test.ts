@@ -58,10 +58,20 @@ describe("app store — session-centric routing", () => {
   });
 
   it("navigate() passes non-session destinations through unchanged", () => {
-    for (const view of ["home", "memory", "connections", "workspace", "dashboard", "workbench", "start"] as const) {
+    for (const view of ["home", "memory", "workspace", "dashboard", "workbench", "start"] as const) {
       useAppStore.getState().navigate(view);
       expect(useAppStore.getState().currentView).toBe(view);
     }
+  });
+
+  it("navigate('connections') opens the settings sheet on the 연동 tab", () => {
+    useAppStore.setState({ currentView: "home", settingsSheetOpen: false });
+    useAppStore.getState().navigate("connections");
+    const state = useAppStore.getState();
+    expect(state.settingsSheetOpen).toBe(true);
+    expect(state.settingsTab).toBe("connections");
+    // The underlying view does not change; the user keeps their place.
+    expect(state.currentView).toBe("home");
   });
 
   it("navigate('settings') opens the settings sheet instead of routing", () => {
