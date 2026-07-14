@@ -158,7 +158,6 @@ function QuickCapture({ capture }: { capture: RecordLedger["capture"] }) {
           rows={2}
         />
         <div className="ledger-capture-foot">
-          <span className="ledger-capture-hint">운동 · 학습 · 자료 · 메모를 알아서 정리합니다</span>
           <Button
             type="submit"
             variant="primary"

@@ -19,8 +19,11 @@
   position: relative;
   display: grid;
   gap: 5px;
-  padding: 11px 14px 10px;
-  padding-right: 38px;
+  /* One shared inset for head + body so the title and content share a left
+     edge and the panel reads the same at every width (fixed, never
+     width-dependent). */
+  padding: 12px var(--base-space-6) 11px;
+  padding-right: 40px;
   border-bottom: 1px solid var(--line);
   background: white;
 }
@@ -90,7 +93,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 10px 13px 13px;
+  padding: 12px var(--base-space-6) var(--base-space-6);
   display: grid;
   gap: 8px;
   align-content: start;

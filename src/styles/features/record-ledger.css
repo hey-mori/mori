@@ -207,22 +207,28 @@
 .ledger-capture {
   display: grid;
   gap: var(--base-space-4);
-  padding: var(--base-space-6);
+  padding: var(--base-space-6) var(--base-space-6) var(--base-space-5);
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--panel, #fff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ledger-capture:focus-within {
+  border-color: color-mix(in srgb, var(--purple) 42%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--purple) 12%, transparent);
 }
 
 .ledger-capture-input {
   width: 100%;
-  min-height: 52px;
-  resize: vertical;
+  min-height: 60px;
+  resize: none;
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--text);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
   font-family: inherit;
 }
 
@@ -230,17 +236,10 @@
   color: var(--muted-2);
 }
 
+/* Button sits quietly to the right; the field is the surface, not the chrome. */
 .ledger-capture-foot {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--base-space-5);
-  flex-wrap: wrap;
-}
-
-.ledger-capture-hint {
-  font-size: 12px;
-  color: var(--muted-2);
+  justify-content: flex-end;
 }
 
 .ledger-notice {
