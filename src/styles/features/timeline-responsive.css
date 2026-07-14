@@ -307,7 +307,7 @@
     justify-self: start;
   }
 
-  .inspector {
+  .inspector:not(.base-inspector-panel) {
     position: static;
     max-height: none;
     border-left: 1px solid var(--line);

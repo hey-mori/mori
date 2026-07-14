@@ -715,7 +715,7 @@ td a {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .inspector,
+  .inspector:not(.base-inspector-panel),
   .summary-panel,
   .report-builder {
     position: static;
@@ -748,7 +748,7 @@ td a {
     padding-right: 36px;
   }
 
-  .inspector {
+  .inspector:not(.base-inspector-panel) {
     padding: 28px 32px 32px;
   }
 }
