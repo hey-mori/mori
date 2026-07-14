@@ -31,6 +31,7 @@ export type SessionTab =
 export type SettingsTab =
   | "profile"
   | "localAi"
+  | "connections"
   | "privacy"
   | "storage"
   | "repositories"

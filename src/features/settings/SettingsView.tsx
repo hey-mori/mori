@@ -3,6 +3,7 @@ import {
   Bot,
   HardDrive,
   Info,
+  Link2,
   Palette,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -22,10 +23,12 @@ import { DemoModeCard } from "./DemoModeCard";
 import { DatabaseRecoveryCard } from "./DatabaseRecoveryCard";
 import { NotificationsCard } from "./NotificationsCard";
 import { SettingsSection } from "./SettingsPrimitives";
+import { ConnectionsCard } from "./ConnectionsCard";
 import { AboutCard } from "./AboutCard";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "분석 엔진", icon: Bot },
+  { id: "connections", label: "연동", icon: Link2 },
   { id: "storage", label: "저장소", icon: HardDrive },
   { id: "appearance", label: "테마", icon: Palette },
   { id: "notifications", label: "알림", icon: Bell },
@@ -79,6 +82,7 @@ export function SettingsView() {
             <BackgroundWatchCard />
           </>
         ) : null}
+        {activeTab === "connections" ? <ConnectionsCard /> : null}
         {activeTab === "storage" ? (
           <>
             <DatabaseRecoveryCard />

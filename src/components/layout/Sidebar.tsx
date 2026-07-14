@@ -1,10 +1,8 @@
 import {
-  Brain,
   FolderGit2,
   House,
   Layers,
   LayoutDashboard,
-  Link2,
   Network,
   NotebookPen,
   PanelLeftClose,
@@ -46,16 +44,12 @@ import type { ViewKey } from "../../domain/types";
  *  those up instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: viewIcon.home ?? House },
-  // 기록 · the unified record workspace: quick capture + view switcher
-  // (오늘 / 캘린더 / 트래커) + the 확인 필요 queue. Absorbs the former
-  // 오늘 · 캘린더 · 트래커 · 인박스 menus (they were lenses on one ledger).
+  // 기록 · the single record workspace: quick capture + search + a journal
+  // feed with a collapsible calendar and a collapsible 합계 roll-up. Absorbs
+  // the former 오늘 · 캘린더 · 트래커 · 인박스 · 메모리 surfaces (all lenses
+  // on one ledger; durable memory is the feed + search over distilled records).
   { key: "ledger", label: "기록", icon: NotebookPen },
   { key: "liveSession", label: "라이브", icon: Radio },
-  {
-    key: "connections",
-    label: "연동",
-    icon: viewIcon.connections ?? Link2,
-  },
   // 프로젝트 · contexts over records (projects · routines · topics · people).
   // Reframed off the AI-session-only model; the legacy all-projects list and
   // single-project view stay palette-reachable.
@@ -63,11 +57,6 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
     key: "contexts",
     label: "프로젝트",
     icon: viewIcon.workspace ?? FolderGit2,
-  },
-  {
-    key: "memoryHub",
-    label: "메모리",
-    icon: Brain,
   },
   {
     key: "dashboard",
