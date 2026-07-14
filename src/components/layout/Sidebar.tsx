@@ -6,6 +6,7 @@ import {
   Inbox,
   Layers,
   LayoutDashboard,
+  LineChart,
   Link2,
   Network,
   PanelLeftClose,
@@ -71,6 +72,12 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
     key: "memoryHub",
     label: "메모리",
     icon: Brain,
+  },
+  // 트래커 · the ledger rolled up by type and entity with metric totals.
+  {
+    key: "trackers",
+    label: "트래커",
+    icon: LineChart,
   },
   // 인박스 · the capture confirm queue (K2): only the items the apply policy
   // could not auto-organize surface here for a quick 반영 / 무시.

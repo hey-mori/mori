@@ -21,6 +21,7 @@ import { applyRecordPatch } from "../../lib/record-kernel/recordFactory";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type {
   KernelEntity,
+  KernelRelation,
   KernelRule,
   MoriRecord,
   RecordStatus,
@@ -31,6 +32,7 @@ export type RecordLedger = {
   records: MoriRecord[];
   registry: SchemaRegistry;
   entities: KernelEntity[];
+  relations: KernelRelation[];
   loading: boolean;
   reload: () => Promise<void>;
   capture: (input: CaptureInput) => Promise<CaptureOutcome>;
@@ -45,6 +47,7 @@ export function useRecordLedger(): RecordLedger {
   const [userSchemas, setUserSchemas] = useState<SchemaDefinition[]>([]);
   const [rules, setRules] = useState<KernelRule[]>([]);
   const [entities, setEntities] = useState<KernelEntity[]>([]);
+  const [relations, setRelations] = useState<KernelRelation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const registry = useMemo(() => {
@@ -59,15 +62,18 @@ export function useRecordLedger(): RecordLedger {
 
   const reload = useCallback(async () => {
     const repo = getKernelRepository();
-    const [recordsResult, schemasResult, rulesResult, entitiesResult] = await Promise.all([
-      repo.listRecords(),
-      repo.listUserSchemas(),
-      repo.listRules(),
-      repo.listEntities(),
-    ]);
+    const [recordsResult, schemasResult, rulesResult, entitiesResult, relationsResult] =
+      await Promise.all([
+        repo.listRecords(),
+        repo.listUserSchemas(),
+        repo.listRules(),
+        repo.listEntities(),
+        repo.listRelations(),
+      ]);
     setUserSchemas(schemasResult.data);
     setRules(rulesResult.data);
     setEntities(entitiesResult.data);
+    setRelations(relationsResult.data);
     setRecords(recordsResult.data);
     setLoading(false);
   }, []);
@@ -122,5 +128,15 @@ export function useRecordLedger(): RecordLedger {
     [registry, reload],
   );
 
-  return { records, registry, entities, loading, reload, capture, setStatus, renameEntity };
+  return {
+    records,
+    registry,
+    entities,
+    relations,
+    loading,
+    reload,
+    capture,
+    setStatus,
+    renameEntity,
+  };
 }

@@ -304,15 +304,17 @@ export class KernelRepository {
     }
   }
 
+  async listRelations(): Promise<KernelResult<KernelRelation[]>> {
+    return this.listObjects<KernelRelation>("relation", () => this.store().listRelations());
+  }
+
   async listRelationsForRecord(recordId: string): Promise<KernelResult<KernelRelation[]>> {
     if (!this.isDesktop()) {
       return browserResult(
         this.store().listRelations().filter((relation) => relation.fromRecordId === recordId),
       );
     }
-    const listed = await this.listObjects<KernelRelation>("relation", () =>
-      this.store().listRelations(),
-    );
+    const listed = await this.listRelations();
     return { ...listed, data: listed.data.filter((relation) => relation.fromRecordId === recordId) };
   }
 

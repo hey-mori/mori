@@ -305,6 +305,78 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── 트래커 ─────────────────────────────────────────────────────────────── */
+
+.tracker {
+  display: grid;
+  gap: var(--base-space-7);
+  align-content: start;
+}
+
+.tracker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tracker-group {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel, #fff);
+}
+
+.tracker-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tracker-group-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tracker-group-stat {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--purple);
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-entities {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tracker-entity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.tracker-entity-name {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tracker-entity-stat {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── 인박스 ─────────────────────────────────────────────────────────────── */
 
 .inbox {

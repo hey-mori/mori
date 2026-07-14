@@ -38,6 +38,8 @@ export type ViewKey =
   | "today"
   /** 캘린더 · the record ledger grouped by the day the activity happened. */
   | "calendar"
+  /** 트래커 · the ledger rolled up by schema and entity with metric totals. */
+  | "trackers"
   /** 인박스 · captures awaiting review: confirm cards from the apply policy,
    *  plus date-unknown and exception items (K2). */
   | "captureInbox"

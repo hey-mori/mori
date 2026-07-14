@@ -93,6 +93,11 @@ const CalendarView = lazy(() =>
     default: m.CalendarView,
   })),
 );
+const TrackerView = lazy(() =>
+  import("../features/record-ledger/TrackerView").then((m) => ({
+    default: m.TrackerView,
+  })),
+);
 const CaptureInboxView = lazy(() =>
   import("../features/record-ledger/CaptureInboxView").then((m) => ({
     default: m.CaptureInboxView,
@@ -187,6 +192,7 @@ export default function App() {
             {currentView === "memoryHub" ? <MemoryHubView /> : null}
             {currentView === "today" ? <TodayView /> : null}
             {currentView === "calendar" ? <CalendarView /> : null}
+            {currentView === "trackers" ? <TrackerView /> : null}
             {currentView === "captureInbox" ? <CaptureInboxView /> : null}
           </Suspense>
         </ErrorBoundary>
