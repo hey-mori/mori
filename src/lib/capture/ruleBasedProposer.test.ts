@@ -63,10 +63,25 @@ describe("proposeRecords · pilot schemas", () => {
     expect(proposal.timeBasis).toBe("unknown");
   });
 
-  it("never fabricates an activity time when the user gave no hint", () => {
+  it("never fabricates an activity time when no hint and no date word", () => {
     const [proposal] = proposeRecords(textInput("운동 러닝 10분"));
     expect(proposal.occurredStart).toBeUndefined();
     expect(proposal.timeBasis).toBe("unknown");
+  });
+
+  it("infers the activity date from a date word, marked ai-inferred", () => {
+    const [proposal] = proposeRecords(textInput("오늘 러닝 10분"), {
+      now: () => new Date("2026-07-14T09:00:00Z"),
+    });
+    expect(proposal.occurredStart).toBe("2026-07-14");
+    expect(proposal.timeBasis).toBe("ai-inferred");
+    expect(proposal.timeConfidence).toBe(0.9);
+  });
+
+  it("lets an explicit hint win over an inferred date word", () => {
+    const [proposal] = proposeRecords(textInput("어제 러닝 10분", "2026-07-01"));
+    expect(proposal.occurredStart).toBe("2026-07-01");
+    expect(proposal.timeBasis).toBe("user-provided");
   });
 
   it("returns nothing for empty content", () => {

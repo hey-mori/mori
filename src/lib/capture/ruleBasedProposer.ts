@@ -10,6 +10,7 @@
  */
 import type { RecordProposal } from "./captureTypes";
 import type { CaptureInput } from "./captureTypes";
+import { inferOccurredTime } from "./dateInference";
 
 /** Injected clock keeps proposals deterministic in tests. */
 export type ProposerOptions = {
@@ -81,7 +82,12 @@ function titleFrom(content: string, fallback: string): string {
   return clipped.length > 0 ? clipped : fallback;
 }
 
-function noteProposal(content: string, timeBasis: RecordProposal["timeBasis"], occurredStart?: string): RecordProposal {
+function noteProposal(
+  content: string,
+  timeBasis: RecordProposal["timeBasis"],
+  occurredStart?: string,
+  timeConfidence?: number,
+): RecordProposal {
   return {
     schemaId: "note",
     title: titleFrom(content, "메모"),
@@ -89,6 +95,7 @@ function noteProposal(content: string, timeBasis: RecordProposal["timeBasis"], o
     properties: {},
     occurredStart,
     timeBasis,
+    timeConfidence,
     // A note is the safe fallback: it never structures, so it is always a
     // faithful capture of what the user wrote. High confidence by design.
     confidence: 1,
@@ -117,10 +124,18 @@ export function proposeRecords(input: CaptureInput, options: ProposerOptions = {
   const content = input.content.trim();
   if (content.length === 0) return [];
 
-  const occurredStart = input.occurredHint;
-  // User-typed captures carry an activity time only when the user provided a
-  // hint; the proposer never fabricates a date (three-time honesty).
-  const timeBasis: RecordProposal["timeBasis"] = occurredStart ? "user-provided" : "unknown";
+  // Activity time: an explicit hint wins; otherwise infer from a date word in
+  // the text (marked ai-inferred). Absent both, the record stays `unknown` and
+  // no date is fabricated (three-time honesty).
+  const now = (options.now ?? (() => new Date()))();
+  const inferred = input.occurredHint ? null : inferOccurredTime(content, now);
+  const occurredStart = input.occurredHint ?? inferred?.occurredStart;
+  const timeBasis: RecordProposal["timeBasis"] = input.occurredHint
+    ? "user-provided"
+    : inferred
+      ? "ai-inferred"
+      : "unknown";
+  const timeConfidence = inferred?.confidence;
 
   if (input.kind === "url" || URL_RE.test(content)) {
     const url = input.url ?? content.match(URL_RE)?.[0] ?? content;
@@ -132,6 +147,7 @@ export function proposeRecords(input: CaptureInput, options: ProposerOptions = {
         properties: { url },
         occurredStart,
         timeBasis,
+        timeConfidence,
         // The URL itself is certain; the page body is not fetched yet, so this
         // is a faithful pointer, not an interpretation of contents.
         confidence: 0.9,
@@ -158,6 +174,7 @@ export function proposeRecords(input: CaptureInput, options: ProposerOptions = {
         properties,
         occurredStart,
         timeBasis,
+        timeConfidence,
         confidence: 0.75,
         rationale: "운동 관련 표현을 찾아 운동 기록으로 정리합니다",
         entityMentions: mentions.map((name) => ({ type: "exercise", canonicalName: name })),
@@ -176,6 +193,7 @@ export function proposeRecords(input: CaptureInput, options: ProposerOptions = {
         properties: subject ? { subject } : {},
         occurredStart,
         timeBasis,
+        timeConfidence,
         confidence: 0.7,
         rationale: "학습 관련 표현을 찾아 학습 기록으로 정리합니다",
         entityMentions: [],
@@ -183,5 +201,5 @@ export function proposeRecords(input: CaptureInput, options: ProposerOptions = {
     ];
   }
 
-  return [noteProposal(content, timeBasis, occurredStart)];
+  return [noteProposal(content, timeBasis, occurredStart, timeConfidence)];
 }

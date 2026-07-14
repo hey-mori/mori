@@ -15,6 +15,7 @@ export {
   type AutomationLevel,
 } from "./applyPolicy";
 export { proposeRecords, type ProposerOptions } from "./ruleBasedProposer";
+export { inferOccurredTime, type InferredTime } from "./dateInference";
 export {
   automationLevelFor,
   buildAliasRule,

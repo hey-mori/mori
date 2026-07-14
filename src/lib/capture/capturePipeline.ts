@@ -146,6 +146,7 @@ export function runCapturePipeline(
         body: proposal.body,
         occurredStart: proposal.occurredStart,
         timeBasis: proposal.timeBasis,
+        timeConfidence: proposal.timeConfidence,
         origin: originForProposal(proposal),
         status: statusForDecision(evaluation.decision),
         contextIds: addedContextIds,

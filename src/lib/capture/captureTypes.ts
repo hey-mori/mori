@@ -34,6 +34,8 @@ export type RecordProposal = {
   properties: Record<string, RecordPropertyValue>;
   occurredStart?: string;
   timeBasis: TimeBasis;
+  /** 0..1 confidence in the activity time, when it was inferred. */
+  timeConfidence?: number;
   /** 0..1 confidence in this interpretation (not in the raw text). */
   confidence: number;
   /** Human-readable one-liner of why this schema was chosen. */
