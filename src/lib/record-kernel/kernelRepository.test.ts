@@ -100,6 +100,30 @@ describe("KernelRepository · desktop mode", () => {
     expect(revisions.data[0]?.id).toBe(revision.id);
   });
 
+  it("round-trips personalization rules through kernel objects", async () => {
+    const commands = desktopCommands();
+    const repository = new KernelRepository({
+      runtime: "desktop",
+      store: new KernelBrowserStore(new MemoryKeyValueStorage()),
+      commands,
+    });
+    const rule = {
+      id: "rule-1",
+      kind: "alias" as const,
+      condition: { alias: "달리기" },
+      effect: { canonicalName: "러닝" },
+      learnedFromRevisionIds: [],
+      enabled: true,
+      createdAt: "2026-07-14",
+    };
+    await repository.saveRule(rule);
+    expect(commands.saveKernelObjectRows).toHaveBeenCalledWith([
+      expect.objectContaining({ collection: "rule", id: "rule-1" }),
+    ]);
+    const listed = await repository.listRules();
+    expect(listed.data).toEqual([rule]);
+  });
+
   it("round-trips contexts and user schemas through kernel objects", async () => {
     const commands = desktopCommands();
     const repository = new KernelRepository({

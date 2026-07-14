@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createSchemaRegistry } from "../record-kernel/schemaRegistry";
+import type { KernelRule } from "../record-kernel/kernelTypes";
 import { runCapturePipeline } from "./capturePipeline";
 import type { CaptureInput } from "./captureTypes";
 
@@ -69,6 +70,52 @@ describe("runCapturePipeline", () => {
       automationForSchema: (schemaId) => (schemaId === "workout" ? "manual" : "auto"),
     });
     expect(outcome.records[0].decision).toBe("confirm");
+  });
+
+  it("applies an automation-level rule so a schema always confirms", () => {
+    const rules: KernelRule[] = [
+      {
+        id: "auto-1",
+        kind: "automation-level",
+        condition: { schemaId: "workout" },
+        effect: { level: "manual" },
+        learnedFromRevisionIds: [],
+        enabled: true,
+        createdAt: "2026-07-14",
+      },
+    ];
+    const outcome = runCapturePipeline(text("러닝 10분", "2026-07-14"), registry, {
+      now,
+      knownEntityNames: new Set(["러닝"]),
+      rules,
+    });
+    expect(outcome.records[0].decision).toBe("confirm");
+  });
+
+  it("reclassifies via a classification rule and attaches a bound context", () => {
+    const rules: KernelRule[] = [
+      {
+        id: "class-1",
+        kind: "classification",
+        condition: { keywords: ["회고"] },
+        effect: { schemaId: "reflection" },
+        learnedFromRevisionIds: [],
+        enabled: true,
+        createdAt: "2026-07-14",
+      },
+      {
+        id: "bind-1",
+        kind: "context-binding",
+        condition: { keywords: ["회고"] },
+        effect: { contextId: "ctx-journal" },
+        learnedFromRevisionIds: [],
+        enabled: true,
+        createdAt: "2026-07-14",
+      },
+    ];
+    const outcome = runCapturePipeline(text("오늘 하루 회고"), registry, { now, rules });
+    expect(outcome.records[0].created.record.schemaId).toBe("reflection");
+    expect(outcome.records[0].created.record.contextIds).toEqual(["ctx-journal"]);
   });
 
   it("accepts a swapped proposer without changing orchestration", () => {

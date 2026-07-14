@@ -16,6 +16,13 @@ export {
 } from "./applyPolicy";
 export { proposeRecords, type ProposerOptions } from "./ruleBasedProposer";
 export {
+  automationLevelFor,
+  buildAliasRule,
+  classifyProposal,
+  normalizeEntityName,
+  type ClassificationResult,
+} from "./personalization";
+export {
   runCapturePipeline,
   type CaptureOutcome,
   type CapturePipelineOptions,

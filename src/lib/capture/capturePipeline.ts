@@ -21,6 +21,7 @@ import type {
   SourceLink,
 } from "../record-kernel/kernelTypes";
 import { containsLikelySecret } from "../connectors/redaction";
+import type { KernelRule } from "../record-kernel/kernelTypes";
 import {
   evaluateApply,
   statusForDecision,
@@ -28,6 +29,11 @@ import {
   type AutomationLevel,
 } from "./applyPolicy";
 import type { CaptureInput, RecordProposal } from "./captureTypes";
+import {
+  automationLevelFor,
+  classifyProposal,
+  normalizeEntityName,
+} from "./personalization";
 import { proposeRecords, type ProposerOptions } from "./ruleBasedProposer";
 
 /** One proposed record resolved to a concrete apply decision + built record. */
@@ -47,11 +53,33 @@ export type CaptureOutcome = {
 };
 
 export type CapturePipelineOptions = ProposerOptions & {
-  /** Per-schema automation level; defaults to `auto` for unlisted schemas. */
+  /** Per-schema automation level; defaults to `auto` for unlisted schemas.
+   *  Overridden by any matching automation-level rule in `rules`. */
   automationForSchema?: (schemaId: string) => AutomationLevel;
+  /** The user's personalization rules (alias / classification /
+   *  context-binding / automation-level), applied to every proposal. */
+  rules?: KernelRule[];
   /** Swap the proposer (e.g. an LLM one) without touching orchestration. */
   propose?: (input: CaptureInput, options: ProposerOptions) => RecordProposal[];
 };
+
+/** Applies the user's rules to one proposal: canonicalise entity mentions,
+ *  reclassify the schema, and attach bound contexts. Returns the adjusted
+ *  proposal plus the contexts the rules added. */
+function personalizeProposal(
+  proposal: RecordProposal,
+  rules: KernelRule[],
+): { proposal: RecordProposal; addedContextIds: string[] } {
+  const entityMentions = proposal.entityMentions.map((mention) => ({
+    ...mention,
+    canonicalName: normalizeEntityName(mention.canonicalName, rules),
+  }));
+  const classification = classifyProposal(proposal, rules);
+  return {
+    proposal: { ...proposal, entityMentions, schemaId: classification.schemaId },
+    addedContextIds: classification.addedContextIds,
+  };
+}
 
 function sourceKindFor(input: CaptureInput): KernelSource["kind"] {
   return input.kind;
@@ -88,17 +116,26 @@ export function runCapturePipeline(
   };
 
   const propose = options.propose ?? proposeRecords;
-  const proposals = propose(input, options);
-  const automationFor = options.automationForSchema ?? (() => "auto" as AutomationLevel);
+  const rawProposals = propose(input, options);
+  const rules = options.rules ?? [];
+  const schemaAutomationOverride = options.automationForSchema;
 
-  const records = proposals.map<CaptureRecordOutcome>((proposal) => {
+  const records = rawProposals.map<CaptureRecordOutcome>((rawProposal) => {
+    const { proposal, addedContextIds } = personalizeProposal(rawProposal, rules);
+    // Rules win when present; otherwise the caller's per-schema default, else auto.
+    const ruleLevel = automationLevelFor(
+      proposal.schemaId,
+      addedContextIds,
+      rules,
+      schemaAutomationOverride ? schemaAutomationOverride(proposal.schemaId) : "auto",
+    );
     const evaluation = evaluateApply({
       confidence: proposal.confidence,
       // The pilot only ever creates new records; mutation lands in a later slice.
       mutatesExisting: false,
       createsNewEntity: proposal.introducesNewEntity ?? false,
       sensitive,
-      automationLevel: automationFor(proposal.schemaId),
+      automationLevel: ruleLevel,
       reversible: true,
     });
 
@@ -111,6 +148,7 @@ export function runCapturePipeline(
         timeBasis: proposal.timeBasis,
         origin: originForProposal(proposal),
         status: statusForDecision(evaluation.decision),
+        contextIds: addedContextIds,
         properties: proposal.properties,
         now,
       },

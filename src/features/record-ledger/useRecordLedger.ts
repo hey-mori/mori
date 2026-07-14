@@ -14,7 +14,12 @@ import { runCapturePipeline, type CaptureInput, type CaptureOutcome } from "../.
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { applyRecordPatch } from "../../lib/record-kernel/recordFactory";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
-import type { MoriRecord, RecordStatus, SchemaDefinition } from "../../lib/record-kernel/kernelTypes";
+import type {
+  KernelRule,
+  MoriRecord,
+  RecordStatus,
+  SchemaDefinition,
+} from "../../lib/record-kernel/kernelTypes";
 
 export type RecordLedger = {
   records: MoriRecord[];
@@ -28,6 +33,7 @@ export type RecordLedger = {
 export function useRecordLedger(): RecordLedger {
   const [records, setRecords] = useState<MoriRecord[]>([]);
   const [userSchemas, setUserSchemas] = useState<SchemaDefinition[]>([]);
+  const [rules, setRules] = useState<KernelRule[]>([]);
   const [loading, setLoading] = useState(true);
 
   const registry = useMemo(() => {
@@ -42,11 +48,13 @@ export function useRecordLedger(): RecordLedger {
 
   const reload = useCallback(async () => {
     const repo = getKernelRepository();
-    const [recordsResult, schemasResult] = await Promise.all([
+    const [recordsResult, schemasResult, rulesResult] = await Promise.all([
       repo.listRecords(),
       repo.listUserSchemas(),
+      repo.listRules(),
     ]);
     setUserSchemas(schemasResult.data);
+    setRules(rulesResult.data);
     setRecords(recordsResult.data);
     setLoading(false);
   }, []);
@@ -58,7 +66,10 @@ export function useRecordLedger(): RecordLedger {
   const capture = useCallback(
     async (input: CaptureInput) => {
       const repo = getKernelRepository();
-      const outcome = runCapturePipeline(input, registry);
+      // The pipeline honours the user's saved personalization rules (classify,
+      // context-binding, automation level). Rule creation arrives with the
+      // entity / rename surface; captures already respect any stored rules.
+      const outcome = runCapturePipeline(input, registry, { rules });
       // Source first: the raw trace is preserved before any interpretation,
       // so a later failure never loses what the user typed.
       await repo.saveSource(outcome.source);
@@ -69,7 +80,7 @@ export function useRecordLedger(): RecordLedger {
       await reload();
       return outcome;
     },
-    [registry, reload],
+    [registry, rules, reload],
   );
 
   const setStatus = useCallback(

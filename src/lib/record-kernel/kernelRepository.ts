@@ -29,6 +29,7 @@ import { KernelBrowserStore } from "./kernelStore";
 import type {
   KernelContext,
   KernelRevision,
+  KernelRule,
   KernelSource,
   MoriRecord,
   SchemaDefinition,
@@ -252,6 +253,24 @@ export class KernelRepository {
 
   async listUserSchemas(): Promise<KernelResult<SchemaDefinition[]>> {
     return this.listObjects<SchemaDefinition>("userSchema", () => this.store().listUserSchemas());
+  }
+
+  async saveRule(rule: KernelRule): Promise<KernelResult<KernelRule>> {
+    if (!this.isDesktop()) {
+      this.store().saveRule(rule);
+      return browserResult(rule);
+    }
+    try {
+      await this.commands.saveKernelObjectRows([toSqliteKernelObjectRow("rule", rule.id, rule)]);
+      return desktopResult(rule);
+    } catch (error) {
+      this.store().saveRule(rule);
+      return fallbackResult(rule, error);
+    }
+  }
+
+  async listRules(): Promise<KernelResult<KernelRule[]>> {
+    return this.listObjects<KernelRule>("rule", () => this.store().listRules());
   }
 
   async listRevisions(recordId: string): Promise<KernelResult<KernelRevision[]>> {
