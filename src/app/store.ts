@@ -311,6 +311,13 @@ export const useAppStore = create<AppState>((set) => ({
   navigate: (view) =>
     set(() => {
       switch (view) {
+        case "today":
+        case "calendar":
+        case "trackers":
+        case "captureInbox":
+          // The ledger lenses unified into one 기록 workspace; legacy keys
+          // resolve there so existing deep links keep working.
+          return { currentView: "ledger" };
         case "timeline":
         case "flow":
           return { currentView: "session", sessionTab: "flow" };

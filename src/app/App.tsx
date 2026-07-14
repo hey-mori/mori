@@ -83,24 +83,9 @@ const MemoryHubView = lazy(() =>
     default: m.MemoryHubView,
   })),
 );
-const TodayView = lazy(() =>
-  import("../features/record-ledger/TodayView").then((m) => ({
-    default: m.TodayView,
-  })),
-);
-const CalendarView = lazy(() =>
-  import("../features/record-ledger/CalendarView").then((m) => ({
-    default: m.CalendarView,
-  })),
-);
-const TrackerView = lazy(() =>
-  import("../features/record-ledger/TrackerView").then((m) => ({
-    default: m.TrackerView,
-  })),
-);
-const CaptureInboxView = lazy(() =>
-  import("../features/record-ledger/CaptureInboxView").then((m) => ({
-    default: m.CaptureInboxView,
+const LedgerWorkspace = lazy(() =>
+  import("../features/record-ledger/LedgerWorkspace").then((m) => ({
+    default: m.LedgerWorkspace,
   })),
 );
 export default function App() {
@@ -190,10 +175,7 @@ export default function App() {
             {currentView === "graph" ? <GraphView /> : null}
             {currentView === "liveSession" ? <LiveSessionView /> : null}
             {currentView === "memoryHub" ? <MemoryHubView /> : null}
-            {currentView === "today" ? <TodayView /> : null}
-            {currentView === "calendar" ? <CalendarView /> : null}
-            {currentView === "trackers" ? <TrackerView /> : null}
-            {currentView === "captureInbox" ? <CaptureInboxView /> : null}
+            {currentView === "ledger" ? <LedgerWorkspace /> : null}
           </Suspense>
         </ErrorBoundary>
       </AppShell>

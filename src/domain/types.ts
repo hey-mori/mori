@@ -33,15 +33,16 @@ export type ViewKey =
    *  filters, and provenance across every project (the per-project memory
    *  overview stays on `memory`). */
   | "memoryHub"
-  /** 오늘 · the record ledger for a day: what the user captured and did,
-   *  with quick capture at the top. First surface of the record kernel (K2). */
+  /** 기록 · the unified record-workspace: quick capture + view switcher
+   *  (오늘 / 캘린더 / 트래커) + the confirm queue. Absorbs the former
+   *  today / calendar / trackers / captureInbox menus. */
+  | "ledger"
+  /** Legacy ledger-lens keys, normalised to `ledger` by `navigate`. Kept so
+   *  existing deep links (e.g. the session 활동으로 기록 action) resolve. */
   | "today"
-  /** 캘린더 · the record ledger grouped by the day the activity happened. */
   | "calendar"
-  /** 트래커 · the ledger rolled up by schema and entity with metric totals. */
   | "trackers"
-  /** 인박스 · captures awaiting review: confirm cards from the apply policy,
-   *  plus date-unknown and exception items (K2). */
+  /** Legacy inbox key, normalised to `ledger`. */
   | "captureInbox"
   | "profile"
   | "login"

@@ -163,8 +163,8 @@ export function OverviewView() {
               <WorkShapeBar lanes={workSummary.digest.lanes} />
               <div className="session-overview-actions">
                 {recordState === "done" ? (
-                  <Button variant="secondary" size="sm" onClick={() => navigate("today")}>
-                    오늘에서 보기
+                  <Button variant="secondary" size="sm" onClick={() => navigate("ledger")}>
+                    기록에서 보기
                   </Button>
                 ) : (
                   <Button
