@@ -88,6 +88,11 @@ const TodayView = lazy(() =>
     default: m.TodayView,
   })),
 );
+const CalendarView = lazy(() =>
+  import("../features/record-ledger/CalendarView").then((m) => ({
+    default: m.CalendarView,
+  })),
+);
 const CaptureInboxView = lazy(() =>
   import("../features/record-ledger/CaptureInboxView").then((m) => ({
     default: m.CaptureInboxView,
@@ -181,6 +186,7 @@ export default function App() {
             {currentView === "liveSession" ? <LiveSessionView /> : null}
             {currentView === "memoryHub" ? <MemoryHubView /> : null}
             {currentView === "today" ? <TodayView /> : null}
+            {currentView === "calendar" ? <CalendarView /> : null}
             {currentView === "captureInbox" ? <CaptureInboxView /> : null}
           </Suspense>
         </ErrorBoundary>

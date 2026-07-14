@@ -1,5 +1,6 @@
 import {
   Brain,
+  CalendarDays,
   FolderGit2,
   House,
   Inbox,
@@ -50,6 +51,8 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   // 오늘 · the record ledger + quick capture (K2). First surface of the
   // record kernel; leads the nav next to 홈 as the everyday landing spot.
   { key: "today", label: "오늘", icon: Sun },
+  // 캘린더 · the same ledger by activity day.
+  { key: "calendar", label: "캘린더", icon: CalendarDays },
   { key: "liveSession", label: "라이브", icon: Radio },
   {
     key: "connections",

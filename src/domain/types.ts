@@ -36,6 +36,8 @@ export type ViewKey =
   /** 오늘 · the record ledger for a day: what the user captured and did,
    *  with quick capture at the top. First surface of the record kernel (K2). */
   | "today"
+  /** 캘린더 · the record ledger grouped by the day the activity happened. */
+  | "calendar"
   /** 인박스 · captures awaiting review: confirm cards from the apply policy,
    *  plus date-unknown and exception items (K2). */
   | "captureInbox"

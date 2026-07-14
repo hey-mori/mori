@@ -276,6 +276,35 @@
   color: var(--muted-2);
 }
 
+/* ── 캘린더 ─────────────────────────────────────────────────────────────── */
+
+.calendar-day {
+  display: grid;
+  gap: 8px;
+}
+
+.calendar-day + .calendar-day {
+  margin-top: var(--base-space-6);
+}
+
+.calendar-day-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding-bottom: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.calendar-day-count {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── 인박스 ─────────────────────────────────────────────────────────────── */
 
 .inbox {

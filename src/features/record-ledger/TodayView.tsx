@@ -13,20 +13,19 @@ import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { Button } from "../../components/ui/Button";
-import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { useAppStore } from "../../app/store";
-import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
+import { LedgerRow } from "./LedgerRow";
 import { RecordInspector } from "./RecordInspector";
-import { displayTime, schemaLabel, statusBadge } from "./recordPresentation";
+import { displayTime, ledgerVisibleRecords } from "./recordPresentation";
 
-/** Records that belong on the ledger: applied work, newest first. Candidates
- *  (the confirm queue) live in 인박스, not here. */
+/** Applied records, newest first. Candidates (the confirm queue) live in
+ *  인박스, not here. */
 function ledgerRecords(records: MoriRecord[]): MoriRecord[] {
-  return records
-    .filter((record) => record.status === "active" || record.status === "provisional")
-    .sort((a, b) => displayTime(b).iso.localeCompare(displayTime(a).iso));
+  return ledgerVisibleRecords(records).sort(
+    (a, b) => displayTime(b).iso.localeCompare(displayTime(a).iso),
+  );
 }
 
 export function TodayView() {
@@ -123,35 +122,17 @@ export function TodayView() {
           />
         ) : (
           <ul className="ledger-list">
-            {ledger.map((record) => {
-              const badge = statusBadge(record.status);
-              const time = displayTime(record);
-              return (
-                <li key={record.id}>
-                  <button
-                    type="button"
-                    className={`ledger-row${record.id === selectedId ? " is-selected" : ""}`}
-                    onClick={() =>
-                      setSelectedId((current) => (current === record.id ? null : record.id))
-                    }
-                  >
-                    <div className="ledger-row-head">
-                      <span className="ledger-row-kind">{schemaLabel(record, registry)}</span>
-                      <span className="ledger-row-title">{record.title}</span>
-                      {badge ? (
-                        <BaseStatusBadge tone={badge.tone}>{badge.label}</BaseStatusBadge>
-                      ) : null}
-                    </div>
-                    <div className="ledger-row-meta">
-                      <span>
-                        {time.isCaptureFallback ? "기록함 " : ""}
-                        {formatClaudeRelativeKo(time.iso)}
-                      </span>
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
+            {ledger.map((record) => (
+              <LedgerRow
+                key={record.id}
+                record={record}
+                registry={registry}
+                selected={record.id === selectedId}
+                onSelect={() =>
+                  setSelectedId((current) => (current === record.id ? null : record.id))
+                }
+              />
+            ))}
           </ul>
         )}
         </div>

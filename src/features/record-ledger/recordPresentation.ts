@@ -16,6 +16,12 @@ export function schemaLabel(record: MoriRecord, registry: SchemaRegistry): strin
   return registry.get(record.schemaId)?.name ?? record.schemaId;
 }
 
+/** Records that belong on the ledger surfaces (오늘 · 캘린더): applied work.
+ *  Candidates live in 인박스; discarded / archived are hidden. */
+export function ledgerVisibleRecords(records: MoriRecord[]): MoriRecord[] {
+  return records.filter((record) => record.status === "active" || record.status === "provisional");
+}
+
 /** Plain-language label for how an activity time was established. */
 export function timeBasisLabel(basis: TimeBasis): string {
   switch (basis) {
