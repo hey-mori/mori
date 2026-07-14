@@ -1,0 +1,71 @@
+# 기록 Workspace · canonical design set
+
+Status: **approved 2026-07-15 (R0)** · supersedes the screen-level 기록
+description in `mori-context-workspace-architecture.md` §8.1 "shipped so far"
+and the transitional feed/calendar structure it describes. The kernel and
+pipeline sections of that document (§3-§7) remain canonical and are the
+foundation this set builds on.
+
+## Product definition (short form)
+
+기록 Workspace is Mori's personal activity ledger: the user drops raw text,
+URLs, files, and conversations with zero friction; Mori structures them into
+typed records placed on honest activity time and context; the user reviews,
+corrects, connects, and reuses them. Capture, organize, and review/reuse are
+one flow on one screen, not three surfaces.
+
+The screen that existed before this redesign (big free-text box + 정리
+button + flat date-grouped list + collapsible month picker + collapsible
+합계 panel + read-only inspector) was the kernel's first debug surface. It
+is the input to the audit, not the baseline for the design.
+
+## Approved information architecture
+
+**Alternative A · timeline ledger + context rail** (see
+`information-architecture.md` for the comparison):
+
+- One journal timeline, no view tabs.
+- AI 정리 is a state of the Composer, not a separate screen.
+- The right rail is one contextual slot: time context (mini calendar +
+  selected-day summary) when nothing is selected, record inspector when a
+  record is selected.
+- 확인 필요 and 날짜 미정 live in a strip above the feed with a card-based
+  resolution flow, never a pile at the bottom.
+- The calendar is a ledger calendar (records visible in cells), reached by
+  expanding the rail mini calendar.
+
+## Documents
+
+| File | Role |
+| --- | --- |
+| `current-state-audit.md` | What actually exists in code today, what fails, Reuse/Adapt/Replace/Remove |
+| `product-and-user-journey.md` | Jobs, Capture→Organize→Review→Place→Reuse journey, apply-policy UX, success scenario |
+| `information-architecture.md` | IA alternatives A/B/C, adoption rationale, layout relationships, narrow-width fallback |
+| `interaction-and-state-spec.md` | Composer state machine, review cards, auto/provisional/confirm, failure states, edit/undo |
+| `time-and-placement-ux.md` | The three-time model in user language, date resolution flow, calendar placement semantics |
+| `screen-specifications.md` | M1-M8 screen specs with example data and empty/loading/error states |
+| `implementation-roadmap.md` | R1-R6 stages, scope, done criteria, transition and removal plan |
+| `worklog.md` | Current stage, done work, changed files, next exact action |
+
+## Implementation stages and current status
+
+| Stage | Scope | Status |
+| --- | --- | --- |
+| R0 | UX redesign, this document set | done (approved) |
+| R1 | Composer state machine, draft recovery, schema-driven quick form | done |
+| R2 | Review candidate cards, edit/exclude, policy-driven density, save + revision + undo | done |
+| R3 | Timeline rows + context rail, route swap, legacy retire | next |
+| R4 | Date-confirmation UX (strip + resolution cards + rules) | pending |
+| R5 | Ledger calendar + full record detail | pending |
+| R6 | Weekly review, routine suggestions, rail aggregates | pending |
+
+## Code entry points
+
+- Kernel: `src/lib/record-kernel/` (types, factory + revisions, schema
+  registry, repository, system schemas)
+- Capture pipeline: `src/lib/capture/` (pipeline, rule-based proposer, date
+  inference, apply policy, personalization, entity resolution)
+- Composer + review (R1/R2): `src/features/record-ledger/composer/`
+- Current (transition) surface: `src/features/record-ledger/LedgerWorkspace.tsx`
+- Routing: `src/app/App.tsx` view `"ledger"`, store normalization in
+  `src/app/store.ts` `navigate()`
