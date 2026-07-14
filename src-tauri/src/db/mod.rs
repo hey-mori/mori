@@ -1,6 +1,7 @@
 pub mod accepted_memory;
 pub mod backup;
 pub mod connection;
+pub mod kernel;
 pub mod migrations;
 pub mod records;
 pub mod repository;
@@ -10,6 +11,12 @@ pub use accepted_memory::{
     append_memory_review_actions, list_accepted_memories, list_all_accepted_memories,
     list_memory_review_actions, save_accepted_memories, AcceptedMemoryRow,
     AcceptedMemoryWriteResult, MemoryReviewActionRow, MemoryReviewActionWriteResult,
+};
+pub use kernel::{
+    append_kernel_revisions, delete_kernel_object, delete_kernel_record, get_kernel_record,
+    list_kernel_objects, list_kernel_records, list_kernel_revisions, save_kernel_objects,
+    save_kernel_records, search_kernel_records, KernelObjectRow, KernelRecordRow,
+    KernelRevisionRow, KernelWriteResult,
 };
 pub use session_imports::{
     list_all_session_imports, list_session_imports, save_session_imports, SessionImportRow,

@@ -19,6 +19,16 @@ export {
 } from "./recordFactory";
 export { KernelBrowserStore } from "./kernelStore";
 export {
+  KernelRepository,
+  getKernelRepository,
+  setKernelRepositoryForTesting,
+  type KernelDesktopCommands,
+  type KernelRepositoryOptions,
+  type KernelResult,
+  type KernelRuntime,
+  type KernelStorageSource,
+} from "./kernelRepository";
+export {
   convertMissingProjectContexts,
   projectContextId,
   projectToContext,

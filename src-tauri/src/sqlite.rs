@@ -9,14 +9,16 @@ use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 
 use crate::db::{
-    append_memory_review_actions, apply_migrations, applied_migrations, clear_all_data,
-    database_path, list_accepted_memories, list_all_accepted_memories, list_all_session_imports,
-    list_memory_review_actions,
+    append_kernel_revisions, append_memory_review_actions, apply_migrations, applied_migrations,
+    clear_all_data, database_path, delete_kernel_object, delete_kernel_record, get_kernel_record,
+    list_accepted_memories, list_all_accepted_memories, list_all_session_imports,
+    list_kernel_objects, list_kernel_records, list_kernel_revisions, list_memory_review_actions,
     list_session_imports, list_sessions, load_session_snapshot, open_database,
-    save_accepted_memories, save_session_imports, save_session_snapshot, AcceptedMemoryRow,
-    AcceptedMemoryWriteResult, ClearAllDataResult, DatabaseStatus, MemoryReviewActionRow,
-    MemoryReviewActionWriteResult, SessionImportRow, SessionImportWriteResult, MIGRATIONS,
-    MIGRATION_TABLE_NAME,
+    save_accepted_memories, save_kernel_objects, save_kernel_records, save_session_imports,
+    save_session_snapshot, search_kernel_records, AcceptedMemoryRow, AcceptedMemoryWriteResult,
+    ClearAllDataResult, DatabaseStatus, KernelObjectRow, KernelRecordRow, KernelRevisionRow,
+    KernelWriteResult, MemoryReviewActionRow, MemoryReviewActionWriteResult, SessionImportRow,
+    SessionImportWriteResult, MIGRATIONS, MIGRATION_TABLE_NAME,
 };
 use crate::db::records::{SessionListEntry, SessionSnapshot, SnapshotPersistResult};
 use crate::package::default_storage_dir;
@@ -201,6 +203,119 @@ pub fn list_memory_review_action_rows(
     with_connection(&state, |conn, _| {
         ensure_migrated(conn)?;
         list_memory_review_actions(conn, &project_id)
+    })
+}
+
+// ── Record kernel (K1) ─────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn save_kernel_record_rows(
+    state: tauri::State<'_, SqliteState>,
+    records: Vec<KernelRecordRow>,
+) -> Result<KernelWriteResult, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        save_kernel_records(conn, &records)
+    })
+}
+
+#[tauri::command]
+pub fn list_kernel_record_rows(
+    state: tauri::State<'_, SqliteState>,
+) -> Result<Vec<KernelRecordRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_kernel_records(conn)
+    })
+}
+
+#[tauri::command]
+pub fn get_kernel_record_row(
+    state: tauri::State<'_, SqliteState>,
+    id: String,
+) -> Result<Option<KernelRecordRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        get_kernel_record(conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn delete_kernel_record_row(
+    state: tauri::State<'_, SqliteState>,
+    id: String,
+) -> Result<usize, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        delete_kernel_record(conn, &id)
+    })
+}
+
+#[tauri::command]
+pub fn search_kernel_record_rows(
+    state: tauri::State<'_, SqliteState>,
+    query: String,
+    limit: Option<i64>,
+) -> Result<Vec<KernelRecordRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        search_kernel_records(conn, &query, limit.unwrap_or(50))
+    })
+}
+
+#[tauri::command]
+pub fn save_kernel_object_rows(
+    state: tauri::State<'_, SqliteState>,
+    objects: Vec<KernelObjectRow>,
+) -> Result<KernelWriteResult, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        save_kernel_objects(conn, &objects)
+    })
+}
+
+#[tauri::command]
+pub fn list_kernel_object_rows(
+    state: tauri::State<'_, SqliteState>,
+    collection: String,
+) -> Result<Vec<KernelObjectRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_kernel_objects(conn, &collection)
+    })
+}
+
+#[tauri::command]
+pub fn delete_kernel_object_row(
+    state: tauri::State<'_, SqliteState>,
+    collection: String,
+    id: String,
+) -> Result<usize, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        delete_kernel_object(conn, &collection, &id)
+    })
+}
+
+#[tauri::command]
+pub fn append_kernel_revision_rows(
+    state: tauri::State<'_, SqliteState>,
+    revisions: Vec<KernelRevisionRow>,
+) -> Result<KernelWriteResult, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        append_kernel_revisions(conn, &revisions)
+    })
+}
+
+#[tauri::command]
+pub fn list_kernel_revision_rows(
+    state: tauri::State<'_, SqliteState>,
+    record_id: String,
+) -> Result<Vec<KernelRevisionRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_kernel_revisions(conn, &record_id)
     })
 }
 

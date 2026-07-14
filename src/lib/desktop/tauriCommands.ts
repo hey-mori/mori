@@ -28,6 +28,12 @@ import type {
   SqliteSessionImportWriteResult,
 } from "../sqlite/sessionImportRows";
 import type {
+  SqliteKernelObjectRow,
+  SqliteKernelRecordRow,
+  SqliteKernelRevisionRow,
+  SqliteKernelWriteResult,
+} from "../sqlite/kernelRows";
+import type {
   ClaudeCodeSessionDelta,
   ClaudeCodeSessionDetail,
   ClaudeCodeSessionMeta,
@@ -79,6 +85,16 @@ export type TauriCommandName =
   | "persist_session_imports"
   | "list_session_import_rows"
   | "list_all_session_import_rows"
+  | "save_kernel_record_rows"
+  | "list_kernel_record_rows"
+  | "get_kernel_record_row"
+  | "delete_kernel_record_row"
+  | "search_kernel_record_rows"
+  | "save_kernel_object_rows"
+  | "list_kernel_object_rows"
+  | "delete_kernel_object_row"
+  | "append_kernel_revision_rows"
+  | "list_kernel_revision_rows"
   | "clear_all_sqlite_data"
   | "reset_sqlite_database"
   | "list_sqlite_backups"
@@ -221,6 +237,34 @@ export type TauriCommandMap = {
   list_memory_review_action_rows: {
     input: { projectId: string };
     output: SqliteMemoryReviewActionRow[];
+  };
+  save_kernel_record_rows: {
+    input: { records: SqliteKernelRecordRow[] };
+    output: SqliteKernelWriteResult;
+  };
+  list_kernel_record_rows: { input: undefined; output: SqliteKernelRecordRow[] };
+  get_kernel_record_row: { input: { id: string }; output: SqliteKernelRecordRow | null };
+  delete_kernel_record_row: { input: { id: string }; output: number };
+  search_kernel_record_rows: {
+    input: { query: string; limit?: number };
+    output: SqliteKernelRecordRow[];
+  };
+  save_kernel_object_rows: {
+    input: { objects: SqliteKernelObjectRow[] };
+    output: SqliteKernelWriteResult;
+  };
+  list_kernel_object_rows: {
+    input: { collection: string };
+    output: SqliteKernelObjectRow[];
+  };
+  delete_kernel_object_row: { input: { collection: string; id: string }; output: number };
+  append_kernel_revision_rows: {
+    input: { revisions: SqliteKernelRevisionRow[] };
+    output: SqliteKernelWriteResult;
+  };
+  list_kernel_revision_rows: {
+    input: { recordId: string };
+    output: SqliteKernelRevisionRow[];
   };
   persist_session_imports: {
     input: { imports: SqliteSessionImportRow[] };
@@ -438,6 +482,36 @@ export const tauriCommands = {
   },
   listMemoryReviewActionRows(projectId: string): Promise<SqliteMemoryReviewActionRow[]> {
     return invokeTauriCommand("list_memory_review_action_rows", { projectId });
+  },
+  saveKernelRecordRows(records: SqliteKernelRecordRow[]): Promise<SqliteKernelWriteResult> {
+    return invokeTauriCommand("save_kernel_record_rows", { records });
+  },
+  listKernelRecordRows(): Promise<SqliteKernelRecordRow[]> {
+    return invokeTauriCommand("list_kernel_record_rows", undefined);
+  },
+  getKernelRecordRow(id: string): Promise<SqliteKernelRecordRow | null> {
+    return invokeTauriCommand("get_kernel_record_row", { id });
+  },
+  deleteKernelRecordRow(id: string): Promise<number> {
+    return invokeTauriCommand("delete_kernel_record_row", { id });
+  },
+  searchKernelRecordRows(query: string, limit?: number): Promise<SqliteKernelRecordRow[]> {
+    return invokeTauriCommand("search_kernel_record_rows", { query, limit });
+  },
+  saveKernelObjectRows(objects: SqliteKernelObjectRow[]): Promise<SqliteKernelWriteResult> {
+    return invokeTauriCommand("save_kernel_object_rows", { objects });
+  },
+  listKernelObjectRows(collection: string): Promise<SqliteKernelObjectRow[]> {
+    return invokeTauriCommand("list_kernel_object_rows", { collection });
+  },
+  deleteKernelObjectRow(collection: string, id: string): Promise<number> {
+    return invokeTauriCommand("delete_kernel_object_row", { collection, id });
+  },
+  appendKernelRevisionRows(revisions: SqliteKernelRevisionRow[]): Promise<SqliteKernelWriteResult> {
+    return invokeTauriCommand("append_kernel_revision_rows", { revisions });
+  },
+  listKernelRevisionRows(recordId: string): Promise<SqliteKernelRevisionRow[]> {
+    return invokeTauriCommand("list_kernel_revision_rows", { recordId });
   },
   persistSessionImports(
     imports: SqliteSessionImportRow[],

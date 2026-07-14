@@ -1,0 +1,276 @@
+/**
+ * Runtime-aware kernel repository.
+ *
+ * Routes kernel reads and writes to the right backend so nothing above it
+ * branches on runtime:
+ *
+ *   - **Browser mode** — `KernelBrowserStore` (localStorage).
+ *   - **Tauri desktop mode** — the `kernel_*` SQLite tables behind the
+ *     `*_kernel_*` Tauri commands (with FTS search).
+ *
+ * Desktop mode prefers SQLite; when a SQLite call fails the operation falls
+ * back to localStorage and reports `fellBack: true` with a reason, never
+ * silently claiming SQLite succeeded (same contract as
+ * `AcceptedMemoryRepository`). Search has no browser FTS: the browser path
+ * is a plain includes() filter, honestly weaker, replaced when a browser
+ * search need actually appears.
+ */
+import { isTauriRuntime, tauriCommands } from "../desktop";
+import {
+  fromSqliteKernelObjectRow,
+  fromSqliteKernelRecordRow,
+  fromSqliteKernelRevisionRow,
+  toSqliteKernelObjectRow,
+  toSqliteKernelRecordRow,
+  toSqliteKernelRevisionRow,
+  type KernelObjectCollection,
+} from "../sqlite/kernelRows";
+import { KernelBrowserStore } from "./kernelStore";
+import type { KernelContext, KernelRevision, MoriRecord, SchemaDefinition } from "./kernelTypes";
+
+export type KernelRuntime = "browser" | "desktop";
+export type KernelStorageSource = "browser-local-storage" | "desktop-sqlite";
+
+export type KernelResult<T> = {
+  data: T;
+  source: KernelStorageSource;
+  fellBack: boolean;
+  fallbackReason?: string;
+};
+
+export type KernelDesktopCommands = {
+  saveKernelRecordRows: typeof tauriCommands.saveKernelRecordRows;
+  listKernelRecordRows: typeof tauriCommands.listKernelRecordRows;
+  getKernelRecordRow: typeof tauriCommands.getKernelRecordRow;
+  deleteKernelRecordRow: typeof tauriCommands.deleteKernelRecordRow;
+  searchKernelRecordRows: typeof tauriCommands.searchKernelRecordRows;
+  saveKernelObjectRows: typeof tauriCommands.saveKernelObjectRows;
+  listKernelObjectRows: typeof tauriCommands.listKernelObjectRows;
+  appendKernelRevisionRows: typeof tauriCommands.appendKernelRevisionRows;
+  listKernelRevisionRows: typeof tauriCommands.listKernelRevisionRows;
+};
+
+export type KernelRepositoryOptions = {
+  /** Defaults to `desktop` inside Tauri, `browser` otherwise. */
+  runtime?: KernelRuntime;
+  /** Browser store (browser path + desktop fallback). */
+  store?: KernelBrowserStore;
+  /** SQLite command bridge (desktop path). */
+  commands?: KernelDesktopCommands;
+};
+
+export class KernelRepository {
+  readonly runtime: KernelRuntime;
+  private readonly storeOverride: KernelBrowserStore | null;
+  private lazyStore: KernelBrowserStore | null = null;
+  private readonly commands: KernelDesktopCommands;
+
+  constructor(options: KernelRepositoryOptions = {}) {
+    this.runtime = options.runtime ?? (isTauriRuntime() ? "desktop" : "browser");
+    this.storeOverride = options.store ?? null;
+    this.commands = options.commands ?? {
+      saveKernelRecordRows: tauriCommands.saveKernelRecordRows,
+      listKernelRecordRows: tauriCommands.listKernelRecordRows,
+      getKernelRecordRow: tauriCommands.getKernelRecordRow,
+      deleteKernelRecordRow: tauriCommands.deleteKernelRecordRow,
+      searchKernelRecordRows: tauriCommands.searchKernelRecordRows,
+      saveKernelObjectRows: tauriCommands.saveKernelObjectRows,
+      listKernelObjectRows: tauriCommands.listKernelObjectRows,
+      appendKernelRevisionRows: tauriCommands.appendKernelRevisionRows,
+      listKernelRevisionRows: tauriCommands.listKernelRevisionRows,
+    };
+  }
+
+  isDesktop(): boolean {
+    return this.runtime === "desktop";
+  }
+
+  private store(): KernelBrowserStore {
+    if (this.storeOverride) return this.storeOverride;
+    if (!this.lazyStore) this.lazyStore = new KernelBrowserStore();
+    return this.lazyStore;
+  }
+
+  /** Persists a record together with its revision, both backends. The pair
+   *  is intentionally one call: a write without its revision would violate
+   *  the visible-and-reversible invariant. */
+  async saveRecord(record: MoriRecord, revision: KernelRevision): Promise<KernelResult<MoriRecord>> {
+    if (!this.isDesktop()) {
+      this.store().saveRecord(record);
+      this.store().appendRevision(revision);
+      return browserResult(record);
+    }
+    try {
+      await this.commands.saveKernelRecordRows([toSqliteKernelRecordRow(record)]);
+      await this.commands.appendKernelRevisionRows([toSqliteKernelRevisionRow(revision)]);
+      return desktopResult(record);
+    } catch (error) {
+      this.store().saveRecord(record);
+      this.store().appendRevision(revision);
+      return fallbackResult(record, error);
+    }
+  }
+
+  async listRecords(): Promise<KernelResult<MoriRecord[]>> {
+    if (!this.isDesktop()) {
+      return browserResult(this.store().listRecords());
+    }
+    try {
+      const rows = await this.commands.listKernelRecordRows();
+      return desktopResult(rows.map(fromSqliteKernelRecordRow));
+    } catch (error) {
+      return fallbackResult(this.store().listRecords(), error);
+    }
+  }
+
+  async getRecord(id: string): Promise<KernelResult<MoriRecord | null>> {
+    if (!this.isDesktop()) {
+      return browserResult(this.store().getRecord(id));
+    }
+    try {
+      const row = await this.commands.getKernelRecordRow(id);
+      return desktopResult(row ? fromSqliteKernelRecordRow(row) : null);
+    } catch (error) {
+      return fallbackResult(this.store().getRecord(id), error);
+    }
+  }
+
+  async deleteRecord(id: string): Promise<KernelResult<boolean>> {
+    if (!this.isDesktop()) {
+      this.store().deleteRecord(id);
+      return browserResult(true);
+    }
+    try {
+      const deleted = await this.commands.deleteKernelRecordRow(id);
+      return desktopResult(deleted > 0);
+    } catch (error) {
+      this.store().deleteRecord(id);
+      return fallbackResult(true, error);
+    }
+  }
+
+  /** FTS on desktop; a plain text filter in the browser (honestly weaker). */
+  async searchRecords(query: string, limit = 50): Promise<KernelResult<MoriRecord[]>> {
+    const text = query.trim();
+    if (text.length === 0) return this.isDesktop() ? desktopResult([]) : browserResult([]);
+    if (!this.isDesktop()) {
+      return browserResult(browserTextSearch(this.store().listRecords(), text, limit));
+    }
+    try {
+      const rows = await this.commands.searchKernelRecordRows(text, limit);
+      return desktopResult(rows.map(fromSqliteKernelRecordRow));
+    } catch (error) {
+      return fallbackResult(browserTextSearch(this.store().listRecords(), text, limit), error);
+    }
+  }
+
+  async saveContext(context: KernelContext): Promise<KernelResult<KernelContext>> {
+    if (!this.isDesktop()) {
+      this.store().saveContext(context);
+      return browserResult(context);
+    }
+    try {
+      await this.commands.saveKernelObjectRows([
+        toSqliteKernelObjectRow("context", context.id, context),
+      ]);
+      return desktopResult(context);
+    } catch (error) {
+      this.store().saveContext(context);
+      return fallbackResult(context, error);
+    }
+  }
+
+  async listContexts(): Promise<KernelResult<KernelContext[]>> {
+    return this.listObjects<KernelContext>("context", () => this.store().listContexts());
+  }
+
+  async saveUserSchema(schema: SchemaDefinition): Promise<KernelResult<SchemaDefinition>> {
+    if (!this.isDesktop()) {
+      this.store().saveUserSchema(schema);
+      return browserResult(schema);
+    }
+    try {
+      await this.commands.saveKernelObjectRows([
+        toSqliteKernelObjectRow("userSchema", schema.id, schema),
+      ]);
+      return desktopResult(schema);
+    } catch (error) {
+      this.store().saveUserSchema(schema);
+      return fallbackResult(schema, error);
+    }
+  }
+
+  async listUserSchemas(): Promise<KernelResult<SchemaDefinition[]>> {
+    return this.listObjects<SchemaDefinition>("userSchema", () => this.store().listUserSchemas());
+  }
+
+  async listRevisions(recordId: string): Promise<KernelResult<KernelRevision[]>> {
+    if (!this.isDesktop()) {
+      return browserResult(this.store().listRevisions(recordId));
+    }
+    try {
+      const rows = await this.commands.listKernelRevisionRows(recordId);
+      return desktopResult(rows.map(fromSqliteKernelRevisionRow));
+    } catch (error) {
+      return fallbackResult(this.store().listRevisions(recordId), error);
+    }
+  }
+
+  private async listObjects<T>(
+    collection: KernelObjectCollection,
+    browserRead: () => T[],
+  ): Promise<KernelResult<T[]>> {
+    if (!this.isDesktop()) {
+      return browserResult(browserRead());
+    }
+    try {
+      const rows = await this.commands.listKernelObjectRows(collection);
+      const parsed = rows
+        .map((row) => fromSqliteKernelObjectRow<T>(row))
+        .filter((item): item is T => item !== null);
+      return desktopResult(parsed);
+    } catch (error) {
+      return fallbackResult(browserRead(), error);
+    }
+  }
+}
+
+function browserTextSearch(records: MoriRecord[], text: string, limit: number): MoriRecord[] {
+  const needle = text.toLowerCase();
+  return records
+    .filter(
+      (record) =>
+        record.title.toLowerCase().includes(needle) || record.body.toLowerCase().includes(needle),
+    )
+    .slice(0, limit);
+}
+
+function browserResult<T>(data: T): KernelResult<T> {
+  return { data, source: "browser-local-storage", fellBack: false };
+}
+
+function desktopResult<T>(data: T): KernelResult<T> {
+  return { data, source: "desktop-sqlite", fellBack: false };
+}
+
+function fallbackResult<T>(data: T, error: unknown): KernelResult<T> {
+  return {
+    data,
+    source: "browser-local-storage",
+    fellBack: true,
+    fallbackReason: error instanceof Error ? error.message : String(error),
+  };
+}
+
+// ─── singleton accessor ───────────────────────────────────────────────
+
+let repositorySingleton: KernelRepository | null = null;
+
+export function getKernelRepository(): KernelRepository {
+  if (!repositorySingleton) repositorySingleton = new KernelRepository();
+  return repositorySingleton;
+}
+
+export function setKernelRepositoryForTesting(repository: KernelRepository | null): void {
+  repositorySingleton = repository;
+}
