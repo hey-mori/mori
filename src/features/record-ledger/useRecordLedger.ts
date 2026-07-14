@@ -19,9 +19,10 @@ import {
   type CaptureOutcome,
 } from "../../lib/capture";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
-import { applyRecordPatch } from "../../lib/record-kernel/recordFactory";
+import { applyRecordPatch, createKernelId } from "../../lib/record-kernel/recordFactory";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type {
+  KernelContext,
   KernelEntity,
   KernelRelation,
   KernelRule,
@@ -35,6 +36,7 @@ export type RecordLedger = {
   registry: SchemaRegistry;
   entities: KernelEntity[];
   relations: KernelRelation[];
+  contexts: KernelContext[];
   loading: boolean;
   reload: () => Promise<void>;
   capture: (input: CaptureInput) => Promise<CaptureOutcome>;
@@ -44,6 +46,8 @@ export type RecordLedger = {
   /** Renames an entity by id (ID-stable) and teaches Mori the old name as an
    *  alias, so every record referencing it reads the new name. */
   renameEntity: (entityId: string, newName: string) => Promise<void>;
+  /** Creates a routine context and relates the given records to it. */
+  createRoutine: (name: string, recordIds: string[]) => Promise<void>;
 };
 
 export function useRecordLedger(): RecordLedger {
@@ -52,6 +56,7 @@ export function useRecordLedger(): RecordLedger {
   const [rules, setRules] = useState<KernelRule[]>([]);
   const [entities, setEntities] = useState<KernelEntity[]>([]);
   const [relations, setRelations] = useState<KernelRelation[]>([]);
+  const [contexts, setContexts] = useState<KernelContext[]>([]);
   const [loading, setLoading] = useState(true);
 
   const registry = useMemo(() => {
@@ -66,18 +71,20 @@ export function useRecordLedger(): RecordLedger {
 
   const reload = useCallback(async () => {
     const repo = getKernelRepository();
-    const [recordsResult, schemasResult, rulesResult, entitiesResult, relationsResult] =
+    const [recordsResult, schemasResult, rulesResult, entitiesResult, relationsResult, contextsResult] =
       await Promise.all([
         repo.listRecords(),
         repo.listUserSchemas(),
         repo.listRules(),
         repo.listEntities(),
         repo.listRelations(),
+        repo.listContexts(),
       ]);
     setUserSchemas(schemasResult.data);
     setRules(rulesResult.data);
     setEntities(entitiesResult.data);
     setRelations(relationsResult.data);
+    setContexts(contextsResult.data);
     setRecords(recordsResult.data);
     setLoading(false);
   }, []);
@@ -152,16 +159,43 @@ export function useRecordLedger(): RecordLedger {
     [registry, reload],
   );
 
+  const createRoutine = useCallback(
+    async (name: string, recordIds: string[]) => {
+      if (name.trim().length === 0 || recordIds.length === 0) return;
+      const repo = getKernelRepository();
+      const context: KernelContext = {
+        id: createKernelId("ctx"),
+        type: "routine",
+        name: name.trim(),
+        createdAt: new Date().toISOString(),
+      };
+      await repo.saveContext(context);
+      for (const recordId of recordIds) {
+        await repo.saveRelation({
+          id: createKernelId("rel"),
+          fromRecordId: recordId,
+          type: "belongs-to",
+          toContextId: context.id,
+          createdAt: context.createdAt,
+        });
+      }
+      await reload();
+    },
+    [reload],
+  );
+
   return {
     records,
     registry,
     entities,
     relations,
+    contexts,
     loading,
     reload,
     capture,
     captureAgentSession,
     setStatus,
     renameEntity,
+    createRoutine,
   };
 }

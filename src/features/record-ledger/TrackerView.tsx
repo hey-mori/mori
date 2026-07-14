@@ -6,12 +6,13 @@
  * exceed the sum of its entity rows.
  */
 import { useMemo } from "react";
-import { LineChart } from "lucide-react";
+import { LineChart, Repeat } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { useRecordLedger } from "./useRecordLedger";
 import { aggregateTrackers, type TrackerGroup } from "./trackerAggregation";
+import { discoverRoutines, routineEntityIds } from "./routineDiscovery";
 import { ledgerVisibleRecords } from "./recordPresentation";
 
 function metricText(group: TrackerGroup): string | null {
@@ -20,11 +21,24 @@ function metricText(group: TrackerGroup): string | null {
 }
 
 export function TrackerView() {
-  const { records, registry, entities, relations, loading } = useRecordLedger();
+  const { records, registry, entities, relations, contexts, loading, createRoutine } =
+    useRecordLedger();
 
+  const visible = useMemo(() => ledgerVisibleRecords(records), [records]);
   const groups = useMemo(
-    () => aggregateTrackers(ledgerVisibleRecords(records), relations, entities, registry),
-    [records, relations, entities, registry],
+    () => aggregateTrackers(visible, relations, entities, registry),
+    [visible, relations, entities, registry],
+  );
+  const suggestionByEntity = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const suggestion of discoverRoutines(visible, relations, entities, contexts)) {
+      map.set(suggestion.entity.id, suggestion.recordIds);
+    }
+    return map;
+  }, [visible, relations, entities, contexts]);
+  const routineIds = useMemo(
+    () => routineEntityIds(visible, relations, contexts),
+    [visible, relations, contexts],
   );
 
   return (
@@ -50,17 +64,42 @@ export function TrackerView() {
                   </div>
                   {group.entities.length > 0 ? (
                     <ul className="tracker-entities">
-                      {group.entities.map((row) => (
-                        <li key={row.entity.id} className="tracker-entity">
-                          <span className="tracker-entity-name">{row.entity.canonicalName}</span>
-                          <span className="tracker-entity-stat">
-                            {row.count}회
-                            {group.hasMetric && row.totalMetric > 0
-                              ? ` · ${row.totalMetric}${group.metricUnit ?? ""}`
-                              : ""}
-                          </span>
-                        </li>
-                      ))}
+                      {group.entities.map((row) => {
+                        const suggestion = suggestionByEntity.get(row.entity.id);
+                        const isRoutine = routineIds.has(row.entity.id);
+                        return (
+                          <li key={row.entity.id} className="tracker-entity">
+                            <span className="tracker-entity-name">
+                              {row.entity.canonicalName}
+                              {isRoutine ? (
+                                <span className="tracker-routine-badge">
+                                  <Repeat size={11} aria-hidden="true" />
+                                  루틴
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="tracker-entity-trailing">
+                              {suggestion && !isRoutine ? (
+                                <button
+                                  type="button"
+                                  className="tracker-routine-save"
+                                  onClick={() =>
+                                    void createRoutine(row.entity.canonicalName, suggestion)
+                                  }
+                                >
+                                  루틴으로 저장
+                                </button>
+                              ) : null}
+                              <span className="tracker-entity-stat">
+                                {row.count}회
+                                {group.hasMetric && row.totalMetric > 0
+                                  ? ` · ${row.totalMetric}${group.metricUnit ?? ""}`
+                                  : ""}
+                              </span>
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : null}
                 </li>
