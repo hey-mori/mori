@@ -271,6 +271,16 @@ black box.
 연동 as a top-level content surface ends: **agents get a world, input
 channels become capture affordances (inbox) + connection settings.**
 
+**Shipped so far (2026-07-14), user-confirmed and more consolidated than the
+list above:** 오늘 · 캘린더 · 트래커 · 인박스 unified into ONE **기록**
+surface (nav 11 → 8 → 7). Inside 기록: quick capture (fixed) + a single
+journal **feed** (date-grouped, 오늘+캘린더 merged) + a collapsible month
+calendar that filters the feed to a clicked day + a 피드 / 트래커 lens toggle
++ the 확인 필요 chip. Not a tab switcher: one feed, calendar for navigation,
+tracker a lens. 프로젝트 reframed to contexts-over-records (`ContextView`).
+Staged next: 연동 → 설정, 메모리 hub → a 기억 filter inside 기록,
+대시보드 → 홈.
+
 ### 8.2 The agent world
 
 Per agent: live session follow (existing), session history (existing
