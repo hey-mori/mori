@@ -16,12 +16,15 @@ import {
 } from "../record-kernel/recordFactory";
 import type { SchemaRegistry } from "../record-kernel/schemaRegistry";
 import type {
+  KernelEntity,
+  KernelRelation,
   KernelSource,
   RecordOrigin,
   SourceLink,
 } from "../record-kernel/kernelTypes";
 import { containsLikelySecret } from "../connectors/redaction";
 import type { KernelRule } from "../record-kernel/kernelTypes";
+import { resolveEntities } from "./entityResolution";
 import {
   evaluateApply,
   statusForDecision,
@@ -40,6 +43,8 @@ import { proposeRecords, type ProposerOptions } from "./ruleBasedProposer";
 export type CaptureRecordOutcome = {
   created: CreatedRecord;
   sourceLink: SourceLink;
+  /** record → references → entity links for this record's mentions. */
+  relations: KernelRelation[];
   decision: ApplyDecision;
   reason: string;
   confidence: number;
@@ -48,6 +53,8 @@ export type CaptureRecordOutcome = {
 export type CaptureOutcome = {
   /** The raw trace, preserved regardless of any apply decision. */
   source: KernelSource;
+  /** Entities newly created while resolving this capture's mentions. */
+  newEntities: KernelEntity[];
   sensitive: boolean;
   records: CaptureRecordOutcome[];
 };
@@ -59,6 +66,9 @@ export type CapturePipelineOptions = ProposerOptions & {
   /** The user's personalization rules (alias / classification /
    *  context-binding / automation-level), applied to every proposal. */
   rules?: KernelRule[];
+  /** Entities Mori already knows, so a mention resolves to an existing entity
+   *  instead of duplicating it. New mentions create new entities. */
+  entities?: KernelEntity[];
   /** Swap the proposer (e.g. an LLM one) without touching orchestration. */
   propose?: (input: CaptureInput, options: ProposerOptions) => RecordProposal[];
 };
@@ -119,6 +129,9 @@ export function runCapturePipeline(
   const rawProposals = propose(input, options);
   const rules = options.rules ?? [];
   const schemaAutomationOverride = options.automationForSchema;
+  // Running set so two proposals mentioning the same new entity share one.
+  const knownEntities: KernelEntity[] = [...(options.entities ?? [])];
+  const newEntities: KernelEntity[] = [];
 
   const records = rawProposals.map<CaptureRecordOutcome>((rawProposal) => {
     const { proposal, addedContextIds } = personalizeProposal(rawProposal, rules);
@@ -163,14 +176,30 @@ export function runCapturePipeline(
       confidence: proposal.confidence,
     };
 
+    // Resolve the proposal's mentions to stable entities and link the record
+    // to each, so a later rename of an entity updates every reference.
+    const resolution = resolveEntities(proposal.entityMentions, knownEntities, now);
+    for (const entity of resolution.newEntities) {
+      knownEntities.push(entity);
+      newEntities.push(entity);
+    }
+    const relations = resolution.resolved.map<KernelRelation>((item) => ({
+      id: createKernelId("rel"),
+      fromRecordId: created.record.id,
+      type: "references",
+      toEntityId: item.entity.id,
+      createdAt: nowIso,
+    }));
+
     return {
       created,
       sourceLink,
+      relations,
       decision: evaluation.decision,
       reason: evaluation.reason,
       confidence: proposal.confidence,
     };
   });
 
-  return { source, sensitive, records };
+  return { source, newEntities, sensitive, records };
 }

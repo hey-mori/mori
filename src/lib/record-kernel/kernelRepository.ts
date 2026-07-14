@@ -28,6 +28,8 @@ import {
 import { KernelBrowserStore } from "./kernelStore";
 import type {
   KernelContext,
+  KernelEntity,
+  KernelRelation,
   KernelRevision,
   KernelRule,
   KernelSource,
@@ -264,6 +266,54 @@ export class KernelRepository {
 
   async listUserSchemas(): Promise<KernelResult<SchemaDefinition[]>> {
     return this.listObjects<SchemaDefinition>("userSchema", () => this.store().listUserSchemas());
+  }
+
+  async saveEntity(entity: KernelEntity): Promise<KernelResult<KernelEntity>> {
+    if (!this.isDesktop()) {
+      this.store().saveEntity(entity);
+      return browserResult(entity);
+    }
+    try {
+      await this.commands.saveKernelObjectRows([
+        toSqliteKernelObjectRow("entity", entity.id, entity),
+      ]);
+      return desktopResult(entity);
+    } catch (error) {
+      this.store().saveEntity(entity);
+      return fallbackResult(entity, error);
+    }
+  }
+
+  async listEntities(): Promise<KernelResult<KernelEntity[]>> {
+    return this.listObjects<KernelEntity>("entity", () => this.store().listEntities());
+  }
+
+  async saveRelation(relation: KernelRelation): Promise<KernelResult<KernelRelation>> {
+    if (!this.isDesktop()) {
+      this.store().saveRelation(relation);
+      return browserResult(relation);
+    }
+    try {
+      await this.commands.saveKernelObjectRows([
+        toSqliteKernelObjectRow("relation", relation.id, relation),
+      ]);
+      return desktopResult(relation);
+    } catch (error) {
+      this.store().saveRelation(relation);
+      return fallbackResult(relation, error);
+    }
+  }
+
+  async listRelationsForRecord(recordId: string): Promise<KernelResult<KernelRelation[]>> {
+    if (!this.isDesktop()) {
+      return browserResult(
+        this.store().listRelations().filter((relation) => relation.fromRecordId === recordId),
+      );
+    }
+    const listed = await this.listObjects<KernelRelation>("relation", () =>
+      this.store().listRelations(),
+    );
+    return { ...listed, data: listed.data.filter((relation) => relation.fromRecordId === recordId) };
   }
 
   async saveRule(rule: KernelRule): Promise<KernelResult<KernelRule>> {

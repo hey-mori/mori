@@ -118,6 +118,26 @@ describe("runCapturePipeline", () => {
     expect(outcome.records[0].created.record.contextIds).toEqual(["ctx-journal"]);
   });
 
+  it("resolves workout mentions to new entities and links the record to them", () => {
+    const outcome = runCapturePipeline(text("러닝 10분, 플랭크 3세트"), registry, { now });
+    expect(outcome.newEntities.map((entity) => entity.canonicalName)).toEqual(
+      expect.arrayContaining(["러닝", "플랭크"]),
+    );
+    const relations = outcome.records[0].relations;
+    expect(relations.length).toBe(outcome.newEntities.length);
+    expect(relations.every((relation) => relation.type === "references")).toBe(true);
+    expect(relations[0].fromRecordId).toBe(outcome.records[0].created.record.id);
+  });
+
+  it("reuses a known entity instead of creating a duplicate", () => {
+    const known = [
+      { id: "ent-run", type: "exercise", canonicalName: "러닝", createdAt: "2026-07-01" },
+    ];
+    const outcome = runCapturePipeline(text("러닝 10분"), registry, { now, entities: known });
+    expect(outcome.newEntities).toHaveLength(0);
+    expect(outcome.records[0].relations[0].toEntityId).toBe("ent-run");
+  });
+
   it("accepts a swapped proposer without changing orchestration", () => {
     const outcome = runCapturePipeline(text("무엇이든"), registry, {
       now,

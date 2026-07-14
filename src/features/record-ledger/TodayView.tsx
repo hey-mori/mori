@@ -30,7 +30,7 @@ function ledgerRecords(records: MoriRecord[]): MoriRecord[] {
 }
 
 export function TodayView() {
-  const { records, registry, loading, capture } = useRecordLedger();
+  const { records, registry, entities, loading, capture, renameEntity } = useRecordLedger();
   const setCurrentView = useAppStore((state) => state.setCurrentView);
 
   const [draft, setDraft] = useState("");
@@ -159,6 +159,8 @@ export function TodayView() {
           <RecordInspector
             record={selected}
             registry={registry}
+            entities={entities}
+            onRenameEntity={(entityId, newName) => void renameEntity(entityId, newName)}
             onClose={() => setSelectedId(null)}
           />
         ) : null}

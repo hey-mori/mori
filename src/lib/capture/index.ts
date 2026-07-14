@@ -22,6 +22,13 @@ export {
   type ParsedConversation,
 } from "./conversationParser";
 export {
+  renameEntity,
+  resolveEntities,
+  type EntityResolution,
+  type EntityRename,
+  type ResolvedEntity,
+} from "./entityResolution";
+export {
   automationLevelFor,
   buildAliasRule,
   classifyProposal,

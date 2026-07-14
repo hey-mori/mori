@@ -1,12 +1,13 @@
 /**
  * RecordInspector · the on-demand detail for a ledger record.
  *
- * Shows what the record is, its schema properties, its honest activity vs
- * capture times, the preserved raw source it came from (origin as a
- * relationship, revealed on request), and its append-only history. Read-only
- * for now; the rename / re-type affordances land with the entity surface.
+ * Shows what the record is, its schema properties, its related entities (with
+ * an ID-stable rename), its honest activity vs capture times, the preserved
+ * raw source it came from (origin as a relationship, revealed on request), and
+ * its append-only history.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Check, Pencil, X } from "lucide-react";
 import {
   BaseInspectorPanel,
   InspectorCard,
@@ -16,7 +17,7 @@ import {
 } from "../../components/ui/BaseInspectorPanel";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
-import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import type { KernelEntity, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { useRecordProvenance } from "./useRecordProvenance";
 import {
@@ -43,17 +44,35 @@ const ACTOR_LABEL: Record<string, string> = {
 export function RecordInspector({
   record,
   registry,
+  entities,
+  onRenameEntity,
   onClose,
 }: {
   record: MoriRecord;
   registry: SchemaRegistry;
+  entities: KernelEntity[];
+  onRenameEntity: (entityId: string, newName: string) => void;
   onClose: () => void;
 }) {
-  const { source, revisions, loading } = useRecordProvenance(record.id);
+  const { source, revisions, relations, loading } = useRecordProvenance(record.id);
   const [showRaw, setShowRaw] = useState(false);
 
   const badge = statusBadge(record.status);
   const properties = displayProperties(record, registry);
+  const relatedEntities = useMemo(() => {
+    const byId = new Map(entities.map((entity) => [entity.id, entity]));
+    const seen = new Set<string>();
+    const result: KernelEntity[] = [];
+    for (const relation of relations) {
+      if (!relation.toEntityId || seen.has(relation.toEntityId)) continue;
+      const entity = byId.get(relation.toEntityId);
+      if (entity) {
+        seen.add(entity.id);
+        result.push(entity);
+      }
+    }
+    return result;
+  }, [relations, entities]);
   const activityTime = record.occurredStart
     ? `${formatClaudeRelativeKo(record.occurredStart)} · ${timeBasisLabel(record.timeBasis)}`
     : timeBasisLabel(record.timeBasis);
@@ -83,6 +102,16 @@ export function RecordInspector({
       {properties.length > 0 ? (
         <InspectorSection title="속성">
           <InspectorFields items={properties} />
+        </InspectorSection>
+      ) : null}
+
+      {relatedEntities.length > 0 ? (
+        <InspectorSection title="관련 항목">
+          <div className="record-inspector-entities">
+            {relatedEntities.map((entity) => (
+              <EntityChip key={entity.id} entity={entity} onRename={onRenameEntity} />
+            ))}
+          </div>
         </InspectorSection>
       ) : null}
 
@@ -136,5 +165,69 @@ export function RecordInspector({
         </InspectorSection>
       ) : null}
     </BaseInspectorPanel>
+  );
+}
+
+/** A related-entity chip. Reads the entity's current canonical name (so a
+ *  rename shows everywhere at once) and offers an inline rename that teaches
+ *  Mori the old name as an alias. */
+function EntityChip({
+  entity,
+  onRename,
+}: {
+  entity: KernelEntity;
+  onRename: (entityId: string, newName: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entity.canonicalName);
+
+  if (editing) {
+    const commit = () => {
+      onRename(entity.id, draft);
+      setEditing(false);
+    };
+    return (
+      <span className="record-inspector-entity is-editing">
+        <input
+          className="record-inspector-entity-input"
+          value={draft}
+          autoFocus
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") commit();
+            if (event.key === "Escape") setEditing(false);
+          }}
+          aria-label={`${entity.canonicalName} 이름 바꾸기`}
+        />
+        <button type="button" className="record-inspector-entity-act" onClick={commit} aria-label="변경">
+          <Check size={12} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="record-inspector-entity-act"
+          onClick={() => setEditing(false)}
+          aria-label="취소"
+        >
+          <X size={12} aria-hidden="true" />
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="record-inspector-entity">
+      {entity.canonicalName}
+      <button
+        type="button"
+        className="record-inspector-entity-act"
+        onClick={() => {
+          setDraft(entity.canonicalName);
+          setEditing(true);
+        }}
+        aria-label={`${entity.canonicalName} 이름 바꾸기`}
+      >
+        <Pencil size={11} aria-hidden="true" />
+      </button>
+    </span>
   );
 }
