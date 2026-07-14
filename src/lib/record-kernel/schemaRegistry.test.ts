@@ -105,6 +105,16 @@ describe("validateRecordAgainstSchema", () => {
     expect(result.errors).toContain('property "verdict" does not match type "select"');
   });
 
+  it("accepts both an object and an array for a json property", () => {
+    const schema = {
+      ...READING_SCHEMA,
+      properties: [{ key: "data", label: "데이터", type: "json" as const }],
+    };
+    expect(validateRecordAgainstSchema({ properties: { data: { a: 1 } } }, schema).errors).toEqual([]);
+    expect(validateRecordAgainstSchema({ properties: { data: [1, 2, 3] } }, schema).errors).toEqual([]);
+    expect(validateRecordAgainstSchema({ properties: { data: "nope" } }, schema).errors).toHaveLength(1);
+  });
+
   it("treats unknown properties as warnings so schema evolution never corrupts old records", () => {
     const result = validateRecordAgainstSchema(
       { properties: { bookTitle: "책", legacyField: 1 } },

@@ -38,6 +38,23 @@ describe("proposeRecords · pilot schemas", () => {
     expect(proposal.properties.subject).toBe("영어");
   });
 
+  it("detects a pasted AI dialog as a 질의응답 record", () => {
+    const [proposal, ...rest] = proposeRecords(
+      textInput("사용자: 메모리 설계는?\nAI: Activity와 Memory를 분리하세요."),
+    );
+    expect(rest).toHaveLength(0);
+    expect(proposal.schemaId).toBe("qa");
+    expect(proposal.title).toBe("메모리 설계는?");
+    expect(Array.isArray(proposal.properties.turns)).toBe(true);
+  });
+
+  it("reads a dialog as Q&A even when it mentions exercise", () => {
+    const [proposal] = proposeRecords(
+      textInput("사용자: 러닝 10분이면 충분해?\nAI: 목표에 따라 다릅니다."),
+    );
+    expect(proposal.schemaId).toBe("qa");
+  });
+
   it("records a bare URL as a source document, not a note", () => {
     const [proposal] = proposeRecords({
       kind: "url",

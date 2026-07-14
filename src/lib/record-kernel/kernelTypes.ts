@@ -46,13 +46,15 @@ export type PropertyType =
   | "entity-list"
   | "json";
 
+/** A JSON-shaped property value: scalars, arrays, or objects. Arrays and
+ *  objects back the `json` / `entity-list` property types. */
 export type RecordPropertyValue =
   | string
   | number
   | boolean
-  | string[]
-  | Record<string, unknown>
-  | null;
+  | null
+  | unknown[]
+  | Record<string, unknown>;
 
 export type SchemaPropertyDefinition = {
   key: string;

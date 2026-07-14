@@ -17,6 +17,11 @@ export {
 export { proposeRecords, type ProposerOptions } from "./ruleBasedProposer";
 export { inferOccurredTime, type InferredTime } from "./dateInference";
 export {
+  parseConversation,
+  type ConversationTurn,
+  type ParsedConversation,
+} from "./conversationParser";
+export {
   automationLevelFor,
   buildAliasRule,
   classifyProposal,

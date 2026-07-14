@@ -120,6 +120,18 @@ export const SYSTEM_SCHEMAS: readonly SchemaDefinition[] = [
     ],
   },
   {
+    id: "qa",
+    version: 1,
+    scope: "system",
+    name: "질의응답",
+    description: "AI와 주고받은 질문·답변. 붙여넣은 대화를 턴으로 나눠 기록한다.",
+    layer: "source",
+    properties: [
+      { key: "assistant", label: "AI", type: "text" },
+      { key: "turns", label: "대화", type: "json" },
+    ],
+  },
+  {
     id: "portfolio-item",
     version: 1,
     scope: "system",

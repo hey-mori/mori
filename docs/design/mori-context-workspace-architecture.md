@@ -754,3 +754,47 @@ Palette-reachability is a transition state with an expiry condition, not a
 retirement home. (This operationalizes the revised retire-don't-delete
 rule: retire is a migration tactic; removal is the intended end state
 once the criteria hold.)
+
+## 22. Capture input model (2026-07-14)
+
+The user asked whether Mori should make people pick an input format first
+(a Q&A form, a workout form) or just detect everything. The answer, and the
+built direction, is a hybrid: **free input by default, structure on save,
+optional templates where structure earns its place.**
+
+Two axes, never conflated (they were merged on the legacy 연동 card grid):
+
+- **Capture method** (how a trace arrives): direct text, paste, URL, file,
+  voice, connected service, agent session. This is `CaptureInput.kind`.
+- **Result schema** (what it becomes): activity, note, qa, meeting, workout,
+  study, decision, comparison, reflection, user-defined. This is the
+  record's `schemaId`.
+
+Rules that follow:
+
+1. **The default is one free field + auto-detect.** The user types or pastes
+   anything; the proposer classifies; the raw source is preserved; the apply
+   policy decides auto / provisional / confirm. No format is chosen up front.
+   (Shipped: the 오늘 quick-capture.)
+2. **Optional templates, never mandatory.** A "직접 선택" affordance and a
+   "최근 형식" shortcut let a power user jump straight into a structured entry
+   for schemas where structure pays off (workout, meeting, qa, comparison).
+   Default stays 자동 감지. (Planned slice.)
+3. **One input may yield multiple records.** "회사에서 저장 구조 검토했고
+   퇴근하고 러닝 15분" is a work activity plus a workout in two contexts. The
+   proposer returns `RecordProposal[]` and the pipeline persists all of them,
+   so the model supports this today. The **deterministic pilot stays
+   conservative** (it will not split on fragile heuristics like commas, which
+   would wrongly split "러닝 10분, 팔굽혀펴기 5개 3세트"); robust multi-record
+   splitting is an LLM-proposer capability. Honest over eager.
+4. **AI Q&A is detected, not form-gated.** Pasting a 사용자:/AI: dialog is the
+   default path (auto-split into turns); a structured question/answer entry is
+   an optional mode for partial capture or multi-model comparison, not the
+   requirement. (Shipping: dialog detection → the `qa` schema.)
+5. **Detection is shown and correctable.** Mori surfaces what it understood
+   (types + counts) and lets the user re-type; a repeated correction becomes a
+   personalization rule (§7). Never a silent miscategorisation.
+6. **연동 is connection management; capture is the inbox / global +.** The
+   connections surface manages what is connected and its sync scope; everyday
+   entry lives in the quick-capture field and the inbox, not behind a source
+   card. (§8 IA; the 연동 → 설정 move is the K2-era transition.)

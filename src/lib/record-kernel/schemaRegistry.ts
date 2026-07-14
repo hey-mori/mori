@@ -126,7 +126,8 @@ function matchesType(value: RecordPropertyValue, property: SchemaPropertyDefinit
     case "entity-list":
       return Array.isArray(value) && value.every((item) => typeof item === "string");
     case "json":
-      return typeof value === "object" && !Array.isArray(value);
+      // Any JSON container: an object or an array (null handled above).
+      return typeof value === "object";
   }
 }
 

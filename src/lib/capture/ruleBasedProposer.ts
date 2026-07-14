@@ -10,6 +10,7 @@
  */
 import type { RecordProposal } from "./captureTypes";
 import type { CaptureInput } from "./captureTypes";
+import { parseConversation } from "./conversationParser";
 import { inferOccurredTime } from "./dateInference";
 
 /** Injected clock keeps proposals deterministic in tests. */
@@ -136,6 +137,32 @@ export function proposeRecords(input: CaptureInput, options: ProposerOptions = {
       ? "ai-inferred"
       : "unknown";
   const timeConfidence = inferred?.confidence;
+
+  // A pasted AI dialog becomes a 질의응답 record. Checked before workout /
+  // study so a conversation that mentions exercise still reads as Q&A. Only
+  // fires on clear turn markers, so ordinary prose is never misread.
+  const conversation =
+    input.kind === "pasted-conversation" || input.kind === "text" ? parseConversation(content) : null;
+  if (conversation) {
+    const firstQuestion = conversation.pairs[0]?.question ?? conversation.turns[0]?.text ?? "";
+    return [
+      {
+        schemaId: "qa",
+        title: titleFrom(firstQuestion, "질의응답"),
+        body: content,
+        properties: {
+          turns: conversation.turns,
+          ...(conversation.assistant ? { assistant: conversation.assistant } : {}),
+        },
+        occurredStart,
+        timeBasis,
+        timeConfidence,
+        confidence: 0.85,
+        rationale: "질문·답변 대화를 감지해 질의응답으로 정리합니다",
+        entityMentions: [],
+      },
+    ];
+  }
 
   if (input.kind === "url" || URL_RE.test(content)) {
     const url = input.url ?? content.match(URL_RE)?.[0] ?? content;
