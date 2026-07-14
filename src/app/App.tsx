@@ -83,6 +83,16 @@ const MemoryHubView = lazy(() =>
     default: m.MemoryHubView,
   })),
 );
+const TodayView = lazy(() =>
+  import("../features/record-ledger/TodayView").then((m) => ({
+    default: m.TodayView,
+  })),
+);
+const CaptureInboxView = lazy(() =>
+  import("../features/record-ledger/CaptureInboxView").then((m) => ({
+    default: m.CaptureInboxView,
+  })),
+);
 export default function App() {
   const currentView = useAppStore((state) => state.currentView);
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -170,6 +180,8 @@ export default function App() {
             {currentView === "graph" ? <GraphView /> : null}
             {currentView === "liveSession" ? <LiveSessionView /> : null}
             {currentView === "memoryHub" ? <MemoryHubView /> : null}
+            {currentView === "today" ? <TodayView /> : null}
+            {currentView === "captureInbox" ? <CaptureInboxView /> : null}
           </Suspense>
         </ErrorBoundary>
       </AppShell>

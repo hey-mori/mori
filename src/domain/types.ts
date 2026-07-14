@@ -33,6 +33,12 @@ export type ViewKey =
    *  filters, and provenance across every project (the per-project memory
    *  overview stays on `memory`). */
   | "memoryHub"
+  /** 오늘 · the record ledger for a day: what the user captured and did,
+   *  with quick capture at the top. First surface of the record kernel (K2). */
+  | "today"
+  /** 인박스 · captures awaiting review: confirm cards from the apply policy,
+   *  plus date-unknown and exception items (K2). */
+  | "captureInbox"
   | "profile"
   | "login"
   | "security"

@@ -2,6 +2,7 @@ import {
   Brain,
   FolderGit2,
   House,
+  Inbox,
   Layers,
   LayoutDashboard,
   Link2,
@@ -10,6 +11,7 @@ import {
   PanelLeftOpen,
   Plus,
   Radio,
+  Sun,
 } from "lucide-react";
 import { useAppStore } from "../../app/store";
 import { useProfileStore } from "../../app/profileStore";
@@ -45,6 +47,9 @@ import type { ViewKey } from "../../domain/types";
  *  those up instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: viewIcon.home ?? House },
+  // 오늘 · the record ledger + quick capture (K2). First surface of the
+  // record kernel; leads the nav next to 홈 as the everyday landing spot.
+  { key: "today", label: "오늘", icon: Sun },
   { key: "liveSession", label: "라이브", icon: Radio },
   {
     key: "connections",
@@ -63,6 +68,13 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
     key: "memoryHub",
     label: "메모리",
     icon: Brain,
+  },
+  // 인박스 · the capture confirm queue (K2): only the items the apply policy
+  // could not auto-organize surface here for a quick 반영 / 무시.
+  {
+    key: "captureInbox",
+    label: "인박스",
+    icon: Inbox,
   },
   {
     key: "dashboard",

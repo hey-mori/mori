@@ -26,7 +26,14 @@ import {
   type KernelObjectCollection,
 } from "../sqlite/kernelRows";
 import { KernelBrowserStore } from "./kernelStore";
-import type { KernelContext, KernelRevision, MoriRecord, SchemaDefinition } from "./kernelTypes";
+import type {
+  KernelContext,
+  KernelRevision,
+  KernelSource,
+  MoriRecord,
+  SchemaDefinition,
+  SourceLink,
+} from "./kernelTypes";
 
 export type KernelRuntime = "browser" | "desktop";
 export type KernelStorageSource = "browser-local-storage" | "desktop-sqlite";
@@ -182,6 +189,49 @@ export class KernelRepository {
 
   async listContexts(): Promise<KernelResult<KernelContext[]>> {
     return this.listObjects<KernelContext>("context", () => this.store().listContexts());
+  }
+
+  /** Persists a raw source. The pipeline calls this before its records so the
+   *  origin is never lost, even if a later write fails. */
+  async saveSource(source: KernelSource): Promise<KernelResult<KernelSource>> {
+    if (!this.isDesktop()) {
+      this.store().saveSource(source);
+      return browserResult(source);
+    }
+    try {
+      await this.commands.saveKernelObjectRows([
+        toSqliteKernelObjectRow("source", source.id, source),
+      ]);
+      return desktopResult(source);
+    } catch (error) {
+      this.store().saveSource(source);
+      return fallbackResult(source, error);
+    }
+  }
+
+  async saveSourceLink(link: SourceLink): Promise<KernelResult<SourceLink>> {
+    const id = `${link.sourceId}.${link.recordId}.${link.role}`;
+    if (!this.isDesktop()) {
+      this.store().saveSourceLink(link);
+      return browserResult(link);
+    }
+    try {
+      await this.commands.saveKernelObjectRows([toSqliteKernelObjectRow("sourceLink", id, link)]);
+      return desktopResult(link);
+    } catch (error) {
+      this.store().saveSourceLink(link);
+      return fallbackResult(link, error);
+    }
+  }
+
+  async listSourceLinksForRecord(recordId: string): Promise<KernelResult<SourceLink[]>> {
+    if (!this.isDesktop()) {
+      return browserResult(this.store().listSourceLinksForRecord(recordId));
+    }
+    const listed = await this.listObjects<SourceLink>("sourceLink", () =>
+      this.store().listSourceLinksForRecord(recordId),
+    );
+    return { ...listed, data: listed.data.filter((link) => link.recordId === recordId) };
   }
 
   async saveUserSchema(schema: SchemaDefinition): Promise<KernelResult<SchemaDefinition>> {
