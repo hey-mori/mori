@@ -1,0 +1,92 @@
+import { describe, expect, it } from "vitest";
+import { createSchemaRegistry } from "../record-kernel/schemaRegistry";
+import { runCapturePipeline } from "./capturePipeline";
+import type { CaptureInput } from "./captureTypes";
+
+const registry = createSchemaRegistry();
+const now = () => new Date("2026-07-14T09:00:00.000Z");
+const text = (content: string, occurredHint?: string): CaptureInput => ({
+  kind: "text",
+  content,
+  occurredHint,
+});
+
+describe("runCapturePipeline", () => {
+  it("always preserves the raw source with retention, whatever the decision", () => {
+    const outcome = runCapturePipeline(text("그냥 메모"), registry, { now });
+    expect(outcome.source.rawBody).toBe("그냥 메모");
+    expect(outcome.source.retention).toBe("retained");
+    expect(outcome.source.kind).toBe("text");
+  });
+
+  it("auto-applies a confident workout and links the record to the source", () => {
+    const outcome = runCapturePipeline(
+      text("러닝 10분", "2026-07-14"),
+      registry,
+      { now, knownEntityNames: new Set(["러닝"]) },
+    );
+    expect(outcome.records).toHaveLength(1);
+    const [record] = outcome.records;
+    expect(record.decision).toBe("auto");
+    expect(record.created.record.status).toBe("active");
+    expect(record.created.record.schemaId).toBe("workout");
+    expect(record.sourceLink.sourceId).toBe(outcome.source.id);
+    expect(record.sourceLink.recordId).toBe(record.created.record.id);
+    expect(record.created.revision.operation).toBe("create");
+  });
+
+  it("holds a workout that introduces a new exercise as provisional", () => {
+    const outcome = runCapturePipeline(text("플랭크 3세트"), registry, { now });
+    expect(outcome.records[0].decision).toBe("provisional");
+    expect(outcome.records[0].created.record.status).toBe("provisional");
+  });
+
+  it("keeps a plain note as user-authored and active", () => {
+    const outcome = runCapturePipeline(text("떠오른 생각"), registry, { now });
+    const [note] = outcome.records;
+    expect(note.created.record.schemaId).toBe("note");
+    expect(note.created.record.origin).toBe("user");
+    expect(note.decision).toBe("auto");
+    expect(note.created.record.status).toBe("active");
+  });
+
+  it("confirms and flags sensitive content while still preserving the source", () => {
+    const outcome = runCapturePipeline(
+      text("배포 토큰 ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"),
+      registry,
+      { now },
+    );
+    expect(outcome.sensitive).toBe(true);
+    expect(outcome.records[0].decision).toBe("confirm");
+    expect(outcome.records[0].created.record.status).toBe("candidate");
+    expect(outcome.source.rawBody).toContain("ghp_");
+  });
+
+  it("respects a manual automation level for a schema", () => {
+    const outcome = runCapturePipeline(text("러닝 10분", "2026-07-14"), registry, {
+      now,
+      knownEntityNames: new Set(["러닝"]),
+      automationForSchema: (schemaId) => (schemaId === "workout" ? "manual" : "auto"),
+    });
+    expect(outcome.records[0].decision).toBe("confirm");
+  });
+
+  it("accepts a swapped proposer without changing orchestration", () => {
+    const outcome = runCapturePipeline(text("무엇이든"), registry, {
+      now,
+      propose: () => [
+        {
+          schemaId: "note",
+          title: "대체 제안",
+          body: "대체 본문",
+          properties: {},
+          timeBasis: "unknown",
+          confidence: 1,
+          rationale: "테스트",
+          entityMentions: [],
+        },
+      ],
+    });
+    expect(outcome.records[0].created.record.title).toBe("대체 제안");
+  });
+});
