@@ -38,6 +38,19 @@ export function groupByActivityDay(records: MoriRecord[]): CalendarDayGroup[] {
   return dated;
 }
 
+/** ISO-date (YYYY-MM-DD) → number of records whose activity day is that date.
+ *  Powers the month-calendar's per-day markers. Unknown-date records are
+ *  excluded (they have no day to sit on). */
+export function recordCountByDate(records: MoriRecord[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const record of records) {
+    if (!record.occurredStart) continue;
+    const day = record.occurredStart.slice(0, 10);
+    counts.set(day, (counts.get(day) ?? 0) + 1);
+  }
+  return counts;
+}
+
 /** Human day label: "2026년 7월 14일 (오늘)", with 오늘 / 어제 markers. */
 export function dayLabel(date: string, now: Date): string {
   const [year, month, day] = date.split("-").map(Number);

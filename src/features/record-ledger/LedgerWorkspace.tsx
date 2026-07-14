@@ -9,7 +9,7 @@
  * unify at navigation").
  */
 import { useMemo, useState } from "react";
-import { CalendarDays, Check, Inbox, LineChart, Repeat, RotateCcw, Sparkles, Sun, X } from "lucide-react";
+import { Check, Inbox, LineChart, Repeat, RotateCcw, ScrollText, Sparkles, X } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -18,23 +18,24 @@ import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger, type RecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
+import { LedgerCalendar } from "./LedgerCalendar";
 import { RecordInspector } from "./RecordInspector";
 import { dayLabel, groupByActivityDay } from "./calendarGrouping";
 import { aggregateTrackers } from "./trackerAggregation";
 import { discoverRoutines, routineEntityIds } from "./routineDiscovery";
 import { displayTime, ledgerVisibleRecords, schemaLabel } from "./recordPresentation";
 
-type LedgerMode = "today" | "calendar" | "tracker" | "inbox";
+type LedgerView = "feed" | "tracker" | "inbox";
 
-const MODES: Array<{ key: Exclude<LedgerMode, "inbox">; label: string; icon: typeof Sun }> = [
-  { key: "today", label: "오늘", icon: Sun },
-  { key: "calendar", label: "캘린더", icon: CalendarDays },
+const LENSES: Array<{ key: Exclude<LedgerView, "inbox">; label: string; icon: typeof ScrollText }> = [
+  { key: "feed", label: "피드", icon: ScrollText },
   { key: "tracker", label: "트래커", icon: LineChart },
 ];
 
 export function LedgerWorkspace() {
   const ledger = useRecordLedger();
-  const [mode, setMode] = useState<LedgerMode>("today");
+  const [view, setView] = useState<LedgerView>("feed");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const candidateCount = useMemo(
@@ -42,33 +43,30 @@ export function LedgerWorkspace() {
     [ledger.records],
   );
   const selected = useMemo(
-    () =>
-      mode === "today" || mode === "calendar"
-        ? ledger.records.find((record) => record.id === selectedId) ?? null
-        : null,
-    [mode, ledger.records, selectedId],
+    () => (view === "feed" ? ledger.records.find((record) => record.id === selectedId) ?? null : null),
+    [view, ledger.records, selectedId],
   );
 
-  const switchMode = (next: LedgerMode) => {
-    setMode(next);
+  const switchView = (next: LedgerView) => {
+    setView(next);
     setSelectedId(null);
   };
   const onSelect = (recordId: string) =>
     setSelectedId((current) => (current === recordId ? null : recordId));
 
-  const modeSwitch = (
+  const lensSwitch = (
     <div className="ledger-modes" role="tablist" aria-label="기록 보기">
-      {MODES.map((option) => (
+      {LENSES.map((lens) => (
         <button
-          key={option.key}
+          key={lens.key}
           type="button"
           role="tab"
-          aria-selected={mode === option.key}
-          className={`ledger-mode${mode === option.key ? " is-active" : ""}`}
-          onClick={() => switchMode(option.key)}
+          aria-selected={view === lens.key}
+          className={`ledger-mode${view === lens.key ? " is-active" : ""}`}
+          onClick={() => switchView(lens.key)}
         >
-          <option.icon size={14} aria-hidden="true" />
-          {option.label}
+          <lens.icon size={14} aria-hidden="true" />
+          {lens.label}
         </button>
       ))}
     </div>
@@ -76,9 +74,9 @@ export function LedgerWorkspace() {
 
   const inboxChip = (
     <Button
-      variant={mode === "inbox" ? "primary" : "secondary"}
+      variant={view === "inbox" ? "primary" : "secondary"}
       icon={Inbox}
-      onClick={() => switchMode("inbox")}
+      onClick={() => switchView("inbox")}
     >
       확인 필요{candidateCount > 0 ? ` ${candidateCount}` : ""}
     </Button>
@@ -87,19 +85,29 @@ export function LedgerWorkspace() {
   return (
     <PageShell
       maxWidth="full"
-      actionBar={<ActionBar label="기록" start={modeSwitch} end={inboxChip} />}
+      actionBar={<ActionBar label="기록" start={lensSwitch} end={inboxChip} />}
     >
       <div className={`ledger${selected ? " has-inspector" : ""}`}>
         <div className="ledger-main">
           <QuickCapture capture={ledger.capture} />
-          {ledger.loading ? null : mode === "today" ? (
-            <TodayBody ledger={ledger} selectedId={selectedId} onSelect={onSelect} />
-          ) : mode === "calendar" ? (
-            <CalendarBody ledger={ledger} selectedId={selectedId} onSelect={onSelect} />
-          ) : mode === "tracker" ? (
+          {ledger.loading ? null : view === "tracker" ? (
             <TrackerBody ledger={ledger} />
-          ) : (
+          ) : view === "inbox" ? (
             <InboxBody ledger={ledger} />
+          ) : (
+            <>
+              <LedgerCalendar
+                records={ledgerVisibleRecords(ledger.records)}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+              />
+              <FeedBody
+                ledger={ledger}
+                selectedDate={selectedDate}
+                selectedId={selectedId}
+                onSelect={onSelect}
+              />
+            </>
           )}
         </div>
         {selected ? (
@@ -177,68 +185,40 @@ function QuickCapture({ capture }: { capture: RecordLedger["capture"] }) {
   );
 }
 
-function TodayBody({
+/** The journal feed: applied records grouped by activity day, newest first,
+ *  with a 날짜 미정 group last. Filtered to one day when the calendar selects
+ *  it. Unifies the former 오늘 + 캘린더 into one surface. */
+function FeedBody({
   ledger,
+  selectedDate,
   selectedId,
   onSelect,
 }: {
   ledger: RecordLedger;
+  selectedDate: string | null;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
-  const rows = useMemo(
-    () =>
-      ledgerVisibleRecords(ledger.records).sort(
-        (a, b) => displayTime(b).iso.localeCompare(displayTime(a).iso),
-      ),
-    [ledger.records],
-  );
-  if (rows.length === 0) {
-    return (
+  const groups = useMemo(() => {
+    let visible = ledgerVisibleRecords(ledger.records);
+    if (selectedDate) {
+      visible = visible.filter(
+        (record) => record.occurredStart?.slice(0, 10) === selectedDate,
+      );
+    }
+    return groupByActivityDay(visible);
+  }, [ledger.records, selectedDate]);
+  const now = useMemo(() => new Date(), []);
+
+  if (groups.length === 0) {
+    return selectedDate ? (
+      <EmptyState compact icon={Sparkles} title="이 날에는 기록이 없습니다" />
+    ) : (
       <EmptyState
         compact
         icon={Sparkles}
         title="아직 기록이 없습니다"
         description="위에 무엇이든 적으면 Mori가 활동·지식·기록으로 정리해 여기에 쌓습니다."
-      />
-    );
-  }
-  return (
-    <ul className="ledger-list">
-      {rows.map((record) => (
-        <LedgerRow
-          key={record.id}
-          record={record}
-          registry={ledger.registry}
-          selected={record.id === selectedId}
-          onSelect={() => onSelect(record.id)}
-        />
-      ))}
-    </ul>
-  );
-}
-
-function CalendarBody({
-  ledger,
-  selectedId,
-  onSelect,
-}: {
-  ledger: RecordLedger;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  const groups = useMemo(
-    () => groupByActivityDay(ledgerVisibleRecords(ledger.records)),
-    [ledger.records],
-  );
-  const now = useMemo(() => new Date(), []);
-  if (groups.length === 0) {
-    return (
-      <EmptyState
-        compact
-        icon={CalendarDays}
-        title="아직 기록이 없습니다"
-        description="무엇이든 적으면 활동한 날짜를 기준으로 날짜별로 모입니다."
       />
     );
   }

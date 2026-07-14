@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
-import { dayLabel, groupByActivityDay } from "./calendarGrouping";
+import { dayLabel, groupByActivityDay, recordCountByDate } from "./calendarGrouping";
 
 function record(id: string, occurredStart?: string, capturedAt = "2026-07-14T09:00:00Z"): MoriRecord {
   return {
@@ -41,6 +41,21 @@ describe("groupByActivityDay", () => {
 
   it("returns an empty array for no records", () => {
     expect(groupByActivityDay([])).toEqual([]);
+  });
+});
+
+describe("recordCountByDate", () => {
+  it("counts records per activity day, excluding unknown dates", () => {
+    const counts = recordCountByDate([
+      record("a", "2026-07-14"),
+      record("b", "2026-07-14T22:00:00Z"),
+      record("c", "2026-07-13"),
+      record("d"),
+    ]);
+    expect(counts.get("2026-07-14")).toBe(2);
+    expect(counts.get("2026-07-13")).toBe(1);
+    expect(counts.has("unknown")).toBe(false);
+    expect([...counts.values()].reduce((a, b) => a + b, 0)).toBe(3);
   });
 });
 
