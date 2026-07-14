@@ -11,8 +11,10 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  agentSessionToProposals,
   renameEntity as buildEntityRename,
   runCapturePipeline,
+  type AgentSessionInput,
   type CaptureInput,
   type CaptureOutcome,
 } from "../../lib/capture";
@@ -36,6 +38,8 @@ export type RecordLedger = {
   loading: boolean;
   reload: () => Promise<void>;
   capture: (input: CaptureInput) => Promise<CaptureOutcome>;
+  /** Converts an agent work session into ledger records. */
+  captureAgentSession: (input: AgentSessionInput) => Promise<CaptureOutcome>;
   setStatus: (record: MoriRecord, status: RecordStatus) => Promise<void>;
   /** Renames an entity by id (ID-stable) and teaches Mori the old name as an
    *  alias, so every record referencing it reads the new name. */
@@ -82,26 +86,46 @@ export function useRecordLedger(): RecordLedger {
     void reload();
   }, [reload]);
 
+  const persistOutcome = useCallback(async (outcome: CaptureOutcome) => {
+    const repo = getKernelRepository();
+    // Source first: the raw trace is preserved before any interpretation,
+    // so a later failure never loses what was captured.
+    await repo.saveSource(outcome.source);
+    for (const entity of outcome.newEntities) await repo.saveEntity(entity);
+    for (const item of outcome.records) {
+      await repo.saveRecord(item.created.record, item.created.revision);
+      await repo.saveSourceLink(item.sourceLink);
+      for (const relation of item.relations) await repo.saveRelation(relation);
+    }
+    await reload();
+  }, [reload]);
+
   const capture = useCallback(
     async (input: CaptureInput) => {
-      const repo = getKernelRepository();
       // The pipeline honours the user's saved personalization rules (classify,
       // context-binding, automation level). Rule creation arrives with the
       // entity / rename surface; captures already respect any stored rules.
       const outcome = runCapturePipeline(input, registry, { rules, entities });
-      // Source first: the raw trace is preserved before any interpretation,
-      // so a later failure never loses what the user typed.
-      await repo.saveSource(outcome.source);
-      for (const entity of outcome.newEntities) await repo.saveEntity(entity);
-      for (const item of outcome.records) {
-        await repo.saveRecord(item.created.record, item.created.revision);
-        await repo.saveSourceLink(item.sourceLink);
-        for (const relation of item.relations) await repo.saveRelation(relation);
-      }
-      await reload();
+      await persistOutcome(outcome);
       return outcome;
     },
-    [registry, rules, entities, reload],
+    [registry, rules, entities, persistOutcome],
+  );
+
+  const captureAgentSession = useCallback(
+    async (input: AgentSessionInput) => {
+      // Convert the session to record proposals and run them through the same
+      // pipeline (source preservation, entity resolution, apply policy) with a
+      // fixed agent-session source rather than the text proposer.
+      const outcome = runCapturePipeline(
+        { kind: "agent-session", content: input.summary ?? input.title, locator: input.sessionId },
+        registry,
+        { rules, entities, propose: () => agentSessionToProposals(input) },
+      );
+      await persistOutcome(outcome);
+      return outcome;
+    },
+    [registry, rules, entities, persistOutcome],
   );
 
   const renameEntity = useCallback(
@@ -136,6 +160,7 @@ export function useRecordLedger(): RecordLedger {
     loading,
     reload,
     capture,
+    captureAgentSession,
     setStatus,
     renameEntity,
   };

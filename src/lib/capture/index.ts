@@ -28,6 +28,7 @@ export {
   type EntityRename,
   type ResolvedEntity,
 } from "./entityResolution";
+export { agentSessionToProposals, type AgentSessionInput } from "./agentSessionAdapter";
 export {
   automationLevelFor,
   buildAliasRule,

@@ -305,6 +305,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Session overview → ledger action. */
+.session-overview-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
 /* ── 트래커 ─────────────────────────────────────────────────────────────── */
 
 .tracker {

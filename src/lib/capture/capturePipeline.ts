@@ -117,7 +117,7 @@ export function runCapturePipeline(
   const source: KernelSource = {
     id: createKernelId("src"),
     kind: sourceKindFor(input),
-    locator: input.url,
+    locator: input.locator ?? input.url,
     // Raw-input retention is the default (architecture §16.4): the original is
     // kept so re-derivation reads the source, not a prior interpretation.
     rawBody: rawContent,

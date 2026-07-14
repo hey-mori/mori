@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from "react";
-import { ArrowRight, ListPlus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, ListPlus, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { useRecordLedger } from "../record-ledger/useRecordLedger";
 import { SessionEmptyPrompt } from "./SessionEmptyPrompt";
 import { SessionFilesPanel } from "./SessionFilesPanel";
 import {
@@ -40,6 +41,8 @@ export function OverviewView() {
   const setSessionTab = useAppStore((state) => state.setSessionTab);
   const focusTimelineEvent = useAppStore((state) => state.focusTimelineEvent);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
+  const { captureAgentSession } = useRecordLedger();
+  const [recordState, setRecordState] = useState<"idle" | "busy" | "done">("idle");
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -111,6 +114,29 @@ export function OverviewView() {
     else openReviewItem({ kind: "nextAction", nextActionId: item.nextAction.id });
   }
 
+  async function recordAsActivity() {
+    if (recordState === "busy") return;
+    setRecordState("busy");
+    try {
+      await captureAgentSession({
+        sessionId: view.session.id,
+        title: view.session.title,
+        agentId: view.session.llmProvider,
+        occurredStart: view.session.startedAt,
+        occurredEnd: view.session.endedAt,
+        summary: workSummary.headline,
+        stepCount: view.events.length,
+        decisions: view.decisions.map((decision) => ({
+          title: decision.title,
+          rationale: decision.rationale,
+        })),
+      });
+      setRecordState("done");
+    } catch {
+      setRecordState("idle");
+    }
+  }
+
   return (
     <div className="session-tab-pane session-tab-overview">
       <div className="session-tab-split is-collapsed">
@@ -135,6 +161,23 @@ export function OverviewView() {
             <section className="session-overview-hero" aria-label="세션 개요">
               <p className="session-overview-summary">{workSummary.headline}</p>
               <WorkShapeBar lanes={workSummary.digest.lanes} />
+              <div className="session-overview-actions">
+                {recordState === "done" ? (
+                  <Button variant="secondary" size="sm" onClick={() => navigate("today")}>
+                    오늘에서 보기
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={Sparkles}
+                    disabled={recordState === "busy"}
+                    onClick={() => void recordAsActivity()}
+                  >
+                    활동으로 기록
+                  </Button>
+                )}
+              </div>
             </section>
           ) : null}
 

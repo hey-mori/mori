@@ -15,13 +15,16 @@ import type {
   TimeBasis,
 } from "../record-kernel/kernelTypes";
 
-/** What the user handed to Mori. Kind mirrors the pilot capture channels. */
+/** What the user handed to Mori. Kind mirrors the pilot capture channels
+ *  plus `agent-session` for a converted agent work session. */
 export type CaptureInput = {
-  kind: Extract<SourceKind, "text" | "url" | "pasted-conversation">;
+  kind: Extract<SourceKind, "text" | "url" | "pasted-conversation" | "agent-session">;
   /** The raw text, URL, or pasted body exactly as provided. */
   content: string;
   /** Present for `url` captures; the address itself. */
   url?: string;
+  /** A generic origin locator for the source (e.g. an agent session id). */
+  locator?: string;
   /** When the user says the activity happened, if they said. */
   occurredHint?: string;
 };
