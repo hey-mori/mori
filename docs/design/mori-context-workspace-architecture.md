@@ -271,15 +271,17 @@ black box.
 연동 as a top-level content surface ends: **agents get a world, input
 channels become capture affordances (inbox) + connection settings.**
 
-**Shipped so far (2026-07-14), user-confirmed and more consolidated than the
-list above:** 오늘 · 캘린더 · 트래커 · 인박스 unified into ONE **기록**
-surface (nav 11 → 8 → 7). Inside 기록: quick capture (fixed) + a single
-journal **feed** (date-grouped, 오늘+캘린더 merged) + a collapsible month
-calendar that filters the feed to a clicked day + a 피드 / 트래커 lens toggle
-+ the 확인 필요 chip. Not a tab switcher: one feed, calendar for navigation,
-tracker a lens. 프로젝트 reframed to contexts-over-records (`ContextView`).
-Staged next: 연동 → 설정, 메모리 hub → a 기억 filter inside 기록,
-대시보드 → 홈.
+**Superseded (2026-07-15).** The 2026-07-14 consolidation (오늘 · 캘린더 ·
+트래커 · 인박스 → one 기록 surface with quick capture + a date-grouped feed
++ a collapsible month calendar + a 합계 panel) proved the kernel but not the
+product experience, and the screen was re-planned from scratch. The
+canonical screen-level design of 기록 now lives in
+[`record-workspace/README.md`](record-workspace/README.md) (approved R0:
+timeline ledger + context rail, AI review as a composer state, strip-based
+date resolution, ledger calendar). Navigation-level facts still stand:
+기록 is one nav item; 연동 → 설정 and the 메모리 nav retirement shipped;
+프로젝트 is contexts-over-records (`ContextView`); 대시보드 → 홈 remains
+staged.
 
 ### 8.2 The agent world
 

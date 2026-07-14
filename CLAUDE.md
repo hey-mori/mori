@@ -11,6 +11,11 @@ Read these before changing code or committing.
   storage ADR, decision authority order, K1-K4 execution sequence).
   Existing Mori is material for future Mori, not its boundary; judge
   conflicts by that doc's §16 authority order.
+- Before touching the 기록 workspace (record-ledger feature, composer,
+  timeline, ledger calendar), read
+  [`docs/design/record-workspace/README.md`](docs/design/record-workspace/README.md),
+  the approved screen-level design set and stage roadmap. Keep its
+  `worklog.md` current as you work.
 - Read [`docs/mori-autonomous-loop.md`](docs/mori-autonomous-loop.md) for how
   the development loop runs.
 - [`docs/production-program.md`](docs/production-program.md) is marked

@@ -885,6 +885,13 @@ history). Screens are derived from user jobs, never from where legacy
 components could move (§16.2). Today's shipped navigation (Section 4)
 predates this and transitions per surface.
 
+The 오늘 · 캘린더 · 트래커 · 인박스 rows above consolidated into one
+**기록** workspace (2026-07-14), and that workspace's screen-level design
+was re-planned and approved 2026-07-15. The canonical spec set is
+[`docs/design/record-workspace/`](design/record-workspace/README.md)
+(timeline ledger + context rail, AI review as a composer state, ledger
+calendar).
+
 Mori is a calm productivity app. The product feel target:
 
 - **Visual tone.** White / soft-gray base, purple accent, generous
