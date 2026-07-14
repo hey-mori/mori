@@ -15,6 +15,9 @@ export type AgentSessionInput = {
   title: string;
   /** The agent that ran the session (claude / codex / …), or a fallback. */
   agentId: string;
+  /** The project the session belongs to (its context key + display name). */
+  projectKey?: string;
+  projectName?: string;
   /** Session window; real observed times from the source. */
   occurredStart?: string;
   occurredEnd?: string;

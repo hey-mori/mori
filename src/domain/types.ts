@@ -44,6 +44,11 @@ export type ViewKey =
   | "trackers"
   /** Legacy inbox key, normalised to `ledger`. */
   | "captureInbox"
+  /** 프로젝트 · contexts over records (projects · routines · topics · people).
+   *  Reframes the nav 프로젝트 destination off the AI-session-only model; the
+   *  legacy all-projects `workspace` and single `project` views stay
+   *  palette-reachable. */
+  | "contexts"
   | "profile"
   | "login"
   | "security"

@@ -88,6 +88,11 @@ const LedgerWorkspace = lazy(() =>
     default: m.LedgerWorkspace,
   })),
 );
+const ContextView = lazy(() =>
+  import("../features/record-ledger/ContextView").then((m) => ({
+    default: m.ContextView,
+  })),
+);
 export default function App() {
   const currentView = useAppStore((state) => state.currentView);
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -176,6 +181,7 @@ export default function App() {
             {currentView === "liveSession" ? <LiveSessionView /> : null}
             {currentView === "memoryHub" ? <MemoryHubView /> : null}
             {currentView === "ledger" ? <LedgerWorkspace /> : null}
+            {currentView === "contexts" ? <ContextView /> : null}
           </Suspense>
         </ErrorBoundary>
       </AppShell>

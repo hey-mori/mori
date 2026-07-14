@@ -20,6 +20,7 @@ import {
 } from "../../lib/capture";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { applyRecordPatch, createKernelId } from "../../lib/record-kernel/recordFactory";
+import { projectContextId, projectToContext } from "../../lib/record-kernel/projectContextConverter";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type {
   KernelContext,
@@ -130,9 +131,30 @@ export function useRecordLedger(): RecordLedger {
         { rules, entities, propose: () => agentSessionToProposals(input) },
       );
       await persistOutcome(outcome);
+      // Attach the session's records to their project context so a project
+      // reads as its records, not just its AI sessions.
+      if (input.projectKey) {
+        const repo = getKernelRepository();
+        const contextId = projectContextId(input.projectKey);
+        if (!contexts.some((context) => context.id === contextId)) {
+          await repo.saveContext(
+            projectToContext({ id: input.projectKey, name: input.projectName ?? input.projectKey }),
+          );
+        }
+        for (const item of outcome.records) {
+          await repo.saveRelation({
+            id: createKernelId("rel"),
+            fromRecordId: item.created.record.id,
+            type: "belongs-to",
+            toContextId: contextId,
+            createdAt: item.created.record.createdAt,
+          });
+        }
+        await reload();
+      }
       return outcome;
     },
-    [registry, rules, entities, persistOutcome],
+    [registry, rules, entities, contexts, persistOutcome, reload],
   );
 
   const renameEntity = useCallback(

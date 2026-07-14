@@ -56,8 +56,11 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
     label: "연동",
     icon: viewIcon.connections ?? Link2,
   },
+  // 프로젝트 · contexts over records (projects · routines · topics · people).
+  // Reframed off the AI-session-only model; the legacy all-projects list and
+  // single-project view stay palette-reachable.
   {
-    key: "workspace",
+    key: "contexts",
     label: "프로젝트",
     icon: viewIcon.workspace ?? FolderGit2,
   },

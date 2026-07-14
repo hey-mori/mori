@@ -14,7 +14,7 @@ import { useAppStore } from "../../app/store";
 import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
 import { buildSessionTokenStats } from "../../lib/session/sessionTokenStats";
 import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
-import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
+import { formatSidebarRelative, shortProjectLabel } from "../../lib/sidebar/sessionList";
 import type { ImportDigestLane } from "../../lib/import/importDigest";
 import type { TimelineEvent } from "../../domain/types";
 import {
@@ -118,10 +118,13 @@ export function OverviewView() {
     if (recordState === "busy") return;
     setRecordState("busy");
     try {
+      const projectKey = view.session.sourceLabel ?? view.session.projectId;
       await captureAgentSession({
         sessionId: view.session.id,
         title: view.session.title,
         agentId: view.session.llmProvider,
+        projectKey,
+        projectName: shortProjectLabel(view.session.sourceLabel) || projectKey,
         occurredStart: view.session.startedAt,
         occurredEnd: view.session.endedAt,
         summary: workSummary.headline,
