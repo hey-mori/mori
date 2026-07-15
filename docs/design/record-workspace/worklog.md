@@ -8,6 +8,19 @@ Legacy 메모리 surface retired from bell·palette·home (2026-07-15). **세션
 workspace shipped** (2026-07-15): two-pane 진행 중 / 과거 index + inline live/review.
 Next: slim icon rail (홈·기록·세션·프로젝트·캘린더·검색 + 설정).
 
+## Done (프로젝트 labeled sections, 2026-07-15)
+
+- A context's records now read as labeled sections (세션 · 결정 · 노트 · 활동 ·
+  기타) in a fixed order, each a quiet header + count over its ledger rows, so a
+  project is scannable by kind instead of one flat list. Pure helpers
+  `groupRecordsBySection` / `sectionForSchema` (unit-tested); an unlisted schema
+  falls into 기타. Commit `9546c93`.
+- Deferred (needs user direction): the "click a record → open in its proper home"
+  routing (notes → 기록, sessions → 세션) and the 기록 editor enhancements
+  (type change · entities · related records). The editor entities/related
+  addition was reverted earlier on the interaction-model concern, so it is a
+  design decision, not a mechanical add.
+
 ## Done (슬림 아이콘 레일, 2026-07-15)
 
 - The sidebar is now a permanent 64px icon rail (icon over micro-label). Nav is
