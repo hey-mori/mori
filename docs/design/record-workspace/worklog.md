@@ -5,9 +5,32 @@
 R1-R7 done. **v3 shell reframe underway** (unified explorer: 종류=filter,
 프로젝트=group; per-kind main renderer; artifact
 `d84deffc-64c0-46c5-a00c-2be28f42bfc1`). R8a (explorer type filter + group
-toggle) done and verified (2026-07-15). Next: R8b (shell rail cleanup +
-de-duplicate the ContextNavigator tree + bring legacy sessions into the
-unified explorer / per-kind renderer).
+toggle) and R8b-lite (hide the duplicate 최근 작업 tree in 기록/캘린더) done
+and verified (2026-07-15).
+
+## Done (R8b-lite · sidebar de-duplication, 2026-07-15)
+
+- The shell's 최근 작업 navigator (project → legacy-session tree) is hidden on
+  the surfaces that own a unified note explorer (기록 · 캘린더), so the
+  sidebar is not two competing lists; a flex spacer keeps the foot pinned. It
+  returns on other views. Low-risk conditional render.
+- Verified: 기록/캘린더 show no 최근 작업 tree (foot stays at the bottom);
+  대시보드 and others show it again; no console errors.
+
+## Remaining v3 work (R9 · larger, deferred)
+
+The deep shell merge is a bigger, higher-blast-radius change best done as a
+focused next step, not rushed:
+
+1. Move the unified explorer out of the 기록 view and into the shell sidebar
+   (replacing the navigator), so record selection is app-level and 기록 is
+   just the editor. Needs app-level selected-record state.
+2. Bring legacy sessions (sessionStore) into the unified explorer as a `세션`
+   type, routing to a per-kind session renderer (흐름/정리/상태) instead of a
+   separate surface. This bridges the two parallel data systems (kernel
+   records vs legacy sessions) and is the real unification.
+3. Slim the nav to a few global destinations; retire 대시보드/워크벤치 to
+   홈/palette per the v3 model.
 
 ## Done (R8a · explorer filter + group toggle, 2026-07-15)
 

@@ -568,6 +568,13 @@
   border-color: #5238df;
 }
 
+/* Keeps the foot at the bottom when the 최근 작업 navigator is hidden
+   (기록 · 캘린더 own their explorer). */
+.sidebar-nav-spacer {
+  flex: 1;
+  min-height: 0;
+}
+
 .sidebar-foot {
   padding-top: 6px;
   border-top: 1px solid var(--line);

@@ -169,7 +169,16 @@ export function Sidebar({
         })}
       </nav>
 
-      <ContextNavigator onNavigate={onNavigate} />
+      {/* 최근 작업 (project → session tree). Hidden on the surfaces that own a
+          unified note explorer (기록 · 캘린더) so the sidebar is not two
+          competing lists; the explorer supersedes it there. Reachable
+          elsewhere and via the palette. Full merge of legacy sessions into the
+          explorer is the remaining v3 work. */}
+      {currentView === "ledger" || currentView === "calendar" ? (
+        <div className="sidebar-nav-spacer" />
+      ) : (
+        <ContextNavigator onNavigate={onNavigate} />
+      )}
 
       <div className="sidebar-foot">
         <button
