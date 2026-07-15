@@ -160,6 +160,8 @@ type AppState = {
   /** A record the global calendar asked 기록 to open; the workspace reads it
    *  once on mount and clears it. */
   openRecordId: string | null;
+  /** Set when a global create action asked 기록 to start a new capture. */
+  newRecordRequest: boolean;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -238,6 +240,9 @@ type AppState = {
   /** Opens 기록 with a specific record selected (from the global calendar). */
   openRecordInLedger: (recordId: string) => void;
   clearOpenRecord: () => void;
+  /** Opens 기록 and starts a new capture (the global create action). */
+  requestNewRecord: () => void;
+  clearNewRecordRequest: () => void;
 };
 
 export const useAppStore = create<AppState>((set) => ({
@@ -265,6 +270,7 @@ export const useAppStore = create<AppState>((set) => ({
   startRecordsRequest: false,
   startRecordsAgentId: null,
   openRecordId: null,
+  newRecordRequest: false,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -374,4 +380,6 @@ export const useAppStore = create<AppState>((set) => ({
     set({ startRecordsRequest: false, startRecordsAgentId: null }),
   openRecordInLedger: (recordId) => set({ currentView: "ledger", openRecordId: recordId }),
   clearOpenRecord: () => set({ openRecordId: null }),
+  requestNewRecord: () => set({ currentView: "ledger", newRecordRequest: true }),
+  clearNewRecordRequest: () => set({ newRecordRequest: false }),
 }));

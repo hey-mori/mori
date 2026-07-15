@@ -28,6 +28,8 @@ export function LedgerWorkspace() {
   const now = useMemo(() => new Date(), []);
   const openRecordId = useAppStore((state) => state.openRecordId);
   const clearOpenRecord = useAppStore((state) => state.clearOpenRecord);
+  const newRecordRequest = useAppStore((state) => state.newRecordRequest);
+  const clearNewRecordRequest = useAppStore((state) => state.clearNewRecordRequest);
 
   // The global calendar can ask 기록 to open a specific record.
   useEffect(() => {
@@ -36,6 +38,14 @@ export function LedgerWorkspace() {
     setComposing(false);
     clearOpenRecord();
   }, [openRecordId, clearOpenRecord]);
+
+  // A global create action (the sidebar +) can ask 기록 to start a capture.
+  useEffect(() => {
+    if (!newRecordRequest) return;
+    setComposing(true);
+    setSelectedId(null);
+    clearNewRecordRequest();
+  }, [newRecordRequest, clearNewRecordRequest]);
 
   const candidates = useMemo(
     () => byNewest(ledger.records.filter((record) => record.status === "candidate")),

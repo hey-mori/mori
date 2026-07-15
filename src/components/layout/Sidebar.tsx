@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarDays,
+  FilePlus2,
   FolderGit2,
   House,
   Layers,
@@ -10,6 +12,7 @@ import {
   PanelLeftOpen,
   Plus,
   Radio,
+  Sparkles,
 } from "lucide-react";
 import { useAppStore } from "../../app/store";
 import { useProfileStore } from "../../app/profileStore";
@@ -85,10 +88,30 @@ export function Sidebar({
 }) {
   const currentView = useAppStore((state) => state.currentView);
   const setCurrentView = useAppStore((state) => state.setCurrentView);
+  const requestNewRecord = useAppStore((state) => state.requestNewRecord);
   const openSettings = useAppStore((state) => state.openSettingsSheet);
   const profile = useProfileStore((state) => state.profile);
+  const [createOpen, setCreateOpen] = useState(false);
+  const createRef = useRef<HTMLDivElement>(null);
 
   const isActive = (key: ViewKey) => key === currentView;
+
+  // The create menu closes on an outside click or Escape.
+  useEffect(() => {
+    if (!createOpen) return;
+    const onDown = (event: MouseEvent) => {
+      if (createRef.current && !createRef.current.contains(event.target as Node)) setCreateOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setCreateOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [createOpen]);
 
   return (
     <aside
@@ -96,15 +119,44 @@ export function Sidebar({
       aria-label="세션 목록 및 메뉴"
     >
       <div className="sidebar-head" role="group" aria-label="빠른 작업">
-        <button
-          type="button"
-          className={`sidebar-head-action${currentView === "start" ? " is-active" : ""}`}
-          onClick={() => setCurrentView("start")}
-          aria-label="새 세션"
-          aria-current={currentView === "start" ? "page" : undefined}
-        >
-          <Plus size={15} aria-hidden="true" />
-        </button>
+        {/* 만들기 · two experiences, one entry: a new 기록 (the frequent
+            personal capture) or a new 세션. No longer session-only. */}
+        <div className="sidebar-create" ref={createRef}>
+          <button
+            type="button"
+            className={`sidebar-head-action${createOpen ? " is-active" : ""}`}
+            onClick={() => setCreateOpen((v) => !v)}
+            aria-label="만들기"
+            aria-haspopup="menu"
+            aria-expanded={createOpen}
+          >
+            <Plus size={15} aria-hidden="true" />
+          </button>
+          {createOpen ? (
+            <div className="sidebar-create-menu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  requestNewRecord();
+                  setCreateOpen(false);
+                }}
+              >
+                <FilePlus2 size={14} aria-hidden="true" />새 기록
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setCurrentView("start");
+                  setCreateOpen(false);
+                }}
+              >
+                <Sparkles size={14} aria-hidden="true" />새 세션
+              </button>
+            </div>
+          ) : null}
+        </div>
         {/* Work graph · an experimental overview of projects + sessions. Sits
             between 새 세션 and 알림 as a quick action; the full surface is also
             reachable from the command palette. */}

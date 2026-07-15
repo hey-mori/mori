@@ -152,6 +152,48 @@
   color: var(--purple);
 }
 
+/* 만들기 menu · a small popover under the + action (새 기록 / 새 세션). */
+.sidebar-create {
+  position: relative;
+  display: inline-flex;
+}
+
+.sidebar-create-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  min-width: 148px;
+  display: grid;
+  gap: 2px;
+  padding: 5px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(20, 25, 45, 0.16);
+}
+
+.sidebar-create-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+
+.sidebar-create-menu button:hover {
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
 /* Context-navigator label: a quiet divider between the global nav above and
    the recent-work navigator below. A label + hairline, never a collapsible
    group; hidden entirely on the collapsed icon rail. */
