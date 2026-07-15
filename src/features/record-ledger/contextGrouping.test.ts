@@ -4,7 +4,12 @@ import type {
   KernelRelation,
   MoriRecord,
 } from "../../lib/record-kernel/kernelTypes";
-import { contextTypeLabel, groupRecordsByContext } from "./contextGrouping";
+import {
+  contextTypeLabel,
+  groupRecordsByContext,
+  groupRecordsBySection,
+  sectionForSchema,
+} from "./contextGrouping";
 
 function record(id: string, contextIds: string[] = [], capturedAt = "2026-07-14T09:00:00Z"): MoriRecord {
   return {
@@ -66,6 +71,45 @@ describe("groupRecordsByContext", () => {
       [],
     );
     expect(groups.map((group) => group.context.id)).toEqual(["ctx-project-mori", "ctx-run"]);
+  });
+});
+
+function recordOf(id: string, schemaId: string): MoriRecord {
+  return { ...record(id), schemaId };
+}
+
+describe("sectionForSchema", () => {
+  it("maps schema families to sections and unlisted schemas to 기타", () => {
+    expect(sectionForSchema("agent-session")).toBe("session");
+    expect(sectionForSchema("decision")).toBe("decision");
+    expect(sectionForSchema("insight")).toBe("decision");
+    expect(sectionForSchema("note")).toBe("note");
+    expect(sectionForSchema("activity")).toBe("activity");
+    expect(sectionForSchema("something-new")).toBe("other");
+  });
+});
+
+describe("groupRecordsBySection", () => {
+  it("splits records into labeled sections in a fixed order, dropping empties", () => {
+    const sections = groupRecordsBySection([
+      recordOf("n1", "note"),
+      recordOf("s1", "agent-session"),
+      recordOf("d1", "decision"),
+      recordOf("n2", "knowledge"),
+      recordOf("x1", "something-new"),
+    ]);
+    // Fixed order: 세션 · 결정 · 노트 · 활동 · 기타 (활동 absent here).
+    expect(sections.map((s) => s.id)).toEqual(["session", "decision", "note", "other"]);
+    expect(sections.map((s) => s.label)).toEqual(["세션", "결정", "노트", "기타"]);
+    expect(sections.find((s) => s.id === "note")?.records.map((r) => r.id)).toEqual(["n1", "n2"]);
+  });
+
+  it("preserves input order within a section", () => {
+    const sections = groupRecordsBySection([
+      recordOf("s2", "agent-session"),
+      recordOf("s1", "agent-session"),
+    ]);
+    expect(sections[0].records.map((r) => r.id)).toEqual(["s2", "s1"]);
   });
 });
 

@@ -17,7 +17,11 @@ import type { KernelContext } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
 import { RecordInspector } from "./RecordInspector";
-import { contextTypeLabel, groupRecordsByContext } from "./contextGrouping";
+import {
+  contextTypeLabel,
+  groupRecordsByContext,
+  groupRecordsBySection,
+} from "./contextGrouping";
 import { ledgerVisibleRecords } from "./recordPresentation";
 
 const CONTEXT_ICON: Partial<Record<KernelContext["type"], LucideIcon>> = {
@@ -82,21 +86,31 @@ export function ContextView() {
           </aside>
 
           <div className="context-body">
-            {activeGroup ? (
-              <ul className="ledger-list">
-                {activeGroup.records.map((record) => (
-                  <LedgerRow
-                    key={record.id}
-                    record={record}
-                    registry={registry}
-                    selected={record.id === selectedRecordId}
-                    onSelect={() =>
-                      setSelectedRecordId((current) => (current === record.id ? null : record.id))
-                    }
-                  />
-                ))}
-              </ul>
-            ) : null}
+            {activeGroup
+              ? groupRecordsBySection(activeGroup.records).map((section) => (
+                  <section key={section.id} className="context-section">
+                    <p className="context-section-label">
+                      {section.label}
+                      <span className="context-section-count">{section.records.length}</span>
+                    </p>
+                    <ul className="ledger-list">
+                      {section.records.map((record) => (
+                        <LedgerRow
+                          key={record.id}
+                          record={record}
+                          registry={registry}
+                          selected={record.id === selectedRecordId}
+                          onSelect={() =>
+                            setSelectedRecordId((current) =>
+                              current === record.id ? null : record.id,
+                            )
+                          }
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                ))
+              : null}
           </div>
 
           {selectedRecord ? (
