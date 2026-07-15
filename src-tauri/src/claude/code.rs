@@ -294,11 +294,14 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 preview.first_timestamp
             };
             // Prefer Claude's own generated title (the clean resume-list label),
-            // then the conversation summary, then a distilled first user message.
+            // then the conversation summary, then a format-tolerant title match
+            // (survives a field rename), then a distilled first user message.
             let title = if !preview.ai_title.trim().is_empty() {
                 truncate(&preview.ai_title, 90)
             } else if !preview.summary.trim().is_empty() {
                 truncate(&preview.summary, 90)
+            } else if !preview.generic_title.trim().is_empty() {
+                truncate(&preview.generic_title, 90)
             } else if preview.first_user_text.trim().is_empty() {
                 format!("Claude Code · {}", project_label)
             } else {
@@ -541,6 +544,7 @@ struct SessionPreview {
     first_user_text: String,
     summary: String,
     ai_title: String,
+    generic_title: String,
     first_timestamp: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
@@ -581,6 +585,11 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
         if preview.summary.is_empty() {
             if let Some(summary) = extract_summary(&value) {
                 preview.summary = summary;
+            }
+        }
+        if preview.generic_title.is_empty() {
+            if let Some(title) = detect_generic_title(&value) {
+                preview.generic_title = title;
             }
         }
         let role = detect_role(&value);
@@ -669,6 +678,7 @@ fn parse_jsonl(text: &str) -> ParsedSession {
     let mut title = String::new();
     let mut summary = String::new();
     let mut ai_title = String::new();
+    let mut generic_title = String::new();
     let mut cwd = String::new();
     let mut tokens = TokenAccumulator::default();
     let mut file_touches: Vec<ClaudeFileTouch> = Vec::new();
@@ -707,6 +717,11 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         if summary.is_empty() {
             if let Some(found) = extract_summary(&value) {
                 summary = found;
+            }
+        }
+        if generic_title.is_empty() {
+            if let Some(found) = detect_generic_title(&value) {
+                generic_title = found;
             }
         }
         let role = detect_role(&value);
@@ -754,11 +769,14 @@ fn parse_jsonl(text: &str) -> ParsedSession {
     ParsedSession {
         messages,
         // Prefer Claude's own generated title, then the conversation summary,
-        // then the first user message (a session that was never titled).
+        // then a format-tolerant title match, then the first user message (a
+        // session that was never titled).
         title: if !ai_title.trim().is_empty() {
             ai_title
         } else if !summary.trim().is_empty() {
             summary
+        } else if !generic_title.trim().is_empty() {
+            generic_title
         } else {
             title
         },
@@ -1237,6 +1255,69 @@ fn extract_ai_title(value: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
+/// Format-tolerant title fallback. Rather than hard-coding the exact line type
+/// and field name (which Claude has already changed once: summary → ai-title),
+/// this recognises a title by *role*: a head line that is not a conversation
+/// turn or tool step, carrying a title-ish field whose value reads like a real
+/// title. So a future rename (a new `sessionTitle` field, a `title` line type)
+/// still yields a title without a code change — the exact matchers above are
+/// the fast path, this is the safety net before we fall back to the first user
+/// message. Deliberately conservative: it never turns a tool line or a setting
+/// value like "auto" into a title.
+fn detect_generic_title(value: &Value) -> Option<String> {
+    let type_field = value.get("type").and_then(Value::as_str).unwrap_or("");
+    // Conversation turns, tool steps, and event envelopes are never titles.
+    if matches!(
+        type_field,
+        "user"
+            | "human"
+            | "assistant"
+            | "response_item"
+            | "event_msg"
+            | "tool_use"
+            | "tool_result"
+            | "queue-operation"
+    ) {
+        return None;
+    }
+    for key in [
+        "aiTitle",
+        "title",
+        "sessionTitle",
+        "threadTitle",
+        "thread_name",
+        "summary",
+        "subject",
+    ] {
+        if let Some(candidate) = value.get(key).and_then(Value::as_str) {
+            let trimmed = candidate.trim();
+            if looks_like_title(trimmed) {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Whether a string reads like a human session title rather than a placeholder,
+/// a setting value ("auto"), a tool / command name, or a filesystem path.
+fn looks_like_title(s: &str) -> bool {
+    let len = s.chars().count();
+    if len == 0 || len > 120 {
+        return false;
+    }
+    match s.to_ascii_lowercase().as_str() {
+        "auto" | "none" | "null" | "default" | "untitled" | "new session" => return false,
+        _ => {}
+    }
+    // A path or a command line, not a title.
+    if s.contains('/') || s.contains('\\') {
+        return false;
+    }
+    // Must carry at least one letter (reject pure ids / numbers / symbols).
+    s.chars().any(char::is_alphabetic)
+}
+
 fn is_jsonl(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
@@ -1482,6 +1563,35 @@ mod tests {
         let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
         assert_eq!(detail.title, "Fix calendar time mismatch");
         assert_eq!(detail.messages.len(), 2);
+    }
+
+    #[test]
+    fn tolerant_title_survives_a_future_field_rename() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-Users-alice-mori");
+        // A hypothetical future format with neither an ai-title nor a summary
+        // line, but a metadata line carrying a renamed title field. The tolerant
+        // detector still recovers the title without a code change.
+        write_session(
+            &project,
+            "session-future.jsonl",
+            "{\"type\":\"session-title\",\"sessionTitle\":\"Design the ingestion layer\"}\n\
+             {\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"first request text here\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n",
+        );
+        let listing = list_sessions_at(temp.path()).unwrap();
+        let row = listing.iter().find(|r| r.session_id == "session-future").unwrap();
+        assert_eq!(row.title, "Design the ingestion layer");
+    }
+
+    #[test]
+    fn looks_like_title_rejects_placeholders_and_paths() {
+        assert!(looks_like_title("Design the feed system"));
+        assert!(looks_like_title("GitHub에서 GitLab으로 마이그레이션"));
+        assert!(!looks_like_title("auto"));
+        assert!(!looks_like_title(""));
+        assert!(!looks_like_title("C:/dev/mori"));
+        assert!(!looks_like_title("/usr/bin/exec"));
+        assert!(!looks_like_title(&"x".repeat(200)));
     }
 
     #[test]
