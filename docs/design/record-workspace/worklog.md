@@ -2,8 +2,28 @@
 
 ## Current stage
 
-R1 + R2 + R3 done and verified (2026-07-15). Next stage: R4 date-confirmation
-UX (확인할 것 strip + resolution cards + repeat-correction rules).
+R1 + R2 + R3 done; R4a (확인할 것 strip + date-resolution cards) done and
+verified (2026-07-15). In progress: R4b (repeat-correction → date rule).
+
+## Done (R4a, 2026-07-15)
+
+- `dateResolution.ts`: `isDateUndecided` (`timeBasis === "unknown"`) +
+  `dateSituation(record, now)` → reason + context-fit choices (오늘 alone
+  when captured today; 입력일 + 오늘 for an earlier capture day; 전날 first
+  for a small-hours capture). Pure, tested.
+- `useRecordLedger.setActivityDate(record, date|null)`: a date pins the
+  activity day (`user-provided`, clears inference confidence); null moves the
+  basis to `capture-fallback` so "날짜 없이 유지" is acknowledged (leaves the
+  strip) without fabricating a day. Both via `applyRecordPatch` (user
+  revision).
+- `ReviewStrip` replaces the inline `CandidateStrip`: one 확인할 것 strip for
+  policy-held candidates (반영/무시) and date-undecided records (M5 cards,
+  reason first, choices incl. 날짜 선택 date input). Disappears at zero.
+- Verified in the Vite app: strip shows "확인할 것 2" for the two dateless
+  records; "오늘 (7월 15일)" moves the 할 일 into today's group and drops the
+  strip to 1; "날짜 없이 유지" removes the strip and keeps the insight in
+  날짜 미정 (no fabricated date); both survive reload; no console errors.
+  2773 unit tests + build + style green.
 
 ## Done
 

@@ -89,6 +89,10 @@ export type RecordLedger = {
   /** Converts an agent work session into ledger records. */
   captureAgentSession: (input: AgentSessionInput) => Promise<CaptureOutcome>;
   setStatus: (record: MoriRecord, status: RecordStatus) => Promise<void>;
+  /** Resolves a date-undecided record: a date pins it (`user-provided`);
+   *  null acknowledges it stays dateless (`capture-fallback`). Either way it
+   *  leaves the 확인할 것 strip. */
+  setActivityDate: (record: MoriRecord, date: string | null) => Promise<void>;
   /** Renames an entity by id (ID-stable) and teaches Mori the old name as an
    *  alias, so every record referencing it reads the new name. */
   renameEntity: (entityId: string, newName: string) => Promise<void>;
@@ -381,6 +385,22 @@ export function useRecordLedger(): RecordLedger {
     [registry, reload],
   );
 
+  const setActivityDate = useCallback(
+    async (record: MoriRecord, date: string | null) => {
+      const repo = getKernelRepository();
+      // A chosen date is user-provided (no inference confidence); "keep none"
+      // moves the basis off `unknown` to `capture-fallback` so the record is
+      // acknowledged as dateless (out of the strip) without inventing a day.
+      const patch = date
+        ? { occurredStart: date, timeBasis: "user-provided" as const, timeConfidence: undefined }
+        : { timeBasis: "capture-fallback" as const };
+      const { record: next, revision } = applyRecordPatch(record, patch, "user", registry);
+      await repo.saveRecord(next, revision);
+      await reload();
+    },
+    [registry, reload],
+  );
+
   const createRoutine = useCallback(
     async (name: string, recordIds: string[]) => {
       if (name.trim().length === 0 || recordIds.length === 0) return;
@@ -421,6 +441,7 @@ export function useRecordLedger(): RecordLedger {
     discardRecords,
     captureAgentSession,
     setStatus,
+    setActivityDate,
     renameEntity,
     createRoutine,
   };

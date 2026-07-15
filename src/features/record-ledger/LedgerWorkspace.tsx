@@ -10,19 +10,18 @@
  * 메모리 hub did (find your accumulated records).
  */
 import { useEffect, useMemo, useState } from "react";
-import { Check, Sparkles, X } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
-import { Button } from "../../components/ui/Button";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
-import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
-import { useRecordLedger, type RecordLedger } from "./useRecordLedger";
+import { useRecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
 import { RecordInspector } from "./RecordInspector";
 import { LedgerTimeline } from "./LedgerTimeline";
 import { ContextRail } from "./ContextRail";
-import { displayTime, ledgerVisibleRecords, schemaLabel } from "./recordPresentation";
+import { ReviewStrip } from "./ReviewStrip";
+import { isDateUndecided } from "./dateResolution";
+import { displayTime, ledgerVisibleRecords } from "./recordPresentation";
 
 export function LedgerWorkspace() {
   const ledger = useRecordLedger();
@@ -41,6 +40,9 @@ export function LedgerWorkspace() {
     [ledger.records, selectedId],
   );
   const visibleRecords = useMemo(() => ledgerVisibleRecords(ledger.records), [ledger.records]);
+  // Date-undecided records need a day; they share the 확인할 것 strip with the
+  // policy-held candidates instead of piling up in the timeline.
+  const dateUnknown = useMemo(() => byNewest(visibleRecords.filter(isDateUndecided)), [visibleRecords]);
   const onSelect = (recordId: string) =>
     setSelectedId((current) => (current === recordId ? null : recordId));
 
@@ -77,9 +79,7 @@ export function LedgerWorkspace() {
           <RecordComposer ledger={ledger} onSaved={setNewIds} />
           {ledger.loading ? null : (
             <>
-              {candidates.length > 0 ? (
-                <CandidateStrip candidates={candidates} ledger={ledger} />
-              ) : null}
+              <ReviewStrip candidates={candidates} dateUnknown={dateUnknown} ledger={ledger} now={now} />
               <LedgerTimeline
                 ledger={ledger}
                 query={query}
@@ -112,43 +112,6 @@ export function LedgerWorkspace() {
         )}
       </div>
     </PageShell>
-  );
-}
-
-/** Records the apply policy could not auto-organize, surfaced inline above the
- *  feed with 반영 / 무시 in place. No separate inbox mode. */
-function CandidateStrip({ candidates, ledger }: { candidates: MoriRecord[]; ledger: RecordLedger }) {
-  return (
-    <section className="ledger-review">
-      <header className="ledger-review-head">
-        <h2>확인이 필요한 항목</h2>
-        <span className="ledger-review-count">{candidates.length}</span>
-      </header>
-      <ul className="inbox-list">
-        {candidates.map((record) => (
-          <li key={record.id} className="inbox-card">
-            <div className="inbox-card-body">
-              <div className="inbox-card-head">
-                <span className="inbox-card-kind">{schemaLabel(record, ledger.registry)}</span>
-                <span className="inbox-card-title">{record.title}</span>
-              </div>
-              {record.body && record.body !== record.title ? (
-                <p className="inbox-card-summary">{record.body}</p>
-              ) : null}
-              <span className="inbox-card-time">{formatClaudeRelativeKo(displayTime(record).iso)}</span>
-            </div>
-            <div className="inbox-card-actions">
-              <Button variant="primary" size="sm" icon={Check} onClick={() => void ledger.setStatus(record, "active")}>
-                반영
-              </Button>
-              <Button variant="ghost" size="sm" icon={X} onClick={() => void ledger.setStatus(record, "discarded")}>
-                무시
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 
