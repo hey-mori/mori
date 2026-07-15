@@ -134,6 +134,7 @@ concurrent 세션 workspace work:
   producer over `searchRecords` + `openRecord` target + snippet rows.
   Done when a captured agent-session and a workout note are both
   findable from 검색 with honest desktop/browser labels. No schema work.
+  Implementation contract: [`global-search-spec.md`](global-search-spec.md).
 - **S2 · auto-import writes kernel records too.** Reuse the stable
   auto-id as the kernel record id seed; upsert an `agent-session` record
   per discovered session alongside the legacy draft (dual-write during
