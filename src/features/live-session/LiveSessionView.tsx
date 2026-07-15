@@ -21,7 +21,6 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
-import { EmptyState } from "../../components/layout/EmptyState";
 import { useSessionStore } from "../../app/sessionStore";
 import { buildLiveCompletionNotification } from "../../lib/notifications/liveSessionNotifications";
 import { isClaudeBridgeAvailable, formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
@@ -319,11 +318,7 @@ export function LiveSessionView() {
   if (!available) {
     return (
       <PageShell maxWidth="full" actionBar={<ActionBar label="라이브 세션" end={statusEl} />}>
-        <EmptyState
-          icon={Radio}
-          title="라이브 세션은 데스크톱 앱에서만 동작합니다"
-          description="실행 중인 세션 파일을 실시간으로 읽어야 하므로 데스크톱 앱이 필요합니다. 브라우저에서는 세션 저장소에 접근할 수 없습니다."
-        />
+        <LiveLanding mode="browser" activeCount={0} />
       </PageShell>
     );
   }
@@ -363,15 +358,9 @@ export function LiveSessionView() {
         ) : null}
 
         {feed.length === 0 ? (
-          <EmptyState
-            compact
-            icon={Radio}
-            title={watching ? "실시간 요청을 기다리는 중" : "일시정지됨"}
-            description={
-              watching
-                ? "실행 중인 세션의 요청과 작업이 실시간으로 여기에 모입니다."
-                : "재개를 누르면 다시 실행 중인 세션을 따라갑니다."
-            }
+          <LiveLanding
+            mode={watching ? "waiting" : "paused"}
+            activeCount={snapshot.activeCount}
           />
         ) : (
           <div className="lsv-feed">
@@ -383,6 +372,47 @@ export function LiveSessionView() {
         )}
       </div>
     </PageShell>
+  );
+}
+
+/** The calm first view of the 세션 workspace's live pane: a pulsing orb, a
+ *  status line, and a quiet pointer to the session list. Replaces a bare empty
+ *  state so entering 세션 reads as a considered surface, not a blank wait. */
+function LiveLanding({
+  mode,
+  activeCount,
+}: {
+  mode: "browser" | "waiting" | "paused";
+  activeCount: number;
+}) {
+  const copy = {
+    browser: {
+      title: "라이브 세션",
+      sub: "데스크톱 앱에서 실행 중인 Claude · Codex 세션의 작업을 실시간으로 따라갑니다.",
+    },
+    waiting: {
+      title: "라이브 세션 대기 중",
+      sub: "실행 중인 세션의 요청과 작업이 여기에 실시간으로 흐릅니다.",
+    },
+    paused: {
+      title: "일시정지됨",
+      sub: "재개하면 다시 실행 중인 세션을 따라갑니다.",
+    },
+  }[mode];
+  return (
+    <div className="lsv-landing">
+      <div className={`lsv-landing-orb${mode === "waiting" ? " is-live" : ""}`} aria-hidden="true">
+        <Radio size={24} />
+      </div>
+      <h2 className="lsv-landing-title">{copy.title}</h2>
+      <p className="lsv-landing-sub">{copy.sub}</p>
+      {mode === "waiting" ? (
+        <span className="lsv-landing-status">
+          {activeCount > 0 ? `${activeCount}개 세션 실시간` : "세션을 찾는 중"}
+        </span>
+      ) : null}
+      <p className="lsv-landing-foot">지난 세션은 왼쪽 목록에서 열 수 있습니다.</p>
+    </div>
   );
 }
 
