@@ -29,20 +29,23 @@ import {
   sessionShortLabel,
 } from "../live-session/liveFeed";
 
+/** A followed session counts as "live" while it is working or was touched this
+ *  recently — so the list stays stable between turns instead of flickering, and
+ *  the 30-minute follow window's older sessions fall through to 과거 instead. */
+const LIVE_WINDOW_MS = 4 * 60_000;
+
 /**
  * 세션 인덱스 · the left column of the unified 세션 workspace.
  *
- * One list, two groups by *state*, not by source type:
- *  - 라이브 피드 · sessions the live-follow driver is tailing right now (desktop
- *    only). Each row reads by its current request (the conversation), with a
- *    작업 중 badge when the agent is genuinely mid-turn. Selecting one shows the
- *    live feed.
- *  - 과거 · every stored session, grouped by recency or by project (a toggle),
- *    newest first. Selecting one loads it and opens its review inline.
+ * Deliberately calm and dense, matching the old sidebar session list:
+ *  - 라이브 피드 · only sessions running right now (working or just-active),
+ *    each read by its current request with a 작업 중 mark when mid-turn.
+ *  - 과거 · every stored session, grouped by recency or project (a toggle). Each
+ *    row shows the ONE signal its group does not already imply — the project in
+ *    recency mode, the time in project mode — so nothing is repeated.
  *
- * This index is the single home for browsing sessions: it supersedes both the
- * live view's session-picker popover and the global 최근 작업 tree, so the shell
- * is never two competing lists.
+ * Selecting a row opens it in the main pane. This index supersedes both the live
+ * view's picker popover and the old global 최근 작업 tree.
  */
 export function SessionIndex({
   liveActive,
@@ -50,16 +53,12 @@ export function SessionIndex({
   onSelectLive,
   onSelectPast,
 }: {
-  /** The main pane is showing the live feed. */
   liveActive: boolean;
-  /** The past session whose review is open (null when live). */
   selectedPastId: string | null;
   onSelectLive: (focusSessionId?: string) => void;
   onSelectPast: (sessionId: string) => void;
 }) {
   const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
-  // Bumped by the background auto-import pass so newly-registered sessions
-  // appear in 과거 without a navigation.
   const sessionListNonce = useSessionStore((state) => state.sessionListNonce);
   const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? state.demoSessionId ?? null,
@@ -70,17 +69,22 @@ export function SessionIndex({
   const liveRows = useMemo(() => {
     const now = Date.now();
     return liveSnapshot.sessions
-      .map((s) => ({
-        key: s.meta.filePath,
-        sessionId: s.meta.sessionId,
-        title: liveSessionTitle(s),
-        project: sessionShortLabel(s.meta),
-        working: sessionIsWorking(s, now),
-        lastAt:
+      .map((s) => {
+        const lastAt =
           s.follow.messages[s.follow.messages.length - 1]?.createdAt ||
-          s.meta.startedAt,
-      }))
-      // Working sessions first, then most-recently-active — like Claude / Codex.
+          s.meta.startedAt;
+        return {
+          key: s.meta.filePath,
+          sessionId: s.meta.sessionId,
+          title: liveSessionTitle(s),
+          project: sessionShortLabel(s.meta),
+          working: sessionIsWorking(s, now),
+          lastAt,
+        };
+      })
+      // Only what is genuinely live right now — working, or touched within the
+      // stability window. Everything older belongs to 과거.
+      .filter((row) => row.working || now - (Date.parse(row.lastAt) || 0) < LIVE_WINDOW_MS)
       .sort(
         (a, b) =>
           Number(b.working) - Number(a.working) ||
@@ -136,6 +140,7 @@ export function SessionIndex({
   );
 
   const isProjectMode = groupMode === "project";
+  const workingCount = visibleLive.filter((row) => row.working).length;
 
   return (
     <aside className="session-index" aria-label="세션 목록">
@@ -162,10 +167,7 @@ export function SessionIndex({
       </div>
 
       <div className="session-index-list base-scroll">
-        {/* 라이브 피드 · always present and clickable, so the live pane is
-            reachable from anywhere in the index (even mid-review with no
-            running session). Its followed sessions list underneath, working
-            ones first. */}
+        {/* 라이브 피드 · always reachable; lists only what is live right now. */}
         <section className="session-index-group">
           <button
             type="button"
@@ -173,12 +175,12 @@ export function SessionIndex({
             onClick={() => onSelectLive()}
           >
             <span
-              className={`session-index-live-dot${visibleLive.some((r) => r.working) ? "" : " is-idle"}`}
+              className={`session-index-live-dot${workingCount > 0 ? "" : " is-idle"}`}
               aria-hidden="true"
             />
             <span className="session-index-live-head-label">라이브 피드</span>
-            {visibleLive.length > 0 ? (
-              <span className="session-index-live-count">{visibleLive.length}</span>
+            {workingCount > 0 ? (
+              <span className="session-index-live-count">{workingCount}</span>
             ) : null}
           </button>
           {visibleLive.length > 0 ? (
@@ -196,13 +198,7 @@ export function SessionIndex({
                         <span className="session-index-working">작업 중</span>
                       ) : null}
                     </span>
-                    <span className="session-index-row-meta">
-                      <span className="session-index-row-source">
-                        <FolderGit2 size={11} aria-hidden="true" />
-                        {row.project}
-                      </span>
-                      <span>{formatClaudeRelativeKo(row.lastAt)}</span>
-                    </span>
+                    <span className="session-index-row-meta">{row.project}</span>
                   </button>
                 </li>
               ))}
@@ -216,7 +212,7 @@ export function SessionIndex({
           <p className="session-index-empty">
             {term
               ? "검색 결과가 없습니다."
-              : "아직 지난 세션이 없습니다. Claude · Codex 작업을 가져오면 여기에 쌓입니다."}
+              : "아직 지난 세션이 없습니다. Claude · Codex 작업을 연동하면 자동으로 쌓입니다."}
           </p>
         ) : (
           pastGroups.map((group) => (
@@ -225,11 +221,18 @@ export function SessionIndex({
               className="session-index-group"
             >
               <p className="session-index-label">
-                {isProjectMode ? shortProjectLabel(group.label) : `과거 · ${group.label}`}
+                {isProjectMode ? shortProjectLabel(group.label) : group.label}
               </p>
               <ul>
                 {group.rows.map((row) => {
                   const active = !liveActive && selectedPastId === row.sessionId;
+                  // One calm signal, never repeating the group: the project in
+                  // recency mode, the time in project mode.
+                  const meta = isProjectMode
+                    ? formatClaudeRelativeKo(row.timestamp)
+                    : row.sourceLabel
+                      ? shortProjectLabel(row.sourceLabel)
+                      : formatClaudeRelativeKo(row.timestamp);
                   return (
                     <li key={row.sessionId}>
                       <button
@@ -237,16 +240,12 @@ export function SessionIndex({
                         className={`session-index-row${active ? " is-active" : ""}`}
                         onClick={() => handleSelectPast(row.sessionId)}
                       >
-                        <span className="session-index-row-title">{row.title}</span>
-                        <span className="session-index-row-meta">
-                          {!isProjectMode && row.sourceLabel ? (
-                            <span className="session-index-row-source">
-                              <FolderGit2 size={11} aria-hidden="true" />
-                              {shortProjectLabel(row.sourceLabel)}
-                            </span>
-                          ) : null}
-                          <span>{formatClaudeRelativeKo(row.timestamp)}</span>
+                        <span className="session-index-row-title">
+                          <span className="session-index-row-name">{row.title}</span>
                         </span>
+                        {meta ? (
+                          <span className="session-index-row-meta">{meta}</span>
+                        ) : null}
                       </button>
                     </li>
                   );
