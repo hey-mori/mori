@@ -293,7 +293,11 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             } else {
                 preview.first_timestamp
             };
-            let title = if !preview.summary.trim().is_empty() {
+            // Prefer Claude's own generated title (the clean resume-list label),
+            // then the conversation summary, then a distilled first user message.
+            let title = if !preview.ai_title.trim().is_empty() {
+                truncate(&preview.ai_title, 90)
+            } else if !preview.summary.trim().is_empty() {
                 truncate(&preview.summary, 90)
             } else if preview.first_user_text.trim().is_empty() {
                 format!("Claude Code · {}", project_label)
@@ -536,6 +540,7 @@ struct SessionPreview {
     message_count: usize,
     first_user_text: String,
     summary: String,
+    ai_title: String,
     first_timestamp: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
@@ -568,6 +573,11 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
             continue;
         };
         tokens.observe(&value);
+        if preview.ai_title.is_empty() {
+            if let Some(ai_title) = extract_ai_title(&value) {
+                preview.ai_title = ai_title;
+            }
+        }
         if preview.summary.is_empty() {
             if let Some(summary) = extract_summary(&value) {
                 preview.summary = summary;
@@ -658,6 +668,7 @@ fn parse_jsonl(text: &str) -> ParsedSession {
     let mut messages: Vec<ClaudeCodeMessage> = Vec::new();
     let mut title = String::new();
     let mut summary = String::new();
+    let mut ai_title = String::new();
     let mut cwd = String::new();
     let mut tokens = TokenAccumulator::default();
     let mut file_touches: Vec<ClaudeFileTouch> = Vec::new();
@@ -686,6 +697,11 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         if cwd.is_empty() {
             if let Some(found) = extract_cwd(&value) {
                 cwd = found;
+            }
+        }
+        if ai_title.is_empty() {
+            if let Some(found) = extract_ai_title(&value) {
+                ai_title = found;
             }
         }
         if summary.is_empty() {
@@ -737,9 +753,15 @@ fn parse_jsonl(text: &str) -> ParsedSession {
 
     ParsedSession {
         messages,
-        // Prefer the real conversation summary; fall back to the first user
-        // message only when the session was never summarised.
-        title: if summary.trim().is_empty() { title } else { summary },
+        // Prefer Claude's own generated title, then the conversation summary,
+        // then the first user message (a session that was never titled).
+        title: if !ai_title.trim().is_empty() {
+            ai_title
+        } else if !summary.trim().is_empty() {
+            summary
+        } else {
+            title
+        },
         cwd,
         token_usage: tokens.usage,
         file_touches,
@@ -1197,6 +1219,24 @@ fn extract_summary(value: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
+/// Claude Code's own generated session title, written as an `ai-title` line
+/// (`{"type":"ai-title","aiTitle":"…"}`), usually at the head of the file but
+/// sometimes a few lines in. This is the clean, human-readable title Claude
+/// shows in its resume list (e.g. "Fix calendar time mismatch"); we prefer it
+/// over the conversation summary and the first user message. Sessions that
+/// were never titled have no such line, so callers fall back.
+fn extract_ai_title(value: &Value) -> Option<String> {
+    if value.get("type").and_then(Value::as_str) != Some("ai-title") {
+        return None;
+    }
+    value
+        .get("aiTitle")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|title| !title.is_empty())
+        .map(str::to_string)
+}
+
 fn is_jsonl(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
@@ -1413,6 +1453,34 @@ mod tests {
         let path = project.join("session-sum.jsonl");
         let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
         assert_eq!(detail.title, "Refactor the auth middleware");
+        assert_eq!(detail.messages.len(), 2);
+    }
+
+    #[test]
+    fn prefers_the_ai_title_over_summary_and_first_message() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-Users-alice-mori");
+        // Claude's own generated title arrives a few lines in (after queue /
+        // user lines), exactly as real sessions write it. It wins over both the
+        // summary line and the first user message.
+        write_session(
+            &project,
+            "session-ai.jsonl",
+            "{\"type\":\"queue-operation\",\"op\":\"x\"}\n\
+             {\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"What's the plan?\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"ai-title\",\"aiTitle\":\"Fix calendar time mismatch\",\"sessionId\":\"session-ai\"}\n\
+             {\"type\":\"summary\",\"summary\":\"Refactor the auth middleware\",\"leafUuid\":\"x\"}\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Hi back.\"}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n",
+        );
+        let listing = list_sessions_at(temp.path()).unwrap();
+        let row = listing.iter().find(|r| r.session_id == "session-ai").unwrap();
+        assert_eq!(row.title, "Fix calendar time mismatch");
+        // Neither the ai-title nor the summary line counts as a conversation message.
+        assert_eq!(row.message_count, 2);
+
+        let path = project.join("session-ai.jsonl");
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(detail.title, "Fix calendar time mismatch");
         assert_eq!(detail.messages.len(), 2);
     }
 
