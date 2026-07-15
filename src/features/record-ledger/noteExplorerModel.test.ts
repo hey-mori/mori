@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { KernelContext, KernelRelation, MoriRecord } from "../../lib/record-kernel/kernelTypes";
-import { buildExplorerGroups } from "./noteExplorerModel";
+import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
+import { buildExplorerGroups, RECENT_GROUP_ID, recordTypeFacets } from "./noteExplorerModel";
 
 function record(id: string, occurredStart: string, title = id, contextIds: string[] = []): MoriRecord {
   return {
@@ -66,3 +67,39 @@ describe("buildExplorerGroups", () => {
 function relations(): KernelRelation[] {
   return [];
 }
+
+const registry = createSchemaRegistry();
+
+function typed(id: string, schemaId: string, day: string): MoriRecord {
+  return { ...record(id, day), schemaId };
+}
+
+describe("recent group mode", () => {
+  it("returns one flat list newest-first, no project headers", () => {
+    const groups = buildExplorerGroups(
+      [record("a", "2026-07-10", "a", ["ctx-a"]), record("b", "2026-07-14", "b")],
+      contexts,
+      relations(),
+      "date",
+      "recent",
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].id).toBe(RECENT_GROUP_ID);
+    expect(groups[0].records.map((r) => r.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("recordTypeFacets", () => {
+  it("lists the types present, most common first, with labels", () => {
+    const facets = recordTypeFacets(
+      [
+        typed("a", "note", "2026-07-14"),
+        typed("b", "note", "2026-07-13"),
+        typed("c", "workout", "2026-07-12"),
+      ],
+      registry,
+    );
+    expect(facets[0]).toMatchObject({ schemaId: "note", count: 2 });
+    expect(facets.find((f) => f.schemaId === "workout")).toMatchObject({ name: "운동", count: 1 });
+  });
+});

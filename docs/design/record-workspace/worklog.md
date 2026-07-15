@@ -2,9 +2,25 @@
 
 ## Current stage
 
-R1-R6 done. **v2 pivot (document workspace) shipped** (see
-`v2-document-workspace.md`): R7a (document workspace) and R7b (global
-calendar) both done and verified (2026-07-15).
+R1-R7 done. **v3 shell reframe underway** (unified explorer: 종류=filter,
+프로젝트=group; per-kind main renderer; artifact
+`d84deffc-64c0-46c5-a00c-2be28f42bfc1`). R8a (explorer type filter + group
+toggle) done and verified (2026-07-15). Next: R8b (shell rail cleanup +
+de-duplicate the ContextNavigator tree + bring legacy sessions into the
+unified explorer / per-kind renderer).
+
+## Done (R8a · explorer filter + group toggle, 2026-07-15)
+
+- `noteExplorerModel`: `buildExplorerGroups` gains a `groupMode`
+  (project / recent; recent is one flat newest-first list, no headers) and
+  `recordTypeFacets` lists the types present, most common first, with labels
+  (extensible: a new schema is just another chip). Tested.
+- `NoteExplorer`: a 프로젝트별 / 최근순 group toggle, a 날짜 / 제목 sort
+  toggle, and 종류 filter chips (전체 + one per schema present). The filter
+  applies to the grouped records; the pinned 확인할 것 group always shows.
+- Verified in the Vite app: chips read 전체·노트·운동·인사이트·할 일·활동;
+  filtering to 운동 shows only the workout; 최근순 renders a flat headerless
+  list newest-first; no console errors. 2790 unit tests + build + style green.
 
 ## Done (R7b · global calendar, 2026-07-15)
 

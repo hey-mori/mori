@@ -9,9 +9,27 @@ import type {
   KernelRelation,
   MoriRecord,
 } from "../../lib/record-kernel/kernelTypes";
-import { displayTime } from "./recordPresentation";
+import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
+import { displayTime, schemaLabel } from "./recordPresentation";
 
 export type ExplorerSort = "date" | "title";
+export type ExplorerGroupMode = "project" | "recent";
+
+export const RECENT_GROUP_ID = "__recent__";
+const RECENT_ID = RECENT_GROUP_ID;
+
+/** A record type present in the list, for the 종류 filter. `count` orders the
+ *  chips by how common the type is, so the filter grows with the schema
+ *  taxonomy (extensible: a new schema is just another facet). */
+export type TypeFacet = { schemaId: string; name: string; count: number };
+
+export function recordTypeFacets(records: MoriRecord[], registry: SchemaRegistry): TypeFacet[] {
+  const counts = new Map<string, number>();
+  for (const record of records) counts.set(record.schemaId, (counts.get(record.schemaId) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([schemaId, count]) => ({ schemaId, name: schemaLabel({ schemaId } as MoriRecord, registry), count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
 
 export type ExplorerGroup = {
   /** Context id, or "__none__" for the 기타 bucket. */
@@ -62,7 +80,15 @@ export function buildExplorerGroups(
   contexts: KernelContext[],
   relations: KernelRelation[],
   sort: ExplorerSort,
+  groupMode: ExplorerGroupMode = "project",
 ): ExplorerGroup[] {
+  // 최근순: one flat list, newest first, no project headers.
+  if (groupMode === "recent") {
+    return records.length > 0
+      ? [{ id: RECENT_ID, name: "최근", records: sortRecords(records, sort) }]
+      : [];
+  }
+
   const membership = membershipByRecord(records, relations);
   const contextName = new Map(contexts.map((context) => [context.id, context.name]));
   const buckets = new Map<string, MoriRecord[]>();

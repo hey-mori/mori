@@ -2358,7 +2358,12 @@
   outline: none;
 }
 
-.note-sort {
+.note-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.note-seg {
   display: inline-flex;
   gap: 2px;
   background: var(--panel, #fff);
@@ -2367,7 +2372,11 @@
   padding: 2px;
 }
 
-.note-sort button {
+.note-seg:first-child {
+  flex: 1;
+}
+
+.note-seg button {
   flex: 1;
   font-size: 11.5px;
   font-weight: 700;
@@ -2375,13 +2384,37 @@
   background: transparent;
   border: 0;
   border-radius: 6px;
-  padding: 4px 0;
+  padding: 4px 8px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.note-sort button.is-on {
+.note-seg button.is-on {
   background: var(--accent-soft, #f2efff);
   color: var(--purple);
+}
+
+.note-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.note-fchip {
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 9px;
+  cursor: pointer;
+  color: var(--muted);
+  background: var(--panel-soft, #fbfbfd);
+  border: 1px solid var(--line);
+}
+
+.note-fchip.is-on {
+  color: var(--purple);
+  background: var(--accent-soft, #f2efff);
+  border-color: color-mix(in srgb, var(--purple) 32%, var(--line));
 }
 
 .note-explorer-body {
