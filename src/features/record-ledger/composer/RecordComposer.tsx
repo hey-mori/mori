@@ -61,7 +61,15 @@ function classifyError(error: unknown): ComposerError {
   return { kind: "unknown", message: "정리 중 문제가 생겼어요" };
 }
 
-export function RecordComposer({ ledger }: { ledger: RecordLedger }) {
+export function RecordComposer({
+  ledger,
+  onSaved,
+}: {
+  ledger: RecordLedger;
+  /** Reports the ids just committed (or [] on undo) so the workspace can
+   *  highlight their placement in the timeline. */
+  onSaved?: (savedRecordIds: string[]) => void;
+}) {
   const [state, dispatch] = useReducer(
     composerReduce,
     null,
@@ -140,6 +148,7 @@ export function RecordComposer({ ledger }: { ledger: RecordLedger }) {
       );
       clearComposerDraft();
       dispatch({ type: "SAVED", savedRecordIds: result.savedRecordIds });
+      onSaved?.(result.savedRecordIds);
     } catch (error) {
       dispatch({ type: "SAVE_FAILED", error: classifyError(error) });
     }
@@ -149,6 +158,7 @@ export function RecordComposer({ ledger }: { ledger: RecordLedger }) {
     if (state.phase !== "saved" || state.undone) return;
     await ledger.discardRecords(state.savedRecordIds);
     dispatch({ type: "UNDONE" });
+    onSaved?.([]);
   };
 
   /** 직접 정리 from the failed state: save the text as one faithful note.

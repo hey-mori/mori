@@ -9,8 +9,9 @@
   align-items: start;
 }
 
-.ledger.has-inspector {
-  grid-template-columns: minmax(0, 1fr) 340px;
+.ledger.has-inspector,
+.ledger.has-rail {
+  grid-template-columns: minmax(0, 1fr) 320px;
 }
 
 .ledger-main {
@@ -243,11 +244,19 @@
 }
 
 @media (max-width: 1100px) {
-  .ledger.has-inspector {
+  .ledger.has-inspector,
+  .ledger.has-rail {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .ledger > .inspector.base-inspector-panel {
+    position: static;
+    max-height: none;
+  }
+
+  /* Narrow width: the rail stacks under the timeline rather than squeezing
+     the body. The inspector drawer polish is a follow-up (worklog). */
+  .context-rail {
     position: static;
     max-height: none;
   }
@@ -769,81 +778,238 @@
   color: var(--muted-2);
 }
 
-/* ── 접히는 월 달력 (기록 피드 상단) ──────────────────────────────────────── */
+/* ── Timeline (R3 · 기록 원장 본문) ───────────────────────────────────────── */
 
-.ledger-cal {
+.timeline {
   display: grid;
-  gap: 10px;
+  gap: var(--base-space-6);
 }
 
-.ledger-cal-bar {
+.timeline-day {
+  display: grid;
+  gap: 7px;
+}
+
+.timeline-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.timeline-day-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.timeline-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 13px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.timeline-row:hover {
+  border-color: var(--line-strong, #d7dbea);
+}
+
+.timeline-row.is-selected {
+  border-color: color-mix(in srgb, var(--purple) 42%, var(--line));
+  background: color-mix(in srgb, var(--purple) 5%, var(--panel, #fff));
+}
+
+/* Just-saved placement highlight: a calm tint that fades (no border bar). */
+@keyframes timeline-row-land {
+  from {
+    background: color-mix(in srgb, var(--purple) 16%, var(--panel, #fff));
+  }
+  to {
+    background: var(--panel, #fff);
+  }
+}
+
+.timeline-row.is-new {
+  animation: timeline-row-land 2.4s ease-out;
+}
+
+.timeline-row-time {
+  flex-shrink: 0;
+  width: 42px;
+  padding-top: 1px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-2);
+}
+
+.timeline-row-body {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 4px;
+}
+
+.timeline-row-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 
-.ledger-cal-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 10px;
+.timeline-kind {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1.5px 6px;
+  border-radius: 5px;
+  background: var(--panel-soft);
+  color: var(--muted);
+}
+
+.timeline-kind.is-work {
+  background: var(--blue-50, #eef5ff);
+  color: var(--blue, #2369f6);
+}
+.timeline-kind.is-exercise {
+  background: var(--green-50, #edf9f2);
+  color: var(--green, #15955a);
+}
+.timeline-kind.is-study {
+  background: var(--orange-50, #fff7e8);
+  color: var(--color-warning-base, #b87812);
+}
+.timeline-kind.is-insight {
+  background: var(--purple-50, #f2efff);
+  color: var(--purple, #6246f5);
+}
+.timeline-kind.is-task {
+  background: var(--red-50, #fff1f1);
+  color: var(--red, #d43a3a);
+}
+
+.timeline-row-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
 }
 
-.ledger-cal-toggle:hover {
-  background: var(--panel-soft);
+.timeline-row-preview {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.ledger-cal-chevron {
+.timeline-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
   color: var(--muted-2);
-  transition: transform 0.15s ease;
 }
 
-.ledger-cal.is-open .ledger-cal-chevron {
-  transform: rotate(180deg);
-}
-
-.ledger-cal-clear {
+.timeline-tag {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--purple);
-  background: color-mix(in srgb, var(--purple) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--purple) 30%, transparent);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 7px;
   border-radius: 999px;
-  cursor: pointer;
 }
 
-.ledger-cal-grid-wrap {
-  padding: 12px;
+.timeline-tag.is-context {
+  color: var(--purple, #6246f5);
+  background: var(--purple-50, #f2efff);
+}
+
+.timeline-tag.is-provisional {
+  color: var(--color-warning-base, #b87812);
+  background: var(--color-warning-subtle, #fff7e8);
+}
+
+.timeline-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.timeline-flag.is-inferred {
+  color: var(--color-warning-base, #b87812);
+}
+
+.timeline-flag.is-mori {
+  color: var(--purple, #6246f5);
+}
+
+.timeline-flag.is-mori::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--purple, #6246f5);
+}
+
+/* ── Context rail (R3 · 시간 맥락) ────────────────────────────────────────── */
+
+.context-rail {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel, #fff);
+  border-radius: 14px;
+  background: var(--panel-soft, #fbfbfd);
 }
 
-.ledger-cal-nav {
+.mini-cal {
+  display: grid;
+  gap: 8px;
+}
+
+.mini-cal-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
 }
 
-.ledger-cal-nav button {
+.mini-cal-nav button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border: 0;
   border-radius: 7px;
   background: transparent;
@@ -851,84 +1017,177 @@
   cursor: pointer;
 }
 
-.ledger-cal-nav button:hover {
-  background: var(--panel-soft);
+.mini-cal-nav button:hover {
+  background: var(--panel, #fff);
   color: var(--text);
 }
 
-.ledger-cal-nav-label {
-  font-size: 13px;
+.mini-cal-label {
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--text);
 }
 
-.ledger-cal-weekdays,
-.ledger-cal-grid {
+.mini-cal-weekdays,
+.mini-cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
-.ledger-cal-weekdays {
-  margin-bottom: 4px;
-}
-
-.ledger-cal-weekdays span {
+.mini-cal-weekdays span {
   text-align: center;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--muted-2);
+  padding-bottom: 3px;
 }
 
-.ledger-cal-grid {
+.mini-cal-grid {
   gap: 2px;
 }
 
-.ledger-cal-cell {
+.mini-cal-cell {
   position: relative;
   aspect-ratio: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--muted);
   background: transparent;
   border: 0;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
   transition: background 0.1s ease, color 0.1s ease;
 }
 
-.ledger-cal-cell.is-blank {
+.mini-cal-cell.is-blank {
   cursor: default;
 }
 
-.ledger-cal-cell:not(.is-blank):hover {
-  background: var(--panel-soft);
+.mini-cal-cell:not(.is-blank):hover {
+  background: var(--panel, #fff);
   color: var(--text);
 }
 
-.ledger-cal-cell.is-today {
+.mini-cal-cell.is-today {
   color: var(--text);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--purple) 40%, transparent);
 }
 
-.ledger-cal-cell.is-selected {
+.mini-cal-cell.is-selected {
   background: var(--purple);
   color: #fff;
 }
 
-.ledger-cal-dot {
+.mini-cal-dot {
   position: absolute;
-  bottom: 5px;
-  width: 4px;
-  height: 4px;
+  bottom: 4px;
+  width: 3.5px;
+  height: 3.5px;
   border-radius: 50%;
   background: var(--purple);
 }
 
-.ledger-cal-cell.is-selected .ledger-cal-dot {
+.mini-cal-cell.is-selected .mini-cal-dot {
   background: #fff;
+}
+
+.rail-section {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid var(--line);
+  padding-top: 13px;
+}
+
+.rail-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.rail-section-count {
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+.rail-clear {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--purple);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.rail-agenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.rail-agenda-item {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  padding: 4px 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.rail-agenda-item:hover {
+  background: var(--panel, #fff);
+}
+
+.rail-agenda-kind {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--purple);
+}
+
+.rail-agenda-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.rail-week {
+  display: grid;
+  gap: 3px;
+}
+
+.rail-week-kinds {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.rail-week-metric {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.rail-empty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted-2);
 }
 
 /* ── 캘린더 ─────────────────────────────────────────────────────────────── */

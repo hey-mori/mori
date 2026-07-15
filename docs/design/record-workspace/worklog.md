@@ -2,8 +2,8 @@
 
 ## Current stage
 
-R1 + R2 done and verified (2026-07-15). Next stage: R3 timeline + context
-rail.
+R1 + R2 + R3 done and verified (2026-07-15). Next stage: R4 date-confirmation
+UX (확인할 것 strip + resolution cards + repeat-correction rules).
 
 ## Done
 
@@ -62,20 +62,58 @@ rail.
   existing kernel tests). Screenshots: browser-pane screenshots time out in
   this environment; DOM-level assertions recorded instead.
 
-## Next exact actions (R3)
+## Done (R3, 2026-07-15)
 
-1. Timeline rows (time column, meta line, kind variants, note preview).
-2. Context rail (time mode ↔ inspector mode; narrow-width drawer).
-3. Saved-state placement highlight onto the new timeline.
-4. Route body swap + delete `FeedBody`/`LedgerRow`(old)/`LedgerCalendar`/
-   month bar; demote `TrackerPanel` to the rail week line.
+- Timeline body (`LedgerTimeline` + `LedgerTimelineRow`) replaces the flat
+  `FeedBody`: day-grouped, time column (time-of-day when the activity carries
+  one), schema-family kind chips, 2-line note preview, meta line (project
+  chip, 잠정, 추정, Mori 정리 dot). Just-saved rows highlight and fade.
+- Context rail (`ContextRail` + `MiniCalendar` + `ledgerRailSummary`): time
+  mode = always-open month calendar (record dots, day filter) + selected-day
+  agenda + this-week roll-up ("운동 1 · 활동 1", "운동 누적 1시간"). The rail
+  is one slot: selecting a record swaps it for the inspector, Esc/close
+  returns to time mode with the picked day intact.
+- `LedgerWorkspace` rewired to timeline + rail; `LedgerCalendar` deleted
+  (its collapsible-body role is gone); `TrackerPanel` (합계 panel) removed,
+  its job now the rail week line + R6 weekly review; the composer reports
+  saved ids up for the placement highlight.
+
+## Verification (R3)
+
+- Unit: 2768 passed (292 files), incl. `ledgerRailSummary` (week bounds,
+  in-week filter, kind counts, cumulative metric line).
+- `npm run check:full`, `npm run build`, `npm run style:check` green.
+  `src-tauri/` untouched.
+- Real screen (Vite dev, browser build): the §5 scenario end to end,
+  input → 4 candidates (활동 어제·추정 / 운동 오늘·추정 / 인사이트 날짜 없음
+  / 할 일 예정일 없음) → 4건 저장 → placed under 오늘(운동) / 어제(활동) /
+  날짜 미정(인사이트·할 일), 추정 flags on the 2 dated rows, Mori-정리 dots
+  on all 4, mini-calendar dots on 14·15, rail "운동 1 · 활동 1" + "운동 누적
+  1시간"; select row → rail swaps to inspector; Esc → back to time mode;
+  mini-calendar 14th → timeline filters to that day + rail agenda; records
+  persist across reload; no console errors, no error boundary.
+- Screenshots still time out in this environment; DOM assertions recorded.
+
+## Next exact actions (R4)
+
+1. 확인할 것 strip: fold 확인 필요 (candidates) + 날짜 미정 into one strip.
+2. Resolution cards (M5): evidence-first, context-matched date options,
+   "날짜 없이 유지"; drag-to-day on the (R5) calendar.
+3. Repeat correction → personalization Rule proposal.
 
 ## Transition markers
 
-- `RecordComposer` sits above the CURRENT feed inside `LedgerWorkspace`;
-  the old feed remains the placement surface until R3. Removal stage: R3.
-- `manualNote` (failed → 노트로 저장) creates a second source for the same
-  text; dedupe when the composer gains source-reuse in R3.
+- `LedgerRow` is retained (used by `ContextView`/프로젝트); the timeline has
+  its own richer `LedgerTimelineRow`. Not dead code.
+- Tracker aggregation + routine discovery (`trackerAggregation`,
+  `routineDiscovery`, `createRoutine`) are kept as the data layer; the full
+  breakdown + 루틴으로 저장 UI moves to R6 weekly review. Rail shows only the
+  one-line roll-up for now.
+- Narrow-width (<1100px) rail currently stacks under the timeline; the
+  inspector-as-drawer polish (IA §3 fallback) is deferred. Removal/upgrade
+  stage: a later responsive pass.
+- `manualNote` (failed → 노트로 저장) still creates a second source for the
+  same text; dedupe when the composer gains source-reuse.
 
 ## Commits
 
@@ -85,3 +123,5 @@ rail.
 - 0de841b feat: persist reviewed proposals with revision history
 - 8885ba4 feat: add the record composer state machine
 - 28f8291 feat: present structured record proposals for review
+- 1e45d5d docs: record the R1 and R2 vertical slice in the worklog
+- (R3) feat: replace the ledger body with a timeline and context rail
