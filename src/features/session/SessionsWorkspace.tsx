@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Radio } from "lucide-react";
 import { selectSessionSource, useSessionStore } from "../../app/sessionStore";
+import { isAutoImportedSessionId } from "../../lib/agents/autoImportSessions";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { LiveSessionView } from "../live-session/LiveSessionView";
 import { SessionDetailView } from "./SessionDetailView";
@@ -23,6 +24,7 @@ export function SessionsWorkspace() {
   const source = useSessionStore(selectSessionSource);
   const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
+  const openDiscoveredSession = useSessionStore((state) => state.openDiscoveredSession);
   const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
@@ -37,6 +39,15 @@ export function SessionsWorkspace() {
       setSelectedPastId(sessionId);
       setMode("review");
       if (sessionId === activeSessionId) return;
+      // An auto-registered session is a metadata-only placeholder: load its real
+      // transcript on demand, falling back to the metadata draft if the fetch
+      // fails (browser, or the source moved).
+      if (isAutoImportedSessionId(sessionId)) {
+        void openDiscoveredSession(sessionId).then((ok) => {
+          if (!ok) loadBrowserSession(sessionId);
+        });
+        return;
+      }
       if (isDesktop) {
         void loadDesktopSession(sessionId).then((ok) => {
           if (!ok) loadBrowserSession(sessionId);
@@ -45,7 +56,7 @@ export function SessionsWorkspace() {
         loadBrowserSession(sessionId);
       }
     },
-    [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession],
+    [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession, openDiscoveredSession],
   );
 
   const handleSelectLive = useCallback(() => {

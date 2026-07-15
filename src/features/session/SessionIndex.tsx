@@ -58,6 +58,9 @@ export function SessionIndex({
   onSelectPast: (sessionId: string) => void;
 }) {
   const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
+  // Bumped by the background auto-import pass so newly-registered sessions
+  // appear in 과거 without a navigation.
+  const sessionListNonce = useSessionStore((state) => state.sessionListNonce);
   const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? state.demoSessionId ?? null,
   );
@@ -99,7 +102,7 @@ export function SessionIndex({
   };
   useEffect(() => {
     setSummaries(safeListSessions());
-  }, [activeSessionId, dataResetNonce]);
+  }, [activeSessionId, dataResetNonce, sessionListNonce]);
 
   const pastRows = useMemo<SidebarSessionRow[]>(
     () => mergeDemoSessionSummaries(summaries).map(toSidebarRow),

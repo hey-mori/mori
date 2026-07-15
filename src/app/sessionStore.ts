@@ -28,6 +28,12 @@ import {
 } from "../lib/analysis";
 import { buildLlmRequestAbstraction, type DisclosureLevel } from "../lib/disclosure";
 import {
+  buildPrimaryImportCandidateFromAgentWorkSession,
+  getAgentWorkSession,
+} from "../lib/agents/workSessions";
+import { autoImportedProjectId } from "../lib/agents/autoImportSessions";
+import { loadAutoImportMeta } from "../lib/agents/autoImportMetaStore";
+import {
   decideFollowReaction,
   followReducer,
   initialFollowState,
@@ -209,6 +215,12 @@ export type SessionState = {
    * a multi-session producer independent of the single-session Follow reducer.
    */
   liveNotifications: CompanionNotification[];
+  /**
+   * Aggregate "N sessions newly auto-imported" notices from the background
+   * auto-import pass. Same ephemeral in-memory shape as the other push
+   * producers; one entry per sync batch.
+   */
+  importSyncNotifications: CompanionNotification[];
   source: SessionSource;
   /**
    * Bumped whenever a data reset wipes stored sessions
@@ -218,6 +230,13 @@ export type SessionState = {
    * not change (e.g. wiping background sessions while already in demo).
    */
   dataResetNonce: number;
+  /**
+   * Bumped whenever the background auto-import pass upserts session drafts, so
+   * the 세션 workspace's 과거 list re-reads and shows the newly-registered rows
+   * without a navigation. Distinct from `dataResetNonce` (which means "data was
+   * wiped") so the two signals never conflate.
+   */
+  sessionListNonce: number;
   /**
    * Live timeline data-source seam. Static today (there is no backend), so
    * it never emits. A future polling / SSE source is a drop-in replacement
@@ -420,8 +439,27 @@ export type SessionState = {
    * capped so a long-lived dashboard stays bounded.
    */
   pushLiveNotification: (notification: CompanionNotification) => void;
+  /**
+   * Push one aggregate auto-import notice ("세션 N건 새로 수집") into the feed.
+   * Deduped by id (the sync batch time), capped like the other push producers.
+   */
+  pushImportSyncNotification: (notification: CompanionNotification) => void;
+  /**
+   * Register discovered agent sessions in the background: upsert a
+   * metadata-only draft per session (so it appears in 과거) and bump the list
+   * nonce. Does not open or analyse anything — the review gate still governs
+   * the deeper analyze→apply step. Returns nothing; callers push the notice.
+   */
+  registerDiscoveredSessions: (drafts: StoredSessionDraft[]) => void;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
+  /**
+   * Open an auto-registered (discovered) session by loading its real transcript
+   * on demand: fetch the agent detail, import it as a full session, and retire
+   * the lightweight placeholder. Returns false when the reopen descriptor is
+   * missing or the fetch fails (the caller can fall back to the metadata draft).
+   */
+  openDiscoveredSession: (sessionId: string) => Promise<boolean>;
   /**
    * Open an already-saved browser session draft as the active session.
    * Used by the Workspace project hub to continue a previous session.
@@ -566,8 +604,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   follow: initialFollowState(),
   followNotifications: [],
   liveNotifications: [],
+  importSyncNotifications: [],
   source: "demo",
   dataResetNonce: 0,
+  sessionListNonce: 0,
   dataSource: createStaticMockDataSource(demoView),
   subscribeToDataSource: (onUpdate) => get().dataSource.subscribe(onUpdate),
   hydrate: async () => {
@@ -1254,6 +1294,57 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const next = [...state.liveNotifications, notification];
       return { liveNotifications: next.length > 50 ? next.slice(-50) : next };
     }),
+  pushImportSyncNotification: (notification) =>
+    set((state) => {
+      if (state.importSyncNotifications.some((existing) => existing.id === notification.id)) {
+        return state;
+      }
+      const next = [...state.importSyncNotifications, notification];
+      return { importSyncNotifications: next.length > 50 ? next.slice(-50) : next };
+    }),
+  registerDiscoveredSessions: (drafts) => {
+    if (drafts.length === 0) return;
+    const repository = getRepository();
+    for (const draft of drafts) {
+      try {
+        repository.putStoredSessionDraft(draft);
+      } catch {
+        // A single bad write must not abort the batch; skip and continue.
+      }
+    }
+    set((state) => ({ sessionListNonce: state.sessionListNonce + 1 }));
+  },
+  openDiscoveredSession: async (sessionId) => {
+    const meta = loadAutoImportMeta(sessionId);
+    if (!meta) return false;
+    try {
+      const detail = await getAgentWorkSession(meta);
+      const candidate = buildPrimaryImportCandidateFromAgentWorkSession(detail, {
+        projectId: autoImportedProjectId(meta),
+        sessionId,
+        capturedAt: new Date().toISOString(),
+      });
+      // Materialize the full transcript as a real session and open it.
+      get().importAndOpenAsNewSession({
+        candidate,
+        title: meta.title,
+        startedAt: meta.startedAt,
+        endedAt: meta.updatedAt || meta.startedAt,
+        projectLabel: meta.projectPath || meta.projectName,
+      });
+      // Retire the lightweight placeholder now that a full session exists, so
+      // the 과거 list shows the real session rather than a duplicate stub.
+      try {
+        getRepository().clearStoredSession(sessionId);
+      } catch {
+        // Non-fatal — the real session is already open.
+      }
+      set((state) => ({ sessionListNonce: state.sessionListNonce + 1 }));
+      return true;
+    } catch {
+      return false;
+    }
+  },
   pauseFollow: () => set({ follow: followReducer(get().follow, { type: "pause" }) }),
   resumeFollow: () => set({ follow: followReducer(get().follow, { type: "resume" }) }),
   stopFollow: () => set({ follow: followReducer(get().follow, { type: "stop" }) }),

@@ -17,6 +17,7 @@ import {
 } from "../../lib/settings/notificationPreferences";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import { useBackgroundWatch } from "../background-watch/useBackgroundWatch";
+import { useAutoImportSessions } from "../background-watch/useAutoImportSessions";
 import { useNotifications } from "./useNotifications";
 import { useOsNotifications } from "./useOsNotifications";
 import { NotificationFeedList } from "./NotificationFeedList";
@@ -59,6 +60,8 @@ export function AttentionIndicator({
   // Opt-in background watch: while enabled (and on desktop), watch the connector
   // inbox and feed detections into the notification feed below. No-op otherwise.
   useBackgroundWatch();
+  // Continuously register discovered agent sessions into 과거 (desktop, opt-out).
+  useAutoImportSessions();
   const { notifications } = useNotifications();
   useOsNotifications(notifications);
   const openReviewItem = useAppStore((state) => state.openReviewItem);

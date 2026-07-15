@@ -51,6 +51,7 @@ export function useNotifications(): {
   const imports = useSessionStore((state) => state.imports);
   const followNotifications = useSessionStore((state) => state.followNotifications);
   const liveNotifications = useSessionStore((state) => state.liveNotifications);
+  const importSyncNotifications = useSessionStore((state) => state.importSyncNotifications);
   const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
@@ -140,6 +141,7 @@ export function useNotifications(): {
           storageHealthNotifications,
           followNotifications,
           liveNotifications,
+          importSyncNotifications,
           importFinishedNotifications,
           packageExportNotifications,
           sessionFeedNotifications,
@@ -151,6 +153,7 @@ export function useNotifications(): {
       storageHealthNotifications,
       followNotifications,
       liveNotifications,
+      importSyncNotifications,
       importFinishedNotifications,
       packageExportNotifications,
       sessionFeedNotifications,
