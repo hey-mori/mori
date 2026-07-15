@@ -248,10 +248,12 @@ lifecycle gate is untouched.
 Documentation/code mismatches noticed while verifying current truth; none
 block this document, all worth small follow-ups:
 
-- `src/lib/navigation/navGroups.ts` still encodes the retired 4-axis nav
-  (홈/연동/프로젝트/대시보드/워크벤치); the real nav is `Sidebar.tsx`
-  `PRIMARY_NAV` (홈/기록/라이브/프로젝트/대시보드/워크벤치). Stale code,
-  misleading as documentation.
+- `src/lib/navigation/navGroups.ts` encoded the retired 4-axis nav
+  (홈/연동/프로젝트/대시보드/워크벤치) while the real nav is
+  `Sidebar.tsx` `PRIMARY_NAV` (홈/기록/라이브/프로젝트/대시보드/워크벤치).
+  **Resolved 2026-07-15:** the module was provably dead (imported only
+  by its own test; `Sidebar.tsx` never consumed it) and was removed
+  with its test per the §21 removal criteria.
 - `mori-project-goal.md` §4 lists the pre-기록 nav and §9 says migrations
   are "currently V001 and V002"; reality is V001-V008 with the kernel in
   V008. Doc bug per that file's own update rule.
