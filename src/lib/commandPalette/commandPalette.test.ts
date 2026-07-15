@@ -29,7 +29,11 @@ describe("buildCommands", () => {
     const cmds = buildCommands({ sessions: [] });
     const nav = cmds.filter((c) => c.group === "navigate");
     expect(nav.map((c) => c.id)).toContain("nav-home");
-    expect(nav.map((c) => c.id)).toContain("nav-memory");
+    expect(nav.map((c) => c.id)).toContain("nav-connections");
+    // The legacy 메모리 surfaces are retired from the palette (durable memory
+    // is the 기록 record ledger now).
+    expect(nav.map((c) => c.id)).not.toContain("nav-memory");
+    expect(nav.map((c) => c.id)).not.toContain("nav-consolidation");
   });
 
   it("drops the current view from the navigate list to avoid no-op rows", () => {
@@ -84,8 +88,14 @@ describe("filterCommands", () => {
   });
 
   it("ranks prefix matches above substring matches", () => {
-    const result = filterCommands(cmds, "메모리");
-    expect(result[0]!.label).toMatch(/^메모리/);
+    const local = buildCommands({
+      sessions: [
+        summary({ sessionId: "p1", title: "결제 오류 수정", sourceLabel: "x" }),
+        summary({ sessionId: "p2", title: "빠른 결제 흐름", sourceLabel: "x" }),
+      ],
+    });
+    const result = filterCommands(local, "결제");
+    expect(result[0]!.label).toMatch(/^결제/);
   });
 
   it("matches sessions by their source label keyword", () => {

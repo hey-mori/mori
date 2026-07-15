@@ -188,24 +188,21 @@ export function buildModeGuide(input: {
           "다음에 무엇부터 이어가면 될까요?",
         ]),
         features: [
-          feature("guide-ask-memory", "프로젝트 메모리 열기", {
-            hint: "확정된 기억 모아 보기",
-            target: { type: "navigate", view: "memory" },
+          feature("guide-ask-memory", "기록 열기", {
+            hint: "쌓인 기록 모아 보기",
+            target: { type: "navigate", view: "ledger" },
           }),
         ],
       };
     case "shape":
       return {
-        headline: "검토한 작업을 durable 메모리로 정리",
+        headline: "검토한 작업을 기록으로 정리",
         promptsLabel: "",
         prompts: [],
         features: [
-          feature("guide-shape-consolidation", "메모리 통합 검토", {
-            hint: "리뷰한 작업을 기억으로",
-            target: { type: "navigate", view: "consolidation" },
-          }),
-          feature("guide-shape-memory", "프로젝트 메모리 열기", {
-            target: { type: "navigate", view: "memory" },
+          feature("guide-shape-memory", "기록 열기", {
+            hint: "검토한 작업을 기록으로",
+            target: { type: "navigate", view: "ledger" },
           }),
         ],
       };
@@ -324,12 +321,9 @@ function buildModeActions(
     }
     case "shape":
       return [
-        action("act-shape-consolidation", "메모리 통합 검토", {
-          hint: "리뷰한 작업을 기억으로",
-          target: { type: "navigate", view: "consolidation" },
-        }),
-        action("act-shape-memory", "프로젝트 메모리 열기", {
-          target: { type: "navigate", view: "memory" },
+        action("act-shape-memory", "기록 열기", {
+          hint: "검토한 작업을 기록으로",
+          target: { type: "navigate", view: "ledger" },
         }),
       ];
     case "create":

@@ -144,7 +144,7 @@ describe("buildCommandSpaceResults", () => {
     const routes: Record<CommandModeId, unknown> = {
       find: { type: "palette" },
       ask: { type: "ask", question: "" },
-      shape: { type: "navigate", view: "consolidation" },
+      shape: { type: "navigate", view: "ledger" },
       create: { type: "navigate", view: "start" },
       review: { type: "navigate", view: "continue" },
       connect: { type: "navigate", view: "connections" },
@@ -269,7 +269,7 @@ describe("buildModeGuide", () => {
 
   it("leads the navigation-only modes with the feature and no prompts", () => {
     const routes: Partial<Record<CommandModeId, unknown>> = {
-      shape: { type: "navigate", view: "consolidation" },
+      shape: { type: "navigate", view: "ledger" },
       create: { type: "navigate", view: "start" },
       review: { type: "navigate", view: "continue" },
       connect: { type: "navigate", view: "connections" },

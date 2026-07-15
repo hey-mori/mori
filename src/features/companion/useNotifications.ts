@@ -6,7 +6,6 @@ import {
 import { buildBackgroundAnalysisNotifications } from "../../lib/notifications/backgroundAnalysisNotifications";
 import { buildBackgroundDetectionNotifications } from "../../lib/notifications/backgroundDetectionNotifications";
 import { buildImportFinishedNotifications } from "../../lib/notifications/importFinishedNotifications";
-import { buildMemoryHealthNotifications } from "../../lib/notifications/memoryHealthNotifications";
 import { buildPackageExportNotifications } from "../../lib/notifications/packageExportNotifications";
 import { buildSessionFeedNotifications } from "../../lib/notifications/notificationFeed";
 import {
@@ -48,7 +47,7 @@ export function useNotifications(): {
   notifications: CompanionNotification[];
   isDemo: boolean;
 } {
-  const { isDemo, acceptedMemories } = useCompanionSignals();
+  const { isDemo } = useCompanionSignals();
   const imports = useSessionStore((state) => state.imports);
   const followNotifications = useSessionStore((state) => state.followNotifications);
   const liveNotifications = useSessionStore((state) => state.liveNotifications);
@@ -86,13 +85,11 @@ export function useNotifications(): {
     [imports],
   );
 
-  // Third producer: memory-health (stale / contradiction). One summary row
-  // per category, deep-links into the 통합 surface where per-memory actions
-  // already live.
-  const memoryHealthNotifications = useMemo<CompanionNotification[]>(
-    () => buildMemoryHealthNotifications({ acceptedMemories }),
-    [acceptedMemories],
-  );
+  // (Retired) The legacy memory-health producer (stale / contradiction) used to
+  // deep-link into the pre-kernel 메모리 통합 surface. That surface is retired
+  // from the product (durable memory is now the 기록 record ledger), so it no
+  // longer pushes notifications. The consolidation route stays in code but is
+  // unwired from the bell, the palette, and home.
 
   // Fourth producer: "방금 내보냄" pulse for .mori packages saved within
   // the last 24h. Same recency / dedupe shape as import-finished.
@@ -143,7 +140,6 @@ export function useNotifications(): {
           storageHealthNotifications,
           followNotifications,
           liveNotifications,
-          memoryHealthNotifications,
           importFinishedNotifications,
           packageExportNotifications,
           sessionFeedNotifications,
@@ -156,7 +152,6 @@ export function useNotifications(): {
       followNotifications,
       liveNotifications,
       importFinishedNotifications,
-      memoryHealthNotifications,
       packageExportNotifications,
       sessionFeedNotifications,
       backgroundDetectionNotifications,
