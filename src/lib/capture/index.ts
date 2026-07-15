@@ -43,3 +43,9 @@ export {
   type CaptureRecordOutcome,
 } from "./capturePipeline";
 export { proposeFromForm, type FormEntry } from "./formProposer";
+export {
+  buildLateNightRule,
+  hasLateNightRule,
+  inferDateFromRules,
+  isLateNightRule,
+} from "./dateRuleLearning";

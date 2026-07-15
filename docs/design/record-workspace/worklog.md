@@ -2,8 +2,29 @@
 
 ## Current stage
 
-R1 + R2 + R3 done; R4a (확인할 것 strip + date-resolution cards) done and
-verified (2026-07-15). In progress: R4b (repeat-correction → date rule).
+R1 + R2 + R3 + R4 done and verified (2026-07-15). Next stage: R5 (ledger
+calendar drag-to-day + full record detail with inline editing).
+
+## Done (R4b, 2026-07-15)
+
+- `dateRuleLearning.ts` (lib/capture, tested): `buildLateNightRule` /
+  `isLateNightRule` / `hasLateNightRule` and `inferDateFromRules(timeBasis,
+  rules, capturedAt)` → previous day for a still-undecided small-hours
+  capture. `runCapturePipeline` applies it (marked `ai-inferred`, so the
+  placed row shows 추정 and stays correctable); the two new pipeline tests
+  cover fire and no-override.
+- `dateRuleMemory.ts`: a local-only counter of small-hours → 전날 corrections
+  (threshold 3). `ReviewStrip` bumps it when the 전날 choice is taken;
+  `useRecordLedger.createDateInferenceRule` persists the rule; `ledger.rules`
+  is exposed so the offer knows whether one already exists.
+- `DateRuleOffer`: a one-line prompt above the strip (survives an empty
+  strip); 네 → rule + reset, 아니요 → reset (no nag).
+- Verified in the Vite app: seeding the counter to 3 shows the offer; 네
+  persists a `date-inference` rule (`capturedBeforeHour:5`, `offsetDays:-1`,
+  enabled) and clears the counter; re-seeding to 5 does not re-offer (the
+  rule exists); no console errors. Small-hours auto-placement is covered by
+  the pipeline unit tests (a real-time small-hours capture is not reproducible
+  in a daytime browser session). 2781 unit tests + build + style green.
 
 ## Done (R4a, 2026-07-15)
 
@@ -114,12 +135,14 @@ verified (2026-07-15). In progress: R4b (repeat-correction → date rule).
   persist across reload; no console errors, no error boundary.
 - Screenshots still time out in this environment; DOM assertions recorded.
 
-## Next exact actions (R4)
+## Next exact actions (R5)
 
-1. 확인할 것 strip: fold 확인 필요 (candidates) + 날짜 미정 into one strip.
-2. Resolution cards (M5): evidence-first, context-matched date options,
-   "날짜 없이 유지"; drag-to-day on the (R5) calendar.
-3. Repeat correction → personalization Rule proposal.
+1. Ledger calendar (M4): cells show kind-colored marks + leading titles;
+   selecting a day opens its agenda; 날짜 미정 tray with drag-to-day
+   (activity date vs scheduled date) plus a full click/keyboard fallback.
+2. Full record detail (M6): editable title/body, 원문 보기, side panel
+   (활동 날짜 + basis, 프로젝트/엔티티, 관련 기록, 이력 with per-entry
+   되돌리기), provenance dots. Rail inspector stays for short records.
 
 ## Transition markers
 

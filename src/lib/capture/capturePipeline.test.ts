@@ -129,6 +129,46 @@ describe("runCapturePipeline", () => {
     expect(relations[0].fromRecordId).toBe(outcome.records[0].created.record.id);
   });
 
+  it("applies a late-night date rule to place an undecided small-hours capture", () => {
+    // Local-time constructor so the capture's local hour is deterministic
+    // regardless of the test machine's timezone (the rule reads local hours).
+    const smallHours = () => new Date(2026, 6, 15, 1, 30, 0);
+    const rules: KernelRule[] = [
+      {
+        id: "rule-late",
+        kind: "date-inference",
+        condition: { capturedBeforeHour: 5 },
+        effect: { offsetDays: -1 },
+        learnedFromRevisionIds: [],
+        enabled: true,
+        createdAt: "2026-07-10T00:00:00.000Z",
+      },
+    ];
+    const outcome = runCapturePipeline(text("그냥 메모"), registry, { now: smallHours, rules });
+    const record = outcome.records[0].created.record;
+    expect(record.occurredStart).toBe("2026-07-14");
+    expect(record.timeBasis).toBe("ai-inferred");
+  });
+
+  it("does not apply the late-night rule when the capture already has a date", () => {
+    const smallHours = () => new Date(2026, 6, 15, 1, 30, 0);
+    const rules: KernelRule[] = [
+      {
+        id: "rule-late",
+        kind: "date-inference",
+        condition: { capturedBeforeHour: 5 },
+        effect: { offsetDays: -1 },
+        learnedFromRevisionIds: [],
+        enabled: true,
+        createdAt: "2026-07-10T00:00:00.000Z",
+      },
+    ];
+    // "오늘" already infers a date, so the rule must not override it.
+    const outcome = runCapturePipeline(text("오늘 그냥 메모"), registry, { now: smallHours, rules });
+    const record = outcome.records[0].created.record;
+    expect(record.occurredStart).toBe("2026-07-15");
+  });
+
   it("reuses a known entity instead of creating a duplicate", () => {
     const known = [
       { id: "ent-run", type: "exercise", canonicalName: "러닝", createdAt: "2026-07-01" },

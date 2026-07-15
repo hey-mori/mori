@@ -12,6 +12,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   agentSessionToProposals,
+  buildLateNightRule,
+  hasLateNightRule,
   proposeFromForm,
   renameEntity as buildEntityRename,
   runCapturePipeline,
@@ -67,6 +69,9 @@ export type RecordLedger = {
   entities: KernelEntity[];
   relations: KernelRelation[];
   contexts: KernelContext[];
+  /** The user's personalization rules (so surfaces can tell whether a learned
+   *  rule already exists, e.g. the late-night date rule). */
+  rules: KernelRule[];
   loading: boolean;
   reload: () => Promise<void>;
   capture: (input: CaptureInput) => Promise<CaptureOutcome>;
@@ -98,6 +103,9 @@ export type RecordLedger = {
   renameEntity: (entityId: string, newName: string) => Promise<void>;
   /** Creates a routine context and relates the given records to it. */
   createRoutine: (name: string, recordIds: string[]) => Promise<void>;
+  /** Makes the late-night → previous-day date correction durable as a rule;
+   *  future small-hours captures are then placed automatically. */
+  createDateInferenceRule: () => Promise<void>;
 };
 
 /** Turns one candidate's staged edit into a `RecordPatch`, or null when
@@ -401,6 +409,13 @@ export function useRecordLedger(): RecordLedger {
     [registry, reload],
   );
 
+  const createDateInferenceRule = useCallback(async () => {
+    if (hasLateNightRule(rules)) return;
+    const repo = getKernelRepository();
+    await repo.saveRule(buildLateNightRule(new Date().toISOString()));
+    await reload();
+  }, [rules, reload]);
+
   const createRoutine = useCallback(
     async (name: string, recordIds: string[]) => {
       if (name.trim().length === 0 || recordIds.length === 0) return;
@@ -432,6 +447,7 @@ export function useRecordLedger(): RecordLedger {
     entities,
     relations,
     contexts,
+    rules,
     loading,
     reload,
     capture,
@@ -444,5 +460,6 @@ export function useRecordLedger(): RecordLedger {
     setActivityDate,
     renameEntity,
     createRoutine,
+    createDateInferenceRule,
   };
 }

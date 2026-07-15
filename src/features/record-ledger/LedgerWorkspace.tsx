@@ -14,13 +14,16 @@ import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { hasLateNightRule } from "../../lib/capture";
 import { useRecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
 import { RecordInspector } from "./RecordInspector";
 import { LedgerTimeline } from "./LedgerTimeline";
 import { ContextRail } from "./ContextRail";
 import { ReviewStrip } from "./ReviewStrip";
+import { DateRuleOffer } from "./DateRuleOffer";
 import { isDateUndecided } from "./dateResolution";
+import { bumpLateNightPrev, lateNightPrevCount, LATE_NIGHT_PREV_THRESHOLD, resetLateNightPrev } from "./dateRuleMemory";
 import { displayTime, ledgerVisibleRecords } from "./recordPresentation";
 
 export function LedgerWorkspace() {
@@ -29,6 +32,7 @@ export function LedgerWorkspace() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newIds, setNewIds] = useState<string[]>([]);
+  const [lateNightCount, setLateNightCount] = useState(() => lateNightPrevCount());
   const now = useMemo(() => new Date(), []);
 
   const candidates = useMemo(
@@ -43,6 +47,19 @@ export function LedgerWorkspace() {
   // Date-undecided records need a day; they share the 확인할 것 strip with the
   // policy-held candidates instead of piling up in the timeline.
   const dateUnknown = useMemo(() => byNewest(visibleRecords.filter(isDateUndecided)), [visibleRecords]);
+  // Offer to learn the small-hours → previous-day rule once the same
+  // correction has been made enough times and no such rule exists yet.
+  const offerDateRule =
+    lateNightCount >= LATE_NIGHT_PREV_THRESHOLD && !hasLateNightRule(ledger.rules);
+  const acceptDateRule = async () => {
+    await ledger.createDateInferenceRule();
+    resetLateNightPrev();
+    setLateNightCount(0);
+  };
+  const dismissDateRule = () => {
+    resetLateNightPrev();
+    setLateNightCount(0);
+  };
   const onSelect = (recordId: string) =>
     setSelectedId((current) => (current === recordId ? null : recordId));
 
@@ -79,7 +96,16 @@ export function LedgerWorkspace() {
           <RecordComposer ledger={ledger} onSaved={setNewIds} />
           {ledger.loading ? null : (
             <>
-              <ReviewStrip candidates={candidates} dateUnknown={dateUnknown} ledger={ledger} now={now} />
+              {offerDateRule ? (
+                <DateRuleOffer onAccept={() => void acceptDateRule()} onDismiss={dismissDateRule} />
+              ) : null}
+              <ReviewStrip
+                candidates={candidates}
+                dateUnknown={dateUnknown}
+                ledger={ledger}
+                now={now}
+                onLearnLateNightPrev={() => setLateNightCount(bumpLateNightPrev())}
+              />
               <LedgerTimeline
                 ledger={ledger}
                 query={query}

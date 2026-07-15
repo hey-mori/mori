@@ -25,6 +25,7 @@ import type {
 import { containsLikelySecret } from "../connectors/redaction";
 import type { KernelRule } from "../record-kernel/kernelTypes";
 import { resolveEntities } from "./entityResolution";
+import { inferDateFromRules } from "./dateRuleLearning";
 import {
   evaluateApply,
   statusForDecision,
@@ -139,6 +140,13 @@ export function runCapturePipeline(
 
   const records = rawProposals.map<CaptureRecordOutcome>((rawProposal) => {
     const { proposal, addedContextIds } = personalizeProposal(rawProposal, rules);
+    // A learned date rule can place a still-undecided capture (e.g. a
+    // small-hours note onto the previous day), marked ai-inferred so it is
+    // shown as 추정 and stays correctable.
+    const ruleDate = inferDateFromRules(proposal.timeBasis, rules, source.capturedAt);
+    const occurredStart = proposal.occurredStart ?? ruleDate?.occurredStart;
+    const timeBasis = ruleDate ? "ai-inferred" : proposal.timeBasis;
+    const timeConfidence = ruleDate?.timeConfidence ?? proposal.timeConfidence;
     // Rules win when present; otherwise the caller's per-schema default, else auto.
     const ruleLevel = automationLevelFor(
       proposal.schemaId,
@@ -161,9 +169,9 @@ export function runCapturePipeline(
         schemaId: proposal.schemaId,
         title: proposal.title,
         body: proposal.body,
-        occurredStart: proposal.occurredStart,
-        timeBasis: proposal.timeBasis,
-        timeConfidence: proposal.timeConfidence,
+        occurredStart,
+        timeBasis,
+        timeConfidence,
         origin: originForProposal(proposal),
         status: statusForDecision(evaluation.decision),
         contextIds: addedContextIds,

@@ -20,11 +20,15 @@ export function ReviewStrip({
   dateUnknown,
   ledger,
   now,
+  onLearnLateNightPrev,
 }: {
   candidates: MoriRecord[];
   dateUnknown: MoriRecord[];
   ledger: RecordLedger;
   now: Date;
+  /** Called when the user resolves a small-hours capture to the previous day,
+   *  so the workspace can count toward offering a rule. */
+  onLearnLateNightPrev: () => void;
 }) {
   const total = candidates.length + dateUnknown.length;
   if (total === 0) return null;
@@ -40,7 +44,13 @@ export function ReviewStrip({
           <CandidateItem key={record.id} record={record} ledger={ledger} />
         ))}
         {dateUnknown.map((record) => (
-          <DateItem key={record.id} record={record} ledger={ledger} now={now} />
+          <DateItem
+            key={record.id}
+            record={record}
+            ledger={ledger}
+            now={now}
+            onLearnLateNightPrev={onLearnLateNightPrev}
+          />
         ))}
       </ul>
     </section>
@@ -74,15 +84,32 @@ function CandidateItem({ record, ledger }: { record: MoriRecord; ledger: RecordL
 }
 
 /** A date-undecided record: reason first, then context-fit choices. */
-function DateItem({ record, ledger, now }: { record: MoriRecord; ledger: RecordLedger; now: Date }) {
+function DateItem({
+  record,
+  ledger,
+  now,
+  onLearnLateNightPrev,
+}: {
+  record: MoriRecord;
+  ledger: RecordLedger;
+  now: Date;
+  onLearnLateNightPrev: () => void;
+}) {
   const situation = useMemo(() => dateSituation(record, now), [record, now]);
   const [picking, setPicking] = useState(false);
   if (!situation) return null;
 
   const apply = (choice: DateChoice) => {
-    if (choice.kind === "set") void ledger.setActivityDate(record, choice.date);
-    else if (choice.kind === "keep-none") void ledger.setActivityDate(record, null);
-    else setPicking(true);
+    if (choice.kind === "set") {
+      // The 전날 choice on a small-hours capture is the correction Mori can
+      // learn (id "prev" is only produced for the late-night situation).
+      if (choice.id === "prev") onLearnLateNightPrev();
+      void ledger.setActivityDate(record, choice.date);
+    } else if (choice.kind === "keep-none") {
+      void ledger.setActivityDate(record, null);
+    } else {
+      setPicking(true);
+    }
   };
 
   return (
