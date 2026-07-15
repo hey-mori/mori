@@ -4,14 +4,10 @@ import {
   FilePlus2,
   FolderGit2,
   House,
-  Layers,
-  LayoutDashboard,
-  Network,
   NotebookPen,
-  PanelLeftClose,
-  PanelLeftOpen,
   Plus,
   Radio,
+  Search,
   Sparkles,
 } from "lucide-react";
 import { useAppStore } from "../../app/store";
@@ -19,80 +15,47 @@ import { useProfileStore } from "../../app/profileStore";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
 import { getProfileInitials } from "../../lib/profile/localProfile";
 import { viewIcon } from "../brand/moriIcons";
-import { ContextNavigator } from "./ContextNavigator";
 import type { LucideIcon } from "lucide-react";
 import type { ViewKey } from "../../domain/types";
 
 /**
- * Primary sidebar · full-height navigation column with two zones.
+ * Primary sidebar · a slim icon rail (56–64px) running full height.
  *
- * Mori has no top chrome bar: the workspace runs full height and the sidebar
- * owns everything we used to spread across a header. From top to bottom:
+ * Mori has no top chrome bar: the rail owns everything. From top to bottom:
  *
- *   1. Quick actions · icon-only 새 세션 / 작업 그래프 / Mori 노트.
- *   2. Zone 1 · global product nav (`PRIMARY_NAV`): destinations by job.
- *   3. Zone 2 · the `ContextNavigator`: search + recent work in context
- *      (today the project→session tree; the boundary exists so future
- *      non-session evidence can appear without touching the shell).
- *   4. The user button (opens the settings sheet).
+ *   1. Quick actions · 만들기 (기록 / 세션) and 알림.
+ *   2. Product nav (`PRIMARY_NAV`): the six destinations by job, each an
+ *      icon over a micro-label, plus 검색 (opens the command palette).
+ *   3. The user button (opens the settings sheet).
  *
- * The zones are deliberately separate components (see
- * docs/design/mori-product-shell-ia.md): global navigation never grows
- * source-type entries, and everything about browsing recent work lives in
- * the navigator.
+ * This is the "두 경험 + 교차 렌즈" rail: 기록 (notes · edit) and 세션 (AI work ·
+ * review) are the two experiences; 프로젝트 · 캘린더 · 검색 are cross-lenses that
+ * route each record to its proper home. The former 대시보드 · 워크벤치 · 작업 그래프
+ * destinations retire to the command palette, and browsing sessions moved into
+ * the 세션 workspace, so the rail no longer carries a session tree.
  */
 
-/** Product-nav entries. Ordered top-to-bottom; "프로젝트" lights up only for the
- *  session-detail and the projects→sessions browser · NOT for new-session /
- *  import flows, which are reached via the head shortcut buttons and light
- *  those up instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: viewIcon.home ?? House },
-  // 기록 · the single record workspace: quick capture + search + a journal
-  // feed with a collapsible calendar and a collapsible 합계 roll-up. Absorbs
-  // the former 오늘 · 캘린더 · 트래커 · 인박스 · 메모리 surfaces (all lenses
-  // on one ledger; durable memory is the feed + search over distilled records).
   { key: "ledger", label: "기록", icon: NotebookPen },
-  // 세션 · the unified AI-work surface: a left index (진행 중 / 과거) and a
-  // right pane that hosts the live feed or a past session's review inline.
-  // Supersedes the former standalone 라이브 destination (still palette-reachable)
-  // and the global 최근 작업 tree.
   { key: "sessions", label: "세션", icon: Radio },
-  // 프로젝트 · contexts over records (projects · routines · topics · people).
-  // Reframed off the AI-session-only model; the legacy all-projects list and
-  // single-project view stay palette-reachable.
-  {
-    key: "contexts",
-    label: "프로젝트",
-    icon: viewIcon.workspace ?? FolderGit2,
-  },
-  {
-    key: "dashboard",
-    label: "대시보드",
-    icon: viewIcon.dashboard ?? LayoutDashboard,
-  },
-  // 워크벤치 stays visible on its own merits pending a real role/overlap
-  // evaluation (see mori-product-shell-ia.md): a usable capability is not
-  // hidden into the palette just to keep the item count low.
-  {
-    key: "workbench",
-    label: "워크벤치",
-    icon: viewIcon.workbench ?? Layers,
-  },
+  { key: "contexts", label: "프로젝트", icon: viewIcon.workspace ?? FolderGit2 },
+  { key: "calendar", label: "캘린더", icon: CalendarDays },
 ];
 
 export function Sidebar({
   onNavigate,
   collapsed = false,
-  onToggleCollapsed,
 }: {
   onNavigate: (view: ViewKey) => void;
+  /** Icon-only focus mode, toggled from the command palette. The rail is
+   *  already slim; collapsing drops the micro-labels for the narrowest column. */
   collapsed?: boolean;
-  onToggleCollapsed?: () => void;
 }) {
   const currentView = useAppStore((state) => state.currentView);
   const setCurrentView = useAppStore((state) => state.setCurrentView);
   const requestNewRecord = useAppStore((state) => state.requestNewRecord);
+  const openCommandPalette = useAppStore((state) => state.openCommandPalette);
   const openSettings = useAppStore((state) => state.openSettingsSheet);
   const profile = useProfileStore((state) => state.profile);
   const [createOpen, setCreateOpen] = useState(false);
@@ -119,12 +82,12 @@ export function Sidebar({
 
   return (
     <aside
-      className={`sidebar${collapsed ? " is-collapsed" : ""}`}
-      aria-label="세션 목록 및 메뉴"
+      className={`sidebar is-rail${collapsed ? " is-collapsed" : ""}`}
+      aria-label="주요 메뉴"
     >
       <div className="sidebar-head" role="group" aria-label="빠른 작업">
         {/* 만들기 · two experiences, one entry: a new 기록 (the frequent
-            personal capture) or a new 세션. No longer session-only. */}
+            personal capture) or a new 세션. */}
         <div className="sidebar-create" ref={createRef}>
           <button
             type="button"
@@ -134,7 +97,7 @@ export function Sidebar({
             aria-haspopup="menu"
             aria-expanded={createOpen}
           >
-            <Plus size={15} aria-hidden="true" />
+            <Plus size={16} aria-hidden="true" />
           </button>
           {createOpen ? (
             <div className="sidebar-create-menu" role="menu">
@@ -161,49 +124,8 @@ export function Sidebar({
             </div>
           ) : null}
         </div>
-        {/* Work graph · an experimental overview of projects + sessions. Sits
-            between 새 세션 and 알림 as a quick action; the full surface is also
-            reachable from the command palette. */}
-        <button
-          type="button"
-          className={`sidebar-head-action${currentView === "graph" ? " is-active" : ""}`}
-          onClick={() => setCurrentView("graph")}
-          aria-label="작업 그래프"
-          aria-current={currentView === "graph" ? "page" : undefined}
-        >
-          <Network size={15} aria-hidden="true" />
-        </button>
-        {/* 캘린더 · a global time view over all records (including AI sessions,
-            which are captured as records). Sits with the quick actions so it
-            spans more than the 기록 workspace; opening a note routes to 기록. */}
-        <button
-          type="button"
-          className={`sidebar-head-action${currentView === "calendar" ? " is-active" : ""}`}
-          onClick={() => setCurrentView("calendar")}
-          aria-label="캘린더"
-          aria-current={currentView === "calendar" ? "page" : undefined}
-        >
-          <CalendarDays size={15} aria-hidden="true" />
-        </button>
-        {/* Mori 노트 · promoted to the head so it sits with the other quick
-            actions instead of buried in the foot. Compact icon + count
-            badge; the popup panel still opens on click. */}
+        {/* Mori 노트 · the notification bell, compact. */}
         <AttentionIndicator onNavigate={onNavigate} compact />
-        {onToggleCollapsed ? (
-          <button
-            type="button"
-            className="sidebar-collapse-toggle"
-            onClick={onToggleCollapsed}
-            aria-pressed={collapsed}
-            aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
-          >
-            {collapsed ? (
-              <PanelLeftOpen size={14} aria-hidden="true" />
-            ) : (
-              <PanelLeftClose size={14} aria-hidden="true" />
-            )}
-          </button>
-        ) : null}
       </div>
 
       <nav className="sidebar-nav" aria-label="주요 메뉴">
@@ -218,25 +140,25 @@ export function Sidebar({
               onClick={() => onNavigate(item.key)}
               aria-current={active ? "page" : undefined}
             >
-              <Icon size={14} aria-hidden="true" />
+              <Icon size={18} aria-hidden="true" />
               <span>{item.label}</span>
             </button>
           );
         })}
+        {/* 검색 · opens the command palette (⌘K), the one search surface across
+            sessions, records, and destinations. */}
+        <button
+          type="button"
+          className="sidebar-nav-item"
+          onClick={() => openCommandPalette()}
+          aria-label="검색 (명령 팔레트 열기)"
+        >
+          <Search size={18} aria-hidden="true" />
+          <span>검색</span>
+        </button>
       </nav>
 
-      {/* 최근 작업 (project → session tree). Hidden on the surfaces that own a
-          unified note explorer (기록 · 캘린더) so the sidebar is not two
-          competing lists; the explorer supersedes it there. Reachable
-          elsewhere and via the palette. Full merge of legacy sessions into the
-          explorer is the remaining v3 work. */}
-      {currentView === "ledger" ||
-      currentView === "calendar" ||
-      currentView === "sessions" ? (
-        <div className="sidebar-nav-spacer" />
-      ) : (
-        <ContextNavigator onNavigate={onNavigate} />
-      )}
+      <div className="sidebar-nav-spacer" />
 
       <div className="sidebar-foot">
         <button

@@ -86,11 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <Menu size={18} aria-hidden="true" />
       </button>
-      <Sidebar
-        onNavigate={closeAndNavigate}
-        collapsed={sidebarCollapsed}
-        onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
+      <Sidebar onNavigate={closeAndNavigate} collapsed={sidebarCollapsed} />
       <div
         className="sidebar-scrim"
         aria-hidden="true"
