@@ -48,6 +48,10 @@ export type CaptureRecordOutcome = {
   decision: ApplyDecision;
   reason: string;
   confidence: number;
+  /** Why the proposer chose this schema (shown behind "왜 이렇게 나눴나요"). */
+  rationale: string;
+  /** The matched date text when the activity time was inferred (근거). */
+  dateEvidence?: string;
 };
 
 export type CaptureOutcome = {
@@ -98,10 +102,10 @@ function sourceKindFor(input: CaptureInput): KernelSource["kind"] {
 /** Origin for records derived from a capture: user-typed text is `user`
  *  authorship, but the structured interpretation is still machine-derived,
  *  so a note that echoes the raw text is `user` and a typed schema record is
- *  `derived`. A plain note keeps user authorship; everything structured is
- *  derived. */
+ *  `derived`. A proposal may override this (schema-form entry authors its
+ *  structure directly, so it stays `user`). */
 function originForProposal(proposal: RecordProposal): RecordOrigin {
-  return proposal.schemaId === "note" ? "user" : "derived";
+  return proposal.origin ?? (proposal.schemaId === "note" ? "user" : "derived");
 }
 
 export function runCapturePipeline(
@@ -198,6 +202,8 @@ export function runCapturePipeline(
       decision: evaluation.decision,
       reason: evaluation.reason,
       confidence: proposal.confidence,
+      rationale: proposal.rationale,
+      dateEvidence: proposal.dateEvidence,
     };
   });
 

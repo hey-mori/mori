@@ -151,6 +151,7 @@ export function createRecord(input: CreateRecordInput, registry: SchemaRegistry)
 export type RecordPatch = Partial<
   Pick<
     MoriRecord,
+    | "schemaId"
     | "title"
     | "body"
     | "occurredStart"
@@ -177,12 +178,14 @@ export function applyRecordPatch(
   registry: SchemaRegistry,
   now: () => Date = () => new Date(),
 ): UpdatedRecord {
-  const schema = registry.get(record.schemaId);
+  const next: MoriRecord = { ...record, ...patch, updatedAt: now().toISOString() };
+  // A patch may retype the record (유형 변경 in review / detail); validation
+  // then runs against the schema the record is becoming, not the one it was.
+  const schema = registry.get(next.schemaId);
   if (!schema) {
-    throw new KernelValidationError(`unknown schema "${record.schemaId}"`);
+    throw new KernelValidationError(`unknown schema "${next.schemaId}"`);
   }
 
-  const next: MoriRecord = { ...record, ...patch, updatedAt: now().toISOString() };
   const issues = validateTimes(next, next.timeBasis);
   if (next.title.trim().length === 0) issues.push("title is required");
   const validation = validateRecordAgainstSchema(next, schema);

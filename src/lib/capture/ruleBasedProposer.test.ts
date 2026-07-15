@@ -105,3 +105,74 @@ describe("proposeRecords · pilot schemas", () => {
     expect(proposeRecords(textInput("   "))).toEqual([]);
   });
 });
+
+describe("proposeRecords · segmentation (record-workspace vertical slice)", () => {
+  const now = () => new Date("2026-07-15T09:00:00Z");
+
+  it("splits the approved success-scenario input into four typed records", () => {
+    const proposals = proposeRecords(
+      textInput(
+        "어제 MORI 기록 화면을 검토했고 오늘 러닝 1시간 했어. " +
+          "Activity와 Memory를 분리해야 한다는 생각도 들었고 다음에는 캘린더 날짜 추정 UX를 개선해야 해.",
+      ),
+      { now },
+    );
+    expect(proposals.map((proposal) => proposal.schemaId)).toEqual([
+      "activity",
+      "workout",
+      "insight",
+      "task",
+    ]);
+
+    const [activity, workout, insight, task] = proposals;
+    // 업무: 어제 as an estimate with its evidence word.
+    expect(activity.occurredStart).toBe("2026-07-14");
+    expect(activity.timeBasis).toBe("ai-inferred");
+    expect(activity.dateEvidence).toBe("어제");
+    // 운동: 오늘 + "1시간" parsed to 60 minutes.
+    expect(workout.occurredStart).toBe("2026-07-15");
+    expect(workout.properties.durationMinutes).toBe(60);
+    // 인사이트: no date is fabricated.
+    expect(insight.occurredStart).toBeUndefined();
+    expect(insight.timeBasis).toBe("unknown");
+    // 할 일: no due, no activity date (예정일 없음).
+    expect(task.occurredStart).toBeUndefined();
+    expect(task.properties.done).toBe(false);
+  });
+
+  it("keeps a comma-joined workout list as ONE workout (guarded split)", () => {
+    const proposals = proposeRecords(textInput("러닝 10분, 팔굽혀펴기 5개 3세트"), { now });
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].schemaId).toBe("workout");
+  });
+
+  it("merges same-kind unanchored sentences instead of fragmenting them", () => {
+    const proposals = proposeRecords(textInput("러닝 45분. 팔굽혀펴기 3세트."), { now });
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].schemaId).toBe("workout");
+  });
+
+  it("keeps a connective sentence whole when one side cannot stand alone", () => {
+    // "밥 먹" alone is a dateless note fragment, so no split happens; the
+    // whole sentence still reads as the workout it contains.
+    const proposals = proposeRecords(textInput("밥 먹고 러닝 30분 했다"), { now });
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].schemaId).toBe("workout");
+    expect(proposals[0].properties.durationMinutes).toBe(30);
+  });
+
+  it("parses 시간+분 compound durations", () => {
+    const [proposal] = proposeRecords(textInput("러닝 1시간 30분"), { now });
+    expect(proposal.properties.durationMinutes).toBe(90);
+  });
+
+  it("collapses an all-note segmentation back to one faithful note", () => {
+    const proposals = proposeRecords(
+      textInput("오늘은 날씨가 좋았다. 산책하며 바람을 쐤다."),
+      { now },
+    );
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].schemaId).toBe("note");
+    expect(proposals[0].body).toBe("오늘은 날씨가 좋았다. 산책하며 바람을 쐤다.");
+  });
+});

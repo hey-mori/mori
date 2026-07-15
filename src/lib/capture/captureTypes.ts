@@ -10,6 +10,7 @@
  */
 import type {
   KernelSource,
+  RecordOrigin,
   RecordPropertyValue,
   SourceKind,
   TimeBasis,
@@ -43,10 +44,16 @@ export type RecordProposal = {
   confidence: number;
   /** Human-readable one-liner of why this schema was chosen. */
   rationale: string;
+  /** The matched date text ("어제") when the time was inferred; shown to the
+   *  user as the 근거 so an estimate is never dressed as a stated date. */
+  dateEvidence?: string;
   /** Entities this proposal references by canonical name; resolved later. */
   entityMentions: EntityMention[];
   /** True when the interpretation introduces an entity Mori has not seen. */
   introducesNewEntity?: boolean;
+  /** Overrides the derived-vs-user origin default. Template (schema form)
+   *  entry sets `user`: the structure is user-authored, not interpreted. */
+  origin?: RecordOrigin;
 };
 
 export type EntityMention = {

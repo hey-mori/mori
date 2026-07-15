@@ -11,6 +11,8 @@ export type InferredTime = {
   /** ISO date (YYYY-MM-DD), no time-of-day. */
   occurredStart: string;
   confidence: number;
+  /** The matched text ("어제", "7월 8일"), shown to the user as the 근거. */
+  evidence: string;
 };
 
 /** Relative day words, offset from the capture day. Longer words are listed
@@ -37,13 +39,13 @@ export function inferOccurredTime(text: string, now: Date): InferredTime | null 
     if (text.includes(word)) {
       const target = new Date(now.getTime());
       target.setDate(target.getDate() + delta);
-      return { occurredStart: toIsoDate(target), confidence: 0.9 };
+      return { occurredStart: toIsoDate(target), confidence: 0.9, evidence: word };
     }
   }
 
   const iso = text.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (iso) {
-    return { occurredStart: iso[0], confidence: 0.95 };
+    return { occurredStart: iso[0], confidence: 0.95, evidence: iso[0] };
   }
 
   const monthDay = text.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
@@ -51,7 +53,11 @@ export function inferOccurredTime(text: string, now: Date): InferredTime | null 
     const month = Number(monthDay[1]);
     const day = Number(monthDay[2]);
     if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return { occurredStart: `${now.getFullYear()}-${pad(month)}-${pad(day)}`, confidence: 0.8 };
+      return {
+        occurredStart: `${now.getFullYear()}-${pad(month)}-${pad(day)}`,
+        confidence: 0.8,
+        evidence: monthDay[0],
+      };
     }
   }
 

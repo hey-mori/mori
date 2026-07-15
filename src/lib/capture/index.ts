@@ -42,3 +42,4 @@ export {
   type CapturePipelineOptions,
   type CaptureRecordOutcome,
 } from "./capturePipeline";
+export { proposeFromForm, type FormEntry } from "./formProposer";

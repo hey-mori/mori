@@ -4,10 +4,11 @@ import { inferOccurredTime } from "./dateInference";
 const now = new Date("2026-07-14T09:00:00.000Z");
 
 describe("inferOccurredTime", () => {
-  it("resolves 오늘 to the capture day", () => {
+  it("resolves 오늘 to the capture day with the matched word as evidence", () => {
     expect(inferOccurredTime("오늘 운동 러닝 10분", now)).toEqual({
       occurredStart: "2026-07-14",
       confidence: 0.9,
+      evidence: "오늘",
     });
   });
 
@@ -25,6 +26,7 @@ describe("inferOccurredTime", () => {
     expect(inferOccurredTime("2026-07-08 커밋 작업", now)).toEqual({
       occurredStart: "2026-07-08",
       confidence: 0.95,
+      evidence: "2026-07-08",
     });
   });
 
