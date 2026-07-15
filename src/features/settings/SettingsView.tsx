@@ -16,6 +16,7 @@ import { buildAnalysisRunHistoryViewModel } from "../../lib/analysis";
 import { isTauriRuntime } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { BackgroundWatchCard } from "./BackgroundWatchCard";
+import { AutoImportCard } from "./AutoImportCard";
 import { LocalAiCard } from "./LocalAiCard";
 import { StorageCard } from "./StorageCard";
 import { ThemeCard } from "./ThemeCard";
@@ -86,7 +87,12 @@ export function SettingsView() {
             <BackgroundWatchCard />
           </>
         ) : null}
-        {activeTab === "connections" ? <SourcesView embedded /> : null}
+        {activeTab === "connections" ? (
+          <>
+            <AutoImportCard />
+            <SourcesView embedded />
+          </>
+        ) : null}
         {activeTab === "storage" ? (
           <>
             <DatabaseRecoveryCard />
