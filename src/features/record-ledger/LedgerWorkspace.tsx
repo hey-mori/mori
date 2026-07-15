@@ -10,6 +10,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { PageShell } from "../../components/layout/PageShell";
+import { useAppStore } from "../../app/store";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
 import { NoteExplorer } from "./NoteExplorer";
@@ -25,6 +26,16 @@ export function LedgerWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
   const now = useMemo(() => new Date(), []);
+  const openRecordId = useAppStore((state) => state.openRecordId);
+  const clearOpenRecord = useAppStore((state) => state.clearOpenRecord);
+
+  // The global calendar can ask 기록 to open a specific record.
+  useEffect(() => {
+    if (!openRecordId) return;
+    setSelectedId(openRecordId);
+    setComposing(false);
+    clearOpenRecord();
+  }, [openRecordId, clearOpenRecord]);
 
   const candidates = useMemo(
     () => byNewest(ledger.records.filter((record) => record.status === "candidate")),

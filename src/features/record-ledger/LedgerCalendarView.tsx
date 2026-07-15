@@ -91,7 +91,7 @@ export function LedgerCalendarView({
       <header className="ledger-calendar-head">
         <button type="button" className="ledger-calendar-back" onClick={onClose}>
           <ListTree size={14} aria-hidden="true" />
-          타임라인으로
+          기록으로
         </button>
         <div className="ledger-calendar-nav">
           <button type="button" onClick={() => shiftMonth(-1)} aria-label="이전 달">
@@ -115,13 +115,11 @@ export function LedgerCalendarView({
           cell === null ? (
             <span key={`blank-${index}`} className="ledger-calendar-cell is-blank" />
           ) : (
-            <button
+            <div
               key={cell.date}
-              type="button"
               className={`ledger-calendar-cell${cell.date === selectedDate ? " is-selected" : ""}${
                 cell.date === todayIso ? " is-today" : ""
               }${dropTarget === cell.date ? " is-drop" : ""}`}
-              onClick={() => onSelectDate(cell.date === selectedDate ? null : cell.date)}
               onDragOver={(event) => {
                 if (undecided.length > 0) {
                   event.preventDefault();
@@ -131,9 +129,21 @@ export function LedgerCalendarView({
               onDragLeave={() => setDropTarget((current) => (current === cell.date ? null : current))}
               onDrop={(event) => assignFromDrag(event, cell.date)}
             >
-              <span className="ledger-calendar-num">{cell.day}</span>
-              <CellEntries records={byDate.get(cell.date) ?? []} registry={registry} todayIso={todayIso} />
-            </button>
+              <button
+                type="button"
+                className="ledger-calendar-num"
+                onClick={() => onSelectDate(cell.date === selectedDate ? null : cell.date)}
+                aria-label={`${cell.day}일 선택`}
+              >
+                {cell.day}
+              </button>
+              <CellEntries
+                records={byDate.get(cell.date) ?? []}
+                registry={registry}
+                todayIso={todayIso}
+                onSelectRecord={onSelectRecord}
+              />
+            </div>
           ),
         )}
       </div>
@@ -186,29 +196,35 @@ function CellEntries({
   records,
   registry,
   todayIso,
+  onSelectRecord,
 }: {
   records: MoriRecord[];
   registry: SchemaRegistry;
   todayIso: string;
+  onSelectRecord: (recordId: string) => void;
 }) {
   if (records.length === 0) return null;
   const shown = records.slice(0, MAX_TITLES);
   const more = records.length - shown.length;
   return (
-    <span className="ledger-cell-entries">
+    <div className="ledger-cell-entries">
       {shown.map((record) => {
         const planned = (record.occurredStart?.slice(0, 10) ?? "") > todayIso;
         return (
-          <span key={record.id} className={`ledger-cell-entry${planned ? " is-planned" : ""}`}>
+          <button
+            key={record.id}
+            type="button"
+            className={`ledger-cell-entry${planned ? " is-planned" : ""}`}
+            onClick={() => onSelectRecord(record.id)}
+            title={record.title}
+          >
             <span className={`ledger-cell-dot ${kindColorClass(record.schemaId)}`} aria-hidden="true" />
-            <span className="ledger-cell-title" title={record.title}>
-              {record.title}
-            </span>
-          </span>
+            <span className="ledger-cell-title">{record.title}</span>
+          </button>
         );
       })}
       {more > 0 ? <span className="ledger-cell-more">+{more}</span> : null}
       <span className="ledger-cell-sr">{schemaLabel(records[0], registry)}</span>
-    </span>
+    </div>
   );
 }

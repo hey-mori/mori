@@ -1,4 +1,5 @@
 import {
+  CalendarDays,
   FolderGit2,
   House,
   Layers,
@@ -115,6 +116,18 @@ export function Sidebar({
           aria-current={currentView === "graph" ? "page" : undefined}
         >
           <Network size={15} aria-hidden="true" />
+        </button>
+        {/* 캘린더 · a global time view over all records (including AI sessions,
+            which are captured as records). Sits with the quick actions so it
+            spans more than the 기록 workspace; opening a note routes to 기록. */}
+        <button
+          type="button"
+          className={`sidebar-head-action${currentView === "calendar" ? " is-active" : ""}`}
+          onClick={() => setCurrentView("calendar")}
+          aria-label="캘린더"
+          aria-current={currentView === "calendar" ? "page" : undefined}
+        >
+          <CalendarDays size={15} aria-hidden="true" />
         </button>
         {/* Mori 노트 · promoted to the head so it sits with the other quick
             actions instead of buried in the foot. Compact icon + count

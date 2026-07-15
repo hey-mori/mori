@@ -2,9 +2,26 @@
 
 ## Current stage
 
-R1-R6 done. **v2 pivot (document workspace) approved and underway** (see
-`v2-document-workspace.md`). R7a (document workspace) done and verified
-(2026-07-15). In progress: R7b (global calendar head button).
+R1-R6 done. **v2 pivot (document workspace) shipped** (see
+`v2-document-workspace.md`): R7a (document workspace) and R7b (global
+calendar) both done and verified (2026-07-15).
+
+## Done (R7b · global calendar, 2026-07-15)
+
+- Promoted `LedgerCalendarView` to a top-level `CalendarView` reached from a
+  new sidebar-head calendar button (beside ＋ / graph / bell). It scopes over
+  all ledger-visible records, so it spans 기록 and AI sessions (agent
+  sessions are records). `navigate("calendar")` is now its own view (removed
+  from the ledger normalization); `App.tsx` routes it.
+- Cross-view handoff: `openRecordInLedger(recordId)` in the store sets the
+  ledger view + a pending `openRecordId`; `LedgerWorkspace` reads it once and
+  opens the record. Calendar cells became divs with a day-number button and
+  clickable note-chip buttons (no nested buttons); clicking a chip opens that
+  record in the 기록 editor.
+- Verified in the Vite app: the head calendar button opens the calendar with
+  populated cells and a 기록으로 return; clicking a note chip routes to 기록
+  with that record open in the editor and selected in the explorer; no
+  console errors. 2788 unit tests + build + style green.
 
 ## Done (R7a · document workspace, 2026-07-15)
 

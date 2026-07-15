@@ -157,6 +157,9 @@ type AppState = {
    * means "no preference" and falls back to the first detection-capable agent.
    */
   startRecordsAgentId: AgentWorkAgentId | null;
+  /** A record the global calendar asked 기록 to open; the workspace reads it
+   *  once on mount and clears it. */
+  openRecordId: string | null;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -232,6 +235,9 @@ type AppState = {
    */
   requestStartRecords: (agentId?: AgentWorkAgentId) => void;
   clearStartRecordsRequest: () => void;
+  /** Opens 기록 with a specific record selected (from the global calendar). */
+  openRecordInLedger: (recordId: string) => void;
+  clearOpenRecord: () => void;
 };
 
 export const useAppStore = create<AppState>((set) => ({
@@ -258,6 +264,7 @@ export const useAppStore = create<AppState>((set) => ({
   currentProjectKey: null,
   startRecordsRequest: false,
   startRecordsAgentId: null,
+  openRecordId: null,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -313,7 +320,6 @@ export const useAppStore = create<AppState>((set) => ({
     set(() => {
       switch (view) {
         case "today":
-        case "calendar":
         case "trackers":
         case "captureInbox":
           // The ledger lenses unified into one 기록 workspace; legacy keys
@@ -366,4 +372,6 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   clearStartRecordsRequest: () =>
     set({ startRecordsRequest: false, startRecordsAgentId: null }),
+  openRecordInLedger: (recordId) => set({ currentView: "ledger", openRecordId: recordId }),
+  clearOpenRecord: () => set({ openRecordId: null }),
 }));

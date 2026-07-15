@@ -1487,16 +1487,10 @@
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: var(--panel, #fff);
-  cursor: pointer;
   transition: background 0.1s ease;
 }
 
 .ledger-calendar-cell.is-blank {
-  cursor: default;
-  background: var(--panel-soft);
-}
-
-.ledger-calendar-cell:not(.is-blank):hover {
   background: var(--panel-soft);
 }
 
@@ -1511,10 +1505,21 @@
 }
 
 .ledger-calendar-num {
+  align-self: flex-start;
   font-size: 11.5px;
   font-weight: 700;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  background: transparent;
+  border: 0;
+  padding: 1px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ledger-calendar-num:hover {
+  background: var(--panel-soft);
+  color: var(--text);
 }
 
 .ledger-calendar-cell.is-today .ledger-calendar-num {
@@ -1532,6 +1537,17 @@
   align-items: center;
   gap: 4px;
   min-width: 0;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 1px 3px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.ledger-cell-entry:hover {
+  background: color-mix(in srgb, var(--purple) 9%, transparent);
 }
 
 .ledger-cell-dot {
