@@ -235,3 +235,29 @@ export function sessionShortLabel(meta: ClaudeCodeSessionMeta): string {
   const parts = raw.split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] || raw;
 }
+
+/**
+ * A live session's title: the text of its most recent real request (what it is
+ * working on right now), so the index reads by conversation, not by project
+ * path. Falls back to the first request, then the project label. One line,
+ * trimmed to a readable length.
+ */
+export function liveSessionTitle(session: FollowedSession): string {
+  const openers = session.follow.messages.filter(isRequestOpener);
+  const opener = openers[openers.length - 1] ?? openers[0];
+  const text = opener?.content.trim();
+  if (text) return oneLine(text, 80);
+  return sessionShortLabel(session.meta);
+}
+
+/** Whether a followed session is genuinely mid-turn right now (exported for the
+ *  session index, which shows only truly-working sessions under 라이브 피드). */
+export function sessionIsWorking(session: FollowedSession, now: number): boolean {
+  return isSessionWorking(session.follow.messages, now);
+}
+
+/** Collapse a message to a single clean line, capped, with an ellipsis. */
+function oneLine(text: string, max: number): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}

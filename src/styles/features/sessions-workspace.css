@@ -36,7 +36,52 @@
 }
 
 .session-index-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 12px 12px 8px;
+}
+
+.session-index-search > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Sort / group toggle beside the search field — recency ↔ project, like a
+   session browser. Calm icon button, matches the search field height. */
+.session-index-sort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1, transparent);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.session-index-sort:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+/* 작업 중 badge on a live row title. */
+.session-index-working {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 0 6px;
+  height: 15px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-success-base, #2f9e6f) 16%, transparent);
+  color: var(--color-success-strong, #1c7a54);
+  font-size: 9.5px;
+  font-weight: 600;
+  vertical-align: middle;
 }
 
 .session-index-list {
@@ -150,11 +195,19 @@
 }
 
 .session-index-row-title {
+  display: flex;
+  align-items: center;
+  gap: 0;
   font-size: 12.5px;
   line-height: 1.35;
+  min-width: 0;
+}
+
+.session-index-row-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .session-index-row-meta {
