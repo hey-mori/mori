@@ -42,7 +42,8 @@ Consequences:
 This is also the precondition for the originally-discussed MCP / "open Mori
 as a tool" direction: memory trapped in React components cannot be exposed;
 memory as a capability layer makes a read-only MCP server a thin adapter
-over the same functions.
+over the same functions. That adapter is now specified as a proposal in
+[agent-context-read-surface.md](agent-context-read-surface.md).
 
 ## 3. The capability façade
 
