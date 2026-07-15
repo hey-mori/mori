@@ -8,6 +8,20 @@ Legacy 메모리 surface retired from bell·palette·home (2026-07-15). **세션
 workspace shipped** (2026-07-15): two-pane 진행 중 / 과거 index + inline live/review.
 Next: slim icon rail (홈·기록·세션·프로젝트·캘린더·검색 + 설정).
 
+## Done (슬림 아이콘 레일, 2026-07-15)
+
+- The sidebar is now a permanent 64px icon rail (icon over micro-label). Nav is
+  the v4 six: 홈 · 기록 · 세션 · 프로젝트 · 캘린더 · 검색 (검색 opens the command
+  palette). 대시보드 · 워크벤치 · 작업 그래프 retire to the palette; the always-on
+  최근 작업 tree is gone from the shell (session browsing lives in 세션).
+- 만들기 + 알림 stack in the head; the 만들기 menu opens beside the rail. The
+  rail's collapse toggle is removed; icon-only focus mode stays palette-reachable
+  and the mobile off-canvas drawer is unchanged. Scoped to `.sidebar.is-rail` so
+  the collapsed / drawer mechanics are untouched.
+- Verified in-browser: 64px rail, all six destinations navigate and render, 검색
+  opens the palette, 만들기 menu opens, workspace gained ~190px, no new console
+  errors; build + 2790 tests + style:check green. Commit `11a0c56`.
+
 ## Done (세션 unified workspace, 2026-07-15)
 
 - New `sessions` view (`SessionsWorkspace`): a two-pane surface with a left
