@@ -31,8 +31,14 @@ import {
   buildPrimaryImportCandidateFromAgentWorkSession,
   getAgentWorkSession,
 } from "../lib/agents/workSessions";
-import { autoImportedProjectId } from "../lib/agents/autoImportSessions";
-import { loadAutoImportMeta } from "../lib/agents/autoImportMetaStore";
+import {
+  autoImportedProjectId,
+  isAutoImportedSessionId,
+} from "../lib/agents/autoImportSessions";
+import {
+  loadAutoImportMeta,
+  removeAutoImportMeta,
+} from "../lib/agents/autoImportMetaStore";
 import {
   decideFollowReaction,
   followReducer,
@@ -449,9 +455,17 @@ export type SessionState = {
    * Register discovered agent sessions in the background: upsert a
    * metadata-only draft per session (so it appears in 과거) and bump the list
    * nonce. Does not open or analyse anything — the review gate still governs
-   * the deeper analyze→apply step. Returns nothing; callers push the notice.
+   * the deeper analyze→apply step. Returns the ids that were actually written
+   * (a quota-failed write is omitted so the caller can retry it and does not
+   * report a false success).
    */
-  registerDiscoveredSessions: (drafts: StoredSessionDraft[]) => void;
+  registerDiscoveredSessions: (drafts: StoredSessionDraft[]) => string[];
+  /**
+   * Remove auto-import metadata placeholders whose id is not in `keepIds` and
+   * that were never opened (no imports), bounding the auto-registered draft set
+   * to the recent discovery window. Returns the removed ids.
+   */
+  pruneAutoImportedSessions: (keepIds: ReadonlySet<string>) => string[];
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
   /**
@@ -1307,20 +1321,53 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return { importSyncNotifications: next.length > 50 ? next.slice(-50) : next };
     }),
   registerDiscoveredSessions: (drafts) => {
-    if (drafts.length === 0) return;
+    if (drafts.length === 0) return [];
     const repository = getRepository();
+    const written: string[] = [];
     for (const draft of drafts) {
       try {
         repository.putStoredSessionDraft(draft);
+        written.push(draft.session.id);
       } catch {
-        // A single bad write must not abort the batch; skip and continue.
+        // A quota / write failure must not abort the batch or be reported as a
+        // success — leave it out of `written` so the caller can retry it.
       }
     }
-    set((state) => ({ sessionListNonce: state.sessionListNonce + 1 }));
+    if (written.length > 0) {
+      set((state) => ({ sessionListNonce: state.sessionListNonce + 1 }));
+    }
+    return written;
+  },
+  pruneAutoImportedSessions: (keepIds) => {
+    const repository = getRepository();
+    const removed: string[] = [];
+    for (const summary of repository.listStoredSessions()) {
+      if (!isAutoImportedSessionId(summary.sessionId)) continue;
+      if (keepIds.has(summary.sessionId)) continue;
+      // Never prune a materialized (opened) auto session — it holds real
+      // imported work. Only stale metadata placeholders are removed.
+      if (repository.listSessionImports(summary.sessionId).length > 0) continue;
+      try {
+        repository.clearStoredSession(summary.sessionId);
+        removeAutoImportMeta(summary.sessionId);
+        removed.push(summary.sessionId);
+      } catch {
+        // Skip a stubborn key; the next pass retries.
+      }
+    }
+    if (removed.length > 0) {
+      set((state) => ({ sessionListNonce: state.sessionListNonce + 1 }));
+    }
+    return removed;
   },
   openDiscoveredSession: async (sessionId) => {
     const meta = loadAutoImportMeta(sessionId);
     if (!meta) return false;
+    // Open the placeholder as the active session first, then apply the real
+    // transcript ONTO THE SAME id. Materializing in place (rather than minting a
+    // new session id) means a later auto-import poll just refreshes this one row
+    // instead of resurrecting a duplicate placeholder for the same conversation.
+    if (!get().loadBrowserSession(sessionId)) return false;
     try {
       const detail = await getAgentWorkSession(meta);
       const candidate = buildPrimaryImportCandidateFromAgentWorkSession(detail, {
@@ -1328,24 +1375,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         sessionId,
         capturedAt: new Date().toISOString(),
       });
-      // Materialize the full transcript as a real session and open it.
-      get().importAndOpenAsNewSession({
-        candidate,
-        title: meta.title,
-        startedAt: meta.startedAt,
-        endedAt: meta.updatedAt || meta.startedAt,
-        projectLabel: meta.projectPath || meta.projectName,
-      });
-      // Retire the lightweight placeholder now that a full session exists, so
-      // the 과거 list shows the real session rather than a duplicate stub.
-      try {
-        getRepository().clearStoredSession(sessionId);
-      } catch {
-        // Non-fatal — the real session is already open.
-      }
-      set((state) => ({ sessionListNonce: state.sessionListNonce + 1 }));
+      get().addImport(candidate);
       return true;
     } catch {
+      // The metadata draft is already open as an honest fallback.
       return false;
     }
   },

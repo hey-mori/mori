@@ -12,7 +12,8 @@ import { AUTO_IMPORT_META_KEY, autoImportedSessionId } from "./autoImportSession
 
 type MetaMap = Record<string, AgentWorkSessionMeta>;
 
-/** Bound the persisted map so a long-lived install never fills localStorage. */
+/** Bound the reopen-descriptor map (this key only; the per-session drafts are
+ *  bounded separately by the poll's recency cap + prune). */
 const MAX_METAS = 1000;
 
 function storage(): Storage | null {
@@ -67,6 +68,21 @@ export function upsertAutoImportMetas(metas: readonly AgentWorkSessionMeta[]): v
     store.setItem(AUTO_IMPORT_META_KEY, JSON.stringify(Object.fromEntries(entries)));
   } catch {
     // Quota exceeded — a best-effort cache; drop this write silently.
+  }
+}
+
+/** Drop the reopen descriptor for one auto session (called when its placeholder
+ *  is pruned, so a stale meta does not linger). */
+export function removeAutoImportMeta(sessionId: string): void {
+  const store = storage();
+  if (!store) return;
+  const map = readMap();
+  if (!(sessionId in map)) return;
+  delete map[sessionId];
+  try {
+    store.setItem(AUTO_IMPORT_META_KEY, JSON.stringify(map));
+  } catch {
+    // Best-effort; a failed prune-write just leaves the stale entry.
   }
 }
 

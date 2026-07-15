@@ -34,6 +34,11 @@ import {
 } from "../../lib/agents/autoImportSettings";
 import { buildSessionSyncNotification } from "../../lib/notifications/sessionSyncNotifications";
 
+/** Auto-register only the most-recent N discovered sessions, so the localStorage
+ *  draft set + the seen-fingerprint set stay bounded on a long-lived multi-agent
+ *  install (older sessions can still be opened via the record browser). Must be
+ *  ≤ the reopen-meta cap so the seed never misses a registered session. */
+const REGISTER_CAP = 400;
 /** Calm cadence: discovery parses files, so we poll gently, not tightly. */
 const VISIBLE_INTERVAL_MS = 90_000;
 /** First pass shortly after launch so 과거 populates quickly. */
@@ -46,6 +51,9 @@ const ERROR_BACKOFF_MS = 120_000;
 export function useAutoImportSessions(): void {
   const registerDiscoveredSessions = useSessionStore(
     (state) => state.registerDiscoveredSessions,
+  );
+  const pruneAutoImportedSessions = useSessionStore(
+    (state) => state.pruneAutoImportedSessions,
   );
   const pushImportSyncNotification = useSessionStore(
     (state) => state.pushImportSyncNotification,
@@ -92,19 +100,45 @@ export function useAutoImportSessions(): void {
       try {
         const discovered = await listAllAgentWorkSessions();
         if (!cancelled) {
-          const diff = diffDiscoveredSessions(discovered, seenRef.current);
+          // Bound to the most-recent window so the draft + seen sets stay small.
+          const recent = [...discovered]
+            .sort((a, b) => activityMs(b) - activityMs(a))
+            .slice(0, REGISTER_CAP);
+
+          const diff = diffDiscoveredSessions(recent, seenRef.current);
           if (diff.toUpsert.length > 0) {
-            registerDiscoveredSessions(diff.toUpsert.map(agentSessionToStoredDraft));
-            upsertAutoImportMetas(diff.toUpsert);
-            for (const meta of diff.toUpsert) {
-              seenRef.current.set(autoImportedSessionId(meta), agentSessionFingerprint(meta));
+            const written = new Set(
+              registerDiscoveredSessions(diff.toUpsert.map(agentSessionToStoredDraft)),
+            );
+            // Only mark + notify for sessions that actually persisted, so a
+            // quota-failed write is retried next pass instead of lost.
+            const persisted = diff.toUpsert.filter((meta) =>
+              written.has(autoImportedSessionId(meta)),
+            );
+            if (persisted.length > 0) {
+              upsertAutoImportMetas(persisted);
+              let newCount = 0;
+              let updatedCount = 0;
+              for (const meta of persisted) {
+                const id = autoImportedSessionId(meta);
+                if (seenRef.current.has(id)) updatedCount += 1;
+                else newCount += 1;
+                seenRef.current.set(id, agentSessionFingerprint(meta));
+              }
+              const notice = buildSessionSyncNotification({
+                newCount,
+                updatedCount,
+                at: new Date().toISOString(),
+              });
+              if (notice) pushImportSyncNotification(notice);
             }
-            const notice = buildSessionSyncNotification({
-              newCount: diff.newCount,
-              updatedCount: diff.updatedCount,
-              at: new Date().toISOString(),
-            });
-            if (notice) pushImportSyncNotification(notice);
+          }
+
+          // Prune placeholders that dropped out of the recent window (keeping
+          // any the user opened) so 과거 does not accumulate stale stubs.
+          const keep = new Set(recent.map((meta) => autoImportedSessionId(meta)));
+          for (const removedId of pruneAutoImportedSessions(keep)) {
+            seenRef.current.delete(removedId);
           }
         }
       } catch {
@@ -118,5 +152,16 @@ export function useAutoImportSessions(): void {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [enabled, registerDiscoveredSessions, pushImportSyncNotification]);
+  }, [
+    enabled,
+    registerDiscoveredSessions,
+    pruneAutoImportedSessions,
+    pushImportSyncNotification,
+  ]);
+}
+
+/** Millisecond activity time for recency sorting; 0 when unparseable. */
+function activityMs(meta: { updatedAt: string; startedAt: string }): number {
+  const ms = Date.parse(meta.updatedAt || meta.startedAt || "");
+  return Number.isNaN(ms) ? 0 : ms;
 }

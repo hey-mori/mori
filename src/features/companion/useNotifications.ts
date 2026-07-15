@@ -56,18 +56,21 @@ export function useNotifications(): {
     (state) => state.draft?.session.id ?? null,
   );
   const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
+  // Bumped by the background auto-import pass, so the per-session feed rows keep
+  // pace with the 과거 list (which keys on the same nonce).
+  const sessionListNonce = useSessionStore((state) => state.sessionListNonce);
   const backgroundDetections = useBackgroundWatchStore((state) => state.detections);
   const backgroundAnalysisResults = useBackgroundWatchStore((state) => state.analysisResults);
 
   // Cross-session feed source: every stored session becomes a timestamped
-  // event. Re-read when work changes (active session / new import / reset) so
-  // the feed stays live without a background watcher.
+  // event. Re-read when work changes (active session / new import / reset /
+  // background auto-import) so the feed stays live without a background watcher.
   const [summaries, setSummaries] = useState<StoredSessionSummary[]>(() =>
     safeListSummaries(),
   );
   useEffect(() => {
     setSummaries(safeListSummaries());
-  }, [activeSessionId, imports.length, dataResetNonce]);
+  }, [activeSessionId, imports.length, dataResetNonce, sessionListNonce]);
   // Recent .mori package drafts — re-read whenever the active session
   // changes (a reasonable proxy for "the user did something Reports-y").
   // The dedupe in `composeNotifications` keeps the row to a single entry

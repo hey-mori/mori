@@ -27,14 +27,21 @@ export const AUTO_IMPORT_META_KEY = "mori.autoImport.v1";
 /** Prefix that marks a session id as auto-registered (vs a manual import). */
 const AUTO_ID_PREFIX = "auto-";
 
-/** Deterministic 32-bit FNV-1a hash → stable, collision-resistant id suffix. */
-function fnv1a(input: string): string {
-  let hash = 2166136261;
+/**
+ * Two independent FNV-1a passes over the input → a ~64-bit key-safe suffix.
+ * The discovery `meta.id` is already globally unique; this only shortens it to
+ * a stable localStorage-key-safe token, wide enough that distinct ids do not
+ * collide within an agent in practice.
+ */
+function stableHash(input: string): string {
+  let a = 2166136261;
+  let b = 2246822519;
   for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
+    const c = input.charCodeAt(i);
+    a = Math.imul(a ^ c, 16777619);
+    b = Math.imul(b ^ c, 16777619) + a;
   }
-  return (hash >>> 0).toString(36);
+  return `${(a >>> 0).toString(36)}${(b >>> 0).toString(36)}`;
 }
 
 /**
@@ -44,7 +51,7 @@ function fnv1a(input: string): string {
  * duplicating a row every poll.
  */
 export function autoImportedSessionId(meta: Pick<AgentWorkSessionMeta, "id" | "agentId">): string {
-  return `${AUTO_ID_PREFIX}${meta.agentId}-${fnv1a(meta.id)}`;
+  return `${AUTO_ID_PREFIX}${meta.agentId}-${stableHash(meta.id)}`;
 }
 
 /** Whether a stored session id was created by auto-import. */
@@ -58,7 +65,7 @@ export function autoImportedProjectId(
   meta: Pick<AgentWorkSessionMeta, "projectPath" | "projectName" | "agentId">,
 ): string {
   const key = (meta.projectPath || meta.projectName || meta.agentId).trim();
-  return `${AUTO_ID_PREFIX}proj-${fnv1a(key)}`;
+  return `${AUTO_ID_PREFIX}proj-${stableHash(key)}`;
 }
 
 /**
