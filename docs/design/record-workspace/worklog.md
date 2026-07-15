@@ -2,8 +2,8 @@
 
 ## Current stage
 
-R2 in progress (documentation landed; R1/R2 implementation underway in this
-session).
+R1 + R2 done and verified (2026-07-15). Next stage: R3 timeline + context
+rail.
 
 ## Done
 
@@ -19,34 +19,69 @@ session).
 - 2026-07-15 · Canonical document set created under
   `docs/design/record-workspace/`.
 
-## In flight (next exact actions)
+## Done (R1 + R2, 2026-07-15)
 
-1. Reconcile legacy docs: architecture §8.1 shipped-note superseded pointer;
-   CLAUDE.md always-read pointer. Commit `docs: ...` (two commits).
-2. R1 domain: extend `dateInference` (evidence), `ruleBasedProposer`
-   (segmentation + activity/insight/task + 시간 durations), proposal
-   `origin` override; add `proposeCapture`/`commitCapture` two-phase API to
-   `useRecordLedger`. Tests alongside.
-3. R1 UI: `composerMachine` + `composerDraft` + `RecordComposer` (chips +
-   schema-driven quick form), mounted in `LedgerWorkspace` replacing
-   `QuickCapture`.
-4. R2 UI: review candidate cards + save/undo semantics.
-5. Verification: unit + `check:full` + `build` + real-app E2E of the
-   success scenario; screenshots if the environment allows.
+- Legacy docs reconciled: architecture §8.1 shipped-note superseded with a
+  pointer here; project-goal §10 pointer; CLAUDE.md always-read entry.
+- Domain: proposer segmentation (sentences + guarded "~고 " splits, all-note
+  collapse, same-kind merge), 업무 활동/인사이트/할 일 detectors, 시간
+  compound durations, date-inference `evidence`, proposal `origin` override,
+  outcome `rationale`/`dateEvidence`, `RecordPatch.schemaId` (validates
+  against the new schema).
+- Two-phase capture: `proposeCapture` (persists the source at 정리 time,
+  even when understanding throws) / `proposeFormCapture` /
+  `commitCapture` (edits → user revisions on the AI create revision;
+  exclusions skip records + orphan entities; confirm-kept saves active) /
+  `discardRecords` (post-save undo).
+- Composer: six-state pure machine (`composerMachine.ts`, illegal
+  transitions are no-ops, double organize/save impossible), local recovery
+  draft (`composerDraft.ts`), `RecordComposer` + `CandidateCard` +
+  `SchemaQuickForm` (fields generated from `SchemaPropertyDefinition`, no
+  per-schema components), mounted in `LedgerWorkspace` replacing
+  `QuickCapture` (removed; the composer covers its whole job).
 
-## Changed files (running list)
+## Verification (R1/R2)
 
-- `docs/design/record-workspace/*` (this set) · new
-- (implementation files appended as they land)
+- Unit: 2765 passed (291 files), incl. machine transitions, segmentation
+  guards ("러닝 10분, 팔굽혀펴기 5개 3세트" stays one workout), commit-patch
+  semantics, form proposer origin.
+- `npm run check:full`, `npm run build`, `npm run style:check`,
+  `git diff --check` all green. `src-tauri/` untouched (no cargo run
+  needed).
+- Real screen (browser build, Vite dev): the §5 success scenario end to
+  end: draft persists and restores across reload; 정리 → 4 candidates
+  (활동 7/14 "어제"에서 추정 · 운동 7/15 60분 · 인사이트 날짜 없음 · 할 일
+  예정일 없음); date edit → "직접 지정"; insight excluded; 3건 저장 →
+  placed under 오늘/7월 13일/날짜 미정; storage shows ai:create +
+  user:update revisions and one retained source; 되돌리기 discards all
+  three and keeps the source; schema form (운동) generates from the
+  definition, saves as user-origin auto, survives reload; inspector shows
+  직접 입력 + history.
+- Not run this round: the packaged Tauri app itself (disk-constrained
+  machine; the runtime-aware repository's desktop path is covered by
+  existing kernel tests). Screenshots: browser-pane screenshots time out in
+  this environment; DOM-level assertions recorded instead.
+
+## Next exact actions (R3)
+
+1. Timeline rows (time column, meta line, kind variants, note preview).
+2. Context rail (time mode ↔ inspector mode; narrow-width drawer).
+3. Saved-state placement highlight onto the new timeline.
+4. Route body swap + delete `FeedBody`/`LedgerRow`(old)/`LedgerCalendar`/
+   month bar; demote `TrackerPanel` to the rail week line.
 
 ## Transition markers
 
-- `RecordComposer` mounts above the current feed inside `LedgerWorkspace`;
-  the current feed remains the placement surface until R3. Removal stage:
-  R3.
-- Saved-state highlight targets the current feed rows until the R3 timeline
-  exists. Removal stage: R3.
+- `RecordComposer` sits above the CURRENT feed inside `LedgerWorkspace`;
+  the old feed remains the placement surface until R3. Removal stage: R3.
+- `manualNote` (failed → 노트로 저장) creates a second source for the same
+  text; dedupe when the composer gains source-reuse in R3.
 
 ## Commits
 
-- (appended as they land)
+- d752882 docs: canonicalize the record workspace redesign
+- 17924ef docs: reconcile legacy record and calendar directions
+- 724e083 feat: propose several typed records from one capture
+- 0de841b feat: persist reviewed proposals with revision history
+- 8885ba4 feat: add the record composer state machine
+- 28f8291 feat: present structured record proposals for review
