@@ -117,6 +117,7 @@ import type {
   ConnectorSourceImportSummary,
 } from "../lib/connectors";
 import { isTauriRuntime } from "../lib/desktop";
+import { syncLlmAllowedEndpoints } from "../lib/desktop/llmEndpointRegistry";
 import { getSessionImportRepository } from "../lib/storage/sessionImportRepository";
 import { persistMemoryBodyFromAnalysis } from "./sessionMemoryPersistence";
 
@@ -614,6 +615,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const repository = getRepository();
     const service = getPersistenceService();
     const analysisSettings = repository.loadQuickPassSettings();
+    // Register the configured engine origins with the native LLM bridge's
+    // allowlist; llm_http_request rejects every other origin.
+    void syncLlmAllowedEndpoints(analysisSettings);
     const localDraft = repository.loadCurrentSessionDraft();
     const localImports = localDraft ? repository.listSessionImports(localDraft.session.id) : [];
     const localAnalysisRecord = localDraft ? repository.loadSessionAnalysis(localDraft.session.id) : null;
@@ -1354,6 +1358,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const repository = getRepository();
     const next = sanitizeQuickPassSettings({ ...get().analysisSettings, ...patch });
     repository.saveQuickPassSettings(next);
+    void syncLlmAllowedEndpoints(next);
     set({ analysisSettings: next });
     return next;
   },

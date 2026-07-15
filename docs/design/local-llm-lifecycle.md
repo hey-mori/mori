@@ -118,8 +118,14 @@ their own tooling instead.
    lifecycle actions (unload, start, stop) additionally require the
    endpoint to classify local: Mori never manages a remote server's
    lifecycle.
-2. **Finding: `llm_http_request` is an unrestricted proxy and should
-   be origin-allowlisted at the Rust boundary.**
+2. **Finding: `llm_http_request` was an unrestricted proxy; hardened
+   at the Rust boundary (implemented 2026-07-15).** The plan below
+   shipped as `src-tauri/src/llm_endpoints.rs` (origin allowlist state
+   + `set_llm_allowed_endpoints`), the validation gate in
+   `llm_http.rs` (origins, http/https only, GET/POST only, redirects
+   never followed, Authorization bound to its configured origin), and
+   `src/lib/desktop/llmEndpointRegistry.ts` syncing the allowlist on
+   settings hydrate/save. Original finding, kept for the record:
    `src-tauri/src/llm_http.rs` accepts any URL, method, headers, and
    body from the webview and performs the request natively (bypassing
    browser CORS). Today every caller is the analysis provider using

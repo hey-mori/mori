@@ -124,6 +124,7 @@ export type TauriCommandName =
   | "resolve_file_locations"
   | "reveal_path_in_os"
   | "llm_http_request"
+  | "set_llm_allowed_endpoints"
   | "discover_local_ai_tools"
   | "discover_codex_sessions"
   | "get_codex_session"
@@ -346,6 +347,10 @@ export type TauriCommandMap = {
   };
   reveal_path_in_os: { input: { path: string }; output: null };
   llm_http_request: { input: { request: LlmHttpRequest }; output: LlmHttpResponse };
+  set_llm_allowed_endpoints: {
+    input: { entries: Array<{ url: string; allowsAuthorization: boolean }> };
+    output: number;
+  };
   discover_local_ai_tools: { input: undefined; output: LocalAiToolReport };
   discover_codex_sessions: { input: undefined; output: CodexSessionMeta[] };
   get_codex_session: {

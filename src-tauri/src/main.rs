@@ -10,6 +10,7 @@ mod connectors;
 mod db;
 mod files;
 mod git;
+mod llm_endpoints;
 mod llm_http;
 mod opencode;
 mod package;
@@ -55,6 +56,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .manage(sqlite::SqliteState::default())
+        .manage(llm_endpoints::LlmEndpointState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
             commands::host_platform,
@@ -117,6 +119,7 @@ fn main() {
             files::resolve_file_locations,
             files::reveal_path_in_os,
             llm_http::llm_http_request,
+            llm_endpoints::set_llm_allowed_endpoints,
             claude::installations::discover_local_ai_tools,
             codex::sessions::discover_codex_sessions,
             codex::sessions::get_codex_session,

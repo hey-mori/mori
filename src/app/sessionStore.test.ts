@@ -1,4 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const syncLlmEndpointsMock = vi.fn();
+vi.mock("../lib/desktop/llmEndpointRegistry", () => ({
+  syncLlmAllowedEndpoints: (settings: unknown) => syncLlmEndpointsMock(settings),
+}));
+
 import {
   selectHasRealAnalysis,
   setSessionPersistenceServiceForSessionStore,
@@ -145,6 +151,22 @@ describe("useSessionStore Quick Pass provider flow", () => {
     expect(hydrated.provider).toBe("ollama");
     expect(hydrated.ollamaEndpoint).toBe("http://localhost:9999");
     expect(hydrated.fallbackToDeterministic).toBe(false);
+  });
+
+  it("registers the engine endpoints with the native bridge on save and on hydrate", async () => {
+    syncLlmEndpointsMock.mockClear();
+
+    const next = useSessionStore.getState().updateAnalysisSettings({
+      ollamaEndpoint: "http://localhost:9999",
+    });
+    expect(syncLlmEndpointsMock).toHaveBeenCalledTimes(1);
+    expect(syncLlmEndpointsMock).toHaveBeenCalledWith(next);
+
+    syncLlmEndpointsMock.mockClear();
+    resetStore();
+    await useSessionStore.getState().hydrate();
+    expect(syncLlmEndpointsMock).toHaveBeenCalledTimes(1);
+    expect(syncLlmEndpointsMock.mock.calls[0]?.[0]?.ollamaEndpoint).toBe("http://localhost:9999");
   });
 
   it("surfaces the error when Ollama fails even if legacy fallback is enabled", async () => {
