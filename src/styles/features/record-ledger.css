@@ -301,6 +301,422 @@
   border-radius: 10px;
 }
 
+/* ---- Record composer · the six-state capture entry ---------------------- */
+
+.composer {
+  display: grid;
+  gap: 10px;
+}
+
+.composer-restore {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 13px;
+  font-size: 12.5px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.composer-restore-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.composer-restore-actions button,
+.composer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--purple);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.composer-restore-actions button:hover,
+.composer-link:hover {
+  background: var(--purple-50);
+}
+
+.composer-foot {
+  align-items: center;
+  gap: 10px;
+}
+
+.composer-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+}
+
+.composer-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.composer-chip:hover {
+  background: var(--panel-soft);
+}
+
+.composer-chip.is-active {
+  color: var(--purple);
+  background: var(--purple-50);
+  border-color: transparent;
+  cursor: default;
+}
+
+.composer-chip-select {
+  appearance: none;
+  max-width: 96px;
+  color: var(--muted-2);
+}
+
+.composer-hint {
+  font-size: 11.5px;
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+.composer-organizing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-success-base, var(--green, #15955a));
+}
+
+/* Review state · header + candidate cards + footer. */
+.composer-review {
+  border: 1px solid color-mix(in srgb, var(--purple) 26%, var(--line));
+  border-radius: 14px;
+  background: var(--panel, #fff);
+  padding: 14px 16px;
+}
+
+.composer-review-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.composer-review-head strong {
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.composer-review-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--color-success-base, var(--green, #15955a));
+  margin-right: auto;
+}
+
+.composer-cands {
+  display: grid;
+  gap: 7px;
+}
+
+.composer-review-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.composer-review-foot .composer-hint {
+  margin-left: auto;
+}
+
+/* Saved / failed strips. */
+.composer-saved,
+.composer-failed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-radius: 12px;
+}
+
+.composer-saved {
+  color: var(--text);
+  background: var(--color-success-subtle, var(--green-50, #edf9f2));
+  border: 1px solid color-mix(in srgb, var(--color-success-base, #15955a) 30%, var(--line));
+}
+
+.composer-saved > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.composer-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  color: var(--muted-2);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.composer-close:hover {
+  background: rgb(0 0 0 / 0.05);
+  color: var(--text);
+}
+
+.composer-failed {
+  color: var(--text);
+  background: var(--color-warning-subtle, var(--orange-50, #fff7e8));
+  border: 1px solid color-mix(in srgb, var(--color-warning-base, #b87812) 34%, var(--line));
+  flex-wrap: wrap;
+}
+
+.composer-failed-msg {
+  font-weight: 600;
+}
+
+.composer-failed-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* ---- Candidate card ------------------------------------------------------ */
+
+.cand-card {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel, #fff);
+  padding: 8px 12px;
+}
+
+.cand-card.is-confirm {
+  border-color: color-mix(in srgb, var(--color-warning-base, #b87812) 34%, var(--line));
+  background: color-mix(in srgb, var(--color-warning-base, #b87812) 4%, var(--panel, #fff));
+}
+
+.cand-card.is-excluded {
+  opacity: 0.55;
+}
+
+.cand-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cand-decision {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.cand-decision-auto {
+  color: var(--color-success-base, #15955a);
+  background: var(--color-success-subtle, #edf9f2);
+}
+
+.cand-decision-provisional {
+  color: var(--color-warning-base, #b87812);
+  background: var(--color-warning-subtle, #fff7e8);
+}
+
+.cand-decision-confirm {
+  color: #fff;
+  background: var(--color-warning-base, #b87812);
+}
+
+.cand-kind {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--purple);
+}
+
+.cand-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cand-date {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.cand-date.is-inferred {
+  color: var(--color-warning-base, #b87812);
+}
+
+.cand-date.is-unknown {
+  color: var(--muted-2);
+}
+
+.cand-line-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cand-action {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cand-action:hover:not(:disabled) {
+  background: var(--panel-soft);
+  color: var(--text);
+}
+
+.cand-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line);
+}
+
+.cand-field {
+  display: grid;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.cand-field > span {
+  font-weight: 700;
+  color: var(--muted-2);
+}
+
+.cand-field input,
+.cand-field select {
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--panel, #fff);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-family: inherit;
+}
+
+.cand-field-grow {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.cand-field-grow input {
+  width: 100%;
+}
+
+.cand-field-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cand-rationale {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
+/* ---- Schema quick form --------------------------------------------------- */
+
+.schema-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.schema-form-head strong {
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.schema-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 14px;
+}
+
+.schema-form-field {
+  display: grid;
+  gap: 4px;
+  font-size: 11.5px;
+}
+
+.schema-form-field > span {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.schema-form-opt {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted-2);
+}
+
+.schema-form-field input,
+.schema-form-field select {
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel, #fff);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-family: inherit;
+}
+
+.schema-form-text input {
+  width: 100%;
+}
+
 .ledger-list {
   list-style: none;
   margin: 0;

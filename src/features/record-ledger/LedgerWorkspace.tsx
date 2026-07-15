@@ -18,6 +18,7 @@ import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger, type RecordLedger } from "./useRecordLedger";
+import { RecordComposer } from "./composer/RecordComposer";
 import { LedgerRow } from "./LedgerRow";
 import { LedgerCalendar } from "./LedgerCalendar";
 import { RecordInspector } from "./RecordInspector";
@@ -57,7 +58,7 @@ export function LedgerWorkspace() {
     <PageShell maxWidth="full" actionBar={<ActionBar label="기록" start={search} />}>
       <div className={`ledger${selected ? " has-inspector" : ""}`}>
         <div className="ledger-main">
-          <QuickCapture capture={ledger.capture} />
+          <RecordComposer ledger={ledger} />
           {ledger.loading ? null : (
             <>
               {candidates.length > 0 ? (
@@ -90,67 +91,6 @@ export function LedgerWorkspace() {
         ) : null}
       </div>
     </PageShell>
-  );
-}
-
-function QuickCapture({ capture }: { capture: RecordLedger["capture"] }) {
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const submit = async () => {
-    const content = draft.trim();
-    if (content.length === 0 || busy) return;
-    setBusy(true);
-    try {
-      const outcome = await capture({ kind: "text", content });
-      setDraft("");
-      setNotice(describeOutcome(outcome.records.map((item) => item.decision)));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <>
-      <form
-        className="ledger-capture"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-      >
-        <textarea
-          className="ledger-capture-input"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-              event.preventDefault();
-              void submit();
-            }
-          }}
-          placeholder="오늘 한 일, 배운 것, 떠오른 생각을 그냥 적어보세요"
-          aria-label="빠른 기록"
-          rows={2}
-        />
-        <div className="ledger-capture-foot">
-          <Button
-            type="submit"
-            variant="primary"
-            icon={Sparkles}
-            disabled={draft.trim().length === 0 || busy}
-          >
-            정리
-          </Button>
-        </div>
-      </form>
-      {notice ? (
-        <p className="ledger-notice" role="status">
-          {notice}
-        </p>
-      ) : null}
-    </>
   );
 }
 
@@ -351,18 +291,4 @@ function FeedBody({
 
 function byNewest(records: MoriRecord[]): MoriRecord[] {
   return [...records].sort((a, b) => displayTime(b).iso.localeCompare(displayTime(a).iso));
-}
-
-function describeOutcome(decisions: Array<"auto" | "provisional" | "confirm">): string {
-  if (decisions.length === 0) return "기록할 내용을 찾지 못했습니다.";
-  if (decisions.every((decision) => decision === "confirm")) {
-    return "확인이 필요한 항목으로 두었습니다. 위에서 검토하세요.";
-  }
-  if (decisions.some((decision) => decision === "confirm")) {
-    return "일부는 정리하고, 일부는 확인이 필요해 위에 두었습니다.";
-  }
-  if (decisions.some((decision) => decision === "provisional")) {
-    return "정리했습니다. 잠정으로 표시된 항목은 언제든 되돌릴 수 있습니다.";
-  }
-  return "정리했습니다.";
 }
