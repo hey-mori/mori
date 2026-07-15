@@ -249,6 +249,16 @@ export type DraftRepository = {
     sessionId: string,
     draft: StoredSessionDraft,
   ) => StoredSessionDraft | null;
+  /**
+   * Idempotent background upsert of a per-session draft. Unlike
+   * `saveCurrentSessionDraft` it does NOT touch the current-session pointer
+   * (so a background write never hijacks the open session), and unlike
+   * `saveStoredSessionMetadata` it CREATES the record when absent. The
+   * caller-supplied `savedAt` is preserved verbatim — re-registering an
+   * unchanged session must not reorder the list. Used by auto-import to
+   * register discovered agent sessions. Dedupe is by `draft.session.id`.
+   */
+  putStoredSessionDraft: (draft: StoredSessionDraft) => StoredSessionDraft;
   listStoredSessions: () => StoredSessionSummary[];
   /**
    * Optional heavier summary path. It opens each session's stored imports to

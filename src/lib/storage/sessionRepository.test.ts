@@ -31,6 +31,41 @@ describe("BrowserDraftRepository", () => {
     expect(repository.listStoredSessions()).toHaveLength(1);
   });
 
+  it("putStoredSessionDraft registers a session without opening it or restamping savedAt", () => {
+    const storage = new MemoryKeyValueStorage();
+    const repository = new BrowserDraftRepository(storage);
+    const { project, session } = createSessionDraft({
+      sessionTitle: "Discovered agent session",
+      projectName: "mori",
+      selectedSources: [],
+      recordingMode: "summary",
+      llmProvider: "deterministic",
+      llmModel: "",
+      storageLocation: "auto-import",
+      now: "2026-07-14T10:00:00.000Z",
+    });
+    const draft = {
+      project,
+      session: { ...session, id: "auto-claude-abc" },
+      savedAt: "2026-07-14T10:00:00.000Z",
+      adapter: "browser-local-storage" as const,
+    };
+
+    const put = repository.putStoredSessionDraft(draft);
+
+    // The row appears in the list…
+    expect(put.savedAt).toBe("2026-07-14T10:00:00.000Z");
+    expect(repository.listStoredSessions().map((s) => s.sessionId)).toContain("auto-claude-abc");
+    // …but the current-session pointer is untouched (no hijack).
+    expect(repository.loadCurrentSessionDraft()).toBeNull();
+    // Re-registering the same id overwrites in place (idempotent) and keeps savedAt.
+    repository.putStoredSessionDraft({ ...draft, session: { ...draft.session, title: "renamed" } });
+    const rows = repository.listStoredSessions().filter((s) => s.sessionId === "auto-claude-abc");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe("renamed");
+    expect(rows[0].savedAt).toBe("2026-07-14T10:00:00.000Z");
+  });
+
   it("saves and loads Mori package drafts", () => {
     const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
     const pkg = createMoriPackageFromSession(mockSession);

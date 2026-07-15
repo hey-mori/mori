@@ -112,6 +112,16 @@ export class BrowserDraftRepository implements DraftRepository {
     return next;
   }
 
+  putStoredSessionDraft(draft: StoredSessionDraft): StoredSessionDraft {
+    // Idempotent background upsert: writes ONLY the per-session record, never
+    // the current-session pointer, so registering a discovered session in the
+    // background never hijacks the open session. The caller-supplied `savedAt`
+    // is preserved (not restamped) so re-registering an unchanged session does
+    // not reorder the 과거 list. Dedupe is automatic — the key is the session id.
+    this.write(`${SESSION_PREFIX}${draft.session.id}`, draft);
+    return draft;
+  }
+
   listStoredSessions(): StoredSessionSummary[] {
     return this.listStoredSessionDrafts(false);
   }

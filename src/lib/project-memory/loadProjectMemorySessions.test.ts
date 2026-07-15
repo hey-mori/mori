@@ -24,6 +24,7 @@ function stubRepository(overrides: Partial<DraftRepository> = {}): DraftReposito
     setCurrentSession: () => null,
     loadStoredSessionDraft: () => null,
     saveStoredSessionMetadata: () => null,
+    putStoredSessionDraft: vi.fn() as unknown as DraftRepository["putStoredSessionDraft"],
     listStoredSessions: () => [],
     saveMoriPackageDraft: vi.fn() as unknown as DraftRepository["saveMoriPackageDraft"],
     loadMoriPackageDraft: () => null,
