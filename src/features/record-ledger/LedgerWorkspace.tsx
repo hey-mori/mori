@@ -19,6 +19,7 @@ import { useRecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
 import { RecordInspector } from "./RecordInspector";
 import { LedgerTimeline } from "./LedgerTimeline";
+import { LedgerCalendarView } from "./LedgerCalendarView";
 import { ContextRail } from "./ContextRail";
 import { ReviewStrip } from "./ReviewStrip";
 import { DateRuleOffer } from "./DateRuleOffer";
@@ -33,6 +34,7 @@ export function LedgerWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newIds, setNewIds] = useState<string[]>([]);
   const [lateNightCount, setLateNightCount] = useState(() => lateNightPrevCount());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const now = useMemo(() => new Date(), []);
 
   const candidates = useMemo(
@@ -106,14 +108,27 @@ export function LedgerWorkspace() {
                 now={now}
                 onLearnLateNightPrev={() => setLateNightCount(bumpLateNightPrev())}
               />
-              <LedgerTimeline
-                ledger={ledger}
-                query={query}
-                selectedDate={selectedDate}
-                selectedId={selectedId}
-                newIds={newIds}
-                onSelect={onSelect}
-              />
+              {calendarOpen ? (
+                <LedgerCalendarView
+                  records={visibleRecords}
+                  registry={ledger.registry}
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  onAssignDate={(record, date) => void ledger.setActivityDate(record, date)}
+                  onSelectRecord={(recordId) => setSelectedId(recordId)}
+                  onClose={() => setCalendarOpen(false)}
+                  now={now}
+                />
+              ) : (
+                <LedgerTimeline
+                  ledger={ledger}
+                  query={query}
+                  selectedDate={selectedDate}
+                  selectedId={selectedId}
+                  newIds={newIds}
+                  onSelect={onSelect}
+                />
+              )}
             </>
           )}
         </div>
@@ -133,6 +148,8 @@ export function LedgerWorkspace() {
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             onSelectRecord={(recordId) => setSelectedId(recordId)}
+            onExpandCalendar={() => setCalendarOpen(true)}
+            showCalendar={!calendarOpen}
             now={now}
           />
         )}

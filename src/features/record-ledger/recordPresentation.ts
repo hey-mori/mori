@@ -16,6 +16,28 @@ export function schemaLabel(record: MoriRecord, registry: SchemaRegistry): strin
   return registry.get(record.schemaId)?.name ?? record.schemaId;
 }
 
+/** Schema family → a calm kind-color class, shared by the timeline row and the
+ *  calendar marks so the two never drift. Unlisted schemas read as a neutral
+ *  note, so a new schema is never unstyled. */
+const KIND_CLASS: Record<string, string> = {
+  activity: "is-work",
+  "agent-session": "is-work",
+  workout: "is-exercise",
+  "study-session": "is-study",
+  knowledge: "is-study",
+  insight: "is-insight",
+  decision: "is-insight",
+  task: "is-task",
+  event: "is-task",
+  note: "is-note",
+  "source-document": "is-source",
+  qa: "is-source",
+};
+
+export function kindColorClass(schemaId: string): string {
+  return KIND_CLASS[schemaId] ?? "is-note";
+}
+
 /** Records that belong on the ledger surfaces (오늘 · 캘린더): applied work.
  *  Candidates live in 인박스; discarded / archived are hidden. */
 export function ledgerVisibleRecords(records: MoriRecord[]): MoriRecord[] {

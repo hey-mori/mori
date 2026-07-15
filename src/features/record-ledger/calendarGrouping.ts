@@ -51,6 +51,24 @@ export function recordCountByDate(records: MoriRecord[]): Map<string, number> {
   return counts;
 }
 
+/** ISO-date → the records whose activity day is that date, newest first.
+ *  Unknown-date records are excluded (they have no cell). Powers the ledger
+ *  calendar's cell contents. */
+export function recordsByDate(records: MoriRecord[]): Map<string, MoriRecord[]> {
+  const byDay = new Map<string, MoriRecord[]>();
+  for (const record of records) {
+    if (!record.occurredStart) continue;
+    const day = record.occurredStart.slice(0, 10);
+    const bucket = byDay.get(day);
+    if (bucket) bucket.push(record);
+    else byDay.set(day, [record]);
+  }
+  for (const bucket of byDay.values()) {
+    bucket.sort((a, b) => displayTime(b).iso.localeCompare(displayTime(a).iso));
+  }
+  return byDay;
+}
+
 /** Human day label: "2026년 7월 14일 (오늘)", with 오늘 / 어제 markers. */
 export function dayLabel(date: string, now: Date): string {
   const [year, month, day] = date.split("-").map(Number);

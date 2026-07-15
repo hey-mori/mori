@@ -5,7 +5,7 @@
  * old collapsible LedgerCalendar, which lived in the body.
  */
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { recordCountByDate } from "./calendarGrouping";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 
@@ -22,10 +22,13 @@ export function MiniCalendar({
   records,
   selectedDate,
   onSelectDate,
+  onExpand,
 }: {
   records: MoriRecord[];
   selectedDate: string | null;
   onSelectDate: (date: string | null) => void;
+  /** Opens the full ledger calendar (body takeover), when provided. */
+  onExpand?: () => void;
 }) {
   const today = useMemo(() => new Date(), []);
   const [cursor, setCursor] = useState(() => {
@@ -64,6 +67,11 @@ export function MiniCalendar({
         <button type="button" onClick={() => shiftMonth(1)} aria-label="다음 달">
           <ChevronRight size={14} aria-hidden="true" />
         </button>
+        {onExpand ? (
+          <button type="button" className="mini-cal-expand" onClick={onExpand} aria-label="달력 크게 보기">
+            <Maximize2 size={13} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
       <div className="mini-cal-weekdays">
         {WEEKDAYS.map((weekday) => (

@@ -9,24 +9,7 @@
  */
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
-import { schemaLabel } from "./recordPresentation";
-
-/** Schema family → a calm kind-chip color class. Anything unlisted reads as a
- *  neutral note so a new schema never renders unstyled. */
-const KIND_CLASS: Record<string, string> = {
-  activity: "is-work",
-  "agent-session": "is-work",
-  workout: "is-exercise",
-  "study-session": "is-study",
-  knowledge: "is-study",
-  insight: "is-insight",
-  decision: "is-insight",
-  task: "is-task",
-  event: "is-task",
-  note: "is-note",
-  "source-document": "is-source",
-  qa: "is-source",
-};
+import { kindColorClass, schemaLabel } from "./recordPresentation";
 
 function timeOfDay(occurredStart: string | undefined): string | null {
   // Only render a clock when the activity time carries one; date-only records
@@ -56,7 +39,7 @@ export function LedgerTimelineRow({
   isNew: boolean;
   onSelect: () => void;
 }) {
-  const kindClass = KIND_CLASS[record.schemaId] ?? "is-note";
+  const kindClass = kindColorClass(record.schemaId);
   const clock = timeOfDay(record.occurredStart);
   const hasPreview = record.body.trim().length > 0 && record.body.trim() !== record.title.trim();
   const isDerived = record.origin === "derived";

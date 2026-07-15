@@ -23,6 +23,8 @@ export function ContextRail({
   selectedDate,
   onSelectDate,
   onSelectRecord,
+  onExpandCalendar,
+  showCalendar = true,
   now,
 }: {
   /** Ledger-visible records (active + provisional). */
@@ -32,6 +34,10 @@ export function ContextRail({
   selectedDate: string | null;
   onSelectDate: (date: string | null) => void;
   onSelectRecord: (recordId: string) => void;
+  /** Opens the full ledger calendar. */
+  onExpandCalendar?: () => void;
+  /** Hidden while the full calendar owns the body (avoid two calendars). */
+  showCalendar?: boolean;
   now: Date;
 }) {
   const week = useMemo(() => buildWeekSummary(records, registry, now), [records, registry, now]);
@@ -45,7 +51,14 @@ export function ContextRail({
 
   return (
     <aside className="context-rail base-scroll" aria-label="시간 맥락">
-      <MiniCalendar records={records} selectedDate={selectedDate} onSelectDate={onSelectDate} />
+      {showCalendar ? (
+        <MiniCalendar
+          records={records}
+          selectedDate={selectedDate}
+          onSelectDate={onSelectDate}
+          onExpand={onExpandCalendar}
+        />
+      ) : null}
 
       {selectedDate ? (
         <section className="rail-section">

@@ -2,8 +2,29 @@
 
 ## Current stage
 
-R1 + R2 + R3 + R4 done and verified (2026-07-15). Next stage: R5 (ledger
-calendar drag-to-day + full record detail with inline editing).
+R1-R4 done; R5a (ledger calendar M4) done and verified (2026-07-15). In
+progress: R5b (full record detail M6 with inline editing).
+
+## Done (R5a, 2026-07-15)
+
+- `LedgerCalendarView`: a body takeover opened from the rail mini-calendar's
+  expand button. Month cells show the day's records (kind-colored marks +
+  up to two leading titles + a more count; future-dated entries render as
+  outlined "planned" marks). Month nav, month count, "타임라인으로" return.
+- Shared `kindColorClass` extracted to `recordPresentation` so the calendar
+  marks and timeline chips never drift; `recordsByDate` added to
+  `calendarGrouping` for O(1) cell lookup.
+- 날짜 미정 tray under the grid: undecided records as draggable chips with a
+  "이 날에" click-assign to the selected day (the guaranteed path) and native
+  drag-to-cell (accelerator, `onAssignDate` → `setActivityDate`). The rail
+  mini-calendar hides while the full calendar owns the body (no two
+  calendars); the selected day and record survive the round trip.
+- Verified in the Vite app: expand opens the calendar (timeline hidden, rail
+  mini-cal hidden), cells show real titles (14 활동, 15 운동+할일), 기록 3건;
+  selecting a day highlights the cell and drives the rail agenda; a fresh
+  dateless note appears in the tray and "이 날에" assigns it (tray empties,
+  count 3→4, cell shows +1); "타임라인으로" returns with the selected day
+  intact; no console errors. 2781 unit tests + build + style green.
 
 ## Done (R4b, 2026-07-15)
 
