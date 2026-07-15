@@ -2,11 +2,27 @@
 
 ## Current stage
 
-R1-R7 done. **v3 shell reframe underway** (unified explorer: 종류=filter,
-프로젝트=group; per-kind main renderer; artifact
-`d84deffc-64c0-46c5-a00c-2be28f42bfc1`). R8a (explorer type filter + group
-toggle) and R8b-lite (hide the duplicate 최근 작업 tree in 기록/캘린더) done
-and verified (2026-07-15).
+R1-R7 done. **v4 shell reframe underway** ("두 경험 + 교차 렌즈": 기록=notes·edit,
+세션=AI work·review; 프로젝트·캘린더·검색 as cross-lenses). R8a/R8b-lite done.
+Legacy 메모리 surface retired from bell·palette·home (2026-07-15). **세션 unified
+workspace shipped** (2026-07-15): two-pane 진행 중 / 과거 index + inline live/review.
+Next: slim icon rail (홈·기록·세션·프로젝트·캘린더·검색 + 설정).
+
+## Done (세션 unified workspace, 2026-07-15)
+
+- New `sessions` view (`SessionsWorkspace`): a two-pane surface with a left
+  `SessionIndex` (진행 중 = live-follow sessions, 과거 = stored history grouped by
+  recency) and a right pane that hosts the live feed (라이브 피드, always
+  clickable to return) or a picked past session's review (`SessionDetailView`)
+  inline. Mode is local to the surface, so switching never leaves the view.
+- The index supersedes both the live view's session-picker popover and the
+  global 최근 작업 tree; the tree is hidden on 세션 too, so the shell is never
+  two competing lists. Sidebar 라이브 destination now points at 세션;
+  standalone 라이브 피드 stays palette-reachable.
+- Composes the existing `LiveSessionView` and `SessionDetailView` unchanged.
+- Verified in-browser: two-pane renders (248px index, full-height), past-click
+  loads the review inline, 라이브 피드 returns to live, no console errors,
+  build + 2790 tests + style:check green. Commit `28f212d`.
 
 ## Done (R8b-lite · sidebar de-duplication, 2026-07-15)
 
