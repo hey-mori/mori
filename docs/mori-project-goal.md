@@ -411,8 +411,12 @@ that is called out.
   consolidated memory + audit rows.
 - Desktop SQLite via `rusqlite` with migrations `V001` (initial
   schema), `V002` (connector identity column on `events`), `V003`
-  (`consolidated_memories` + `consolidated_memory_audit` tables), and
-  `V004` (`session_imports` table). Real save / load of projects,
+  (`consolidated_memories` + `consolidated_memory_audit` tables),
+  `V004` (`session_imports` table), `V005` (`sessions.source_label`),
+  `V006` (`sources.capture_fidelity_json`), `V007` (event provenance
+  columns), and `V008` (the record kernel: `kernel_records` +
+  `kernel_objects` + `kernel_revisions` + FTS5 with sync triggers).
+  Real save / load of projects,
   sessions, sources, events, issues, decisions, relationships,
   artifacts, next actions, and summaries.
 - SQLite Accepted Memory Storage: the `consolidated_memories` and
@@ -581,11 +585,13 @@ that is called out.
   labels, not a separate band or chart.
 - Workspace browser (`WorkspaceView`, `ViewKey: "workspace"`) listing
   all projects, session counts, and a "new project" action.
-- Primary navigation: 홈 / 라이브 / 연동 / 프로젝트 / 대시보드 /
-  워크벤치 (`src/components/layout/Sidebar.tsx`). 메모리 is not a
-  standing sidebar tab; durable project memory lives on each project
-  page, and the memory overview / consolidation review remain routable
-  through a project's action and the command palette.
+- Primary navigation: 홈 / 기록 / 라이브 / 프로젝트 / 대시보드 /
+  워크벤치 (`src/components/layout/Sidebar.tsx`), plus a sidebar-head
+  만들기 menu and global 캘린더 / 작업 그래프 / 알림 buttons. 연동 lives
+  inside the 설정 sheet, not the nav. 메모리 is not a standing sidebar
+  tab and is no longer palette-wired (retired 2026-07-15); durable
+  project memory lives on each project page, and the retired memory /
+  consolidation views stay routed in `App.tsx` per the removal criteria.
 
 If something in this list does not match repo reality, treat the
 mismatch as a documentation bug and update this section rather than
@@ -838,7 +844,7 @@ ownership, where user-authored prose (지식 노트, 저널) becomes
 file-canonical while structured / derived records stay SQLite-canonical.
 `.mori` v1 is the versioned workspace package (backup / selective share);
 v0 becomes import-only. The list below describes today's implemented
-storage, which the kernel tables will join additively (§12 migration).
+storage; the kernel tables joined it additively in `V008` (§12 migration).
 
 - **Browser localStorage fallback.** The current default storage
   backend for drafts, session imports, analysis results, durable
@@ -847,7 +853,8 @@ storage, which the kernel tables will join additively (§12 migration).
   audit trail. Every record is keyed by a known prefix and
   schema-versioned where applicable.
 - **Desktop SQLite (Tauri).** `rusqlite`-backed migrations under
-  `src-tauri/migrations/` (currently `V001` and `V002`). Persists the
+  `src-tauri/migrations/` (currently `V001`-`V008`; the record kernel
+  landed additively in `V008`). Persists the
   active session snapshot (project + session + sources + events +
   issues + decisions + relationships + artifacts + next actions +
   summaries). `SessionPersistenceService` prefers SQLite as the
