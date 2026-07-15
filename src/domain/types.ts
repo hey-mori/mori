@@ -27,8 +27,14 @@ export type ViewKey =
   /** Experimental work-graph overview, reached from the command palette. */
   | "graph"
   /** 라이브 세션 — a live dashboard that tails every currently-active agent
-   *  session and streams their work, newest request on top. */
+   *  session and streams their work, newest request on top. Now embedded as
+   *  the live pane of the unified `sessions` workspace; still palette-reachable
+   *  as a standalone full-width surface. */
   | "liveSession"
+  /** 세션 · the unified session workspace: a left index (진행 중 / 과거) plus a
+   *  right pane that hosts the live feed or a past session's review inline.
+   *  The single home for browsing AI-work sessions. */
+  | "sessions"
   /** 메모리 · the global memory surface: search, lifecycle segments, scope
    *  filters, and provenance across every project (the per-project memory
    *  overview stays on `memory`). */

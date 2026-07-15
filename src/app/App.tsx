@@ -83,6 +83,11 @@ const MemoryHubView = lazy(() =>
     default: m.MemoryHubView,
   })),
 );
+const SessionsWorkspace = lazy(() =>
+  import("../features/session/SessionsWorkspace").then((m) => ({
+    default: m.SessionsWorkspace,
+  })),
+);
 const LedgerWorkspace = lazy(() =>
   import("../features/record-ledger/LedgerWorkspace").then((m) => ({
     default: m.LedgerWorkspace,
@@ -184,6 +189,7 @@ export default function App() {
             {currentView === "project" ? <ProjectView /> : null}
             {currentView === "graph" ? <GraphView /> : null}
             {currentView === "liveSession" ? <LiveSessionView /> : null}
+            {currentView === "sessions" ? <SessionsWorkspace /> : null}
             {currentView === "memoryHub" ? <MemoryHubView /> : null}
             {currentView === "ledger" ? <LedgerWorkspace /> : null}
             {currentView === "calendar" ? <CalendarView /> : null}

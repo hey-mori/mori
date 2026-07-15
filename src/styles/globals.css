@@ -40,4 +40,5 @@
 @import "./features/understand.css";
 @import "./features/memory-hub.css";
 @import "./features/record-ledger.css";
+@import "./features/sessions-workspace.css";
 @import "./theme-application.css";

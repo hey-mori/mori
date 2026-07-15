@@ -53,7 +53,11 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   // the former 오늘 · 캘린더 · 트래커 · 인박스 · 메모리 surfaces (all lenses
   // on one ledger; durable memory is the feed + search over distilled records).
   { key: "ledger", label: "기록", icon: NotebookPen },
-  { key: "liveSession", label: "라이브", icon: Radio },
+  // 세션 · the unified AI-work surface: a left index (진행 중 / 과거) and a
+  // right pane that hosts the live feed or a past session's review inline.
+  // Supersedes the former standalone 라이브 destination (still palette-reachable)
+  // and the global 최근 작업 tree.
+  { key: "sessions", label: "세션", icon: Radio },
   // 프로젝트 · contexts over records (projects · routines · topics · people).
   // Reframed off the AI-session-only model; the legacy all-projects list and
   // single-project view stay palette-reachable.
@@ -226,7 +230,9 @@ export function Sidebar({
           competing lists; the explorer supersedes it there. Reachable
           elsewhere and via the palette. Full merge of legacy sessions into the
           explorer is the remaining v3 work. */}
-      {currentView === "ledger" || currentView === "calendar" ? (
+      {currentView === "ledger" ||
+      currentView === "calendar" ||
+      currentView === "sessions" ? (
         <div className="sidebar-nav-spacer" />
       ) : (
         <ContextNavigator onNavigate={onNavigate} />

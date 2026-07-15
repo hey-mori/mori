@@ -1,0 +1,183 @@
+/* ─── 세션 (unified session workspace) ─────────────────────────────────────
+   Two panes: a left session index (진행 중 / 과거) and a right pane that hosts
+   either the live-follow feed or a past session's review. Full-bleed: the
+   workspace owns the whole content cell, the right pane brings its own
+   PageShell, so only index-specific layout lives here. */
+
+.sessions-workspace {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.sessions-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The embedded PageShell (live feed / review) fills the right pane. */
+.sessions-main > .page-shell {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Left index ─────────────────────────────────────────────────────────── */
+
+.session-index {
+  flex: 0 0 248px;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+  background: var(--base-bg);
+}
+
+.session-index-search {
+  padding: 12px 12px 8px;
+}
+
+.session-index-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 12px;
+}
+
+.session-index-group + .session-index-group {
+  margin-top: 12px;
+}
+
+.session-index-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.session-index-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-2);
+}
+
+/* 라이브 피드 · a clickable header row that always returns the main pane to the
+   live feed. Reads as a destination, not a group label. */
+.session-index-live-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 9px;
+  margin-bottom: 2px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.session-index-live-head:hover {
+  background: var(--gray-50);
+}
+
+.session-index-live-head.is-active {
+  background: var(--purple-50);
+}
+
+.session-index-live-head-label {
+  flex: 1;
+}
+
+.session-index-live-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--gray-100, var(--gray-50));
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.session-index-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success-base, #2f9e6f);
+}
+
+.session-index-live-dot.is-idle {
+  background: var(--muted-2);
+}
+
+.session-index-hint {
+  margin: 0 0 2px 9px;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
+.session-index-row {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.session-index-row:hover {
+  background: var(--gray-50);
+}
+
+/* Active row: the same soft lavender fill the sidebar uses. No left bar. */
+.session-index-row.is-active {
+  background: var(--purple-50);
+}
+
+.session-index-row-title {
+  font-size: 12.5px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-index-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted-2);
+  overflow: hidden;
+}
+
+.session-index-row-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-index-empty {
+  margin: 16px 9px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted-2);
+}
