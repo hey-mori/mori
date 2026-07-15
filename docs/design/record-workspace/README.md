@@ -54,10 +54,13 @@ is the input to the audit, not the baseline for the design.
 | R0 | UX redesign, this document set | done (approved) |
 | R1 | Composer state machine, draft recovery, schema-driven quick form | done |
 | R2 | Review candidate cards, edit/exclude, policy-driven density, save + revision + undo | done |
-| R3 | Timeline rows + context rail, route swap, legacy retire | next |
-| R4 | Date-confirmation UX (strip + resolution cards + rules) | pending |
-| R5 | Ledger calendar + full record detail | pending |
-| R6 | Weekly review, routine suggestions, rail aggregates | pending |
+| R3 | Timeline rows + context rail, route swap, legacy retire | done |
+| R4 | Date-confirmation UX (strip + resolution cards + rules) | done |
+| R5 | Ledger calendar + editable record detail | done |
+| R6 | Weekly review, routine suggestions, rail aggregates | done |
+
+The vertical-slice roadmap is complete; see `worklog.md` for per-stage
+deferred refinements.
 
 ## Code entry points
 

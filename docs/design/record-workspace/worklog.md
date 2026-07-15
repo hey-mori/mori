@@ -2,8 +2,35 @@
 
 ## Current stage
 
-R1-R5 done and verified (2026-07-15). Next stage: R6 (weekly review +
-routine suggestions + rail aggregates).
+R1-R6 done and verified (2026-07-15). The R0 vertical-slice roadmap is
+complete; remaining work is the deferred refinements listed per stage below
+(full-detail wide layout, drag ⌥-scheduled, header actions, etc.).
+
+## Done (R6, 2026-07-15)
+
+- `weeklyReview.ts` (pure, tested): `weekRange` / `shiftWeeks` and
+  `buildWeeklyReview` → per-day kind bars, this-week tracker aggregates with a
+  metric delta against the previous week, and the week's insights/decisions.
+- `WeeklyReviewView`: a body takeover opened from the rail's 주간 리뷰 button.
+  Per-day stacked kind bars, aggregate rows written as sentences (운동 1회 ·
+  1시간, 지난주보다 1시간 증가), routine suggestions with 루틴으로 만들기
+  (the deferred `discoverRoutines` / `createRoutine` finally surface here),
+  and the week's insights. Week nav; 타임라인으로 return.
+- The body now has three modes (`bodyMode`: timeline / calendar / review);
+  the rail hides its mini-calendar only in calendar mode.
+- Verified in the Vite app: 주간 리뷰 opens the review (timeline hidden),
+  range "7월 12일 - 7월 18일", 기록 3건; day bars show 화 1 (활동) and 수 2
+  (운동+할일); flow rows read "활동 1회", "할 일 1회", "운동 1회 · 1시간
+  지난주보다 1시간 증가"; the routine and insight sections stay hidden when
+  the data has none; previous-week nav shows the record moved to 7/10;
+  타임라인으로 returns; no console errors. 2785 unit tests + build + style
+  green.
+
+## Deferred (R6 follow-up)
+
+- The tracker views were folded entirely into the weekly review and the rail
+  one-liner; a dedicated per-schema metric chart (트래커 lens) is not built,
+  matching the audit's decision to retire the standalone 합계 panel.
 
 ## Done (R5b, 2026-07-15)
 

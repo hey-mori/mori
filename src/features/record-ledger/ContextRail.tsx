@@ -24,6 +24,7 @@ export function ContextRail({
   onSelectDate,
   onSelectRecord,
   onExpandCalendar,
+  onOpenReview,
   showCalendar = true,
   now,
 }: {
@@ -36,6 +37,8 @@ export function ContextRail({
   onSelectRecord: (recordId: string) => void;
   /** Opens the full ledger calendar. */
   onExpandCalendar?: () => void;
+  /** Opens the weekly review. */
+  onOpenReview?: () => void;
   /** Hidden while the full calendar owns the body (avoid two calendars). */
   showCalendar?: boolean;
   now: Date;
@@ -88,7 +91,13 @@ export function ContextRail({
       <section className="rail-section">
         <header className="rail-section-head">
           <span>이번 주</span>
-          {week.total > 0 ? <span className="rail-section-count">{week.total}건</span> : null}
+          {onOpenReview ? (
+            <button type="button" className="rail-clear" onClick={onOpenReview}>
+              주간 리뷰
+            </button>
+          ) : week.total > 0 ? (
+            <span className="rail-section-count">{week.total}건</span>
+          ) : null}
         </header>
         {week.total > 0 ? (
           <div className="rail-week">

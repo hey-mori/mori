@@ -20,6 +20,7 @@ import { RecordComposer } from "./composer/RecordComposer";
 import { RecordInspector } from "./RecordInspector";
 import { LedgerTimeline } from "./LedgerTimeline";
 import { LedgerCalendarView } from "./LedgerCalendarView";
+import { WeeklyReviewView } from "./WeeklyReviewView";
 import { ContextRail } from "./ContextRail";
 import { ReviewStrip } from "./ReviewStrip";
 import { DateRuleOffer } from "./DateRuleOffer";
@@ -34,7 +35,7 @@ export function LedgerWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newIds, setNewIds] = useState<string[]>([]);
   const [lateNightCount, setLateNightCount] = useState(() => lateNightPrevCount());
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [bodyMode, setBodyMode] = useState<"timeline" | "calendar" | "review">("timeline");
   const now = useMemo(() => new Date(), []);
 
   const candidates = useMemo(
@@ -108,7 +109,7 @@ export function LedgerWorkspace() {
                 now={now}
                 onLearnLateNightPrev={() => setLateNightCount(bumpLateNightPrev())}
               />
-              {calendarOpen ? (
+              {bodyMode === "calendar" ? (
                 <LedgerCalendarView
                   records={visibleRecords}
                   registry={ledger.registry}
@@ -116,7 +117,19 @@ export function LedgerWorkspace() {
                   onSelectDate={setSelectedDate}
                   onAssignDate={(record, date) => void ledger.setActivityDate(record, date)}
                   onSelectRecord={(recordId) => setSelectedId(recordId)}
-                  onClose={() => setCalendarOpen(false)}
+                  onClose={() => setBodyMode("timeline")}
+                  now={now}
+                />
+              ) : bodyMode === "review" ? (
+                <WeeklyReviewView
+                  records={visibleRecords}
+                  registry={ledger.registry}
+                  relations={ledger.relations}
+                  entities={ledger.entities}
+                  contexts={ledger.contexts}
+                  onSelectRecord={(recordId) => setSelectedId(recordId)}
+                  onCreateRoutine={(name, recordIds) => void ledger.createRoutine(name, recordIds)}
+                  onClose={() => setBodyMode("timeline")}
                   now={now}
                 />
               ) : (
@@ -149,8 +162,9 @@ export function LedgerWorkspace() {
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             onSelectRecord={(recordId) => setSelectedId(recordId)}
-            onExpandCalendar={() => setCalendarOpen(true)}
-            showCalendar={!calendarOpen}
+            onExpandCalendar={() => setBodyMode("calendar")}
+            onOpenReview={() => setBodyMode("review")}
+            showCalendar={bodyMode !== "calendar"}
             now={now}
           />
         )}
