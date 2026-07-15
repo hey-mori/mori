@@ -2,9 +2,34 @@
 
 ## Current stage
 
-R1-R6 done and verified (2026-07-15). The R0 vertical-slice roadmap is
-complete; remaining work is the deferred refinements listed per stage below
-(full-detail wide layout, drag ⌥-scheduled, header actions, etc.).
+R1-R6 done. **v2 pivot (document workspace) approved and underway** (see
+`v2-document-workspace.md`). R7a (document workspace) done and verified
+(2026-07-15). In progress: R7b (global calendar head button).
+
+## Done (R7a · document workspace, 2026-07-15)
+
+- Extracted `recordEditing.tsx` (InlineEditable, ActivityDateEditor,
+  revertPatch) from `RecordInspector` so the rail inspector and the new
+  center editor edit a record the same way.
+- `noteExplorerModel.ts` (pure, tested): `buildExplorerGroups` groups records
+  by project (contextIds + belongs-to), a 기타 bucket for the rest, sortable
+  by date or title, groups ordered by newest activity (기타 last).
+- `NoteExplorer` (left pane): ＋ 새 기록, search, 날짜순/제목순 sort, a pinned
+  확인할 것 group (candidates + date-undecided), project groups, note items
+  (kind dot + title + date·kind meta).
+- `DocumentEditor` (center): the selected record as an editable document
+  (title, meta row with the date editor + project/kind chips, full body),
+  provenance dot, 원문/이력 as quiet disclosures with 되돌리기, candidate
+  반영/무시; a new capture hosts the composer; empty state otherwise.
+- `LedgerWorkspace` rebuilt as `ledger-docs` (explorer + editor, no right
+  panel); the timeline / context rail / review strip / mini-calendar /
+  weekly-review arrangement is retired from 기록 (components kept for reuse).
+- Verified in the Vite app: explorer shows 새 기록 + search + sort + groups;
+  selecting a note opens the editable document (title, date, kind, body,
+  원문/이력); ＋ 새 기록 hosts the composer, and 정리 → 저장 opens the saved
+  record and lists it selected in the explorer; a title edit propagates to
+  both; no console errors, old surfaces gone. 2788 unit tests + build + style
+  green.
 
 ## Done (R6, 2026-07-15)
 
