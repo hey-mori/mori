@@ -12,14 +12,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   agentSessionToProposals,
+  proposeFromForm,
   renameEntity as buildEntityRename,
   runCapturePipeline,
   type AgentSessionInput,
   type CaptureInput,
   type CaptureOutcome,
+  type FormEntry,
+  type RecordProposal,
 } from "../../lib/capture";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
-import { applyRecordPatch, createKernelId } from "../../lib/record-kernel/recordFactory";
+import {
+  applyRecordPatch,
+  createKernelId,
+  type RecordPatch,
+} from "../../lib/record-kernel/recordFactory";
 import { projectContextId, projectToContext } from "../../lib/record-kernel/projectContextConverter";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type {
@@ -31,6 +38,28 @@ import type {
   RecordStatus,
   SchemaDefinition,
 } from "../../lib/record-kernel/kernelTypes";
+import type { CaptureRecordOutcome } from "../../lib/capture";
+
+/** A staged user correction to one reviewed candidate (view-level; becomes a
+ *  `RecordPatch` + user revision at commit). */
+export type CaptureCandidateEdit = {
+  schemaId?: string;
+  title?: string;
+  /** `null` clears the date (날짜 없이); a string sets a user-provided date. */
+  occurredStart?: string | null;
+  contextIds?: string[];
+};
+
+export type CaptureCommitOptions = {
+  edits?: Record<string, CaptureCandidateEdit>;
+  excludeRecordIds?: string[];
+  /** Persist the source only, no records (원문만 저장). */
+  sourceOnly?: boolean;
+};
+
+export type CaptureCommitResult = {
+  savedRecordIds: string[];
+};
 
 export type RecordLedger = {
   records: MoriRecord[];
@@ -41,6 +70,22 @@ export type RecordLedger = {
   loading: boolean;
   reload: () => Promise<void>;
   capture: (input: CaptureInput) => Promise<CaptureOutcome>;
+  /** Phase 1 of the review flow: run the pipeline and persist the raw source
+   *  immediately (원문 보관), returning the outcome for review. Nothing else
+   *  is written until `commitCapture`. */
+  proposeCapture: (input: CaptureInput) => Promise<CaptureOutcome>;
+  /** Same phase-1 entry for a schema quick form (형식 입력). */
+  proposeFormCapture: (entry: FormEntry) => Promise<CaptureOutcome>;
+  /** Phase 2: persist the reviewed outcome. Edits become user revisions on
+   *  top of the AI create revision; excluded candidates (and entities only
+   *  they referenced) are skipped; confirm-kept records save as active
+   *  because the review was the confirmation. */
+  commitCapture: (
+    outcome: CaptureOutcome,
+    options?: CaptureCommitOptions,
+  ) => Promise<CaptureCommitResult>;
+  /** Post-save undo: discards the given records with a user revision each. */
+  discardRecords: (recordIds: string[]) => Promise<void>;
   /** Converts an agent work session into ledger records. */
   captureAgentSession: (input: AgentSessionInput) => Promise<CaptureOutcome>;
   setStatus: (record: MoriRecord, status: RecordStatus) => Promise<void>;
@@ -50,6 +95,57 @@ export type RecordLedger = {
   /** Creates a routine context and relates the given records to it. */
   createRoutine: (name: string, recordIds: string[]) => Promise<void>;
 };
+
+/** Turns one candidate's staged edit into a `RecordPatch`, or null when
+ *  nothing changes. Retyping filters properties to what the new schema
+ *  defines; a date edit is `user-provided` (or `unknown` when cleared); a
+ *  kept confirm-candidate becomes active because the review confirmed it.
+ *  Exported for tests; the hook is its only runtime caller. */
+export function buildCommitPatch(
+  item: CaptureRecordOutcome,
+  edit: CaptureCandidateEdit | undefined,
+  registry: SchemaRegistry,
+): RecordPatch | null {
+  const patch: RecordPatch = {};
+  const record = item.created.record;
+
+  if (edit?.schemaId && edit.schemaId !== record.schemaId) {
+    const schema = registry.get(edit.schemaId);
+    if (schema) {
+      patch.schemaId = edit.schemaId;
+      const allowed = new Set(schema.properties.map((property) => property.key));
+      const filtered: MoriRecord["properties"] = {};
+      for (const [key, value] of Object.entries(record.properties)) {
+        if (allowed.has(key)) filtered[key] = value;
+      }
+      patch.properties = filtered;
+    }
+  }
+  if (edit?.title !== undefined && edit.title.trim().length > 0 && edit.title.trim() !== record.title) {
+    patch.title = edit.title.trim();
+  }
+  if (edit?.occurredStart !== undefined) {
+    if (edit.occurredStart === null) {
+      if (record.occurredStart !== undefined) {
+        patch.occurredStart = undefined;
+        patch.timeBasis = "unknown";
+        patch.timeConfidence = undefined;
+      }
+    } else if (edit.occurredStart !== record.occurredStart || record.timeBasis !== "user-provided") {
+      patch.occurredStart = edit.occurredStart;
+      patch.timeBasis = "user-provided";
+      patch.timeConfidence = undefined;
+    }
+  }
+  if (edit?.contextIds !== undefined) {
+    patch.contextIds = edit.contextIds;
+  }
+  if (item.decision === "confirm" && record.status === "candidate") {
+    patch.status = "active";
+  }
+
+  return Object.keys(patch).length > 0 ? patch : null;
+}
 
 export function useRecordLedger(): RecordLedger {
   const [records, setRecords] = useState<MoriRecord[]>([]);
@@ -118,6 +214,110 @@ export function useRecordLedger(): RecordLedger {
       return outcome;
     },
     [registry, rules, entities, persistOutcome],
+  );
+
+  const proposeWith = useCallback(
+    async (input: CaptureInput, proposals?: RecordProposal[]) => {
+      const repo = getKernelRepository();
+      let outcome: CaptureOutcome;
+      try {
+        outcome = runCapturePipeline(input, registry, {
+          rules,
+          entities,
+          ...(proposals ? { propose: () => proposals } : {}),
+        });
+      } catch (error) {
+        // Understanding failed: the raw text is preserved anyway (approved
+        // 5.1), so the composer's failed state can honestly say 원문은 보관됨.
+        await repo.saveSource({
+          id: createKernelId("src"),
+          kind: input.kind,
+          locator: input.locator ?? input.url,
+          rawBody: input.content,
+          capturedAt: new Date().toISOString(),
+          retention: "retained",
+        });
+        throw error;
+      }
+      // 원문 먼저, 해석은 검토 뒤: the source persists at 정리 time, records
+      // wait for commitCapture. A dropped review loses nothing.
+      await repo.saveSource(outcome.source);
+      return outcome;
+    },
+    [registry, rules, entities],
+  );
+
+  const proposeCapture = useCallback(
+    (input: CaptureInput) => proposeWith(input),
+    [proposeWith],
+  );
+
+  const proposeFormCapture = useCallback(
+    (entry: FormEntry) => {
+      const proposal = proposeFromForm(entry);
+      return proposeWith({ kind: "text", content: proposal.body }, [proposal]);
+    },
+    [proposeWith],
+  );
+
+  const commitCapture = useCallback(
+    async (outcome: CaptureOutcome, options: CaptureCommitOptions = {}) => {
+      const repo = getKernelRepository();
+      // The source was persisted by proposeCapture; this writes records only.
+      if (options.sourceOnly) {
+        await reload();
+        return { savedRecordIds: [] };
+      }
+      const excluded = new Set(options.excludeRecordIds ?? []);
+      const kept = outcome.records.filter((item) => !excluded.has(item.created.record.id));
+      // Entities referenced only by excluded candidates are not created.
+      const keptEntityIds = new Set(
+        kept.flatMap((item) => item.relations.map((relation) => relation.toEntityId)),
+      );
+      for (const entity of outcome.newEntities) {
+        if (keptEntityIds.has(entity.id)) await repo.saveEntity(entity);
+      }
+
+      const savedRecordIds: string[] = [];
+      for (const item of kept) {
+        // AI interpretation first (create revision), then the user's staged
+        // edits as a distinct user revision, so the trail shows both acts.
+        await repo.saveRecord(item.created.record, item.created.revision);
+        const patch = buildCommitPatch(item, options.edits?.[item.created.record.id], registry);
+        let finalRecord = item.created.record;
+        if (patch) {
+          const updated = applyRecordPatch(item.created.record, patch, "user", registry);
+          await repo.saveRecord(updated.record, updated.revision);
+          finalRecord = updated.record;
+        }
+        await repo.saveSourceLink(item.sourceLink);
+        for (const relation of item.relations) await repo.saveRelation(relation);
+        savedRecordIds.push(finalRecord.id);
+      }
+      await reload();
+      return { savedRecordIds };
+    },
+    [registry, reload],
+  );
+
+  const discardRecords = useCallback(
+    async (recordIds: string[]) => {
+      const repo = getKernelRepository();
+      const current = await repo.listRecords();
+      for (const id of recordIds) {
+        const record = current.data.find((candidate) => candidate.id === id);
+        if (!record || record.status === "discarded") continue;
+        const { record: next, revision } = applyRecordPatch(
+          record,
+          { status: "discarded" },
+          "user",
+          registry,
+        );
+        await repo.saveRecord(next, revision);
+      }
+      await reload();
+    },
+    [registry, reload],
   );
 
   const captureAgentSession = useCallback(
@@ -215,6 +415,10 @@ export function useRecordLedger(): RecordLedger {
     loading,
     reload,
     capture,
+    proposeCapture,
+    proposeFormCapture,
+    commitCapture,
+    discardRecords,
     captureAgentSession,
     setStatus,
     renameEntity,
