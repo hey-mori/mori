@@ -392,6 +392,125 @@
   font-variant-numeric: tabular-nums;
 }
 
+.record-inspector-history-undo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--purple);
+  background: transparent;
+  border: 0;
+  padding: 0 0 0 4px;
+  cursor: pointer;
+}
+
+.record-inspector-history-undo:hover {
+  text-decoration: underline;
+}
+
+/* Editable inspector (R5b): provenance, inline edit, date editor. */
+.record-provenance {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.record-provenance.is-mori {
+  color: var(--purple);
+}
+
+.record-provenance.is-user {
+  color: var(--muted);
+}
+
+.record-provenance-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.record-inline-view {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
+  cursor: text;
+}
+
+.record-inline-view:hover {
+  background: var(--panel-soft);
+}
+
+.record-inline-view.is-empty {
+  color: var(--muted-2);
+}
+
+.record-inline-edit {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--panel, #fff);
+  border: 1px solid color-mix(in srgb, var(--purple) 40%, var(--line));
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+
+.record-inline-edit.is-multiline {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.record-date-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+
+.record-date-label {
+  color: var(--text);
+}
+
+.record-date-edit,
+.record-date-clear,
+.record-date-cancel {
+  font-size: 11.5px;
+  font-weight: 700;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.record-date-edit {
+  color: var(--purple);
+}
+
+.record-date-clear {
+  color: var(--muted);
+}
+
+.record-date-cancel {
+  color: var(--muted-2);
+}
+
+.record-date-input {
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--line-strong, #d7dbea);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--panel, #fff);
+}
+
 @media (max-width: 1100px) {
   .ledger.has-inspector,
   .ledger.has-rail {

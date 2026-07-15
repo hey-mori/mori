@@ -138,6 +138,7 @@ export function LedgerWorkspace() {
             registry={ledger.registry}
             entities={ledger.entities}
             onRenameEntity={(entityId, newName) => void ledger.renameEntity(entityId, newName)}
+            onUpdate={(patch) => void ledger.updateRecord(selected, patch)}
             onClose={() => setSelectedId(null)}
           />
         ) : (

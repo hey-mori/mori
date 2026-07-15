@@ -98,6 +98,9 @@ export type RecordLedger = {
    *  null acknowledges it stays dateless (`capture-fallback`). Either way it
    *  leaves the 확인할 것 strip. */
   setActivityDate: (record: MoriRecord, date: string | null) => Promise<void>;
+  /** Applies a user edit (title, body, type, context, ...) as an audited
+   *  revision on top of the record's history. */
+  updateRecord: (record: MoriRecord, patch: RecordPatch) => Promise<void>;
   /** Renames an entity by id (ID-stable) and teaches Mori the old name as an
    *  alias, so every record referencing it reads the new name. */
   renameEntity: (entityId: string, newName: string) => Promise<void>;
@@ -409,6 +412,16 @@ export function useRecordLedger(): RecordLedger {
     [registry, reload],
   );
 
+  const updateRecord = useCallback(
+    async (record: MoriRecord, patch: RecordPatch) => {
+      const repo = getKernelRepository();
+      const { record: next, revision } = applyRecordPatch(record, patch, "user", registry);
+      await repo.saveRecord(next, revision);
+      await reload();
+    },
+    [registry, reload],
+  );
+
   const createDateInferenceRule = useCallback(async () => {
     if (hasLateNightRule(rules)) return;
     const repo = getKernelRepository();
@@ -458,6 +471,7 @@ export function useRecordLedger(): RecordLedger {
     captureAgentSession,
     setStatus,
     setActivityDate,
+    updateRecord,
     renameEntity,
     createRoutine,
     createDateInferenceRule,

@@ -2,8 +2,36 @@
 
 ## Current stage
 
-R1-R4 done; R5a (ledger calendar M4) done and verified (2026-07-15). In
-progress: R5b (full record detail M6 with inline editing).
+R1-R5 done and verified (2026-07-15). Next stage: R6 (weekly review +
+routine suggestions + rail aggregates).
+
+## Done (R5b, 2026-07-15)
+
+- `useRecordLedger.updateRecord(record, patch)`: a user edit as an audited
+  revision (via `applyRecordPatch`).
+- `RecordInspector` is now editable (fixes the read-only D6): the title and
+  body are click-to-edit (`InlineEditable`; Enter / ⌘Enter saves, Esc
+  cancels), the activity date has an editor (pick a day → user-provided, or
+  날짜 없이 → capture-fallback), the origin shows as a provenance dot
+  (Mori가 정리 / 직접 입력), and the history offers a 되돌리기 on the most
+  recent change (restores its `before`, itself recorded as a revision).
+  `useRecordProvenance` takes the record's `updatedAt` as its reload key so
+  the history refreshes after each edit. `ContextView` passes `onUpdate` too.
+- Verified in the Vite app: selecting a row opens the editable inspector;
+  editing the title updates the inspector and the timeline row and adds a
+  수정 revision; 되돌리기 restores the prior title (append-only, a 4th
+  revision); the date editor moves the record to a new day group; provenance
+  dot and history render; no console errors. 2781 unit tests + build + style
+  green.
+
+## Deferred (R5 follow-up)
+
+- The roomy full-detail body-takeover for long notes (M6 wide layout): the
+  rail inspector edits records of any length (the body textarea scrolls), so
+  nothing is blocked; the wide variant is a comfort refinement.
+- Per-revision 되돌리기 is offered on the latest change only (an unambiguous
+  undo); reverting to an arbitrary older point is not exposed.
+- 재분석 / 분리 / 병합 header actions (M6) are not yet wired.
 
 ## Done (R5a, 2026-07-15)
 

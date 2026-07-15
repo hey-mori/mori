@@ -22,7 +22,10 @@ export type RecordProvenance = {
   loading: boolean;
 };
 
-export function useRecordProvenance(recordId: string | null, reloadKey = 0): RecordProvenance {
+export function useRecordProvenance(
+  recordId: string | null,
+  reloadKey: string | number = 0,
+): RecordProvenance {
   const [source, setSource] = useState<KernelSource | null>(null);
   const [revisions, setRevisions] = useState<KernelRevision[]>([]);
   const [relations, setRelations] = useState<KernelRelation[]>([]);

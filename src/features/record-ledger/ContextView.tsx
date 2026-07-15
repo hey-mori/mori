@@ -27,7 +27,7 @@ const CONTEXT_ICON: Partial<Record<KernelContext["type"], LucideIcon>> = {
 };
 
 export function ContextView() {
-  const { records, registry, entities, relations, contexts, loading, renameEntity } =
+  const { records, registry, entities, relations, contexts, loading, renameEntity, updateRecord } =
     useRecordLedger();
   const [selectedContextId, setSelectedContextId] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
@@ -105,6 +105,7 @@ export function ContextView() {
               registry={registry}
               entities={entities}
               onRenameEntity={(entityId, newName) => void renameEntity(entityId, newName)}
+              onUpdate={(patch) => void updateRecord(selectedRecord, patch)}
               onClose={() => setSelectedRecordId(null)}
             />
           ) : null}
