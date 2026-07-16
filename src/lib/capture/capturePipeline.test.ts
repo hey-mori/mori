@@ -20,6 +20,18 @@ describe("runCapturePipeline", () => {
     expect(outcome.source.kind).toBe("text");
   });
 
+  it("normalizes decomposed (NFD) Korean input to precomposed (NFC)", () => {
+    // macOS / WKWebView can hand over typed Korean as decomposed jamo; stored
+    // NFD renders as tofu. The pipeline must precompose it at the boundary.
+    const nfd = "한글".normalize("NFD");
+    expect(nfd).not.toBe("한글"); // guard: the input really is decomposed
+    const outcome = runCapturePipeline(text(nfd), registry, { now });
+    const rawBody = outcome.source.rawBody ?? "";
+    expect(rawBody).toBe("한글");
+    expect(rawBody.normalize("NFC")).toBe(rawBody);
+    expect(outcome.records[0]?.created.record.body).toBe("한글");
+  });
+
   it("auto-applies a confident workout and links the record to the source", () => {
     const outcome = runCapturePipeline(
       text("러닝 10분", "2026-07-14"),

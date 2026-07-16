@@ -3195,7 +3195,7 @@
 
 .doc-raw {
   margin: 0;
-  font-family: var(--mono, "JetBrains Mono", Consolas, monospace);
+  font-family: var(--mono, "JetBrains Mono", Consolas, "Apple SD Gothic Neo", monospace);
   font-size: 11.5px;
   line-height: 1.6;
   color: var(--muted);

@@ -116,7 +116,12 @@ export function runCapturePipeline(
 ): CaptureOutcome {
   const now = options.now ?? (() => new Date());
   const nowIso = now().toISOString();
-  const rawContent = input.content;
+  // Normalize to NFC (precomposed) at the storage boundary: macOS / WKWebView
+  // can deliver typed Korean as decomposed (NFD) jamo, which stores and renders
+  // as tofu (□). Precomposed syllables render reliably everywhere. NFC of
+  // already-NFC text is identity, so this is safe for every input kind.
+  const rawContent = input.content.normalize("NFC");
+  const normalizedInput = rawContent === input.content ? input : { ...input, content: rawContent };
   const sensitive = containsLikelySecret(rawContent);
 
   const source: KernelSource = {
@@ -131,7 +136,7 @@ export function runCapturePipeline(
   };
 
   const propose = options.propose ?? proposeRecords;
-  const rawProposals = propose(input, options);
+  const rawProposals = propose(normalizedInput, options);
   const rules = options.rules ?? [];
   const schemaAutomationOverride = options.automationForSchema;
   // Running set so two proposals mentioning the same new entity share one.

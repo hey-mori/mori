@@ -1104,7 +1104,7 @@
 }
 
 .connector-jsonl-error-list code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, "Apple SD Gothic Neo", monospace;
   font-size: 11px;
   color: var(--base-text-muted);
 }
@@ -1261,7 +1261,7 @@
 }
 
 .connector-jsonl-inbox > header code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, "Apple SD Gothic Neo", monospace;
   font-size: 11.5px;
   background: var(--base-surface-subtle);
   padding: 1px 5px;
@@ -1369,7 +1369,7 @@
 }
 
 .connector-jsonl-inbox-row-meta small {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, "Apple SD Gothic Neo", monospace;
   font-size: 11px;
   color: var(--base-text-muted-2);
   max-width: 240px;
