@@ -731,6 +731,25 @@
   background: var(--base-border-strong);
 }
 
+/* Honest label for the empty-install demo canvas: a calm caution pill, not a
+   dotted list item, so demo data never reads as the user's real sessions. */
+.mcs-demo-flag {
+  padding: 2px 9px;
+  border-radius: var(--base-radius-pill);
+  background: rgba(216, 146, 63, 0.14);
+  color: #a4671f;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.mcs-status-row > .mcs-demo-flag + span::before {
+  display: none;
+}
+
+[data-base-theme="nightLake"] .mcs-demo-flag {
+  color: #e0a866;
+}
+
 .mcs-status-row button {
   height: 22px;
   padding: 0 8px;

@@ -42,7 +42,7 @@ are cheap to close.
 
 | # | Gap | Sev | Smallest fix |
 | --- | --- | --- | --- |
-| 1 | Home renders demo session nodes and "N개 프로젝트/세션" with **no demo label** (`MoriCommandSpaceHome.tsx:144-147,307-323`); a new user cannot tell the canvas is fake. Other surfaces do label demo (`ImportPanel.tsx:172-177`), so honesty is surface-dependent | High | A quiet 데모 pill in the status row whenever the sessions came from `DEMO_SESSION_SUMMARIES` |
+| 1 | ✅ Fixed 2026-07-16. Home now shows a quiet `데모 미리보기` pill and reads "N개 예시 세션" whenever the canvas falls back to `DEMO_SESSION_SUMMARIES`, so demo data never reads as the user's real work (`MoriCommandSpaceHome.tsx`). Record-count awareness (Gap #9) is the remaining half. | High | ~~A quiet 데모 pill in the status row whenever the sessions came from `DEMO_SESSION_SUMMARIES`~~ done |
 | 2 | Home has no first-action guidance; a brand-new user and a power user see the same populated-looking canvas, so the empty state teaches nothing | High | When stored sessions AND ledger records are both zero, one line under the input: 첫 기록 쓰기 · 에이전트 연결 |
 | 3 | The guide's primary desktop CTA routes to session import (`requestStartRecords`), not the everyday 기록 capture loop | Med | Third guide action 첫 기록 쓰기 → `requestNewRecord()` |
 | 4 | 세션 empty state ("세션을 선택하세요", `SessionsWorkspace.tsx:81-86`) never routes to 연동 when no agent is connected | Med | Zero past sessions + no connected agent → 에이전트 연결하기 CTA into 설정 > 연동 |

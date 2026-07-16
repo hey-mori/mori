@@ -141,10 +141,15 @@ export function MoriCommandSpaceHome() {
   const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
 
-  const sessions = useMemo(() => {
-    const stored = loadStoredSessionSummaries();
-    return stored.length > 0 ? stored : DEMO_SESSION_SUMMARIES;
-  }, [initialized, dataResetNonce]);
+  const storedSessions = useMemo(
+    () => loadStoredSessionSummaries(),
+    [initialized, dataResetNonce],
+  );
+  // Demo sessions are a fallback for an empty install, never a stand-in for the
+  // user's real work. When they show, the status row says so (no-fabrication
+  // invariant): the ambient canvas stays populated, but honestly labelled.
+  const usingDemoData = storedSessions.length === 0;
+  const sessions = usingDemoData ? DEMO_SESSION_SUMMARIES : storedSessions;
 
   const activeMode = COMMAND_MODES.find((mode) => mode.id === activeModeId) ?? COMMAND_MODES[0];
   const sessionNodes = useMemo(() => buildCommandNodes(sessions), [sessions]);
@@ -326,8 +331,13 @@ export function MoriCommandSpaceHome() {
       <div className="mcs-scroll base-scroll">
         <section className="mcs-stage" aria-label="Mori Command Space">
           <div className="mcs-status-row" aria-label="작업 공간 상태">
+            {usingDemoData ? (
+              <span className="mcs-demo-flag">데모 미리보기</span>
+            ) : null}
             <span>{projectCount}개 프로젝트</span>
-            <span>{sessions.length}개 세션</span>
+            <span>
+              {sessions.length}개 {usingDemoData ? "예시 세션" : "세션"}
+            </span>
             <button type="button" onClick={openCommandPalette}>
               {SHORTCUT_LABEL}
             </button>
@@ -452,7 +462,9 @@ export function MoriCommandSpaceHome() {
                     <HomeAskMoriPanel
                       question={askRequest.question}
                       requestId={askRequest.id}
-                      onSelectMemory={() => navigate("memory")}
+                      // 메모리 hub is retired from nav; route a cited memory to
+                      // 검색 (now record-aware) instead of a dead-end surface.
+                      onSelectMemory={() => openCommandPalette()}
                       onNavigateEvent={() => openSession("flow")}
                     />
                   </Suspense>
