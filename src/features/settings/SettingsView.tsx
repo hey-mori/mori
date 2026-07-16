@@ -17,6 +17,7 @@ import { isTauriRuntime } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { BackgroundWatchCard } from "./BackgroundWatchCard";
 import { AutoImportCard } from "./AutoImportCard";
+import { AgentConnectionsCard } from "./AgentConnectionsCard";
 import { LocalAiCard } from "./LocalAiCard";
 import { StorageCard } from "./StorageCard";
 import { ThemeCard } from "./ThemeCard";
@@ -90,11 +91,16 @@ export function SettingsView() {
         {activeTab === "connections" ? (
           <>
             <AutoImportCard />
-            <p className="settings-inline-note">
-              세션을 하나씩 직접 가져오려면 왼쪽 위 <strong>+</strong> · <strong>새 세션</strong>을
-              쓰세요. 아래는 에이전트 연결 상태와 설정입니다.
-            </p>
-            <SourcesView embedded />
+            <AgentConnectionsCard />
+            <details className="settings-advanced">
+              <summary className="settings-advanced-summary">직접 연결 · 가져오기 (고급)</summary>
+              <p className="settings-inline-note">
+                자동 수집이 켜져 있으면 대부분 필요 없습니다. Claude 실시간 연결(훅)
+                설정이나 특정 세션·대화를 직접 가져올 때 씁니다. 새 세션을 하나 만들려면
+                왼쪽 위 <strong>+</strong> · <strong>새 세션</strong>이 더 편합니다.
+              </p>
+              <SourcesView embedded />
+            </details>
           </>
         ) : null}
         {activeTab === "storage" ? (
