@@ -26,6 +26,7 @@ export type CommandGroup =
 /** The intent the renderer should act on when the user picks a command. */
 export type CommandTarget =
   | { kind: "navigate"; view: ViewKey }
+  | { kind: "newRecord" }
   | { kind: "openRecord"; recordId: string }
   | { kind: "openSession"; sessionId: string; tab?: "overview" | "flow" | "evidence" | "insights" | "report" }
   | { kind: "openSettings"; segment?: SettingsTab }
@@ -77,6 +78,13 @@ const ACTION_COMMANDS: ReadonlyArray<{
   target: CommandTarget;
   keywords?: string[];
 }> = [
+  {
+    id: "action-new-record",
+    label: "새 기록 쓰기",
+    hint: "n",
+    target: { kind: "newRecord" },
+    keywords: ["new", "capture", "기록", "메모", "작성", "note"],
+  },
   {
     id: "action-toggle-sidebar",
     label: "사이드바 접기/펼치기",

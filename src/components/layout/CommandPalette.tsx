@@ -57,6 +57,7 @@ export function CommandPalette({
   const navigate = useAppStore((state) => state.navigate);
   const openSession = useAppStore((state) => state.openSession);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
+  const requestNewRecord = useAppStore((state) => state.requestNewRecord);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const loadBrowserSession = useSessionStore(
     (state) => state.loadBrowserSession,
@@ -193,6 +194,9 @@ export function CommandPalette({
         case "navigate":
           navigate(target.view);
           break;
+        case "newRecord":
+          requestNewRecord();
+          break;
         case "openRecord":
           openRecordInLedger(target.recordId);
           break;
@@ -221,6 +225,7 @@ export function CommandPalette({
       navigate,
       onToggleSidebarCollapsed,
       openRecordInLedger,
+      requestNewRecord,
       openSession,
       openSettingsSheet,
       setTheme,

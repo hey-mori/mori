@@ -25,8 +25,23 @@ const CommandPalette = lazy(() =>
  * workspace as an off-canvas drawer; the floating toggle in the top-left
  * corner opens it.
  */
+/** Whether a keystroke landed in a field where a bare shortcut key must be
+ *  treated as typed text, not a command. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || !el.tagName) return false;
+  const tag = el.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    el.isContentEditable
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useAppStore((state) => state.navigate);
+  const requestNewRecord = useAppStore((state) => state.requestNewRecord);
   const toggleCommandPalette = useAppStore(
     (state) => state.toggleCommandPalette,
   );
@@ -57,15 +72,25 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const isMod = event.metaKey || event.ctrlKey;
-      if (!isMod) return;
-      const key = event.key.toLowerCase();
-      if (key !== "k" && key !== "p") return;
-      event.preventDefault();
-      toggleCommandPalette();
+      if (isMod) {
+        const key = event.key.toLowerCase();
+        if (key !== "k" && key !== "p") return;
+        event.preventDefault();
+        toggleCommandPalette();
+        return;
+      }
+      // Unmodified single-key shortcut for the highest-frequency action: 새 기록.
+      // Skipped while typing (input / textarea / select / contenteditable) and
+      // when any modifier is held, so Cmd+N (browser) and literal "n" are safe.
+      if (event.altKey || event.shiftKey) return;
+      if (event.key === "n" && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        requestNewRecord();
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [toggleCommandPalette]);
+  }, [toggleCommandPalette, requestNewRecord]);
 
   const shellClass = [
     "app-shell",
