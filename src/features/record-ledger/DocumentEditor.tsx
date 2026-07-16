@@ -46,40 +46,50 @@ export function DocumentEditor({
   onSaved: (savedRecordIds: string[]) => void;
   now: Date;
 }) {
-  // Idle and composing are one state: the capture canvas (v3). The composer is
-  // the screen's front door, and the day visibly builds right under it.
+  // Idle and composing are one state: the capture canvas (v3). "오늘" anchors
+  // the day (the ledger's rhythm carried onto the front door, Apple-Journal
+  // style); the composer is the hero input, and the day builds right under it.
   if (composing || !record) {
+    const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "long" }).format(now);
+    const dateLine = `${now.getMonth() + 1}월 ${now.getDate()}일 ${weekday}`;
     return (
       <div className="doc-editor">
         <div className="doc-canvas base-scroll">
           <div className="doc-canvas-inner">
+            <header className="doc-canvas-head">
+              <div className="doc-canvas-heading">
+                <h2 className="doc-canvas-title">오늘</h2>
+                <p className="doc-canvas-date">{dateLine}</p>
+              </div>
+              {todayRecords.length > 0 ? (
+                <span className="doc-canvas-count">기록 {todayRecords.length}건</span>
+              ) : null}
+            </header>
+
             <RecordComposer ledger={ledger} onSaved={onSaved} />
+
             {todayRecords.length > 0 ? (
-              <section className="doc-today" aria-label="오늘 남긴 기록">
-                <header className="doc-today-head">
-                  오늘
-                  <span className="doc-today-count">{todayRecords.length}</span>
-                </header>
-                <ul className="doc-today-list">
-                  {todayRecords.map((item) => {
-                    const snippet = recordSnippet(item);
-                    const time = item.occurredStart ? timeOfDayLabel(item.occurredStart) : "";
-                    return (
-                      <li key={item.id}>
-                        <button type="button" className="doc-today-item" onClick={() => onOpenRecord(item.id)}>
-                          <span className={`note-item-dot ${kindColorClass(item.schemaId)}`} aria-hidden="true" />
-                          <span className="doc-today-text">
-                            <span className="doc-today-title">{item.title}</span>
-                            {snippet ? <span className="doc-today-snippet">{snippet}</span> : null}
-                          </span>
-                          {time ? <span className="note-item-time">{time}</span> : null}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ) : null}
+              <ul className="doc-today-list" aria-label="오늘 남긴 기록">
+                {todayRecords.map((item) => {
+                  const snippet = recordSnippet(item);
+                  const time = item.occurredStart ? timeOfDayLabel(item.occurredStart) : "";
+                  return (
+                    <li key={item.id}>
+                      <button type="button" className="doc-today-item" onClick={() => onOpenRecord(item.id)}>
+                        <span className={`note-item-dot ${kindColorClass(item.schemaId)}`} aria-hidden="true" />
+                        <span className="doc-today-text">
+                          <span className="doc-today-title">{item.title}</span>
+                          {snippet ? <span className="doc-today-snippet">{snippet}</span> : null}
+                        </span>
+                        {time ? <span className="note-item-time">{time}</span> : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="doc-today-empty">적으면 오늘의 기록이 여기에 쌓입니다.</p>
+            )}
           </div>
         </div>
       </div>
