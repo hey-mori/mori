@@ -63,8 +63,10 @@ function toNotification(draft: StoredMoriPackageDraft): CompanionNotification {
     id: `package-export:${draft.packageId}`,
     kind: "package_export_ready",
     severity: "info",
-    title: `${variant} 내보냄`,
-    message: draft.packageId,
+    title: `${variant} 내보내기 완료`,
+    message: clientSafe
+      ? "민감한 내용을 제외한 공유용 패키지를 저장했습니다."
+      : "작업 내역을 담은 패키지를 저장했습니다.",
     basis: "verified",
     linkedItemIds: [draft.packageId],
     evidenceRefs: [],

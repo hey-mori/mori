@@ -25,19 +25,23 @@ export function buildSessionSyncNotification(
   const updatedCount = Math.max(0, Math.floor(input.updatedCount));
   if (newCount + updatedCount === 0) return null;
 
-  const parts: string[] = [];
-  if (newCount > 0) parts.push(`새 세션 ${newCount}건`);
-  if (updatedCount > 0) parts.push(`업데이트 ${updatedCount}건`);
-
+  // Title carries the primary count; the body says what was collected and where
+  // it went, so it never just restates the title.
   const title =
-    newCount > 0 ? `세션 ${newCount}건 새로 수집` : `세션 ${updatedCount}건 업데이트`;
+    newCount > 0 ? `새 세션 ${newCount}건 수집` : `세션 ${updatedCount}건 업데이트`;
+  const message =
+    newCount > 0 && updatedCount > 0
+      ? `연결된 에이전트의 새 작업을 담았고, 이어서 진행된 세션 ${updatedCount}건도 함께 업데이트했습니다.`
+      : newCount > 0
+        ? "연결된 에이전트의 새 작업을 세션 목록에 담았습니다."
+        : "이어서 진행된 작업을 세션 목록에 반영했습니다.";
 
   return {
     id: `sessions-imported:${input.at}`,
     kind: "import_finished",
     severity: "info",
     title,
-    message: parts.join(" · "),
+    message,
     basis: "verified",
     linkedItemIds: [],
     evidenceRefs: [],

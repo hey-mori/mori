@@ -25,9 +25,9 @@ export function buildStorageHealthNotifications(
       id: "storage-quota",
       kind: "storage_write_failure",
       severity: "risk",
-      title: "앱 저장 공간이 가득 찼어요",
+      title: "저장 공간 부족",
       message:
-        "디스크가 아니라 Mori 앱 내부 저장 공간이에요 · 디스크 여유 공간과는 무관합니다. 오래된 세션을 정리하거나 .mori 패키지로 내보낸 뒤 다시 시도하세요.",
+        "앱 내부 저장 공간이 가득 찼습니다. 디스크 용량과는 무관하며, 오래된 세션을 정리해 공간을 확보하세요.",
       basis: "state",
       linkedItemIds: [],
       evidenceRefs: [],
