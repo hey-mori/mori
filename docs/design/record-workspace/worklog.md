@@ -1,5 +1,20 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (v5 · note-tool bar, 2026-07-17)
+
+- 기획 doc `v5-note-tool-bar.md`: references (Obsidian/Bear/iA/Granola…),
+  editor decision, extraction extensibility architecture (nature-first,
+  schema-as-data, LLM engine seam), Obsidian vault bridge direction
+  (storage ADR K4), list/search roadmap.
+- Editor: CodeMirror 6 markdown surface (`NoteMarkdownEditor.tsx`) — live
+  md styling, 24px first-line title, app-var theme (both modes), autosave
+  status (N자 · 저장됨). Markdown stripped from titles/extractions
+  (`stripInlineMarkdown`).
+- Extraction: pending cards editable before confirm (kind select + date
+  input, "…에서 추정" evidence); identity matching is title-only so a
+  retyped confirm consumes its preview. Rail overflow on desktop fixed
+  (WKWebView search-input appearance + rail containment).
+
 ## Done (v3 · Daily Ledger, 2026-07-16)
 
 - 기록 re-planned and rebuilt to the reference bar

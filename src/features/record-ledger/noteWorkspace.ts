@@ -85,9 +85,11 @@ export function extractFromNote(body: string, now: Date = new Date()): NoteExtra
 }
 
 /** Normalized identity for matching a live preview against an already-confirmed
- *  extraction, so a confirmed record is never offered again as a fresh preview. */
-export function extractionIdentity(schemaId: string, title: string): string {
-  return `${schemaId}:${title.trim().replace(/\s+/g, " ").toLowerCase()}`;
+ *  extraction. Title-only (not schema): the user can retype an extraction
+ *  before confirming (할 일 → 회고), and the confirmed record must still consume
+ *  the preview it came from rather than leaving it offered twice. */
+export function extractionIdentity(title: string): string {
+  return title.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 /**
@@ -110,11 +112,11 @@ export function buildNoteExtractionPanel(
   // consume exactly one preview, leaving the other still confirmable.
   const confirmedCounts = new Map<string, number>();
   for (const record of confirmedRecords) {
-    const id = extractionIdentity(record.schemaId, record.title);
+    const id = extractionIdentity(record.title);
     confirmedCounts.set(id, (confirmedCounts.get(id) ?? 0) + 1);
   }
   const pending = extractFromNote(body, now).filter((item) => {
-    const id = extractionIdentity(item.schemaId, item.title);
+    const id = extractionIdentity(item.title);
     const remaining = confirmedCounts.get(id) ?? 0;
     if (remaining > 0) {
       confirmedCounts.set(id, remaining - 1);

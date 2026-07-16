@@ -166,12 +166,12 @@ export function NoteEditorPane({
   );
 
   const onConfirm = useCallback(
-    async (item: NoteExtraction) => {
+    async (proposal: NoteExtraction["proposal"]) => {
       // The note must exist before an extraction can link to it; flushSave
       // returns the real note record (created or existing).
       const noteRecord = await flushSave(body);
       if (!noteRecord) return;
-      await ledger.confirmExtraction(noteRecord, item.proposal);
+      await ledger.confirmExtraction(noteRecord, proposal);
     },
     [body, flushSave, ledger],
   );
@@ -233,21 +233,12 @@ export function NoteEditorPane({
                 </div>
               ))}
               {panel.pending.map((item) => (
-                <div key={item.key} className="note-extract-card">
-                  <div className="note-extract-kind">
-                    <span className={`note-item-dot ${kindColorClass(item.schemaId)}`} aria-hidden="true" />
-                    {ledger.registry.get(item.schemaId)?.name ?? item.schemaId}
-                  </div>
-                  <p className="note-extract-title">{item.title}</p>
-                  <div className="note-extract-foot">
-                    <span className="note-extract-meta">
-                      {item.proposal.occurredStart ? formatDate(item.proposal.occurredStart) : "날짜 없음"}
-                    </span>
-                    <button type="button" className="note-extract-confirm" onClick={() => void onConfirm(item)}>
-                      확인
-                    </button>
-                  </div>
-                </div>
+                <PendingExtractionCard
+                  key={item.key}
+                  item={item}
+                  ledger={ledger}
+                  onConfirm={onConfirm}
+                />
               ))}
             </div>
           ) : (
@@ -257,6 +248,101 @@ export function NoteEditorPane({
           )}
         </aside>
       ) : null}
+    </div>
+  );
+}
+
+/** Extraction kinds a note item can be corrected to: writeable schemas only
+ *  (imported / derived-only kinds are not manual retype targets). */
+const NON_RETYPE_KINDS = new Set(["agent-session", "source-document", "qa"]);
+
+/**
+ * One pending extraction, editable before confirming: a wrong kind (an essay
+ * line read as 할 일) or a wrong date costs one correction instead of
+ * polluting the ledger. Confirming applies the edits onto the proposal —
+ * properties are filtered to the target schema so the record stays valid.
+ */
+function PendingExtractionCard({
+  item,
+  ledger,
+  onConfirm,
+}: {
+  item: NoteExtraction;
+  ledger: RecordLedger;
+  onConfirm: (proposal: NoteExtraction["proposal"]) => void | Promise<void>;
+}) {
+  const [schemaId, setSchemaId] = useState(item.schemaId);
+  const initialDate = item.proposal.occurredStart?.slice(0, 10) ?? "";
+  const [date, setDate] = useState(initialDate);
+
+  const kinds = useMemo(
+    () =>
+      ledger.registry
+        .list()
+        .filter(
+          (schema) =>
+            (schema.layer === "occurrence" || schema.layer === "distilled") &&
+            !NON_RETYPE_KINDS.has(schema.id),
+        ),
+    [ledger.registry],
+  );
+
+  const confirm = () => {
+    const proposal = { ...item.proposal };
+    if (schemaId !== item.schemaId) {
+      proposal.schemaId = schemaId;
+      const allowed = new Set(ledger.registry.get(schemaId)?.properties.map((p) => p.key) ?? []);
+      proposal.properties = Object.fromEntries(
+        Object.entries(item.proposal.properties).filter(([key]) => allowed.has(key)),
+      );
+    }
+    if (date !== initialDate) {
+      if (date) {
+        proposal.occurredStart = date;
+        proposal.timeBasis = "user-provided";
+      } else {
+        proposal.occurredStart = undefined;
+        proposal.timeBasis = "unknown";
+      }
+      proposal.timeConfidence = undefined;
+      proposal.dateEvidence = undefined;
+    }
+    void onConfirm(proposal);
+  };
+
+  return (
+    <div className="note-extract-card">
+      <div className="note-extract-kind">
+        <span className={`note-item-dot ${kindColorClass(schemaId)}`} aria-hidden="true" />
+        <select
+          className="note-extract-kind-select"
+          value={schemaId}
+          onChange={(event) => setSchemaId(event.target.value)}
+          aria-label="종류 바꾸기"
+        >
+          {kinds.map((schema) => (
+            <option key={schema.id} value={schema.id}>
+              {schema.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="note-extract-title">{item.title}</p>
+      <div className="note-extract-foot">
+        <input
+          type="date"
+          className="note-extract-date"
+          value={date}
+          onChange={(event) => setDate(event.target.value)}
+          aria-label="날짜 바꾸기"
+        />
+        {item.proposal.dateEvidence && date === initialDate ? (
+          <span className="note-extract-meta">"{item.proposal.dateEvidence}"에서 추정</span>
+        ) : null}
+        <button type="button" className="note-extract-confirm" onClick={confirm}>
+          확인
+        </button>
+      </div>
     </div>
   );
 }

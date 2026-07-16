@@ -87,7 +87,7 @@ describe("buildNoteExtractionPanel", () => {
     expect(panel.confirmed).toHaveLength(1);
     expect(
       panel.pending.some(
-        (p) => extractionIdentity(p.schemaId, p.title) === extractionIdentity("workout", workout!.title),
+        (p) => extractionIdentity(p.title) === extractionIdentity(workout!.title),
       ),
     ).toBe(false);
     // the task is still pending

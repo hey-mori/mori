@@ -3002,6 +3002,30 @@
   color: var(--muted-2);
 }
 
+/* Pre-confirm corrections: quiet inline controls, never a form. */
+.note-extract-kind-select {
+  border: 0;
+  padding: 0 2px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.note-extract-date {
+  min-width: 0;
+  max-width: 118px;
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-soft, #fbfbfd);
+  color: var(--muted);
+  font: inherit;
+  font-size: 10.5px;
+}
+
 .note-extract-confirm {
   margin-left: auto;
   padding: 3px 12px;
