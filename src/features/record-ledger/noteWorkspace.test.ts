@@ -38,6 +38,9 @@ describe("deriveNoteTitle", () => {
   it("strips markdown syntax from the title", () => {
     expect(deriveNoteTitle("# **주간 회고** 노트\n본문")).toBe("주간 회고 노트");
   });
+  it("unwraps a [[wiki-link]] to its title text", () => {
+    expect(deriveNoteTitle("[[할 일 목록]] 참고\n본문")).toBe("할 일 목록 참고");
+  });
 });
 
 describe("stripInlineMarkdown in extraction", () => {

@@ -137,6 +137,7 @@ export function LedgerWorkspace() {
           note={editingNote}
           ledger={ledger}
           onNoteCreated={handleNoteCreated}
+          onOpenRecord={openRecord}
           now={now}
         />
       ) : (

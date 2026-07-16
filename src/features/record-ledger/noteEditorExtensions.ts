@@ -213,10 +213,78 @@ const concealMarkdown = ViewPlugin.fromClass(
   { decorations: (plugin) => plugin.decorations },
 );
 
+/**
+ * Wiki-links: render `[[제목]]` as a link. The inner title is marked
+ * `.cm-wiki-link` (clickable, carries the title in a data attribute for the
+ * click handler); the `[[` and `]]` brackets are hidden on any line the caret is
+ * not on, so a linked note reads as its plain name and only shows syntax while
+ * you edit that line. Regex-scanned per line (the brackets are plain text to the
+ * markdown parser, so this never collides with concealMarkdown's replaces).
+ */
+const WIKI_LINK_LINE = /\[\[([^[\]\n]+)\]\]/g;
+
+const wikiLinks = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: ViewUpdate) {
+      // selectionSet so bracket concealment flips as the caret enters the line.
+      if (update.docChanged || update.viewportChanged || update.selectionSet) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const { state } = view;
+      const activeLines = new Set<number>();
+      for (const range of state.selection.ranges) {
+        const first = state.doc.lineAt(range.from).number;
+        const last = state.doc.lineAt(range.to).number;
+        for (let n = first; n <= last; n++) activeLines.add(n);
+      }
+      const marks: { from: number; to: number; deco: Decoration }[] = [];
+      for (const { from, to } of view.visibleRanges) {
+        let pos = from;
+        while (pos <= to) {
+          const line = state.doc.lineAt(pos);
+          const active = activeLines.has(line.number);
+          WIKI_LINK_LINE.lastIndex = 0;
+          let match: RegExpExecArray | null;
+          while ((match = WIKI_LINK_LINE.exec(line.text))) {
+            const title = match[1];
+            const openFrom = line.from + match.index; // the "[["
+            const innerFrom = openFrom + 2;
+            const innerTo = innerFrom + title.length;
+            const closeTo = innerTo + 2; // past the "]]"
+            marks.push({
+              from: innerFrom,
+              to: innerTo,
+              deco: Decoration.mark({
+                class: "cm-wiki-link",
+                attributes: { "data-wiki-title": title.trim() },
+              }),
+            });
+            if (!active) {
+              marks.push({ from: openFrom, to: innerFrom, deco: concealed });
+              marks.push({ from: innerTo, to: closeTo, deco: concealed });
+            }
+          }
+          pos = line.to + 1;
+        }
+      }
+      marks.sort((a, b) => a.from - b.from || a.to - b.to);
+      return Decoration.set(marks.map((m) => m.deco.range(m.from, m.to)));
+    }
+  },
+  { decorations: (plugin) => plugin.decorations },
+);
+
 export function noteMarkdownEditing(): Extension {
   return [
     taskCheckboxes,
     concealMarkdown,
+    wikiLinks,
     keymap.of([
       { key: "Enter", run: continueList },
       { key: "Mod-b", run: (view) => wrapSelection(view, "**") },

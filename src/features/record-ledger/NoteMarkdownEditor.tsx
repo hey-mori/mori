@@ -97,6 +97,11 @@ const baseTheme = EditorView.theme({
     accentColor: "var(--purple)",
     cursor: "pointer",
   },
+  ".cm-wiki-link": {
+    color: "var(--purple)",
+    cursor: "pointer",
+    borderBottom: "1px solid color-mix(in srgb, var(--purple) 28%, transparent)",
+  },
 });
 
 export function NoteMarkdownEditor({
@@ -104,16 +109,23 @@ export function NoteMarkdownEditor({
   onChange,
   placeholder,
   autoFocus,
+  onOpenLink,
 }: {
   value: string;
   onChange: (text: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
+  /** Fired when a [[wiki-link]] is clicked, with the link's title text. */
+  onOpenLink?: (title: string) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  // Read through a ref: the view mounts once, so the handler must see the
+  // latest callback rather than the first render's.
+  const onOpenLinkRef = useRef(onOpenLink);
+  onOpenLinkRef.current = onOpenLink;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -133,6 +145,18 @@ export function NoteMarkdownEditor({
           baseTheme,
           EditorView.lineWrapping,
           cmPlaceholder(placeholder ?? ""),
+          // Clicking a [[wiki-link]] navigates instead of moving the caret in.
+          EditorView.domEventHandlers({
+            mousedown: (event) => {
+              const target = event.target as HTMLElement | null;
+              const el = target?.closest?.(".cm-wiki-link") as HTMLElement | null;
+              const title = el?.getAttribute("data-wiki-title");
+              if (!title || !onOpenLinkRef.current) return false;
+              event.preventDefault();
+              onOpenLinkRef.current(title);
+              return true;
+            },
+          }),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) onChangeRef.current(update.state.doc.toString());
           }),

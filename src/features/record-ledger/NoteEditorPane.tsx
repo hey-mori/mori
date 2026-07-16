@@ -7,7 +7,7 @@
  * linked back to the note. No composer box, no 정리 button — writing is capture.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Sparkles, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Check, Sparkles, PanelRightClose, PanelRightOpen, Link2 as LinkIcon } from "lucide-react";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "./useRecordLedger";
 import {
@@ -23,6 +23,7 @@ import {
   NOTE_NATURE_LABEL,
   type NoteNature,
 } from "./noteNature";
+import { noteBacklinks, resolveNoteByTitle } from "./wikiLinks";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
 
@@ -32,6 +33,7 @@ export function NoteEditorPane({
   note,
   ledger,
   onNoteCreated,
+  onOpenRecord,
   now,
 }: {
   /** The selected note record, or null for a brand-new note. */
@@ -40,6 +42,9 @@ export function NoteEditorPane({
   /** Fires with the new record id the first time a fresh note is saved, so the
    *  workspace can select it. */
   onNoteCreated: (recordId: string) => void;
+  /** Open another note by id (a clicked [[wiki-link]]); routes through the
+   *  workspace so the current note flushes on the switch. */
+  onOpenRecord: (recordId: string) => void;
   now: Date;
 }) {
   const [body, setBody] = useState(note?.body ?? "");
@@ -203,6 +208,28 @@ export function NoteEditorPane({
     [body, flushSave, ledger],
   );
 
+  // Follow a clicked [[wiki-link]]: open the matching note, or create it when
+  // the name has no note yet (Obsidian's click-to-create). Routing through
+  // onOpenRecord flushes the current note on the way out.
+  const handleOpenLink = useCallback(
+    async (title: string) => {
+      const found = resolveNoteByTitle(title, ledger.records);
+      if (found) {
+        onOpenRecord(found.id);
+        return;
+      }
+      const created = await ledger.createNote(title);
+      if (created) onOpenRecord(created.id);
+    },
+    [ledger, onOpenRecord],
+  );
+
+  // Notes that link TO this one (derived from their bodies, no stored graph).
+  const backlinks = useMemo(
+    () => (note ? noteBacklinks(ledger.records, note) : []),
+    [ledger.records, note],
+  );
+
   const hasExtractions = panel.confirmed.length > 0 || panel.pending.length > 0;
   const dateLine = useMemo(() => {
     const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "long" }).format(now);
@@ -232,8 +259,9 @@ export function NoteEditorPane({
           <NoteMarkdownEditor
             value={body}
             onChange={onChange}
-            placeholder={"오늘 한 일, 배운 것, 떠오른 생각을 그대로 적으세요. 첫 줄이 제목이 됩니다."}
+            placeholder={"오늘 한 일, 배운 것, 떠오른 생각을 그대로 적으세요. 첫 줄이 제목이 됩니다. [[다른 기록]]으로 연결할 수 있어요."}
             autoFocus
+            onOpenLink={handleOpenLink}
           />
         </div>
       </div>
@@ -299,6 +327,22 @@ export function NoteEditorPane({
               쓰다 보면 Mori가 운동·할 일·결정 같은 걸 여기서 뽑아냅니다.
             </p>
           )}
+          {backlinks.length > 0 ? (
+            <details className="note-backlinks" open>
+              <summary>이 기록을 참조하는 {backlinks.length}개</summary>
+              {backlinks.map((source) => (
+                <button
+                  key={source.id}
+                  type="button"
+                  className="note-backlink-row"
+                  onClick={() => onOpenRecord(source.id)}
+                >
+                  <LinkIcon size={12} aria-hidden="true" />
+                  <span className="note-backlink-title">{source.title}</span>
+                </button>
+              ))}
+            </details>
+          ) : null}
         </aside>
       ) : null}
     </div>
