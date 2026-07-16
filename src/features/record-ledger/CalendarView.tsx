@@ -31,6 +31,7 @@ export function CalendarView() {
           onSelectDate={setSelectedDate}
           onAssignDate={(record, date) => void ledger.setActivityDate(record, date)}
           onSelectRecord={(recordId) => openRecordInLedger(recordId)}
+          onOpenSessions={() => navigate("sessions")}
           onClose={() => navigate("ledger")}
           now={now}
         />

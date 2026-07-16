@@ -31,6 +31,7 @@ export function LedgerCalendarView({
   onSelectDate,
   onAssignDate,
   onSelectRecord,
+  onOpenSessions,
   onClose,
   now,
 }: {
@@ -40,6 +41,7 @@ export function LedgerCalendarView({
   onSelectDate: (date: string | null) => void;
   onAssignDate: (record: MoriRecord, date: string) => void;
   onSelectRecord: (recordId: string) => void;
+  onOpenSessions: () => void;
   onClose: () => void;
   now: Date;
 }) {
@@ -144,6 +146,7 @@ export function LedgerCalendarView({
                 registry={registry}
                 todayIso={todayIso}
                 onSelectRecord={onSelectRecord}
+                onOpenSessions={onOpenSessions}
               />
             </div>
           ),
@@ -232,15 +235,22 @@ function CellEntries({
   registry,
   todayIso,
   onSelectRecord,
+  onOpenSessions,
 }: {
   records: MoriRecord[];
   registry: SchemaRegistry;
   todayIso: string;
   onSelectRecord: (recordId: string) => void;
+  onOpenSessions: () => void;
 }) {
   if (records.length === 0) return null;
-  const shown = records.slice(0, MAX_TITLES);
-  const more = records.length - shown.length;
+  // Agent sessions collapse into ONE 세션 N chip so a day with a full backfill of
+  // dual-written sessions (S2) never renders dozens of chips; the chip routes to
+  // the 세션 workspace. Other records keep their titled entries.
+  const sessions = records.filter((record) => record.schemaId === "agent-session");
+  const others = records.filter((record) => record.schemaId !== "agent-session");
+  const shown = others.slice(0, MAX_TITLES);
+  const more = others.length - shown.length;
   return (
     <div className="ledger-cell-entries">
       {shown.map((record) => {
@@ -259,6 +269,17 @@ function CellEntries({
         );
       })}
       {more > 0 ? <span className="ledger-cell-more">+{more}</span> : null}
+      {sessions.length > 0 ? (
+        <button
+          type="button"
+          className="ledger-cell-entry ledger-cell-session"
+          onClick={onOpenSessions}
+          title={`에이전트 세션 ${sessions.length}건`}
+        >
+          <span className="ledger-cell-dot is-work" aria-hidden="true" />
+          <span className="ledger-cell-title">세션 {sessions.length}</span>
+        </button>
+      ) : null}
       <span className="ledger-cell-sr">{schemaLabel(records[0], registry)}</span>
     </div>
   );

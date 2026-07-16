@@ -1577,6 +1577,12 @@
   background: color-mix(in srgb, var(--purple) 9%, transparent);
 }
 
+/* The collapsed 세션 N chip reads as a quiet count, not a titled record. */
+.ledger-cell-session .ledger-cell-title {
+  color: var(--muted);
+  font-weight: 650;
+}
+
 .ledger-cell-dot {
   flex-shrink: 0;
   width: 6px;
