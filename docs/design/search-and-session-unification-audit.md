@@ -140,6 +140,10 @@ concurrent 세션 workspace work:
   per discovered session alongside the legacy draft (dual-write during
   the transition window, per §12 dual-run doctrine). Done when a freshly
   discovered session appears in 캘린더/검색 without the manual button.
+  Implementation contract:
+  [`session-kernel-dual-write-spec.md`](session-kernel-dual-write-spec.md)
+  (covers the calendar-flood treatment and manual-capture id
+  convergence).
 - **S3 · session read-path union.** `SessionIndex` reads kernel
   agent-session records united with legacy drafts (kernel wins on id
   collision), starting the migration off `StoredSessionSummary`.

@@ -133,10 +133,19 @@ cannot verify a registration, it says so.
 
 ## 7. Staging and done criteria
 
-1. **Precondition**: R9 shipped (agent sessions are records in the
-   unified ledger), and the capability facade of
-   `memory-as-a-service.md` §3 exists for the pieces the five tools
-   consume.
+1. **Precondition**: R9-equivalent unification shipped (agent sessions
+   are records; slices S2-S3 of the unification audit), and the
+   capability facade exists for the pieces the five tools consume.
+   Verified 2026-07-15: `src/lib/memory-api/` exists but is scoped to
+   the **legacy** memory stack (accepted memories, session evidence,
+   glossary, Ask Mori). No kernel-side capability entry point exists
+   yet; `search_records` / `get_record` can sit on the pure
+   `KernelRepository` directly, but `get_project_context` /
+   `get_recent_activity` / `prepare_resume_context` need a small
+   ledger-side facade (the aggregates are already pure helpers under
+   `src/features/record-ledger/`, so this is an extraction, not new
+   logic). That extraction is part of this surface's slice 2, not a
+   separate project.
 2. **Slice 1**: `search_records` + `get_record` over the kernel
    repository, server binary + staging + 설정 card. Done when Claude
    Code answers "지난주에 X 관련해서 뭐 기록했지" from a cold session
