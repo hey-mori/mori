@@ -140,12 +140,14 @@ concurrent 세션 workspace work:
   variant; verified in-browser (a captured note is findable by body
   text and opens in 기록). Implementation contract:
   [`global-search-spec.md`](global-search-spec.md).
-- **S2 · auto-import writes kernel records too.** Reuse the stable
-  auto-id as the kernel record id seed; upsert an `agent-session` record
-  per discovered session alongside the legacy draft (dual-write during
-  the transition window, per §12 dual-run doctrine). Done when a freshly
-  discovered session appears in 캘린더/검색 without the manual button.
-  Implementation contract:
+- **S2 · auto-import writes kernel records too.** ✅ Core shipped
+  2026-07-16. `useAutoImportSessions` upserts a `provisional`
+  `agent-session` kernel record (id = `autoImportedSessionId`) for each
+  registered session, best-effort so a kernel failure never undoes the
+  legacy draft; 기록 excludes them by default (opt-in facet chip). A
+  discovered session now reaches 검색/프로젝트 with no manual button.
+  Remaining: calendar per-day grouping, manual-capture id convergence,
+  opt-out prune partition. Implementation contract:
   [`session-kernel-dual-write-spec.md`](session-kernel-dual-write-spec.md)
   (covers the calendar-flood treatment and manual-capture id
   convergence).

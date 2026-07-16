@@ -1,7 +1,17 @@
 # 세션 S2 · auto-import dual-writes kernel records (spec)
 
-Status: **proposal spec, 2026-07-15.** The implementation contract for
-slice S2 of
+Status: **core implemented 2026-07-16.** The driver
+(`useAutoImportSessions`) now dual-writes each registered session as a
+`provisional` `agent-session` kernel record via `upsertAgentSessionRecords`
+(`src/lib/agents/agentSessionKernel.ts`, id = `autoImportedSessionId`,
+best-effort, context-bound only to an existing match), and the 기록 explorer
+excludes `agent-session` from its default view (opt-in via the 에이전트 세션
+facet chip). Status is `provisional` (not the spec's original `active`) per the
+user's 2026-07-16 decision, so agent sessions show in 검색·캘린더·프로젝트 but
+never cross into reports/.mori until confirmed. Still open: id convergence with
+the manual capture path (§1), calendar per-day `세션 N` grouping (§3), opt-out
+prune partition (§4), and partial-failure surfacing in the sync notification
+(§5). The implementation contract for slice S2 of
 [`search-and-session-unification-audit.md`](search-and-session-unification-audit.md):
 every auto-registered agent session also becomes an `agent-session`
 kernel record, so the cross-lenses (캘린더 · 검색 · 프로젝트) span AI

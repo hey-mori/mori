@@ -25,6 +25,9 @@ import {
   diffDiscoveredSessions,
   seenFingerprintsFromMetas,
 } from "../../lib/agents/autoImportSessions";
+import { upsertAgentSessionRecords } from "../../lib/agents/agentSessionKernel";
+import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
+import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import {
   loadAutoImportMetas,
   upsertAutoImportMetas,
@@ -142,6 +145,16 @@ export function useAutoImportSessions(): void {
                 at: new Date().toISOString(),
               });
               if (notice) pushImportSyncNotification(notice);
+
+              // Dual-write (S2): mirror each registered session as a
+              // provisional agent-session kernel record so it reaches 검색 ·
+              // 캘린더 · 프로젝트. Best-effort and self-contained — a kernel
+              // failure never undoes the legacy registration above.
+              void upsertAgentSessionRecords(
+                getKernelRepository(),
+                createSchemaRegistry(),
+                persisted,
+              );
             }
           }
 

@@ -76,7 +76,12 @@ export function NoteExplorer({
       (record) =>
         matches(record) &&
         !pinnedIds.has(record.id) &&
-        (typeFilter === null || record.schemaId === typeFilter),
+        // 기록 is the notes experience; AI work has its own home (세션). Agent
+        // sessions are excluded from the default view so a 400-session backfill
+        // never floods it, but the 에이전트 세션 facet chip still opts them in.
+        (typeFilter === null
+          ? record.schemaId !== "agent-session"
+          : record.schemaId === typeFilter),
     );
     return buildExplorerGroups(visible, ledger.contexts, ledger.relations, sort, groupMode);
     // matches closes over `text`.
