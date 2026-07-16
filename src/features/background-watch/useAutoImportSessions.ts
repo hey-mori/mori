@@ -15,6 +15,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useSessionStore } from "../../app/sessionStore";
+import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { isClaudeBridgeAvailable } from "../../lib/claude/claudeTauri";
 import { listAllAgentWorkSessions } from "../../lib/agents/workSessions";
 import {
@@ -59,6 +60,12 @@ export function useAutoImportSessions(): void {
     (state) => state.pushImportSyncNotification,
   );
 
+  // When app storage (localStorage) is full, every draft write throws a quota
+  // error. Registering more sessions would just fail again and re-notify on
+  // every poll, so auto-import goes DORMANT until the failure clears (the user
+  // frees space). This is the loop-breaker: it never hammers a full store.
+  const quotaFailure = useStorageHealthStore((state) => state.lastQuotaFailure);
+
   const [enabled, setEnabled] = useState(
     () => isClaudeBridgeAvailable() && loadAutoImportSettings().enabled,
   );
@@ -80,6 +87,10 @@ export function useAutoImportSessions(): void {
 
   useEffect(() => {
     if (!enabled) return;
+    // Storage is full · stay dormant so we neither fail writes nor re-notify on
+    // a loop. The effect re-runs when the failure clears (a later successful
+    // write or the user clearing it), and auto-import resumes then.
+    if (quotaFailure) return;
     // Seed the "seen" set from the reopen metas we persisted last session, so a
     // fresh launch does not re-flag every already-registered session as new.
     seenRef.current = seenFingerprintsFromMetas(loadAutoImportMetas());
@@ -154,6 +165,7 @@ export function useAutoImportSessions(): void {
     };
   }, [
     enabled,
+    quotaFailure,
     registerDiscoveredSessions,
     pruneAutoImportedSessions,
     pushImportSyncNotification,
