@@ -395,7 +395,7 @@ function LiveLanding({
   const copy = {
     browser: {
       title: "라이브 세션",
-      sub: "데스크톱 앱에서 실행 중인 Claude · Codex 세션의 작업을 실시간으로 따라갑니다.",
+      sub: "데스크톱 앱에서 실행 중인 Claude Code 세션의 작업을 실시간으로 따라갑니다.",
     },
     waiting: {
       title: "라이브 세션 대기 중",
