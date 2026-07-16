@@ -22,6 +22,13 @@ describe("inferOccurredTime", () => {
     expect(inferOccurredTime("모레 마감", now)?.occurredStart).toBe("2026-07-16");
   });
 
+  it("picks the last-mentioned relative day, not the first by list order", () => {
+    // The activity is the finishing act (오늘), even though 어제 is written first.
+    const result = inferOccurredTime("어제 시작한 걸 오늘 끝냈다", now);
+    expect(result?.occurredStart).toBe("2026-07-14");
+    expect(result?.evidence).toBe("오늘");
+  });
+
   it("parses an explicit ISO date with high confidence", () => {
     expect(inferOccurredTime("2026-07-08 커밋 작업", now)).toEqual({
       occurredStart: "2026-07-08",

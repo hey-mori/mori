@@ -35,12 +35,22 @@ function toIsoDate(date: Date): string {
 }
 
 export function inferOccurredTime(text: string, now: Date): InferredTime | null {
+  // Pick the relative-day word that appears LAST in the text, not first by list
+  // order: in "어제 시작한 걸 오늘 끝냈다" the activity date is 오늘 (the finishing
+  // act), so the latest mention wins. Ties break to the longer word so 그저께
+  // beats a coincidental shorter overlap.
+  let best: { word: string; delta: number; pos: number } | null = null;
   for (const { word, delta } of RELATIVE_DAYS) {
-    if (text.includes(word)) {
-      const target = new Date(now.getTime());
-      target.setDate(target.getDate() + delta);
-      return { occurredStart: toIsoDate(target), confidence: 0.9, evidence: word };
+    const pos = text.lastIndexOf(word);
+    if (pos === -1) continue;
+    if (!best || pos > best.pos || (pos === best.pos && word.length > best.word.length)) {
+      best = { word, delta, pos };
     }
+  }
+  if (best) {
+    const target = new Date(now.getTime());
+    target.setDate(target.getDate() + best.delta);
+    return { occurredStart: toIsoDate(target), confidence: 0.9, evidence: best.word };
   }
 
   const iso = text.match(/(\d{4})-(\d{2})-(\d{2})/);
