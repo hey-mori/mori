@@ -70,9 +70,27 @@ describe("buildProjectGroups", () => {
     expect(groups[0].context?.id).toBe("ctx-mori");
   });
 
-  it("skips sessions with no source label", () => {
-    const groups = buildProjectGroups([session({ sessionId: "s1" })], [], [], []);
-    expect(groups).toHaveLength(0);
+  it("keeps a session with no source label under its project name", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s1", projectName: "proj" })],
+      [],
+      [],
+      [],
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].name).toBe("proj");
+    expect(groups[0].sessions).toHaveLength(1);
+  });
+
+  it("falls back to a 기타 bucket when a session has neither label nor name", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s1", sourceLabel: undefined, projectName: "" })],
+      [],
+      [],
+      [],
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].name).toBe("기타");
   });
 
   it("sorts busiest project first", () => {

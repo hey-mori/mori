@@ -39,8 +39,9 @@ function projectKey(label: string): string {
 
 /**
  * Merge sessions (by `sourceLabel`) and kernel records (by context) into one
- * project list, busiest first. Sessions without a source label are skipped
- * (they belong to no project). A project that has only sessions, only records,
+ * project list, busiest first. A session is never dropped: when its source path
+ * did not resolve it falls back to its project name, then a 기타 bucket, so
+ * 프로젝트 shows every session. A project that has only sessions, only records,
  * or both all appear.
  */
 export function buildProjectGroups(
@@ -62,8 +63,10 @@ export function buildProjectGroups(
   };
 
   for (const session of sessions) {
-    const label = session.sourceLabel?.trim();
-    if (!label) continue;
+    // Never drop a session · an auto-imported session whose project path did not
+    // resolve still belongs somewhere, so fall back to its project name, then a
+    // 기타 bucket. This is what fills 프로젝트 instead of leaving it empty.
+    const label = session.sourceLabel?.trim() || session.projectName?.trim() || "기타";
     ensure(label).sessions.push(session);
   }
 
