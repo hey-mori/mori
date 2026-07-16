@@ -1,15 +1,13 @@
 /**
- * 기록 · the document workspace (v2, docs/design/record-workspace/
- * v2-document-workspace.md).
+ * 기록 · the daily-ledger workspace (v3, docs/design/record-workspace/
+ * v3-daily-ledger.md).
  *
- * Two panes, no right panel: a project-grouped note explorer on the left and
- * a center editor that reads and edits the selected record in place, or hosts
- * a new capture. Records that need a decision (policy-held candidates and
- * date-undecided notes) surface in the explorer's pinned 확인할 것 group and
- * are resolved in the editor. The calendar is a separate global view.
+ * A full-bleed two-pane surface, the same skeleton as 세션: a flush ledger rail
+ * on the left (day-grouped records) and a document/capture canvas filling the
+ * rest — no floating card, no PageShell. Records that need a decision surface in
+ * the rail's pinned 확인할 것 group; the calendar is a separate global view.
  */
 import { useEffect, useMemo, useState } from "react";
-import { PageShell } from "../../components/layout/PageShell";
 import { useAppStore } from "../../app/store";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
@@ -94,8 +92,7 @@ export function LedgerWorkspace() {
   }, [selectedId, selected, ledger.loading]);
 
   return (
-    <PageShell maxWidth="full">
-      <div className="ledger ledger-docs">
+    <div className="ledger-workspace">
         <NoteExplorer
           ledger={ledger}
           query={query}
@@ -122,8 +119,7 @@ export function LedgerWorkspace() {
           onSaved={onSaved}
           now={now}
         />
-      </div>
-    </PageShell>
+    </div>
   );
 }
 

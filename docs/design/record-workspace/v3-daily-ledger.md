@@ -46,8 +46,21 @@ Things / Apple Journal):
 
 ## 3. The design
 
-Two panes stay (explorer 340px · document), both re-thought. No third
-rail: context lives in the document meta and the (separate) calendar.
+### 3.0 Layout · match 세션 (the shared list-detail skeleton)
+
+기록 and 세션 are the two-experience pair and MUST share one layout
+skeleton, so switching between them never re-flows the frame. Both are
+**full-bleed** inside `.workspace` (no `PageShell`, no floating card):
+a flush left rail (`--ledger-rail`/`.session-index`, **248px**, `border-right`,
+app background) and a content pane filling the rest. The v2 기록 rendered
+as a bordered rounded card floating in a `PageShell` — that mismatch is
+what read as "the sidebar isn't done right"; it is removed. Do not
+reintroduce a card wrapper on either surface.
+
+### 3.1 The panes
+
+Two panes (ledger rail · document), both re-thought. No third rail:
+context lives in the document meta and the (separate) calendar.
 
 ### 3.1 Explorer · the ledger list
 

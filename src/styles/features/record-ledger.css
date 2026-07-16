@@ -2502,24 +2502,25 @@
 
 /* Document workspace (v2, explorer + editor) */
 
-.ledger-docs {
-  display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
-  gap: 0;
-  height: calc(100vh - 132px);
-  min-height: 520px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
+/* Full-bleed two-pane, the same skeleton as .sessions-workspace: the rail is
+   flush to the app sidebar and the canvas fills the rest, no floating card. */
+.ledger-workspace {
+  display: flex;
+  height: 100%;
+  min-height: 0;
   background: var(--panel, #fff);
 }
 
+/* The ledger rail — a flush left sidebar matching .session-index (fixed width,
+   border-right, app-bg), so 기록 and 세션 read as siblings. */
 .note-explorer {
+  flex: 0 0 var(--ledger-rail, 248px);
+  width: var(--ledger-rail, 248px);
   display: flex;
   flex-direction: column;
   min-height: 0;
   border-right: 1px solid var(--line);
-  background: var(--panel-soft, #fbfbfd);
+  background: var(--base-bg);
 }
 
 .note-explorer-top {
@@ -2838,6 +2839,7 @@
 }
 
 .doc-editor {
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -3211,11 +3213,12 @@
 .doc-history-undo:hover { text-decoration: underline; }
 
 @media (max-width: 1000px) {
-  .ledger-docs {
-    grid-template-columns: 1fr;
-    height: auto;
+  .ledger-workspace {
+    flex-direction: column;
   }
   .note-explorer {
+    flex: 0 0 auto;
+    width: 100%;
     border-right: 0;
     border-bottom: 1px solid var(--line);
     max-height: 320px;
