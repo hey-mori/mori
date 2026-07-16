@@ -28,9 +28,12 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@codemirror/lang-markdown": "^6.5.1",
+    "@lezer/highlight": "^1.2.3",
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/api": "^2.11.0",
     "@vitejs/plugin-react": "^5.1.1",
+    "codemirror": "^6.0.2",
     "fflate": "^0.8.3",
     "lucide-react": "^0.561.0",
     "react": "^19.2.1",

@@ -2885,7 +2885,6 @@
 }
 
 .note-pane-toggle {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2903,26 +2902,27 @@
   color: var(--text);
 }
 
-/* The writing surface: no box, no chrome — the note IS the page. */
-.note-pane-body {
+/* The writing surface: no box, no chrome — the note IS the page. CodeMirror
+   supplies markdown styling + the first-line title; this host just gives it
+   room and the app text color. */
+.note-md-editor {
   flex: 1;
-  width: 100%;
-  min-height: 320px;
-  resize: none;
-  border: 0;
-  outline: 0;
-  background: transparent;
+  min-height: 340px;
   color: var(--text);
-  font-family: inherit;
-  font-size: 16px;
-  line-height: 1.75;
+  cursor: text;
 }
 
-/* The first line reads as a title via a tall first line-height is not reliable
-   across engines; instead the list + panel derive the title. Keep the surface
-   calm and let the writing lead. */
-.note-pane-body::placeholder {
+.note-md-editor .cm-editor {
+  height: 100%;
+}
+
+.note-pane-status {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
   color: var(--muted-2);
+  white-space: nowrap;
 }
 
 .note-extract {

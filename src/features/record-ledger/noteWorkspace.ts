@@ -15,11 +15,25 @@ import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordProposal } from "../../lib/capture/captureTypes";
 import { proposeRecords } from "../../lib/capture";
 
+/** Strips inline markdown syntax for plain-text surfaces (titles, extraction
+ *  records): the note keeps its raw markdown, but derived text never carries
+ *  `**` / `#` / `` ` `` tokens into lists and records. */
+export function stripInlineMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^>\s?/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+}
+
 /** A note's title is its first non-empty line (Bear / Apple Notes model): you
  *  write, and the first line names the note. Empty until the user types. */
 export function deriveNoteTitle(body: string): string {
   for (const rawLine of body.split(/\r?\n/)) {
-    const line = rawLine.trim();
+    const line = stripInlineMarkdown(rawLine).trim();
     if (line) return line.length > 80 ? `${line.slice(0, 80)}…` : line;
   }
   return "";
@@ -43,7 +57,9 @@ export type NoteExtraction = {
  * extract nothing.
  */
 export function extractFromNote(body: string, now: Date = new Date()): NoteExtraction[] {
-  const trimmed = body.trim();
+  // Extraction reads the note as prose: markdown syntax is presentation, so it
+  // is stripped before the proposer runs and never leaks into record titles.
+  const trimmed = stripInlineMarkdown(body).trim();
   if (trimmed.length < 2) return [];
   let proposals: RecordProposal[];
   try {

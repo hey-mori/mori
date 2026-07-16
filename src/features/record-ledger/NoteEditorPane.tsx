@@ -15,6 +15,7 @@ import {
   deriveNoteTitle,
   type NoteExtraction,
 } from "./noteWorkspace";
+import { NoteMarkdownEditor } from "./NoteMarkdownEditor";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
 
@@ -47,7 +48,9 @@ export function NoteEditorPane({
   // edit with fresh state instead of silently discarding it.
   const latestBodyRef = useRef(note?.body ?? "");
   const flushRef = useRef<(text: string) => Promise<MoriRecord | null>>(async () => null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // The editor host, for "is the user typing here?" focus containment.
+  const docRef = useRef<HTMLDivElement>(null);
+  const [saveState, setSaveState] = useState<"idle" | "dirty" | "saved">("idle");
 
   // Load a different note's body when the workspace selects one; a brand-new
   // note (note === null) starts blank. The just-created case is a no-op because
@@ -55,7 +58,8 @@ export function NoteEditorPane({
   useEffect(() => {
     const incomingId = note?.id ?? null;
     if (incomingId === noteIdRef.current) {
-      if (note && note.body !== body && document.activeElement !== textareaRef.current) {
+      const typingHere = docRef.current?.contains(document.activeElement) ?? false;
+      if (note && note.body !== body && !typingHere) {
         // An external edit (e.g. undo) to the same note, while not typing here.
         setBody(note.body);
         latestBodyRef.current = note.body;
@@ -119,10 +123,13 @@ export function NoteEditorPane({
   const onChange = (text: string) => {
     setBody(text);
     latestBodyRef.current = text;
+    setSaveState("dirty");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveTimer.current = null;
-      void flushSave(text);
+      void flushSave(text).then((saved) => {
+        if (saved) setSaveState("saved");
+      });
     }, SAVE_DEBOUNCE_MS);
   };
 
@@ -140,16 +147,6 @@ export function NoteEditorPane({
     };
   }, []);
 
-  // Focus the writing surface on mount (a note is for writing), placing the
-  // caret at the end so a just-selected note continues where it left off.
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.focus();
-    const end = textarea.value.length;
-    textarea.setSelectionRange(end, end);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // The records already confirmed out of this note (derived-from it).
   const confirmed = useMemo(() => {
@@ -187,10 +184,14 @@ export function NoteEditorPane({
 
   return (
     <div className="note-pane">
-      <div className="note-pane-doc base-scroll">
+      <div className="note-pane-doc base-scroll" ref={docRef}>
         <div className="note-pane-doc-inner">
           <header className="note-pane-head">
             <span className="note-pane-date">{note ? formatDate(note.occurredStart ?? note.capturedAt) : `오늘 · ${dateLine}`}</span>
+            <span className="note-pane-status" aria-live="polite">
+              {body.length > 0 ? `${body.length.toLocaleString("ko-KR")}자` : ""}
+              {saveState === "saved" ? " · 저장됨" : saveState === "dirty" ? " · 쓰는 중" : ""}
+            </span>
             <button
               type="button"
               className="note-pane-toggle"
@@ -201,14 +202,11 @@ export function NoteEditorPane({
               {panelOpen ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
             </button>
           </header>
-          <textarea
-            ref={textareaRef}
-            className="note-pane-body"
+          <NoteMarkdownEditor
             value={body}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder="오늘 한 일, 배운 것, 떠오른 생각을 그대로 적으세요.&#10;첫 줄이 제목이 됩니다."
-            aria-label="기록 작성"
-            spellCheck={false}
+            onChange={onChange}
+            placeholder={"오늘 한 일, 배운 것, 떠오른 생각을 그대로 적으세요. 첫 줄이 제목이 됩니다."}
+            autoFocus
           />
         </div>
       </div>

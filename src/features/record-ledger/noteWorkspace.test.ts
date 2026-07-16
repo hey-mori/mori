@@ -35,6 +35,18 @@ describe("deriveNoteTitle", () => {
     expect(deriveNoteTitle("   \n  ")).toBe("");
     expect(deriveNoteTitle("가".repeat(120)).endsWith("…")).toBe(true);
   });
+  it("strips markdown syntax from the title", () => {
+    expect(deriveNoteTitle("# **주간 회고** 노트\n본문")).toBe("주간 회고 노트");
+  });
+});
+
+describe("stripInlineMarkdown in extraction", () => {
+  it("keeps markdown tokens out of extracted record titles", () => {
+    const items = extractFromNote("**다음 주**에 리팩터링을 해야 한다.", now);
+    const task = items.find((i) => i.schemaId === "task");
+    expect(task?.title.includes("*")).toBe(false);
+    expect(task?.title).toContain("다음 주에 리팩터링");
+  });
 });
 
 describe("extractFromNote", () => {
