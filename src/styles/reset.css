@@ -39,6 +39,24 @@ textarea {
   font: inherit;
 }
 
+/* WKWebView (the desktop shell) paints search inputs with its own rounded
+   chrome and a UA min-width that overflows fixed-width rails — Chrome does
+   not, so the bug only shows on desktop. Kill the native appearance so a
+   search field is styled by its owner like any other input. */
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+}
+
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 button {
   cursor: pointer;
 }

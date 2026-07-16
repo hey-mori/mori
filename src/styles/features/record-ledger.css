@@ -2522,6 +2522,8 @@
   min-height: 0;
   border-right: 1px solid var(--line);
   background: var(--base-bg);
+  /* The rail is a fixed column; nothing inside may paint past its edge. */
+  overflow: hidden;
 }
 
 .note-explorer-top {
@@ -2531,11 +2533,14 @@
   border-bottom: 1px solid var(--line);
 }
 
-/* One control row: ＋ · search · 보기 menu (v3 control diet). */
+/* One control row: ＋ · search · 보기 menu (v3 control diet). min-width: 0 on
+   the row and its flexing search keeps the fixed-width rail airtight even
+   where the engine gives inputs an intrinsic minimum (WKWebView). */
 .note-explorer-controls {
   display: flex;
   align-items: center;
   gap: 7px;
+  min-width: 0;
 }
 
 .note-new {
