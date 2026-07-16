@@ -125,11 +125,11 @@ no registry and no `?` cheatsheet.
 - **E1 · Keyboard capture (small, now).** The two bindings + a
   `계속 쓰기` affordance in the saved phase. Also fold a 새 기록
   command into the palette (composes with S1's producer work).
-- **E2 · Honest notifications (small, now).** Wire the category
-  `enabled` map into `useNotifications` and the OS gate, and suppress
-  repeat OS pings for the same still-growing session within a pass
-  window. Alternatively remove the toggles until wired; a dead
-  control may not ship.
+- **E2 · Honest notifications. Implemented 2026-07-15 (`455c8c7`).**
+  A shared `notificationCategories` map drives both the in-app feed
+  filter and the OS gate; safety/informational kinds stay unmutable;
+  a per-kind cooldown collapses the still-growing-session pings; the
+  settings toggle now reads on = fires.
 - **E3 · Bulk review (small).** 모두 반영 + bulk date resolution in
   `ReviewStrip`, looping the existing single-record actions.
 - **E4 · Record as hub (small-medium).** 세션 열기 / 프로젝트 열기 /
