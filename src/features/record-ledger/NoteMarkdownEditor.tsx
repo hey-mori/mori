@@ -24,6 +24,7 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
+import { noteMarkdownEditing } from "./noteEditorExtensions";
 
 /** Line 1 is the note's title: decorate it so it reads large without any
  *  markdown syntax, matching deriveNoteTitle's first-line rule. */
@@ -88,6 +89,14 @@ const baseTheme = EditorView.theme({
     backgroundColor: "color-mix(in srgb, var(--purple) 18%, transparent)",
   },
   ".cm-cursor": { borderLeftColor: "var(--purple)" },
+  ".cm-task-checkbox": {
+    width: "15px",
+    height: "15px",
+    margin: "0 2px 0 0",
+    verticalAlign: "-2px",
+    accentColor: "var(--purple)",
+    cursor: "pointer",
+  },
 });
 
 export function NoteMarkdownEditor({
@@ -115,6 +124,8 @@ export function NoteMarkdownEditor({
         doc: value,
         extensions: [
           history(),
+          // Before the default keymap so Enter continues a list and ⌘B/⌘I wrap.
+          noteMarkdownEditing(),
           keymap.of([...defaultKeymap, ...historyKeymap]),
           markdown({ base: markdownLanguage }),
           syntaxHighlighting(noteHighlight),
