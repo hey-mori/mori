@@ -7,6 +7,7 @@ import {
   Copy,
   Globe,
   Info,
+  Link2,
   ListChecks,
   Pause,
   PenLine,
@@ -22,6 +23,7 @@ import type { LucideIcon } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
 import { buildLiveCompletionNotification } from "../../lib/notifications/liveSessionNotifications";
 import { isClaudeBridgeAvailable, formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { EventActor, FileTouch } from "../../domain/types";
@@ -104,6 +106,8 @@ function SessionBadge({
  */
 export function LiveSessionView() {
   const available = isClaudeBridgeAvailable();
+  const navigate = useAppStore((state) => state.navigate);
+  const openConnections = () => navigate("connections");
   const [watching, setWatching] = useState(true);
   const [diagOpen, setDiagOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
@@ -318,7 +322,7 @@ export function LiveSessionView() {
   if (!available) {
     return (
       <PageShell maxWidth="full" actionBar={<ActionBar label="라이브 세션" end={statusEl} />}>
-        <LiveLanding mode="browser" activeCount={0} />
+        <LiveLanding mode="browser" activeCount={0} onConnect={openConnections} />
       </PageShell>
     );
   }
@@ -361,6 +365,7 @@ export function LiveSessionView() {
           <LiveLanding
             mode={watching ? "waiting" : "paused"}
             activeCount={snapshot.activeCount}
+            onConnect={openConnections}
           />
         ) : (
           <div className="lsv-feed">
@@ -381,9 +386,11 @@ export function LiveSessionView() {
 function LiveLanding({
   mode,
   activeCount,
+  onConnect,
 }: {
   mode: "browser" | "waiting" | "paused";
   activeCount: number;
+  onConnect?: () => void;
 }) {
   const copy = {
     browser: {
@@ -410,6 +417,12 @@ function LiveLanding({
         <span className="lsv-landing-status">
           {activeCount > 0 ? `${activeCount}개 세션 실시간` : "세션을 찾는 중"}
         </span>
+      ) : null}
+      {onConnect && mode !== "paused" ? (
+        <button type="button" className="lsv-landing-connect" onClick={onConnect}>
+          <Link2 size={14} aria-hidden="true" />
+          연동 설정
+        </button>
       ) : null}
       <p className="lsv-landing-foot">지난 세션은 왼쪽 목록에서 열 수 있습니다.</p>
     </div>

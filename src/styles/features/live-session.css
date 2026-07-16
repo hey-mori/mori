@@ -91,6 +91,44 @@
   font-weight: 600;
 }
 
+/* Quiet path from the session landing into 연동 setup. The session workspace
+   consumes connections; this is where it points to configuring them, so a fresh
+   install can connect an agent without hunting through settings. */
+.lsv-landing-connect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel, white);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.lsv-landing-connect:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+  background: var(--purple-50);
+}
+
+.lsv-landing-connect:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.lsv-landing-connect svg {
+  color: var(--muted-2);
+}
+
+.lsv-landing-connect:hover svg {
+  color: var(--purple);
+}
+
 .lsv-landing-foot {
   margin: 8px 0 0;
   font-size: 11px;
