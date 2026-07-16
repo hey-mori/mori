@@ -65,19 +65,51 @@ export function shortDateLabel(iso: string): string {
  * line that adds something beyond the title. Empty when the body has
  * nothing to add, so a bare row stays a single line.
  */
-export function recordSnippet(record: MoriRecord): string {
+export function recordSnippet(record: MoriRecord, query?: string): string {
   const title = record.title.trim();
-  for (const rawLine of record.body.split(/\r?\n/)) {
-    // Strip inline markdown so the row reads as prose (**다음 주** → 다음 주),
-    // matching the already-stripped title it is compared against.
-    const line = stripInlineMarkdown(rawLine).replace(/\s+/g, " ").trim();
+  const clip = (line: string) => (line.length > 96 ? `${line.slice(0, 96)}…` : line);
+  // Strip inline markdown so the row reads as prose (**다음 주** → 다음 주),
+  // matching the already-stripped title it is compared against.
+  const lines = record.body
+    .split(/\r?\n/)
+    .map((raw) => stripInlineMarkdown(raw).replace(/\s+/g, " ").trim());
+
+  // While searching, surface the first body line that actually holds the query
+  // so the match is visible in the row (and can be highlighted), not buried.
+  const q = query?.trim().toLowerCase();
+  if (q) {
+    const hit = lines.find((line) => line && line !== title && line.toLowerCase().includes(q));
+    if (hit) return clip(hit);
+  }
+
+  for (const line of lines) {
     if (!line || line === title) continue;
     // The proposer often titles a record with its (clipped) first line; a
     // snippet that just repeats it adds noise, not scent.
     if (title.length > 8 && (line.startsWith(title) || title.startsWith(line))) continue;
-    return line.length > 96 ? `${line.slice(0, 96)}…` : line;
+    return clip(line);
   }
   return "";
+}
+
+/**
+ * Split `source` into segments around each case-insensitive occurrence of
+ * `query`, so a list row can wrap the hits in <mark>. No query (or no match)
+ * yields a single non-hit segment, so callers render the plain string.
+ */
+export function matchSegments(source: string, query: string): { text: string; hit: boolean }[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [{ text: source, hit: false }];
+  const haystack = source.toLowerCase();
+  const out: { text: string; hit: boolean }[] = [];
+  let cursor = 0;
+  for (let at = haystack.indexOf(needle); at !== -1; at = haystack.indexOf(needle, cursor)) {
+    if (at > cursor) out.push({ text: source.slice(cursor, at), hit: false });
+    out.push({ text: source.slice(at, at + needle.length), hit: true });
+    cursor = at + needle.length;
+  }
+  if (cursor < source.length) out.push({ text: source.slice(cursor), hit: false });
+  return out.length ? out : [{ text: source, hit: false }];
 }
 
 /** A record type present in the list, for the 종류 filter. `count` orders the

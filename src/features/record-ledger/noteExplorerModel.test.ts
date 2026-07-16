@@ -4,6 +4,7 @@ import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import {
   buildExplorerGroups,
   dayGroupLabel,
+  matchSegments,
   RECENT_GROUP_ID,
   recordSnippet,
   recordTypeFacets,
@@ -164,6 +165,35 @@ describe("recordSnippet · row preview", () => {
     const r = { ...record("a", "2026-07-16", "주간 회고 노트") };
     r.body = "주간 회고 노트\n오늘 러닝 30분 했다. **다음 주**에 [문서](http://x)를 봤다.";
     expect(recordSnippet(r)).toBe("오늘 러닝 30분 했다. 다음 주에 문서를 봤다.");
+  });
+
+  it("surfaces the body line that holds the query when searching", () => {
+    const r = { ...record("a", "2026-07-16", "회의 노트") };
+    r.body = "회의 노트\n첫 줄은 무관하다\n결정: 배포는 금요일에 한다";
+    expect(recordSnippet(r)).toBe("첫 줄은 무관하다");
+    expect(recordSnippet(r, "배포")).toBe("결정: 배포는 금요일에 한다");
+  });
+});
+
+describe("matchSegments · search highlighting", () => {
+  it("returns one non-hit segment when the query is empty or absent", () => {
+    expect(matchSegments("배포 일정", "")).toEqual([{ text: "배포 일정", hit: false }]);
+    expect(matchSegments("배포 일정", "회의")).toEqual([{ text: "배포 일정", hit: false }]);
+  });
+
+  it("splits around every case-insensitive occurrence", () => {
+    expect(matchSegments("Deploy the deploy", "deploy")).toEqual([
+      { text: "Deploy", hit: true },
+      { text: " the ", hit: false },
+      { text: "deploy", hit: true },
+    ]);
+  });
+
+  it("keeps the original casing of matched text", () => {
+    expect(matchSegments("배포는 금요일", "배포")).toEqual([
+      { text: "배포", hit: true },
+      { text: "는 금요일", hit: false },
+    ]);
   });
 });
 

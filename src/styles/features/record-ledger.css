@@ -2823,6 +2823,18 @@
   color: var(--muted-2);
 }
 
+/* Search hit: a calm purple wash on the matched span, never a loud yellow. */
+.note-item-mark {
+  border-radius: 3px;
+  padding: 0 1px;
+  background: color-mix(in srgb, var(--purple) 20%, transparent);
+  color: inherit;
+}
+
+.note-item.is-selected .note-item-mark {
+  background: color-mix(in srgb, var(--purple) 30%, transparent);
+}
+
 /* Trailing time: the one signal the group does not already carry. */
 .note-item-time {
   flex-shrink: 0;

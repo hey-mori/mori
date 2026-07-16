@@ -14,6 +14,7 @@ import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "./useRecordLedger";
 import {
   buildExplorerGroups,
+  matchSegments,
   recordSnippet,
   recordTypeFacets,
   shortDateLabel,
@@ -174,6 +175,7 @@ export function NoteExplorer({
                 selected={record.id === selectedId}
                 onSelect={onSelect}
                 groupMode={groupMode}
+                query={query}
                 now={now}
               />
             ))}
@@ -194,6 +196,7 @@ export function NoteExplorer({
                 selected={record.id === selectedId}
                 onSelect={onSelect}
                 groupMode={groupMode}
+                query={query}
                 now={now}
               />
             ))}
@@ -290,12 +293,31 @@ function ViewMenu({
   );
 }
 
+/** Render `text`, wrapping each case-insensitive hit of `query` in a mark so
+ *  the search term stands out in the row without recolouring the whole line. */
+function Highlighted({ text, query }: { text: string; query: string }) {
+  return (
+    <>
+      {matchSegments(text, query).map((seg, i) =>
+        seg.hit ? (
+          <mark key={i} className="note-item-mark">
+            {seg.text}
+          </mark>
+        ) : (
+          seg.text
+        ),
+      )}
+    </>
+  );
+}
+
 function NoteItem({
   record,
   ledger,
   selected,
   onSelect,
   groupMode,
+  query,
   now,
 }: {
   record: MoriRecord;
@@ -303,9 +325,10 @@ function NoteItem({
   selected: boolean;
   onSelect: (recordId: string) => void;
   groupMode: ExplorerGroupMode;
+  query: string;
   now: Date;
 }) {
-  const snippet = recordSnippet(record);
+  const snippet = recordSnippet(record, query);
   // Trailing signal: the one thing the group does not already imply. Day
   // groups carry the date, so rows show the time of day; project groups show
   // the short date. Pinned (undecided) rows read their honest state instead.
@@ -330,8 +353,14 @@ function NoteItem({
     >
       <span className={`note-item-dot ${kindColorClass(record.schemaId)}`} aria-hidden="true" />
       <span className="note-item-body">
-        <span className="note-item-title">{record.title}</span>
-        {snippet ? <span className="note-item-snippet">{snippet}</span> : null}
+        <span className="note-item-title">
+          <Highlighted text={record.title} query={query} />
+        </span>
+        {snippet ? (
+          <span className="note-item-snippet">
+            <Highlighted text={snippet} query={query} />
+          </span>
+        ) : null}
         {pinnedMeta ? <span className="note-item-snippet is-meta">{pinnedMeta}</span> : null}
       </span>
       {trailing ? <span className="note-item-time">{trailing}</span> : null}
