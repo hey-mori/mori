@@ -2687,6 +2687,81 @@
 .doc-chip.is-kind.is-insight { color: var(--purple, #6246f5); background: var(--purple-50, #f2efff); }
 .doc-chip.is-kind.is-task { color: var(--red, #d43a3a); background: var(--red-50, #fff1f1); }
 
+/* Kind picker · the type chip doubles as a retype control. */
+.doc-kind-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.doc-chip.is-picker {
+  gap: 3px;
+  border: 0;
+  cursor: pointer;
+}
+
+.doc-chip.is-picker svg {
+  opacity: 0.7;
+}
+
+.doc-kind-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 30;
+  min-width: 150px;
+  display: grid;
+  gap: 1px;
+  padding: 5px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--base-shadow-overlay, 0 8px 24px rgba(0, 0, 0, 0.12));
+}
+
+.doc-kind-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.doc-kind-opt:hover {
+  background: var(--gray-50);
+}
+
+.doc-kind-opt.is-current {
+  color: var(--purple);
+}
+
+.doc-kind-opt > svg:last-child {
+  margin-left: auto;
+  color: var(--purple);
+}
+
+.doc-kind-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: currentColor;
+}
+
+.doc-kind-dot.is-work { color: var(--blue, #2369f6); }
+.doc-kind-dot.is-exercise { color: var(--green, #15955a); }
+.doc-kind-dot.is-study { color: var(--color-warning-base, #b87812); }
+.doc-kind-dot.is-insight { color: var(--purple, #6246f5); }
+.doc-kind-dot.is-task { color: var(--red, #d43a3a); }
+.doc-kind-dot.is-note { color: var(--muted); }
+.doc-kind-dot.is-source { color: var(--muted-2); }
+
 .doc-body {
   font-size: 14px;
   line-height: 1.8;

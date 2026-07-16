@@ -5,8 +5,8 @@
  * with 원문 and 이력 as quiet disclosures instead of a fixed panel. No right
  * panel. Long notes open in full.
  */
-import { useMemo, useState } from "react";
-import { Check, FileText, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, FileText, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { KernelRevision, MoriRecord } from "../../lib/record-kernel/kernelTypes";
@@ -140,9 +140,7 @@ function RecordDocument({
         <div className="doc-meta">
           <ActivityDateEditor record={record} onUpdate={onUpdate} />
           {contextName ? <span className="doc-chip is-proj">{contextName}</span> : null}
-          <span className={`doc-chip is-kind ${kindColorClass(record.schemaId)}`}>
-            {schemaLabel(record, ledger.registry)}
-          </span>
+          <KindPicker record={record} ledger={ledger} onUpdate={onUpdate} />
         </div>
 
         <div className="doc-body">
@@ -188,5 +186,89 @@ function RecordDocument({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** Kinds that are derived from an external source (imported / distilled) and so
+ *  are not offered as a manual retype target for a note. */
+const DERIVED_KINDS = new Set(["agent-session", "source-document", "qa"]);
+
+/**
+ * The record's kind, as a picker. Retyping a record is a kernel-supported patch
+ * (`applyRecordPatch` validates against the schema it becomes), so this just
+ * emits `onUpdate({ schemaId })`. Schemas come from the registry (schemas-as-
+ * data), so a new user kind appears here with no code change.
+ */
+function KindPicker({
+  record,
+  ledger,
+  onUpdate,
+}: {
+  record: MoriRecord;
+  ledger: RecordLedger;
+  onUpdate: (patch: RecordPatch) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const options = useMemo(
+    () => ledger.registry.list().filter((schema) => !DERIVED_KINDS.has(schema.id)),
+    [ledger.registry],
+  );
+
+  return (
+    <span className="doc-kind-picker" ref={ref}>
+      <button
+        type="button"
+        className={`doc-chip is-kind is-picker ${kindColorClass(record.schemaId)}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="종류 변경"
+      >
+        {schemaLabel(record, ledger.registry)}
+        <ChevronDown size={11} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="doc-kind-menu" role="menu">
+          {options.map((schema) => {
+            const current = schema.id === record.schemaId;
+            return (
+              <button
+                key={schema.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={current}
+                className={`doc-kind-opt${current ? " is-current" : ""}`}
+                onClick={() => {
+                  if (!current) onUpdate({ schemaId: schema.id });
+                  setOpen(false);
+                }}
+              >
+                <span className={`doc-kind-dot ${kindColorClass(schema.id)}`} aria-hidden="true" />
+                {schema.name}
+                {current ? <Check size={12} aria-hidden="true" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </span>
   );
 }
