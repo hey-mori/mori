@@ -16,6 +16,13 @@ import {
   type NoteExtraction,
 } from "./noteWorkspace";
 import { NoteMarkdownEditor } from "./NoteMarkdownEditor";
+import {
+  detectNoteNature,
+  natureFits,
+  NOTE_NATURES,
+  NOTE_NATURE_LABEL,
+  type NoteNature,
+} from "./noteNature";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
 
@@ -51,6 +58,9 @@ export function NoteEditorPane({
   // The editor host, for "is the user typing here?" focus containment.
   const docRef = useRef<HTMLDivElement>(null);
   const [saveState, setSaveState] = useState<"idle" | "dirty" | "saved">("idle");
+  // A user-set nature overrides the detector until the note switches. null =
+  // trust the detector's read of the current body.
+  const [natureOverride, setNatureOverride] = useState<NoteNature | null>(null);
 
   // Load a different note's body when the workspace selects one; a brand-new
   // note (note === null) starts blank. The just-created case is a no-op because
@@ -76,6 +86,7 @@ export function NoteEditorPane({
     noteIdRef.current = incomingId;
     setBody(note?.body ?? "");
     latestBodyRef.current = note?.body ?? "";
+    setNatureOverride(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id]);
 
@@ -165,6 +176,22 @@ export function NoteEditorPane({
     [body, confirmed, now],
   );
 
+  // The note's nature (일지/회의록/…): a user pick wins, else the detector reads
+  // the body. It gates which pending extractions read as on-topic — off-nature
+  // ones fold under a disclosure rather than compete with the fitting ones.
+  const nature = useMemo<NoteNature>(
+    () => natureOverride ?? detectNoteNature(body).nature,
+    [natureOverride, body],
+  );
+  const { fitPending, offPending } = useMemo(() => {
+    const fit: NoteExtraction[] = [];
+    const off: NoteExtraction[] = [];
+    for (const item of panel.pending) {
+      (natureFits(nature, item.schemaId) ? fit : off).push(item);
+    }
+    return { fitPending: fit, offPending: off };
+  }, [panel.pending, nature]);
+
   const onConfirm = useCallback(
     async (proposal: NoteExtraction["proposal"]) => {
       // The note must exist before an extraction can link to it; flushSave
@@ -216,6 +243,19 @@ export function NoteEditorPane({
           <header className="note-extract-head">
             <Sparkles size={14} aria-hidden="true" />
             <span>Mori가 찾은 것</span>
+            <select
+              className="note-nature-chip"
+              value={nature}
+              onChange={(event) => setNatureOverride(event.target.value as NoteNature)}
+              aria-label="이 기록의 성격"
+              title="이 기록의 성격 · 뽑아낼 것을 고릅니다"
+            >
+              {NOTE_NATURES.map((value) => (
+                <option key={value} value={value}>
+                  {NOTE_NATURE_LABEL[value]}
+                </option>
+              ))}
+            </select>
           </header>
           {hasExtractions ? (
             <div className="note-extract-list">
@@ -232,7 +272,7 @@ export function NoteEditorPane({
                   </p>
                 </div>
               ))}
-              {panel.pending.map((item) => (
+              {fitPending.map((item) => (
                 <PendingExtractionCard
                   key={item.key}
                   item={item}
@@ -240,6 +280,19 @@ export function NoteEditorPane({
                   onConfirm={onConfirm}
                 />
               ))}
+              {offPending.length > 0 ? (
+                <details className="note-extract-off">
+                  <summary>이 성격과 결이 다른 {offPending.length}개</summary>
+                  {offPending.map((item) => (
+                    <PendingExtractionCard
+                      key={item.key}
+                      item={item}
+                      ledger={ledger}
+                      onConfirm={onConfirm}
+                    />
+                  ))}
+                </details>
+              ) : null}
             </div>
           ) : (
             <p className="note-extract-empty">
