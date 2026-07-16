@@ -59,6 +59,33 @@ export function isAutoImportedSessionId(sessionId: string): boolean {
   return sessionId.startsWith(AUTO_ID_PREFIX);
 }
 
+/** Agent ids the auto-id can encode, longest-prefix first so an id that is a
+ *  prefix of another can never shadow it. Mirrors `AgentWorkAgentId`. */
+const AUTO_ID_AGENTS = [
+  "antigravity",
+  "opencode",
+  "continue",
+  "claude",
+  "cursor",
+  "cline",
+  "codex",
+  "manus",
+] as const;
+
+/**
+ * The agent a stored auto-imported session came from, recovered from its
+ * stable id (`auto-<agentId>-<hash>`). Null for manual imports or unknown
+ * shapes — callers must render nothing rather than guess.
+ */
+export function agentIdFromAutoImportedSessionId(sessionId: string): string | null {
+  if (!isAutoImportedSessionId(sessionId)) return null;
+  const rest = sessionId.slice(AUTO_ID_PREFIX.length);
+  for (const agentId of AUTO_ID_AGENTS) {
+    if (rest.startsWith(`${agentId}-`)) return agentId;
+  }
+  return null;
+}
+
 /** Stable project id for a discovered session, grouped by its project path so
  *  the 과거 project grouping stays consistent across polls. */
 export function autoImportedProjectId(

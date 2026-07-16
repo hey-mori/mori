@@ -17,6 +17,7 @@ import {
   saveGroupingPreference,
 } from "../../lib/sidebar/groupingPreference";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
+import { agentIdFromAutoImportedSessionId } from "../../lib/agents/autoImportSessions";
 import { SearchField } from "../../components/ui/SearchField";
 import {
   formatClaudeRelativeKo,
@@ -33,6 +34,24 @@ import {
  *  recently — so the list stays stable between turns instead of flickering, and
  *  the 30-minute follow window's older sessions fall through to 과거 instead. */
 const LIVE_WINDOW_MS = 4 * 60_000;
+
+/** Per-agent monogram for the row glyph. Neutral chips (no rainbow): the
+ *  letters differentiate; purple stays the app accent. */
+const AGENT_MONOGRAM: Record<string, string> = {
+  claude: "CL",
+  codex: "CX",
+  opencode: "OC",
+  antigravity: "AG",
+  continue: "CN",
+  cline: "CI",
+  cursor: "CU",
+  manus: "MA",
+};
+
+function sessionMonogram(sessionId: string): string | null {
+  const agentId = agentIdFromAutoImportedSessionId(sessionId);
+  return agentId ? (AGENT_MONOGRAM[agentId] ?? null) : null;
+}
 
 /**
  * 세션 인덱스 · the left column of the unified 세션 workspace.
@@ -192,13 +211,19 @@ export function SessionIndex({
                     className="session-index-row"
                     onClick={() => onSelectLive(row.sessionId)}
                   >
-                    <span className="session-index-row-title">
-                      <span className="session-index-row-name">{row.title}</span>
-                      {row.working ? (
-                        <span className="session-index-working">작업 중</span>
-                      ) : null}
+                    {/* The live poller is Claude Code only today. */}
+                    <span className="session-index-glyph" aria-hidden="true">
+                      CL
                     </span>
-                    <span className="session-index-row-meta">{row.project}</span>
+                    <span className="session-index-row-text">
+                      <span className="session-index-row-title">
+                        <span className="session-index-row-name">{row.title}</span>
+                        {row.working ? (
+                          <span className="session-index-working">작업 중</span>
+                        ) : null}
+                      </span>
+                      <span className="session-index-row-meta">{row.project}</span>
+                    </span>
                   </button>
                 </li>
               ))}
@@ -226,13 +251,13 @@ export function SessionIndex({
               <ul>
                 {group.rows.map((row) => {
                   const active = !liveActive && selectedPastId === row.sessionId;
-                  // One calm signal, never repeating the group: the project in
-                  // recency mode, the time in project mode.
-                  const meta = isProjectMode
-                    ? formatClaudeRelativeKo(row.timestamp)
-                    : row.sourceLabel
-                      ? shortProjectLabel(row.sourceLabel)
-                      : formatClaudeRelativeKo(row.timestamp);
+                  // The meta line skips what the group already implies: project
+                  // groups drop the project token, recency groups carry both.
+                  const project = row.sourceLabel ? shortProjectLabel(row.sourceLabel) : null;
+                  const meta = [isProjectMode ? null : project, formatClaudeRelativeKo(row.timestamp)]
+                    .filter(Boolean)
+                    .join(" · ");
+                  const monogram = sessionMonogram(row.sessionId);
                   return (
                     <li key={row.sessionId}>
                       <button
@@ -240,12 +265,21 @@ export function SessionIndex({
                         className={`session-index-row${active ? " is-active" : ""}`}
                         onClick={() => handleSelectPast(row.sessionId)}
                       >
-                        <span className="session-index-row-title">
-                          <span className="session-index-row-name">{row.title}</span>
+                        {monogram ? (
+                          <span className="session-index-glyph" aria-hidden="true">
+                            {monogram}
+                          </span>
+                        ) : (
+                          <span className="session-index-glyph is-blank" aria-hidden="true" />
+                        )}
+                        <span className="session-index-row-text">
+                          <span className="session-index-row-title">
+                            <span className="session-index-row-name">{row.title}</span>
+                          </span>
+                          {meta ? (
+                            <span className="session-index-row-meta">{meta}</span>
+                          ) : null}
                         </span>
-                        {meta ? (
-                          <span className="session-index-row-meta">{meta}</span>
-                        ) : null}
                       </button>
                     </li>
                   );
