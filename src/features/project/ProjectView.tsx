@@ -20,9 +20,9 @@ import { VirtualList } from "../../components/ui/VirtualList";
 import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummariesWithMetrics,
-  selectSessionSource,
   useSessionStore,
 } from "../../app/sessionStore";
+import { useSessionResolver } from "../session/useSessionResolver";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { buildDemoSessionContent } from "../../lib/demo/demoSessionContent";
 import {
@@ -89,13 +89,7 @@ export function ProjectView() {
   const editUserProjectRecord = useProjectStore((state) => state.editProject);
   const deleteUserProjectRecord = useProjectStore((state) => state.deleteProject);
   const [editing, setEditing] = useState(false);
-  const source = useSessionStore(selectSessionSource);
-  const loadBrowserSession = useSessionStore(
-    (state) => state.loadBrowserSession,
-  );
-  const loadDesktopSession = useSessionStore(
-    (state) => state.loadDesktopSession,
-  );
+  const resolveSession = useSessionResolver();
   const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
@@ -261,21 +255,12 @@ export function ProjectView() {
     setCurrentView("workspace");
   }
 
-  const isDesktop = source === "desktop-sqlite";
   const openSessionId = (sessionId: string, tab: Parameters<typeof openSession>[0] = "flow") => {
-    if (sessionId === activeSessionId) {
-      openSession(tab);
-      return;
-    }
-    if (isDesktop) {
-      void loadDesktopSession(sessionId).then((ok) => {
-        if (!ok) loadBrowserSession(sessionId);
-        openSession(tab);
-      });
-    } else {
-      loadBrowserSession(sessionId);
-      openSession(tab);
-    }
+    // Shared resolver materializes an auto-imported session's transcript, so a
+    // discovered session opens full here just like in 세션, never empty.
+    void resolveSession(sessionId).then((ok) => {
+      if (ok) openSession(tab);
+    });
   };
 
   if (!projectKey || !overview) {

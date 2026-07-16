@@ -16,6 +16,7 @@ import { useAppStore } from "../../app/store";
 import { loadStoredSessionSummaries } from "../../app/sessionStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
+import { useSessionResolver } from "../session/useSessionResolver";
 import { useRecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
 import { RecordInspector } from "./RecordInspector";
@@ -27,7 +28,18 @@ export function ContextView() {
   const { records, registry, entities, relations, contexts, loading, renameEntity, updateRecord } =
     useRecordLedger();
   const navigate = useAppStore((state) => state.navigate);
+  const openSession = useAppStore((state) => state.openSession);
+  const resolveSession = useSessionResolver();
   const [summaries] = useState(() => safeSummaries());
+
+  // Open the specific session the user clicked (materializing a discovered
+  // session's transcript), not a generic jump to the 세션 workspace.
+  const openSessionById = (sessionId: string) => {
+    void resolveSession(sessionId).then((ok) => {
+      if (ok) openSession("flow");
+      else navigate("sessions");
+    });
+  };
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
 
@@ -103,7 +115,7 @@ export function ContextView() {
                           <button
                             type="button"
                             className="context-session-row"
-                            onClick={() => navigate("sessions")}
+                            onClick={() => openSessionById(session.sessionId)}
                           >
                             <span className="context-session-icon" aria-hidden="true">
                               <Radio size={12} />

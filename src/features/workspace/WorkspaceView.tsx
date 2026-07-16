@@ -21,6 +21,7 @@ import {
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
+import { useSessionResolver } from "../session/useSessionResolver";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
@@ -51,9 +52,7 @@ export function WorkspaceView() {
   const draft = useSessionStore((state) => state.draft);
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
-  const loadBrowserSession = useSessionStore(
-    (state) => state.loadBrowserSession,
-  );
+  const resolveSession = useSessionResolver();
   const setCurrentView = useAppStore((state) => state.navigate);
   const openSessionDetail = useAppStore((state) => state.openSession);
   const openProject = useAppStore((state) => state.openProject);
@@ -130,13 +129,11 @@ export function WorkspaceView() {
     row: SessionRow,
     tab: Parameters<typeof openSessionDetail>[0] = "flow",
   ) => {
-    if (row.isActive) {
-      openSessionDetail(tab);
-      return;
-    }
-    if (row.savedAt !== null && loadBrowserSession(row.sessionId)) {
-      openSessionDetail(tab);
-    }
+    // Shared resolver materializes an auto-imported session's transcript, so a
+    // discovered session opens full here just like in 세션, never empty.
+    void resolveSession(row.sessionId).then((ok) => {
+      if (ok) openSessionDetail(tab);
+    });
   };
 
   const createdProjectRows = useMemo<WorkspaceProjectRow[]>(() => {
