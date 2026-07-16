@@ -832,9 +832,48 @@ fn is_titleable_user_text(content: &str) -> bool {
         "<system-reminder>",
         "<command-name>",
     ];
-    !BOILERPLATE_PREFIXES
+    if BOILERPLATE_PREFIXES
         .iter()
         .any(|prefix| lower.starts_with(prefix))
+    {
+        return false;
+    }
+    // A shell prompt / command paste ("PS C:\Users\…>", "$ npm run …",
+    // "C:\dev> …") is machine text, not a session title.
+    if lower.starts_with("ps ")
+        || lower.starts_with("$ ")
+        || lower.starts_with("> ")
+        || is_windows_path_prompt(trimmed)
+    {
+        return false;
+    }
+    // A bare URL or a dropped file @mention ("@C:\Users\…") is not a title.
+    if lower.starts_with("http://") || lower.starts_with("https://") {
+        return false;
+    }
+    if trimmed.starts_with('@') && (trimmed.contains('\\') || trimmed.contains('/')) {
+        return false;
+    }
+    // The Claude Code startup banner and other ASCII art carry no letters up
+    // front; a real prompt (Latin or Hangul) does.
+    if !leading_has_letter(trimmed, 24) {
+        return false;
+    }
+    true
+}
+
+/// Whether the text opens like a Windows shell prompt, e.g. `C:\Users\me> …`.
+fn is_windows_path_prompt(text: &str) -> bool {
+    let mut chars = text.chars();
+    matches!(chars.next(), Some(c) if c.is_ascii_alphabetic())
+        && matches!(chars.next(), Some(':'))
+        && matches!(chars.next(), Some('\\'))
+}
+
+/// Whether any of the first `max` characters is a letter (Latin or, via
+/// `is_alphabetic`, Hangul / CJK). Rejects symbol-only leads like ASCII banners.
+fn leading_has_letter(text: &str, max: usize) -> bool {
+    text.chars().take(max).any(|c| c.is_alphabetic())
 }
 
 fn detect_role(value: &Value) -> String {
@@ -1563,6 +1602,22 @@ mod tests {
         let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
         assert_eq!(detail.title, "Fix calendar time mismatch");
         assert_eq!(detail.messages.len(), 2);
+    }
+
+    #[test]
+    fn is_titleable_rejects_banners_prompts_paths_and_urls() {
+        // Real garbage-title patterns seen in desktop sessions.
+        assert!(!is_titleable_user_text(".   ____          _            __ _ _")); // ASCII banner
+        assert!(!is_titleable_user_text("PS C:\\Users\\Admin> ssh bogyu@host"));
+        assert!(!is_titleable_user_text("C:\\dev\\mori> npm run build"));
+        assert!(!is_titleable_user_text("@C:\\Users\\Admin\\Downloads\\notes.txt"));
+        assert!(!is_titleable_user_text("http://bi-eis-dev.100.88.168.115/ni"));
+        assert!(!is_titleable_user_text("↳ 도구 결과: ok"));
+        assert!(!is_titleable_user_text("This session is being continued from a previous conversation"));
+        // Real prompts survive.
+        assert!(is_titleable_user_text("RAG 파이프라인 고쳐줘"));
+        assert!(is_titleable_user_text("Fix the calendar time mismatch"));
+        assert!(is_titleable_user_text("결제 모듈 리팩터링 방향 결정해줘"));
     }
 
     #[test]
