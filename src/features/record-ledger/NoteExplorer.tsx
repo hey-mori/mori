@@ -182,9 +182,15 @@ export function NoteExplorer({
         ))}
 
         {pinned.length === 0 && groups.length === 0 ? (
-          <p className="note-explorer-empty">
-            {text ? "조건에 맞는 메모가 없습니다." : "아직 메모가 없습니다."}
-          </p>
+          ledger.loading && !text ? (
+            // First load from SQLite is async: stay quiet until it resolves so a
+            // returning user with real data never sees a false "no records" flash.
+            <p className="note-explorer-empty note-explorer-loading">기록을 불러오는 중…</p>
+          ) : (
+            <p className="note-explorer-empty">
+              {text ? "조건에 맞는 메모가 없습니다." : "아직 메모가 없습니다."}
+            </p>
+          )
         ) : null}
       </div>
     </div>

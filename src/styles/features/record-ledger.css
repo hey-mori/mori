@@ -2637,6 +2637,10 @@
   text-align: center;
 }
 
+.note-explorer-loading {
+  opacity: 0.7;
+}
+
 .doc-editor {
   display: flex;
   flex-direction: column;
