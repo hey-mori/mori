@@ -83,15 +83,22 @@ export function LedgerWorkspace() {
     [ledger.records, selectedId],
   );
 
+  // The editor remounts only on a USER-driven switch (open another note, 새
+  // 기록) — never on the fresh-note → created transition, which would unmount
+  // the pane mid-typing and drop the keystrokes typed during the save window.
+  const [editorNonce, setEditorNonce] = useState(0);
   const openRecord = (recordId: string) => {
+    if (recordId !== selectedId || composing) setEditorNonce((n) => n + 1);
     setSelectedId(recordId);
     setComposing(false);
   };
   const startNew = () => {
+    setEditorNonce((n) => n + 1);
     setComposing(true);
     setSelectedId(null);
   };
   const handleNoteCreated = (recordId: string) => {
+    // Adopt the created id in place: same pane instance, typing continues.
     setComposing(false);
     setSelectedId(recordId);
   };
@@ -126,7 +133,7 @@ export function LedgerWorkspace() {
       />
       {showNoteEditor ? (
         <NoteEditorPane
-          key={editingNote?.id ?? "new-note"}
+          key={editorNonce}
           note={editingNote}
           ledger={ledger}
           onNoteCreated={handleNoteCreated}

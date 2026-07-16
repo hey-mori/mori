@@ -90,11 +90,21 @@ export function buildNoteExtractionPanel(
   confirmedRecords: MoriRecord[],
   now: Date = new Date(),
 ): NoteExtractionPanel {
-  const confirmedIds = new Set(
-    confirmedRecords.map((record) => extractionIdentity(record.schemaId, record.title)),
-  );
-  const pending = extractFromNote(body, now).filter(
-    (item) => !confirmedIds.has(extractionIdentity(item.schemaId, item.title)),
-  );
+  // Multiset matching: confirming ONE of two same-titled extractions must
+  // consume exactly one preview, leaving the other still confirmable.
+  const confirmedCounts = new Map<string, number>();
+  for (const record of confirmedRecords) {
+    const id = extractionIdentity(record.schemaId, record.title);
+    confirmedCounts.set(id, (confirmedCounts.get(id) ?? 0) + 1);
+  }
+  const pending = extractFromNote(body, now).filter((item) => {
+    const id = extractionIdentity(item.schemaId, item.title);
+    const remaining = confirmedCounts.get(id) ?? 0;
+    if (remaining > 0) {
+      confirmedCounts.set(id, remaining - 1);
+      return false;
+    }
+    return true;
+  });
   return { confirmed: confirmedRecords, pending };
 }

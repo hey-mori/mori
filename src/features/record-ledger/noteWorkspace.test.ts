@@ -81,4 +81,15 @@ describe("buildNoteExtractionPanel", () => {
     // the task is still pending
     expect(panel.pending.some((p) => p.schemaId === "task")).toBe(true);
   });
+
+  it("consumes only ONE preview per confirmed record when titles collide (multiset)", () => {
+    const body = "스쿼트 했다. 영어 공부했다. 스쿼트 했다.";
+    const previews = extractFromNote(body, now);
+    const squats = previews.filter((p) => p.schemaId === "workout");
+    expect(squats.length).toBe(2);
+    // Confirm exactly one of the two identical squat extractions.
+    const panel = buildNoteExtractionPanel(body, [confirmed("workout", squats[0].title)], now);
+    const pendingSquats = panel.pending.filter((p) => p.schemaId === "workout");
+    expect(pendingSquats.length).toBe(1); // the second stays confirmable
+  });
 });

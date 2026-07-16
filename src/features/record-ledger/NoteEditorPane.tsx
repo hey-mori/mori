@@ -42,6 +42,11 @@ export function NoteEditorPane({
   // Serializes the first note creation so a debounced save and a 확인 click can
   // never mint two note records for the same fresh note.
   const createInFlight = useRef<Promise<MoriRecord | null> | null>(null);
+  // The latest typed body + the latest flushSave closure, so the unmount
+  // cleanup (which captures the first render) can still persist a pending
+  // edit with fresh state instead of silently discarding it.
+  const latestBodyRef = useRef(note?.body ?? "");
+  const flushRef = useRef<(text: string) => Promise<MoriRecord | null>>(async () => null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load a different note's body when the workspace selects one; a brand-new
@@ -53,11 +58,20 @@ export function NoteEditorPane({
       if (note && note.body !== body && document.activeElement !== textareaRef.current) {
         // An external edit (e.g. undo) to the same note, while not typing here.
         setBody(note.body);
+        latestBodyRef.current = note.body;
       }
       return;
     }
+    // An in-place switch: flush any pending edit to the OLD note before the
+    // ref moves, so its keystroke tail is never dropped or misdirected.
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+      void flushRef.current(latestBodyRef.current);
+    }
     noteIdRef.current = incomingId;
     setBody(note?.body ?? "");
+    latestBodyRef.current = note?.body ?? "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id]);
 
@@ -97,16 +111,32 @@ export function NoteEditorPane({
     [ledger, onNoteCreated],
   );
 
+  // Keep the flush closure fresh: the unmount cleanup below has [] deps, so it
+  // would otherwise capture the first render's ledger snapshot and fail to
+  // find the record to update.
+  flushRef.current = flushSave;
+
   const onChange = (text: string) => {
     setBody(text);
+    latestBodyRef.current = text;
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => void flushSave(text), SAVE_DEBOUNCE_MS);
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      void flushSave(text);
+    }, SAVE_DEBOUNCE_MS);
   };
 
-  // Persist any pending edit when unmounting or switching notes.
+  // Persist any pending edit when unmounting (switching notes, leaving 기록):
+  // a pending timer means an unsaved edit, so flush it with the latest body
+  // instead of discarding the keystroke tail. flushSave closes over `ledger`,
+  // which survives the unmount, so the async write still lands.
   useEffect(() => {
     return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        void flushRef.current(latestBodyRef.current);
+      }
     };
   }, []);
 

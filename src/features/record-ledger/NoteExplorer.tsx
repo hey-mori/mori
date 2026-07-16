@@ -61,20 +61,6 @@ export function NoteExplorer({
     schemaLabel(record, ledger.registry).toLowerCase().includes(text);
 
   const visibleRecords = useMemo(() => ledgerVisibleRecords(ledger.records), [ledger.records]);
-  // Facets over all groupable records so the 종류 filter is stable and grows
-  // with the schema taxonomy (a new schema is just another chip).
-  const facets = useMemo(() => recordTypeFacets(visibleRecords, ledger.registry), [visibleRecords, ledger.registry]);
-
-  const pinnedIds = useMemo(
-    () => new Set([...candidates, ...dateUnknown].map((record) => record.id)),
-    [candidates, dateUnknown],
-  );
-  const pinned = useMemo(
-    () => [...candidates, ...dateUnknown].filter(matches),
-    // matches closes over `text`; recompute when records or query change.
-    [candidates, dateUnknown, text, ledger.registry],
-  );
-
   // Extractions (records derived-from a note) live inside their note's 추출
   // panel, not as separate list rows — so the list stays one row per note.
   const derivedIds = useMemo(
@@ -85,6 +71,26 @@ export function NoteExplorer({
           .map((relation) => relation.fromRecordId),
       ),
     [ledger.relations],
+  );
+  // Facets over the same set the list can show (derived excluded), so a chip
+  // never counts rows that cannot appear. Still schema-driven and extensible.
+  const facets = useMemo(
+    () =>
+      recordTypeFacets(
+        visibleRecords.filter((record) => !derivedIds.has(record.id)),
+        ledger.registry,
+      ),
+    [visibleRecords, derivedIds, ledger.registry],
+  );
+
+  const pinnedIds = useMemo(
+    () => new Set([...candidates, ...dateUnknown].map((record) => record.id)),
+    [candidates, dateUnknown],
+  );
+  const pinned = useMemo(
+    () => [...candidates, ...dateUnknown].filter(matches),
+    // matches closes over `text`; recompute when records or query change.
+    [candidates, dateUnknown, text, ledger.registry],
   );
 
   const groups = useMemo(() => {
