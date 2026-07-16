@@ -2543,56 +2543,34 @@
   min-width: 0;
 }
 
-.note-new {
+/* Our shared search field flexes to fill the row; the two icon buttons sit
+   beside it, matching the 세션 rail's calm search + control layout. */
+.note-explorer-controls > .base-search-field {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Ghost icon buttons (새 기록 · 보기) share one calm outline shape so the header
+   reads as a set, not a loud purple ＋ next to a quiet control. */
+.note-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  color: #fff;
-  background: var(--purple);
-  border: 0;
-  border-radius: 9px;
-  cursor: pointer;
-  transition: background-color 0.12s ease;
-}
-
-.note-new:hover {
-  background: color-mix(in srgb, var(--purple) 88%, #000);
-}
-
-.note-new.is-active {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--purple) 20%, transparent);
-}
-
-.note-search {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 9px;
-  background: var(--panel, #fff);
   border: 1px solid var(--line);
   border-radius: 9px;
-  color: var(--muted-2);
+  background: var(--panel, #fff);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
 }
 
-.note-search:focus-within {
-  border-color: color-mix(in srgb, var(--purple) 45%, var(--line));
-}
-
-.note-search input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font-size: 12.5px;
-  color: var(--text);
-  outline: none;
+.note-icon-btn:hover,
+.note-icon-btn.is-active {
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
 }
 
 .note-view {
@@ -2667,38 +2645,42 @@
   color: var(--purple);
 }
 
-.note-filters {
-  display: flex;
-  flex-wrap: nowrap;
+/* The type filter lives in the 보기 popover now (schema-driven, so it scales);
+   the button carries a dot when a filter is on and one calm pill below shows
+   which, clearing on click. No always-on chip row competing for the eye. */
+.note-view-btn.is-filtered {
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
+}
+
+.note-view-scroll {
+  display: grid;
+  gap: 1px;
+  max-height: 208px;
+  overflow-y: auto;
+}
+
+.note-filter-active {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
   gap: 5px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 1px;
-}
-
-.note-filters::-webkit-scrollbar {
-  display: none;
-}
-
-.note-fchip {
-  flex-shrink: 0;
-}
-
-.note-fchip {
-  font-size: 10.5px;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 3px 9px;
-  cursor: pointer;
-  color: var(--muted);
-  background: var(--panel-soft, #fbfbfd);
-  border: 1px solid var(--line);
-}
-
-.note-fchip.is-on {
+  padding: 3px 6px 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--purple);
   background: var(--accent-soft, #f2efff);
-  border-color: color-mix(in srgb, var(--purple) 32%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--purple) 24%, var(--line));
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.note-filter-active svg {
+  opacity: 0.7;
+}
+
+.note-filter-active:hover svg {
+  opacity: 1;
 }
 
 .note-explorer-body {

@@ -9,7 +9,8 @@
  * canvas.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { Check, Plus, SlidersHorizontal, X } from "lucide-react";
+import { SearchField } from "../../components/ui/SearchField";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "./useRecordLedger";
 import {
@@ -22,7 +23,7 @@ import {
   type ExplorerGroupMode,
   type ExplorerSort,
 } from "./noteExplorerModel";
-import { kindColorClass, ledgerVisibleRecords, schemaLabel } from "./recordPresentation";
+import { ledgerVisibleRecords, schemaLabel } from "./recordPresentation";
 
 export function NoteExplorer({
   ledger,
@@ -84,6 +85,19 @@ export function NoteExplorer({
     [visibleRecords, derivedIds, ledger.registry],
   );
 
+  // The active type filter, resolved to its label for the clear-pill (falls
+  // back to the schema label when the filtered type has no visible rows).
+  const activeFacet = useMemo(() => {
+    if (!typeFilter) return null;
+    return (
+      facets.find((facet) => facet.schemaId === typeFilter) ?? {
+        schemaId: typeFilter,
+        name: schemaLabel({ schemaId: typeFilter } as MoriRecord, ledger.registry),
+        count: 0,
+      }
+    );
+  }, [typeFilter, facets, ledger.registry]);
+
   const pinnedIds = useMemo(
     () => new Set([...candidates, ...dateUnknown].map((record) => record.id)),
     [candidates, dateUnknown],
@@ -115,47 +129,41 @@ export function NoteExplorer({
     <div className="note-explorer">
       <div className="note-explorer-top">
         <div className="note-explorer-controls">
+          <SearchField
+            value={query}
+            onChange={onQuery}
+            placeholder="기록 검색"
+            ariaLabel="기록 검색"
+          />
           <button
             type="button"
-            className={`note-new${composing ? " is-active" : ""}`}
+            className={`note-icon-btn${composing ? " is-active" : ""}`}
             onClick={onNew}
             title="새 기록 (n)"
             aria-label="새 기록"
           >
             <Plus size={15} aria-hidden="true" />
           </button>
-          <label className="note-search">
-            <Search size={13} aria-hidden="true" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => onQuery(event.target.value)}
-              placeholder="기록 검색"
-              aria-label="기록 검색"
-            />
-          </label>
-          <ViewMenu groupMode={groupMode} onGroupMode={setGroupMode} sort={sort} onSort={onSort} />
+          <ViewMenu
+            groupMode={groupMode}
+            onGroupMode={setGroupMode}
+            sort={sort}
+            onSort={onSort}
+            facets={facets}
+            typeFilter={typeFilter}
+            onTypeFilter={setTypeFilter}
+          />
         </div>
-        {facets.length > 1 ? (
-          <div className="note-filters base-scroll">
-            <button
-              type="button"
-              className={`note-fchip${typeFilter === null ? " is-on" : ""}`}
-              onClick={() => setTypeFilter(null)}
-            >
-              전체
-            </button>
-            {facets.map((facet) => (
-              <button
-                key={facet.schemaId}
-                type="button"
-                className={`note-fchip${typeFilter === facet.schemaId ? " is-on" : ""}`}
-                onClick={() => setTypeFilter((current) => (current === facet.schemaId ? null : facet.schemaId))}
-              >
-                {facet.name}
-              </button>
-            ))}
-          </div>
+        {activeFacet ? (
+          <button
+            type="button"
+            className="note-filter-active"
+            onClick={() => setTypeFilter(null)}
+            aria-label={`${activeFacet.name} 필터 해제`}
+          >
+            {activeFacet.name}
+            <X size={11} aria-hidden="true" />
+          </button>
         ) : null}
       </div>
 
@@ -219,17 +227,25 @@ export function NoteExplorer({
   );
 }
 
-/** The single 보기 control: grouping lens + sort, one icon, one popover. */
+/** The single 보기 control: type filter + grouping lens + sort, one icon, one
+ *  popover. The 종류 list is schema-driven so it grows with the taxonomy
+ *  instead of a fixed chip row. */
 function ViewMenu({
   groupMode,
   onGroupMode,
   sort,
   onSort,
+  facets,
+  typeFilter,
+  onTypeFilter,
 }: {
   groupMode: ExplorerGroupMode;
   onGroupMode: (mode: ExplorerGroupMode) => void;
   sort: ExplorerSort;
   onSort: (sort: ExplorerSort) => void;
+  facets: { schemaId: string; name: string }[];
+  typeFilter: string | null;
+  onTypeFilter: (schemaId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -270,7 +286,7 @@ function ViewMenu({
     <div className="note-view" ref={ref}>
       <button
         type="button"
-        className={`note-view-btn${open ? " is-open" : ""}`}
+        className={`note-view-btn${open ? " is-open" : ""}${typeFilter ? " is-filtered" : ""}`}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -281,6 +297,19 @@ function ViewMenu({
       </button>
       {open ? (
         <div className="note-view-menu" role="menu">
+          {facets.length > 1 ? (
+            <>
+              <p className="note-view-label">종류</p>
+              <div className="note-view-scroll base-scroll">
+                {option("전체", typeFilter === null, () => onTypeFilter(null))}
+                {facets.map((facet) =>
+                  option(facet.name, typeFilter === facet.schemaId, () =>
+                    onTypeFilter(facet.schemaId),
+                  ),
+                )}
+              </div>
+            </>
+          ) : null}
           <p className="note-view-label">보기</p>
           {option("날짜별", groupMode === "day", () => onGroupMode("day"))}
           {option("프로젝트별", groupMode === "project", () => onGroupMode("project"))}
@@ -351,7 +380,6 @@ function NoteItem({
       className={`note-item${selected ? " is-selected" : ""}`}
       onClick={() => onSelect(record.id)}
     >
-      <span className={`note-item-dot ${kindColorClass(record.schemaId)}`} aria-hidden="true" />
       <span className="note-item-body">
         <span className="note-item-title">
           <Highlighted text={record.title} query={query} />

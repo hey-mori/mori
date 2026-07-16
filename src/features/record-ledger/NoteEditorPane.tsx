@@ -259,7 +259,7 @@ export function NoteEditorPane({
           <NoteMarkdownEditor
             value={body}
             onChange={onChange}
-            placeholder={"오늘 한 일, 배운 것, 떠오른 생각을 그대로 적으세요. 첫 줄이 제목이 됩니다. [[다른 기록]]으로 연결할 수 있어요."}
+            placeholder={"무엇이든 적어보세요"}
             autoFocus
             onOpenLink={handleOpenLink}
           />
@@ -323,9 +323,7 @@ export function NoteEditorPane({
               ) : null}
             </div>
           ) : (
-            <p className="note-extract-empty">
-              쓰다 보면 Mori가 운동·할 일·결정 같은 걸 여기서 뽑아냅니다.
-            </p>
+            <p className="note-extract-empty">쓰면 여기에 정리됩니다.</p>
           )}
           {backlinks.length > 0 ? (
             <details className="note-backlinks" open>
