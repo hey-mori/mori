@@ -24,7 +24,10 @@ export function LedgerWorkspace() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ExplorerSort>("date");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [composing, setComposing] = useState(false);
+  // 기록 opens ready to capture (approved design: capture/organize/review are one
+  // flow on one screen). The explorer still opens any existing note; a calendar
+  // deep-link (openRecordId) overrides this on mount to show that record.
+  const [composing, setComposing] = useState(true);
   const now = useMemo(() => new Date(), []);
   const openRecordId = useAppStore((state) => state.openRecordId);
   const clearOpenRecord = useAppStore((state) => state.clearOpenRecord);
