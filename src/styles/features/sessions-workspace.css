@@ -17,6 +17,35 @@
   flex-direction: column;
 }
 
+/* Loading state while a discovered session's transcript is fetched. */
+.sessions-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sessions-loading-spin {
+  color: var(--purple);
+  animation: sessions-spin 0.9s linear infinite;
+}
+
+@keyframes sessions-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sessions-loading-spin {
+    animation: none;
+  }
+}
+
 /* The embedded PageShell (live feed / review) fills the right pane. */
 .sessions-main > .page-shell {
   flex: 1;

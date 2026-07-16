@@ -30,14 +30,18 @@ import { buildLlmRequestAbstraction, type DisclosureLevel } from "../lib/disclos
 import {
   buildPrimaryImportCandidateFromAgentWorkSession,
   getAgentWorkSession,
+  listAllAgentWorkSessions,
 } from "../lib/agents/workSessions";
 import {
+  agentSessionToStoredDraft,
   autoImportedProjectId,
+  autoImportedSessionId,
   isAutoImportedSessionId,
 } from "../lib/agents/autoImportSessions";
 import {
   loadAutoImportMeta,
   removeAutoImportMeta,
+  upsertAutoImportMetas,
 } from "../lib/agents/autoImportMetaStore";
 import {
   decideFollowReaction,
@@ -1361,13 +1365,30 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     return removed;
   },
   openDiscoveredSession: async (sessionId) => {
-    const meta = loadAutoImportMeta(sessionId);
+    let meta = loadAutoImportMeta(sessionId);
+    if (!meta) {
+      // Self-heal: the reopen descriptor can be missing (a session registered by
+      // an older build, or whose meta was pruned). Re-discover from the live
+      // agent listing, match by the stable id, and repair the descriptor so the
+      // next open is fast.
+      try {
+        const discovered = await listAllAgentWorkSessions();
+        meta = discovered.find((m) => autoImportedSessionId(m) === sessionId) ?? null;
+        if (meta) upsertAutoImportMetas([meta]);
+      } catch {
+        // Discovery unavailable (browser) — nothing to heal with.
+      }
+    }
     if (!meta) return false;
     // Open the placeholder as the active session first, then apply the real
     // transcript ONTO THE SAME id. Materializing in place (rather than minting a
     // new session id) means a later auto-import poll just refreshes this one row
     // instead of resurrecting a duplicate placeholder for the same conversation.
-    if (!get().loadBrowserSession(sessionId)) return false;
+    if (!get().loadBrowserSession(sessionId)) {
+      // A re-discovered session may have no stored draft yet — create one.
+      getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
+      if (!get().loadBrowserSession(sessionId)) return false;
+    }
     try {
       const detail = await getAgentWorkSession(meta);
       const candidate = buildPrimaryImportCandidateFromAgentWorkSession(detail, {
