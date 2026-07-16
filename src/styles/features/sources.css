@@ -1196,7 +1196,7 @@ details.sources-inspector-block[open] {
 
 .source-cc-tile.is-selected {
   border-color: var(--purple);
-  background: linear-gradient(180deg, #fff, #faf8ff);
+  background: linear-gradient(180deg, var(--panel), #faf8ff);
   box-shadow: 0 6px 18px rgba(98, 70, 245, 0.14);
 }
 
@@ -1635,7 +1635,7 @@ details.sources-inspector-block[open] {
   padding: 18px;
   border: 1px solid var(--purple);
   border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff, #fbfaff);
+  background: linear-gradient(180deg, var(--panel), #fbfaff);
 }
 
 .work-bundle-preview-head {

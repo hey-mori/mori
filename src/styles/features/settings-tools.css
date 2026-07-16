@@ -173,7 +173,7 @@
 }
 
 .settings-provider-card.is-planned {
-  background: linear-gradient(180deg, #fff, #fafbfd);
+  background: linear-gradient(180deg, var(--panel), #fafbfd);
 }
 
 .settings-provider-card header {
@@ -625,7 +625,7 @@
   padding: 12px 14px;
   border: 1px solid #d9d0ff;
   border-radius: 10px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, var(--panel), #fbf9ff);
 }
 
 .settings-sqlite-panel header {
@@ -1215,7 +1215,7 @@
   padding: 10px 12px;
   border: 1px solid #d9d0ff;
   border-radius: 10px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, var(--panel), #fbf9ff);
   text-align: left;
   cursor: pointer;
 }

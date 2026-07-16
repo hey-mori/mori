@@ -221,7 +221,7 @@ input,
 .format-grid .selected,
 .theme-options .selected {
   border-color: var(--purple);
-  background: linear-gradient(180deg, #fff, #faf8ff);
+  background: linear-gradient(180deg, var(--panel), #faf8ff);
 }
 
 .source-card div,
@@ -501,7 +501,7 @@ hr {
   color: #253352;
   border: 1px solid #d9d0ff;
   border-radius: 8px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, var(--panel), #fbf9ff);
 }
 
 .draft-status-panel span {

@@ -2699,12 +2699,12 @@ kbd {
   font-weight: 800;
 }
 
-.card-purple { background: linear-gradient(180deg, #fff, #faf8ff); border-color: #ded7ff; }
-.card-green { background: linear-gradient(180deg, #fff, #f5fcf7); border-color: #cfeadb; }
-.card-red { background: linear-gradient(180deg, #fff, #fff6f5); border-color: #ffd5d5; }
-.card-blue { background: linear-gradient(180deg, #fff, #f7faff); border-color: #d7e2ff; }
-.card-cyan { background: linear-gradient(180deg, #fff, #f5fdff); border-color: #cfeff4; }
-.card-gray { background: linear-gradient(180deg, #fff, #fafbfc); border-color: #e0e4ed; }
+.card-purple { background: linear-gradient(180deg, var(--panel), #faf8ff); border-color: #ded7ff; }
+.card-green { background: linear-gradient(180deg, var(--panel), #f5fcf7); border-color: #cfeadb; }
+.card-red { background: linear-gradient(180deg, var(--panel), #fff6f5); border-color: #ffd5d5; }
+.card-blue { background: linear-gradient(180deg, var(--panel), #f7faff); border-color: #d7e2ff; }
+.card-cyan { background: linear-gradient(180deg, var(--panel), #f5fdff); border-color: #cfeff4; }
+.card-gray { background: linear-gradient(180deg, var(--panel), #fafbfc); border-color: #e0e4ed; }
 
 .mini-map {
   position: relative;
@@ -3033,7 +3033,7 @@ kbd {
 
 .metric-card-accent {
   border-color: rgba(255, 117, 117, 0.4);
-  background: linear-gradient(180deg, #fff, #fff5f5);
+  background: linear-gradient(180deg, var(--panel), #fff5f5);
 }
 
 .empty-state {

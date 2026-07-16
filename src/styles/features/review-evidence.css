@@ -404,7 +404,7 @@ td a {
   white-space: pre-wrap;
   border: 1px solid #d9d0ff;
   border-radius: 8px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, var(--panel), #fbf9ff);
 }
 
 .resource-list {
@@ -758,7 +758,7 @@ td a {
   margin: 0;
   box-shadow: 0 4px 14px rgba(20, 25, 36, 0.06);
   border-color: var(--purple);
-  background: linear-gradient(180deg, #ffffff, #fbfaff);
+  background: linear-gradient(180deg, var(--panel), #fbfaff);
 }
 
 .import-header-meta {
@@ -956,7 +956,7 @@ td a {
 }
 
 .integration-card.is-planned {
-  background: linear-gradient(180deg, #ffffff, #fafbfd);
+  background: linear-gradient(180deg, var(--panel), #fafbfd);
   opacity: 0.92;
 }
 
@@ -2088,12 +2088,12 @@ td a {
 
 .review-event-card.status-accepted {
   border-color: #b9dec3;
-  background: linear-gradient(180deg, #ffffff, #f5fcf7);
+  background: linear-gradient(180deg, var(--panel), #f5fcf7);
 }
 
 .review-event-card.status-discarded {
   border-color: #ead0d0;
-  background: linear-gradient(180deg, #ffffff, #fff5f5);
+  background: linear-gradient(180deg, var(--panel), #fff5f5);
   opacity: 0.85;
 }
 
@@ -4920,7 +4920,7 @@ td a {
   padding: 10px 12px;
   border: 1px solid #d9d0ff;
   border-radius: 9px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, var(--panel), #fbf9ff);
   color: #253352;
   font-size: 12px;
   line-height: 1.6;

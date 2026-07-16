@@ -265,7 +265,7 @@
 
 .report-format-button.selected {
   border-color: var(--purple);
-  background: linear-gradient(180deg, #fff, #f8f4ff);
+  background: linear-gradient(180deg, var(--panel), #f8f4ff);
 }
 
 .report-format-button.is-disabled {
@@ -1480,7 +1480,7 @@
 
 .memory-loop-steps li.is-destination {
   border-color: var(--green);
-  background: linear-gradient(180deg, #fff, #f5fcf7);
+  background: linear-gradient(180deg, var(--panel), #f5fcf7);
 }
 
 .memory-loop-icon {
@@ -3214,7 +3214,7 @@
 
 .memory-session-row.is-current {
   border-color: var(--green);
-  background: linear-gradient(180deg, #fff, #f5fcf7);
+  background: linear-gradient(180deg, var(--panel), #f5fcf7);
 }
 
 /* Title block + metadata stacked in one column so the badges wrap *under*
@@ -3497,7 +3497,7 @@
   padding: 10px 12px;
   border: 1px solid #d9d0ff;
   border-radius: 8px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, var(--panel), #fbf9ff);
   font-size: 11px;
   line-height: 1.55;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -3931,12 +3931,12 @@ button.settings-option {
 
 .settings-option.is-selected {
   border-color: var(--purple);
-  background: linear-gradient(180deg, #fff, #faf8ff);
+  background: linear-gradient(180deg, var(--panel), #faf8ff);
 }
 
 .settings-option.is-disabled,
 .settings-option.is-planned {
-  background: linear-gradient(180deg, #fff, #fafbfd);
+  background: linear-gradient(180deg, var(--panel), #fafbfd);
 }
 
 .settings-ai-layout {
