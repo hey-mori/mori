@@ -15,6 +15,13 @@ export {
   type AutomationLevel,
 } from "./applyPolicy";
 export { proposeRecords, type ProposerOptions } from "./ruleBasedProposer";
+export {
+  classifyCaptureSignal,
+  isLowSignalText,
+  lowSignalReasonLabel,
+  type CaptureSignal,
+  type LowSignalReason,
+} from "./captureSignal";
 export { inferOccurredTime, type InferredTime } from "./dateInference";
 export {
   parseConversation,

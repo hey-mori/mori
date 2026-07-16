@@ -10,9 +10,14 @@
  * AI's create revision.
  */
 import { useEffect, useMemo, useReducer, useState } from "react";
-import { ArrowLeft, Check, RotateCcw, Sparkles, Undo2, X } from "lucide-react";
+import { ArrowLeft, Check, FileText, RotateCcw, Sparkles, Undo2, X } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
-import { proposeRecords, type FormEntry } from "../../../lib/capture";
+import {
+  classifyCaptureSignal,
+  lowSignalReasonLabel,
+  proposeRecords,
+  type FormEntry,
+} from "../../../lib/capture";
 import type { SchemaDefinition } from "../../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "../useRecordLedger";
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from "./composerDraft";
@@ -291,6 +296,43 @@ export function RecordComposer({
     );
   }
 
+  // ---- reviewing · nothing worth a record -------------------------------
+  // A low-signal capture (a bare command, tool-run, path) proposes no records:
+  // the raw source is already kept, so this is a calm confirmation, not an
+  // empty candidate list. It says plainly why, and 원문으로 돌아가기 lets the
+  // user re-word if Mori read it wrong.
+  if (state.phase === "reviewing" && state.outcome.records.length === 0) {
+    const signal = classifyCaptureSignal(state.text);
+    const reason = signal.signal === "low" ? lowSignalReasonLabel(signal.reason) : null;
+    return (
+      <section className="composer composer-review composer-review-empty" aria-label="원문 보관됨">
+        <header className="composer-review-head">
+          <strong>원문만 보관했어요</strong>
+          <span className="composer-review-sub">
+            <Check size={12} aria-hidden="true" /> 원문 보관됨
+          </span>
+        </header>
+        <p className="composer-review-empty-copy">
+          <FileText size={14} aria-hidden="true" />
+          {reason ? `${reason} 기록으로 만들지 않았어요.` : "구조화할 내용이 없어 기록으로 만들지 않았어요."}
+          <span> 원문은 그대로 남아 있어요.</span>
+        </p>
+        <footer className="composer-review-foot">
+          <Button variant="primary" disabled={state.saving} onClick={() => void save(true)}>
+            확인
+          </Button>
+          <button
+            type="button"
+            className="composer-link"
+            onClick={() => dispatch({ type: "BACK_TO_TEXT" })}
+          >
+            <ArrowLeft size={12} aria-hidden="true" /> 원문으로 돌아가기
+          </button>
+        </footer>
+      </section>
+    );
+  }
+
   // ---- reviewing ----------------------------------------------------------
   if (state.phase === "reviewing") {
     const keptCount = keptRecordIds(state).length;
@@ -356,6 +398,11 @@ export function RecordComposer({
               <Undo2 size={13} aria-hidden="true" /> 되돌렸어요 · 원문은 보관되어 있어요
             </span>
           </>
+        ) : state.savedRecordIds.length === 0 ? (
+          // Source-only save (low-signal capture, or 원문만 저장): nothing to undo.
+          <span>
+            <Check size={13} aria-hidden="true" /> 원문을 보관했어요
+          </span>
         ) : (
           <>
             <span>

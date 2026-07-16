@@ -80,6 +80,14 @@ describe("proposeRecords · pilot schemas", () => {
     expect(proposal.timeBasis).toBe("unknown");
   });
 
+  it("proposes nothing for a bare command · the source is kept, no record", () => {
+    // A pasted shell command is machine noise. The pipeline still retains the
+    // raw source; the proposer just declines to mint a garbage note record.
+    expect(proposeRecords(textInput("npm run build"))).toHaveLength(0);
+    expect(proposeRecords(textInput("PS C:\\dev\\mori> git status"))).toHaveLength(0);
+    expect(proposeRecords(textInput("src/lib/capture/captureSignal.ts"))).toHaveLength(0);
+  });
+
   it("never fabricates an activity time when no hint and no date word", () => {
     const [proposal] = proposeRecords(textInput("운동 러닝 10분"));
     expect(proposal.occurredStart).toBeUndefined();

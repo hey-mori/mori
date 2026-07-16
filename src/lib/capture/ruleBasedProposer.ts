@@ -19,6 +19,7 @@
  */
 import type { RecordProposal } from "./captureTypes";
 import type { CaptureInput } from "./captureTypes";
+import { isLowSignalText } from "./captureSignal";
 import { parseConversation } from "./conversationParser";
 import { inferOccurredTime, type InferredTime } from "./dateInference";
 
@@ -402,7 +403,11 @@ export function proposeRecords(input: CaptureInput, options: ProposerOptions = {
 
   const segments = segmentContent(content, now);
   if (segments.every((segment) => segment.kind === "note")) {
-    // Unstructured prose stays whole: one faithful note, never fragments.
+    // A bare command · tool-run · path · code block is machine noise, not a
+    // ledger record. The pipeline still retains the raw source (§16.4), so
+    // nothing is lost, but proposing nothing keeps the ledger clean. Real
+    // prose stays whole: one faithful note, never fragments.
+    if (isLowSignalText(content)) return [];
     return [noteProposal(content, wholeBasis, wholeOccurred, wholeConfidence, wholeEvidence)];
   }
 
