@@ -106,8 +106,7 @@ export class KernelRepository {
    *  the visible-and-reversible invariant. */
   async saveRecord(record: MoriRecord, revision: KernelRevision): Promise<KernelResult<MoriRecord>> {
     if (!this.isDesktop()) {
-      this.store().saveRecord(record);
-      this.store().appendRevision(revision);
+      this.saveRecordPairToStore(record, revision);
       return browserResult(record);
     }
     try {
@@ -115,9 +114,23 @@ export class KernelRepository {
       await this.commands.appendKernelRevisionRows([toSqliteKernelRevisionRow(revision)]);
       return desktopResult(record);
     } catch (error) {
-      this.store().saveRecord(record);
-      this.store().appendRevision(revision);
+      this.saveRecordPairToStore(record, revision);
       return fallbackResult(record, error);
+    }
+  }
+
+  /** Browser-store record+revision write, atomic from the caller's view.
+   *  Revision-first so a quota failure cannot persist a record without its
+   *  audit trail; if the record write itself fails, the just-written
+   *  revision is removed best-effort and the error propagates. */
+  private saveRecordPairToStore(record: MoriRecord, revision: KernelRevision): void {
+    const store = this.store();
+    store.appendRevision(revision);
+    try {
+      store.saveRecord(record);
+    } catch (error) {
+      store.removeRevision(revision);
+      throw error;
     }
   }
 

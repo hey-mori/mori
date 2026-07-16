@@ -11,6 +11,11 @@
  * store may depend on which adapter is active.
  */
 import type { KeyValueStorage } from "../storage/storageTypes";
+import {
+  isQuotaExceededError,
+  notifyQuotaFailure,
+  StorageQuotaError,
+} from "../storage/storageQuota";
 import type {
   EntityAlias,
   KernelContext,
@@ -129,6 +134,13 @@ export class KernelBrowserStore {
     this.write(`${PREFIX.revision}${revision.recordId}.${revision.id}`, revision);
   }
 
+  /** Best-effort removal of one revision. Exists so the repository can roll
+   *  back a revision-first save when the record write itself fails; never
+   *  throws (removeItem is not quota-bound). */
+  removeRevision(revision: Pick<KernelRevision, "recordId" | "id">): void {
+    this.storage.removeItem(`${PREFIX.revision}${revision.recordId}.${revision.id}`);
+  }
+
   listRevisions(recordId: string): KernelRevision[] {
     return this.list<KernelRevision>(`${PREFIX.revision}${recordId}.`).sort((a, b) =>
       a.createdAt.localeCompare(b.createdAt),
@@ -157,7 +169,18 @@ export class KernelBrowserStore {
       savedAt: new Date().toISOString(),
       data,
     };
-    this.storage.setItem(key, JSON.stringify(envelope));
+    try {
+      this.storage.setItem(key, JSON.stringify(envelope));
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        // Same contract as the draft repository: notify the app-level health
+        // observer first, then rethrow typed. A failed kernel save must never
+        // look like a successful one.
+        notifyQuotaFailure({ key, at: new Date().toISOString() });
+        throw new StorageQuotaError(key, { cause: error });
+      }
+      throw error;
+    }
   }
 
   private read<T>(key: string): T | null {

@@ -136,12 +136,13 @@ doctrine and code disagree in writing today.
 
 ## 3. Recommended slices
 
-- **Q1 · Kernel quota hardening (now, small).** Route
-  `KernelBrowserStore` writes through the quota-aware path (or
-  replicate catch → notify → typed error), and make
-  `saveRecord`'s record+revision sequence fail atomically from the
-  caller's view (write revision first, or roll back the record on
-  revision failure). Task chip spawned.
+- **Q1 · Kernel quota hardening. Implemented 2026-07-15.**
+  `KernelBrowserStore.write` now shares the storageQuota contract
+  (notify observer, throw typed `StorageQuotaError`), and
+  `saveRecord` writes revision-first with best-effort rollback so a
+  quota failure persists nothing (see `kernelQuota.test.ts`). The
+  composer's existing `SAVE_FAILED` path surfaces the failure
+  honestly.
 - **Q2 · User-initiated backup (pre-K4 interim, small).** A "지금
   백업 만들기" action in 설정 > 저장 reusing the existing `VACUUM
   INTO` path with a user-chosen destination (Save As), plus a
