@@ -2091,6 +2091,60 @@
   color: var(--muted);
 }
 
+/* Session rows inside a project's 세션 section. */
+.context-session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.context-session-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.context-session-row:hover {
+  background: var(--gray-50);
+}
+
+.context-session-icon {
+  display: inline-flex;
+  color: var(--purple);
+  flex-shrink: 0;
+}
+
+.context-session-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-session-time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+.context-empty-records {
+  margin: 6px 2px;
+  font-size: 12px;
+  color: var(--muted-2);
+}
+
 .context-page > .inspector.base-inspector-panel {
   position: sticky;
   top: 16px;
