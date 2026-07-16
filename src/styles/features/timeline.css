@@ -439,7 +439,7 @@ p {
 }
 
 .segmented button.active {
-  background: white;
+  background: var(--panel);
   color: var(--text);
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.06);
 }
@@ -574,7 +574,7 @@ p {
   color: var(--muted);
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 kbd {
@@ -723,12 +723,12 @@ kbd {
 
 .timeline-density-option:hover {
   color: var(--text);
-  background: white;
+  background: var(--panel);
 }
 
 .timeline-density-option.is-active {
   color: var(--purple);
-  background: white;
+  background: var(--panel);
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.06);
 }
 
@@ -766,7 +766,7 @@ kbd {
 
 .timeline-search-input:focus {
   border-color: var(--accent);
-  background: white;
+  background: var(--panel);
 }
 
 .timeline-search-input::-webkit-search-cancel-button {
@@ -872,7 +872,7 @@ kbd {
   overflow-x: auto;
   overflow-y: hidden;
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   border: 1px solid var(--line);
   box-shadow: 0 10px 26px rgba(34, 41, 56, 0.045);
   scrollbar-gutter: stable;
@@ -913,7 +913,7 @@ kbd {
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: white;
+  background: var(--panel);
   text-align: left;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.04);
@@ -1179,7 +1179,7 @@ kbd {
 }
 
 .timeline-mode-option.is-active {
-  background: white;
+  background: var(--panel);
   color: var(--purple);
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.08);
 }
@@ -1213,7 +1213,7 @@ kbd {
 }
 
 .timeline-zoom-step:hover:not(:disabled) {
-  background: white;
+  background: var(--panel);
   color: var(--purple);
 }
 
@@ -1240,7 +1240,7 @@ kbd {
   padding: 2px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: white;
+  background: var(--panel);
 }
 
 .timeline-density-option {
@@ -1297,7 +1297,7 @@ kbd {
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.04);
   overflow: hidden;
   transition: border-color 140ms ease, box-shadow 140ms ease;
@@ -2071,7 +2071,7 @@ kbd {
      as a calm colour box. The timestamp is no longer printed on the face — the
      axis already states it — and full detail lives in the hover card. */
   border-radius: 7px;
-  background: white;
+  background: var(--panel);
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
   transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
   overflow: visible;
@@ -2477,7 +2477,7 @@ kbd {
      same kind of card, so it must read identically. Was 999px (a capsule),
      which clashed with the single cards' box corners in the compact tier. */
   border-radius: 7px;
-  background: white;
+  background: var(--panel);
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.04), 0 4px 12px rgba(20, 25, 36, 0.04);
   /* No `transform` in the transition list. */
   transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
@@ -2714,7 +2714,7 @@ kbd {
   padding: 9px 14px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--panel);
   box-shadow: none;
 }
 
@@ -2724,6 +2724,10 @@ kbd {
   overflow: hidden;
   border-radius: 7px;
   background: linear-gradient(180deg, #fbfcff, #f6f8fc);
+}
+
+[data-base-theme="nightLake"] .mini-track {
+  background: var(--panel-soft);
 }
 
 .mini-track.is-seekable {
@@ -2894,7 +2898,7 @@ kbd {
   padding: 18px 22px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -2950,7 +2954,7 @@ kbd {
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: white;
+  background: var(--panel);
   color: var(--muted);
   font-size: 12px;
   font-weight: 650;
@@ -3000,7 +3004,7 @@ kbd {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   min-width: 0;
 }
 
@@ -3042,7 +3046,7 @@ kbd {
   margin: 0 0 16px 0;
   border: 1px dashed var(--line-strong);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   text-align: center;
   color: var(--muted);
 }
@@ -3147,7 +3151,7 @@ kbd {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .linked-card header {
@@ -3239,7 +3243,7 @@ kbd {
   padding: 4px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: white;
+  background: var(--panel);
   color: var(--muted);
   font-size: 11px;
   cursor: pointer;
@@ -3259,7 +3263,7 @@ kbd {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .trace-stack li > div:first-child {
@@ -3272,7 +3276,7 @@ kbd {
   margin-left: auto;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: white;
+  background: var(--panel);
   padding: 2px 8px;
   font-size: 11px;
   color: var(--muted);
@@ -3297,7 +3301,7 @@ kbd {
   padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   font-size: 12px;
 }
 
@@ -3328,7 +3332,7 @@ kbd {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .related-list li div {
@@ -3438,7 +3442,7 @@ kbd {
 }
 
 .inspector-meta-strip span.has-value {
-  background: white;
+  background: var(--panel);
   color: var(--text);
 }
 
@@ -3648,7 +3652,7 @@ button.inspector-linked-item.is-linkable:hover {
   justify-content: space-between;
   min-height: 40px;
   padding: 0 12px;
-  background: white;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -3710,7 +3714,7 @@ textarea {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: white;
+  background: var(--panel);
   transition: transform 120ms ease;
 }
 
@@ -3812,7 +3816,7 @@ textarea {
   color: var(--muted);
   border: 1px dashed var(--line-strong);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   text-align: center;
 }
 
@@ -3832,7 +3836,7 @@ textarea {
   color: var(--muted);
   border: 1px dashed var(--line-strong);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   text-align: center;
 }
 

@@ -159,7 +159,7 @@
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -247,7 +247,7 @@ progress::-webkit-progress-value {
   width: 76px;
   height: 76px;
   border-radius: 50%;
-  background: white;
+  background: var(--panel);
   font-size: 20px;
   font-weight: 800;
 }
@@ -422,7 +422,7 @@ td a {
   text-align: left;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .resource-list small {
@@ -496,7 +496,7 @@ td a {
   text-align: left;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .report-type-grid button {
@@ -556,7 +556,7 @@ td a {
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -641,7 +641,7 @@ td a {
   text-align: left;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .project-list span {
@@ -668,7 +668,7 @@ td a {
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .report-summary-list {
@@ -684,7 +684,7 @@ td a {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .report-summary-list span {
@@ -750,7 +750,7 @@ td a {
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -810,7 +810,7 @@ td a {
   padding: 18px 20px 20px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -946,7 +946,7 @@ td a {
   padding: var(--base-space-4);
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
 }
 
@@ -1193,7 +1193,7 @@ td a {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
@@ -1357,7 +1357,7 @@ td a {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
   min-width: 0;
   max-height: calc(100vh - 110px);
@@ -1801,7 +1801,7 @@ td a {
   padding: 11px 14px;
   border: 1px solid var(--line);
   border-radius: 11px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -1925,7 +1925,7 @@ td a {
   padding: 16px 18px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
   min-width: 0;
 }
@@ -2082,7 +2082,7 @@ td a {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
@@ -2168,7 +2168,7 @@ td a {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
   font: inherit;
   font-weight: 500;
@@ -2417,7 +2417,7 @@ td a {
 }
 
 .analysis-section-option.is-active {
-  background: white;
+  background: var(--panel);
   color: var(--purple);
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.08);
 }
@@ -2816,7 +2816,7 @@ td a {
 }
 
 .review-issue-filter-pill:hover {
-  background: white;
+  background: var(--panel);
   color: var(--text);
   border-color: var(--muted-2);
 }
@@ -2852,7 +2852,7 @@ td a {
 }
 
 .review-issue-filter-reset:hover {
-  background: white;
+  background: var(--panel);
   color: var(--text);
 }
 
@@ -3434,7 +3434,7 @@ td a {
   padding: 14px 16px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -3539,7 +3539,7 @@ td a {
   padding: 14px 16px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -3554,7 +3554,7 @@ td a {
 .review-next-action-row {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
@@ -3631,7 +3631,7 @@ td a {
   padding: 14px 16px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -3646,7 +3646,7 @@ td a {
 .review-unresolved-item {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -3725,7 +3725,7 @@ td a {
   padding: 14px 16px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -3741,7 +3741,7 @@ td a {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
 }
 
 .review-suggestions-list li header {
@@ -3805,7 +3805,7 @@ td a {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
   font: inherit;
   font-size: 12px;
@@ -4394,7 +4394,7 @@ td a {
   padding: 12px 14px 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
 }
 
 .session-summary-strip header {
@@ -4601,7 +4601,7 @@ td a {
   padding: 8px 9px;
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -4682,7 +4682,7 @@ td a {
   padding: 8px 9px;
   border: 1px solid rgba(125, 91, 255, 0.22);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: inherit;
   text-align: left;
   font: inherit;
@@ -4756,7 +4756,7 @@ td a {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
 }
 
 .handoff-readiness-head {
@@ -4828,7 +4828,7 @@ td a {
   height: 28px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--purple);
 }
 
@@ -4879,7 +4879,7 @@ td a {
   padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: 11px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -4992,7 +4992,7 @@ td a {
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -5082,7 +5082,7 @@ td a {
   padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 11px;
-  background: white;
+  background: var(--panel);
 }
 
 .mori-package-strip h3 {
@@ -5155,7 +5155,7 @@ td a {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
 }
 
 .mori-package-option header {
@@ -5366,7 +5366,7 @@ td a {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: white;
+  background: var(--panel);
 }
 
 .companion-signal-dot {
@@ -5892,7 +5892,7 @@ td a {
   padding: 9px 11px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .client-work-log-when {
@@ -5921,7 +5921,7 @@ td a {
   margin-bottom: 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   overflow: hidden;
 }
 
