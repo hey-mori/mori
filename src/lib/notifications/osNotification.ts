@@ -34,6 +34,9 @@ export type OsNotificationPayload = {
   title: string;
   body: string;
   notificationId: string;
+  /** The originating kind, so the caller can record a per-kind ping time for
+   *  the cooldown that spans renders. */
+  kind: CompanionNotificationKind;
 };
 
 /**
@@ -69,6 +72,17 @@ export type SelectOsNotificationsOptions = {
   maxAgeMs?: number;
   /** Clock injection point for tests; defaults to now. */
   now?: number;
+  /** Suppress a notice whose kind the user has muted. The in-app feed applies
+   *  the same predicate, so a muted category reaches neither surface. */
+  isMuted?: (kind: CompanionNotificationKind) => boolean;
+  /** Minimum ms between OS pings of the same kind. Collapses a noisy kind that
+   *  re-emits with a fresh id each cycle (the 90s auto-import pass re-notifying
+   *  a still-growing session via `import_finished`). Kinds absent here have no
+   *  cooldown. */
+  cooldownByKind?: Partial<Record<CompanionNotificationKind, number>>;
+  /** Last OS-ping time per kind from prior calls, so the cooldown spans the
+   *  renders of a feed that recomputes every tick. */
+  lastNotifiedAtByKind?: Partial<Record<CompanionNotificationKind, number>>;
 };
 
 /** Whether a notification kind is eligible for an OS-level ping at all. */
@@ -90,6 +104,7 @@ export function toOsNotificationPayload(notification: CompanionNotification): Os
     title: clamp(title, TITLE_MAX),
     body: clamp(collapse(notification.message), BODY_MAX),
     notificationId: notification.id,
+    kind: notification.kind,
   };
 }
 
@@ -105,12 +120,28 @@ export function selectOsNotifications(
   const seen = new Set<string>(options.alreadyNotifiedIds ?? []);
   const maxAgeMs = Math.max(0, options.maxAgeMs ?? DEFAULT_MAX_AGE_MS);
   const now = options.now ?? Date.now();
+  const cooldownByKind = options.cooldownByKind ?? {};
+  // Merge the caller's cross-render ping times with the ones fired inside this
+  // batch, so two eligible notices of a cooled-down kind in one tick collapse
+  // to a single ping too.
+  const lastPingByKind = new Map<CompanionNotificationKind, number>(
+    Object.entries(options.lastNotifiedAtByKind ?? {}) as Array<
+      [CompanionNotificationKind, number]
+    >,
+  );
 
   const out: OsNotificationPayload[] = [];
   for (const notification of notifications) {
     if (!isOsEligibleKind(notification.kind)) continue;
+    if (options.isMuted?.(notification.kind)) continue;
     if (seen.has(notification.id)) continue;
     if (isStale(notification, now, maxAgeMs)) continue;
+    const cooldown = cooldownByKind[notification.kind];
+    if (cooldown && cooldown > 0) {
+      const last = lastPingByKind.get(notification.kind);
+      if (last !== undefined && now - last < cooldown) continue;
+      lastPingByKind.set(notification.kind, now);
+    }
     seen.add(notification.id);
     out.push(toOsNotificationPayload(notification));
   }

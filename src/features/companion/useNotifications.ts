@@ -21,6 +21,12 @@ import type {
 import { useBackgroundWatchStore } from "../../app/backgroundWatchStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { buildStorageHealthNotifications } from "../../lib/notifications/storageHealthNotifications";
+import { isNotificationKindMuted } from "../../lib/notifications/notificationCategories";
+import {
+  loadNotificationPreferences,
+  NOTIFICATION_PREFERENCES_CHANGED_EVENT,
+  type NotificationPreferences,
+} from "../../lib/settings/notificationPreferences";
 import { useCompanionSignals } from "./useCompanionSignals";
 
 /**
@@ -48,6 +54,21 @@ export function useNotifications(): {
   isDemo: boolean;
 } {
   const { isDemo } = useCompanionSignals();
+  // Category mute preferences, re-read when the settings surface changes them
+  // (and on cross-tab writes) so toggling a category takes effect live.
+  const [preferences, setPreferences] = useState<NotificationPreferences>(() =>
+    loadNotificationPreferences(),
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sync = () => setPreferences(loadNotificationPreferences());
+    window.addEventListener(NOTIFICATION_PREFERENCES_CHANGED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(NOTIFICATION_PREFERENCES_CHANGED_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
   const imports = useSessionStore((state) => state.imports);
   const followNotifications = useSessionStore((state) => state.followNotifications);
   const liveNotifications = useSessionStore((state) => state.liveNotifications);
@@ -151,7 +172,7 @@ export function useNotifications(): {
           backgroundDetectionNotifications,
           backgroundAnalysisNotifications,
         ]),
-      ),
+      ).filter((notification) => !isNotificationKindMuted(notification.kind, preferences)),
     [
       storageHealthNotifications,
       followNotifications,
@@ -162,6 +183,7 @@ export function useNotifications(): {
       sessionFeedNotifications,
       backgroundDetectionNotifications,
       backgroundAnalysisNotifications,
+      preferences,
     ],
   );
 

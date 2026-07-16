@@ -126,7 +126,11 @@ export function NotificationsCard() {
             control={
               <PreferenceToggle
                 label={`${row.label} 알림`}
-                active={preferences.enabled[row.id]}
+                // The toggle reads as "notify me about this": on = notifications
+                // fire (the default), off = muted. Storage keeps the mute flag
+                // (`enabled[category] === true` means muted), so the visual is
+                // the inverse of the stored value.
+                active={!preferences.enabled[row.id]}
                 onToggle={() => toggle(row.id)}
               />
             }

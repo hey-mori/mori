@@ -115,4 +115,65 @@ describe("selectOsNotifications", () => {
     const out = selectOsNotifications([live], { now: NOW });
     expect(out.map((p) => p.notificationId)).toEqual(["live"]);
   });
+
+  it("carries the kind on the payload for cross-render cooldown bookkeeping", () => {
+    const out = selectOsNotifications([notification("import_finished", { id: "b" })], { now: NOW });
+    expect(out[0]?.kind).toBe("import_finished");
+  });
+
+  it("suppresses a muted kind so it never reaches the OS", () => {
+    const feed = [
+      notification("import_finished", { id: "b" }),
+      notification("live_follow_update", { id: "d" }),
+    ];
+    const out = selectOsNotifications(feed, {
+      now: NOW,
+      isMuted: (kind) => kind === "import_finished",
+    });
+    expect(out.map((p) => p.notificationId)).toEqual(["d"]);
+  });
+
+  it("collapses a re-emitting kind to one ping per cooldown window", () => {
+    const cooldownByKind = { import_finished: 5 * 60 * 1000 };
+    // Each pass's notice is fresh relative to that pass's clock (the growing
+    // session re-emits with a new id + timestamp every 90s); only the cooldown,
+    // not the freshness window, should decide whether it pings.
+    const at = (offsetMs: number, id: string) =>
+      notification("import_finished", { id, createdAt: new Date(NOW + offsetMs).toISOString() });
+
+    const first = selectOsNotifications([at(0, "at-1")], {
+      now: NOW,
+      cooldownByKind,
+      lastNotifiedAtByKind: {},
+    });
+    expect(first.map((p) => p.notificationId)).toEqual(["at-1"]);
+
+    // Second pass 90s later with a fresh id: within cooldown, suppressed.
+    const second = selectOsNotifications([at(90 * 1000, "at-2")], {
+      now: NOW + 90 * 1000,
+      cooldownByKind,
+      lastNotifiedAtByKind: { import_finished: NOW },
+    });
+    expect(second).toHaveLength(0);
+
+    // Past the window, it pings again.
+    const third = selectOsNotifications([at(6 * 60 * 1000, "at-3")], {
+      now: NOW + 6 * 60 * 1000,
+      cooldownByKind,
+      lastNotifiedAtByKind: { import_finished: NOW },
+    });
+    expect(third.map((p) => p.notificationId)).toEqual(["at-3"]);
+  });
+
+  it("collapses two cooled-down notices in the same batch to one ping", () => {
+    const feed = [
+      notification("import_finished", { id: "x", createdAt: new Date(NOW).toISOString() }),
+      notification("import_finished", { id: "y", createdAt: new Date(NOW).toISOString() }),
+    ];
+    const out = selectOsNotifications(feed, {
+      now: NOW,
+      cooldownByKind: { import_finished: 5 * 60 * 1000 },
+    });
+    expect(out.map((p) => p.notificationId)).toEqual(["x"]);
+  });
 });
