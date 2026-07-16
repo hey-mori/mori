@@ -62,6 +62,18 @@ export function LedgerWorkspace() {
     () => ledger.records.find((record) => record.id === selectedId) ?? null,
     [ledger.records, selectedId],
   );
+  // The capture canvas's 오늘 section: today's ledger-visible records (agent
+  // sessions live in 세션), newest first.
+  const todayRecords = useMemo(() => {
+    const todayIso = localIsoDay(now);
+    return byNewest(
+      ledgerVisibleRecords(ledger.records).filter(
+        (record) =>
+          record.schemaId !== "agent-session" &&
+          displayTime(record).iso.slice(0, 10) === todayIso,
+      ),
+    );
+  }, [ledger.records, now]);
 
   const openRecord = (recordId: string) => {
     setSelectedId(recordId);
@@ -71,12 +83,10 @@ export function LedgerWorkspace() {
     setComposing(true);
     setSelectedId(null);
   };
-  const onSaved = (savedRecordIds: string[]) => {
-    if (savedRecordIds.length > 0) {
-      setComposing(false);
-      setSelectedId(savedRecordIds[0]);
-    }
-  };
+  // Saving stays on the canvas: the new record appears in the 오늘 section
+  // right below the composer (Journal feedback loop), and the composer's own
+  // post-save state offers 이어서 쓰기 / 되돌리기.
+  const onSaved = (_savedRecordIds: string[]) => {};
 
   // A selected record that vanishes (discarded from the editor) clears the pane.
   useEffect(() => {
@@ -104,6 +114,8 @@ export function LedgerWorkspace() {
           record={selected}
           composing={composing}
           ledger={ledger}
+          todayRecords={todayRecords}
+          onOpenRecord={openRecord}
           onUpdate={(patch) => {
             if (selected) void ledger.updateRecord(selected, patch);
           }}
@@ -117,4 +129,9 @@ export function LedgerWorkspace() {
 
 function byNewest(records: MoriRecord[]): MoriRecord[] {
   return [...records].sort((a, b) => displayTime(b).iso.localeCompare(displayTime(a).iso));
+}
+
+function localIsoDay(date: Date): string {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

@@ -6,7 +6,7 @@
  * panel. Long notes open in full.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, FileText, X } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { KernelRevision, MoriRecord } from "../../lib/record-kernel/kernelTypes";
@@ -15,6 +15,7 @@ import type { RecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
 import { ActivityDateEditor, InlineEditable, revertPatch } from "./recordEditing";
 import { kindColorClass, schemaLabel, sourceKindLabel } from "./recordPresentation";
+import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
 
 const REVISION_LABEL: Record<string, string> = {
@@ -29,6 +30,8 @@ export function DocumentEditor({
   record,
   composing,
   ledger,
+  todayRecords,
+  onOpenRecord,
   onUpdate,
   onSaved,
   now,
@@ -36,26 +39,48 @@ export function DocumentEditor({
   record: MoriRecord | null;
   composing: boolean;
   ledger: RecordLedger;
+  /** Today's ledger-visible records, newest first — the canvas's 오늘 section. */
+  todayRecords: MoriRecord[];
+  onOpenRecord: (recordId: string) => void;
   onUpdate: (patch: RecordPatch) => void;
   onSaved: (savedRecordIds: string[]) => void;
   now: Date;
 }) {
-  if (composing) {
+  // Idle and composing are one state: the capture canvas (v3). The composer is
+  // the screen's front door, and the day visibly builds right under it.
+  if (composing || !record) {
     return (
       <div className="doc-editor">
-        <div className="doc-editor-main is-center">
-          <RecordComposer ledger={ledger} onSaved={onSaved} />
-        </div>
-      </div>
-    );
-  }
-  if (!record) {
-    return (
-      <div className="doc-editor">
-        <div className="doc-editor-empty">
-          <FileText size={26} aria-hidden="true" />
-          <p className="doc-editor-empty-title">메모를 선택하거나 새 기록을 시작하세요</p>
-          <p className="doc-editor-empty-sub">왼쪽에서 메모를 고르면 여기서 바로 읽고 고칠 수 있어요.</p>
+        <div className="doc-canvas base-scroll">
+          <div className="doc-canvas-inner">
+            <RecordComposer ledger={ledger} onSaved={onSaved} />
+            {todayRecords.length > 0 ? (
+              <section className="doc-today" aria-label="오늘 남긴 기록">
+                <header className="doc-today-head">
+                  오늘
+                  <span className="doc-today-count">{todayRecords.length}</span>
+                </header>
+                <ul className="doc-today-list">
+                  {todayRecords.map((item) => {
+                    const snippet = recordSnippet(item);
+                    const time = item.occurredStart ? timeOfDayLabel(item.occurredStart) : "";
+                    return (
+                      <li key={item.id}>
+                        <button type="button" className="doc-today-item" onClick={() => onOpenRecord(item.id)}>
+                          <span className={`note-item-dot ${kindColorClass(item.schemaId)}`} aria-hidden="true" />
+                          <span className="doc-today-text">
+                            <span className="doc-today-title">{item.title}</span>
+                            {snippet ? <span className="doc-today-snippet">{snippet}</span> : null}
+                          </span>
+                          {time ? <span className="note-item-time">{time}</span> : null}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ) : null}
+          </div>
         </div>
       </div>
     );

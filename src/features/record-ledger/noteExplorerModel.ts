@@ -13,10 +13,69 @@ import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { displayTime, schemaLabel } from "./recordPresentation";
 
 export type ExplorerSort = "date" | "title";
-export type ExplorerGroupMode = "project" | "recent";
+export type ExplorerGroupMode = "day" | "project" | "recent";
 
 export const RECENT_GROUP_ID = "__recent__";
 const RECENT_ID = RECENT_GROUP_ID;
+
+/**
+ * The ledger's native lens (v3): records grouped by the day they happened
+ * (display time: activity time, else capture time). 오늘 · 어제 · "7월 14일
+ * 화요일" · other-year "2025년 12월 3일". Newest day first.
+ */
+export function dayGroupLabel(isoDay: string, now: Date): string {
+  const [year, month, day] = isoDay.split("-").map(Number);
+  const todayIso = localIsoDay(now);
+  if (isoDay === todayIso) return "오늘";
+  if (isoDay === localIsoDay(new Date(now.getTime() - 86_400_000))) return "어제";
+  const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "long" }).format(
+    new Date(year, (month ?? 1) - 1, day ?? 1),
+  );
+  const base = `${month}월 ${day}일 ${weekday}`;
+  return year === now.getFullYear() ? base : `${year}년 ${base}`;
+}
+
+function localIsoDay(date: Date): string {
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** ISO day (local) a record displays on — activity time, else capture time. */
+export function recordDisplayDay(record: MoriRecord): string {
+  return displayTime(record).iso.slice(0, 10);
+}
+
+/** HH:mm for a day-grouped row's trailing time. */
+export function timeOfDayLabel(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime()) || !iso.includes("T")) return "";
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** M/D for a project-grouped row's trailing date. */
+export function shortDateLabel(iso: string): string {
+  const [, month, day] = iso.slice(0, 10).split("-").map(Number);
+  return month && day ? `${month}/${day}` : "";
+}
+
+/**
+ * One quiet content preview line for a list row: the record body's first
+ * line that adds something beyond the title. Empty when the body has
+ * nothing to add, so a bare row stays a single line.
+ */
+export function recordSnippet(record: MoriRecord): string {
+  const title = record.title.trim();
+  for (const rawLine of record.body.split(/\r?\n/)) {
+    const line = rawLine.replace(/\s+/g, " ").trim();
+    if (!line || line === title) continue;
+    // The proposer often titles a record with its (clipped) first line; a
+    // snippet that just repeats it adds noise, not scent.
+    if (title.length > 8 && (line.startsWith(title) || title.startsWith(line))) continue;
+    return line.length > 96 ? `${line.slice(0, 96)}…` : line;
+  }
+  return "";
+}
 
 /** A record type present in the list, for the 종류 filter. `count` orders the
  *  chips by how common the type is, so the filter grows with the schema
@@ -80,8 +139,28 @@ export function buildExplorerGroups(
   contexts: KernelContext[],
   relations: KernelRelation[],
   sort: ExplorerSort,
-  groupMode: ExplorerGroupMode = "project",
+  groupMode: ExplorerGroupMode = "day",
+  now: Date = new Date(),
 ): ExplorerGroup[] {
+  // 날짜별 (v3 default): the ledger read as days accumulating, newest day
+  // first; rows within a day follow the sort (최신순 = latest first).
+  if (groupMode === "day") {
+    const byDay = new Map<string, MoriRecord[]>();
+    for (const record of records) {
+      const day = recordDisplayDay(record);
+      const bucket = byDay.get(day);
+      if (bucket) bucket.push(record);
+      else byDay.set(day, [record]);
+    }
+    return [...byDay.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([day, group]) => ({
+        id: `day:${day}`,
+        name: dayGroupLabel(day, now),
+        records: sortRecords(group, sort),
+      }));
+  }
+
   // 최근순: one flat list, newest first, no project headers.
   if (groupMode === "recent") {
     return records.length > 0

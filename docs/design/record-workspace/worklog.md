@@ -1,5 +1,29 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (v3 · Daily Ledger, 2026-07-16)
+
+- 기록 re-planned and rebuilt to the reference bar
+  (`v3-daily-ledger.md`): the list now reads as days accumulating
+  (오늘/어제/dated sticky headers, default `day` group mode in
+  `noteExplorerModel`), rows are two-line Bear-style (kind dot · title ·
+  body snippet via `recordSnippet` · trailing HH:mm), and the header
+  dieted to one control row (＋ icon · search · one 보기 popover with
+  날짜별/프로젝트별 + 정렬) plus the horizontal facet-chip row. Pane
+  widened 282→340px.
+- The center pane's idle/composing states merged into the **capture
+  canvas**: composer + an 오늘 section listing today's records right
+  below (Apple Journal loop). Saving stays on the canvas and the new
+  record appears immediately; the passive "메모를 선택하세요" empty
+  state is deleted. A selected record reads as a document (21px/750
+  title, 15px/1.75 body at a 760px measure).
+- 세션 index rows upgraded: per-agent monogram chip (CL/CX/…, recovered
+  from the auto-import id via `agentIdFromAutoImportedSessionId`),
+  two-line anatomy (title / project · relative time), 600-weight titles.
+- Verified in-browser light + dark: capture → 정리 → 저장 leaves you on
+  the canvas with the record under 오늘 and in the list's 오늘 group;
+  view menu switches 날짜별/프로젝트별; facet chips gained 활동
+  automatically (extensibility). All tests green.
+
 ## Current stage
 
 R1-R7 done. **v4 shell reframe underway** ("두 경험 + 교차 렌즈": 기록=notes·edit,

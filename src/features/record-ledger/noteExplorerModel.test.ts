@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { KernelContext, KernelRelation, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
-import { buildExplorerGroups, RECENT_GROUP_ID, recordTypeFacets } from "./noteExplorerModel";
+import {
+  buildExplorerGroups,
+  dayGroupLabel,
+  RECENT_GROUP_ID,
+  recordSnippet,
+  recordTypeFacets,
+  timeOfDayLabel,
+} from "./noteExplorerModel";
 
 function record(id: string, occurredStart: string, title = id, contextIds: string[] = []): MoriRecord {
   return {
@@ -37,7 +44,7 @@ describe("buildExplorerGroups", () => {
     const relations: KernelRelation[] = [
       { id: "r1", fromRecordId: "b1", type: "belongs-to", toContextId: "ctx-b", createdAt: "2026-07-10" },
     ];
-    const groups = buildExplorerGroups(records, contexts, relations, "date");
+    const groups = buildExplorerGroups(records, contexts, relations, "date", "project");
     expect(groups.map((g) => g.name)).toEqual(["tcc-ng-gw", "mori", "기타"]);
     expect(groups[2].records.map((r) => r.id)).toEqual(["loose"]);
   });
@@ -48,7 +55,7 @@ describe("buildExplorerGroups", () => {
       record("new", "2026-07-20", "new", ["ctx-a"]),
       record("mid", "2026-07-10", "mid"),
     ];
-    const groups = buildExplorerGroups(records, contexts, relations(), "date");
+    const groups = buildExplorerGroups(records, contexts, relations(), "date", "project");
     expect(groups.map((g) => g.name)).toEqual(["tcc-ng-gw", "mori", "기타"]);
   });
 
@@ -57,9 +64,9 @@ describe("buildExplorerGroups", () => {
       record("z", "2026-07-10", "z", ["ctx-a"]),
       record("a", "2026-07-14", "a", ["ctx-a"]),
     ];
-    const byDate = buildExplorerGroups(records, contexts, relations(), "date");
+    const byDate = buildExplorerGroups(records, contexts, relations(), "date", "project");
     expect(byDate[0].records.map((r) => r.id)).toEqual(["a", "z"]); // newest first
-    const byTitle = buildExplorerGroups(records, contexts, relations(), "title");
+    const byTitle = buildExplorerGroups(records, contexts, relations(), "title", "project");
     expect(byTitle[0].records.map((r) => r.id)).toEqual(["a", "z"]); // a < z
   });
 });
@@ -86,6 +93,78 @@ describe("recent group mode", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].id).toBe(RECENT_GROUP_ID);
     expect(groups[0].records.map((r) => r.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("day group mode (v3 default)", () => {
+  const now = new Date("2026-07-16T10:00:00");
+
+  it("groups records into 오늘/어제/dated days, newest day first", () => {
+    const groups = buildExplorerGroups(
+      [
+        record("today", "2026-07-16"),
+        record("yesterday", "2026-07-15"),
+        record("older", "2026-07-14"),
+        record("lastYear", "2025-12-03"),
+      ],
+      contexts,
+      relations(),
+      "date",
+      "day",
+      now,
+    );
+    expect(groups.map((g) => g.name)).toEqual([
+      "오늘",
+      "어제",
+      "7월 14일 화요일",
+      "2025년 12월 3일 수요일",
+    ]);
+    expect(groups[0].records.map((r) => r.id)).toEqual(["today"]);
+  });
+
+  it("is the default group mode", () => {
+    const groups = buildExplorerGroups(
+      [record("a", "2026-07-16", "a", ["ctx-a"])],
+      contexts,
+      relations(),
+      "date",
+      undefined,
+      now,
+    );
+    expect(groups[0].id).toBe("day:2026-07-16");
+  });
+
+  it("labels 오늘/어제 relative to now", () => {
+    expect(dayGroupLabel("2026-07-16", now)).toBe("오늘");
+    expect(dayGroupLabel("2026-07-15", now)).toBe("어제");
+  });
+});
+
+describe("recordSnippet · row preview", () => {
+  it("returns the first body line that adds something beyond the title", () => {
+    const r = { ...record("a", "2026-07-16", "gRPC 라우팅 재정비") };
+    r.body = "gRPC 라우팅 재정비\n헬스체크는 다음에 추가하기로 했다.";
+    expect(recordSnippet(r)).toBe("헬스체크는 다음에 추가하기로 했다.");
+  });
+
+  it("returns empty when the body only repeats the title", () => {
+    const r = { ...record("a", "2026-07-16", "오늘 러닝 30분 했다") };
+    r.body = "오늘 러닝 30분 했다";
+    expect(recordSnippet(r)).toBe("");
+  });
+
+  it("clips long lines", () => {
+    const r = { ...record("a", "2026-07-16", "제목") };
+    r.body = "가".repeat(140);
+    expect(recordSnippet(r).length).toBeLessThanOrEqual(97);
+    expect(recordSnippet(r).endsWith("…")).toBe(true);
+  });
+});
+
+describe("timeOfDayLabel", () => {
+  it("formats HH:mm and stays empty for date-only values", () => {
+    expect(timeOfDayLabel("2026-07-16T14:05:00")).toBe("14:05");
+    expect(timeOfDayLabel("2026-07-16")).toBe("");
   });
 });
 

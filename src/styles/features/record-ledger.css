@@ -2504,7 +2504,7 @@
 
 .ledger-docs {
   display: grid;
-  grid-template-columns: 282px minmax(0, 1fr);
+  grid-template-columns: 340px minmax(0, 1fr);
   gap: 0;
   height: calc(100vh - 132px);
   min-height: 520px;
@@ -2525,23 +2525,34 @@
 .note-explorer-top {
   display: grid;
   gap: 8px;
-  padding: 12px 12px 10px;
+  padding: 12px 12px 9px;
   border-bottom: 1px solid var(--line);
+}
+
+/* One control row: ＋ · search · 보기 menu (v3 control diet). */
+.note-explorer-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .note-new {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 12.5px;
-  font-weight: 700;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
   color: #fff;
   background: var(--purple);
   border: 0;
   border-radius: 9px;
-  padding: 7px 12px;
   cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.note-new:hover {
+  background: color-mix(in srgb, var(--purple) 88%, #000);
 }
 
 .note-new.is-active {
@@ -2550,13 +2561,20 @@
 
 .note-search {
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: center;
   gap: 7px;
+  height: 32px;
   padding: 0 9px;
   background: var(--panel, #fff);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 9px;
   color: var(--muted-2);
+}
+
+.note-search:focus-within {
+  border-color: color-mix(in srgb, var(--purple) 45%, var(--line));
 }
 
 .note-search input {
@@ -2564,52 +2582,99 @@
   min-width: 0;
   border: 0;
   background: transparent;
-  padding: 7px 0;
+  padding: 0;
   font-size: 12.5px;
   color: var(--text);
   outline: none;
 }
 
-.note-controls {
-  display: flex;
-  gap: 6px;
+.note-view {
+  position: relative;
+  flex-shrink: 0;
 }
 
-.note-seg {
+.note-view-btn {
   display: inline-flex;
-  gap: 2px;
-  background: var(--panel, #fff);
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 2px;
-}
-
-.note-seg:first-child {
-  flex: 1;
-}
-
-.note-seg button {
-  flex: 1;
-  font-size: 11.5px;
-  font-weight: 700;
+  border-radius: 9px;
+  background: var(--panel, #fff);
   color: var(--muted);
-  background: transparent;
-  border: 0;
-  border-radius: 6px;
-  padding: 4px 8px;
   cursor: pointer;
-  white-space: nowrap;
 }
 
-.note-seg button.is-on {
-  background: var(--accent-soft, #f2efff);
+.note-view-btn:hover,
+.note-view-btn.is-open {
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
+}
+
+.note-view-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 1px;
+  min-width: 148px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, #fff);
+  box-shadow: 0 14px 36px rgba(20, 25, 45, 0.14);
+}
+
+.note-view-label {
+  margin: 4px 8px 2px;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.note-view-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.note-view-opt:hover {
+  background: var(--panel-soft, #fbfbfd);
+}
+
+.note-view-opt.is-on {
   color: var(--purple);
 }
 
 .note-filters {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+
+.note-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.note-fchip {
+  flex-shrink: 0;
 }
 
 .note-fchip {
@@ -2633,11 +2698,11 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 8px 6px 16px;
+  padding: 4px 8px 16px;
 }
 
 .note-group {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .note-group-head {
@@ -2645,9 +2710,20 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 750;
   color: var(--muted);
-  padding: 6px 8px;
+  padding: 8px 8px 5px;
+}
+
+/* Day headers stay put while their rows scroll under, so the reader always
+   knows which day they are in (Things/Linear sticky-group pattern). */
+.note-group-head.is-sticky {
+  position: sticky;
+  top: -4px;
+  z-index: 5;
+  background: color-mix(in srgb, var(--panel-soft, #fbfbfd) 92%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 .note-group-head.is-pinned {
@@ -2669,28 +2745,31 @@
 .note-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
   text-align: left;
-  padding: 6px 8px;
+  padding: 8px 9px;
   background: transparent;
   border: 0;
-  border-radius: 8px;
+  border-radius: 9px;
   cursor: pointer;
+  transition: background-color 0.1s ease;
 }
 
 .note-item:hover {
   background: var(--panel, #fff);
+  box-shadow: 0 1px 2px rgba(20, 25, 40, 0.05);
 }
 
 .note-item.is-selected {
   background: var(--accent-soft, #f2efff);
+  box-shadow: none;
 }
 
 .note-item-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   margin-top: 5px;
   flex-shrink: 0;
   background: var(--muted-2);
@@ -2706,12 +2785,13 @@
   min-width: 0;
   flex: 1;
   display: grid;
-  gap: 1px;
+  gap: 2px;
 }
 
 .note-item-title {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2722,12 +2802,28 @@
   color: var(--purple);
 }
 
-.note-item-meta {
-  font-size: 10.5px;
-  color: var(--muted-2);
+/* One quiet content line under the title (Bear-style scent). */
+.note-item-snippet {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.note-item-snippet.is-meta {
+  color: var(--muted-2);
+}
+
+/* Trailing time: the one signal the group does not already carry. */
+.note-item-time {
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 10.5px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-2);
 }
 
 .note-explorer-empty {
@@ -2814,27 +2910,119 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 26px 34px 60px;
+  padding: 34px 44px 80px;
 }
 
-.doc-editor-main.is-center {
-  max-width: 680px;
-  margin: 0 auto;
-  width: 100%;
+/* A record reads as a document: a comfortable centered measure, never a
+   line stretched across the whole pane. */
+.doc-editor-main > * {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .doc-title {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -0.012em;
+  line-height: 1.3;
   color: var(--text);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .doc-title .record-inline-view,
 .doc-title .record-inline-edit {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 21px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+/* ── Capture canvas · idle/composing = the composer with the day building
+   under it (v3, Apple Journal pattern). ─────────────────────────────── */
+.doc-canvas {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 34px 44px 80px;
+}
+
+.doc-canvas-inner {
+  display: grid;
+  gap: 26px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.doc-today {
+  display: grid;
+  gap: 4px;
+}
+
+.doc-today-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 2px 2px;
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--muted);
+}
+
+.doc-today-count {
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+.doc-today-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-today-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.doc-today-item:hover {
+  background: var(--panel-soft, #fbfbfd);
+}
+
+.doc-today-text {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.doc-today-title {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-today-snippet {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .doc-meta {
@@ -2948,8 +3136,8 @@
 .doc-kind-dot.is-source { color: var(--muted-2); }
 
 .doc-body {
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.75;
   color: var(--text);
 }
 
@@ -2960,8 +3148,8 @@
 
 .doc-body .record-inline-edit.is-multiline {
   min-height: 200px;
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.75;
 }
 
 .doc-disclosure {
@@ -3021,31 +3209,6 @@
 }
 
 .doc-history-undo:hover { text-decoration: underline; }
-
-.doc-editor-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--muted-2);
-  padding: 40px;
-  text-align: center;
-}
-
-.doc-editor-empty-title {
-  margin: 6px 0 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.doc-editor-empty-sub {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted-2);
-}
 
 @media (max-width: 1000px) {
   .ledger-docs {
