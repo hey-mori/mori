@@ -169,7 +169,7 @@
 
 .settings-provider-card.is-selected {
   border-color: var(--purple);
-  box-shadow: inset 3px 0 0 var(--purple);
+  background: var(--purple-50);
 }
 
 .settings-provider-card.is-planned {

@@ -216,7 +216,6 @@
 
 .sources-trow.is-selected {
   background: var(--purple-50);
-  box-shadow: inset 3px 0 0 var(--purple);
 }
 
 .sources-tcell-method {
