@@ -1544,7 +1544,7 @@ details.sources-inspector-block[open] {
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
 }
 
@@ -1604,7 +1604,7 @@ details.sources-inspector-block[open] {
   padding: 7px 9px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
 }
 
@@ -1680,7 +1680,7 @@ details.sources-inspector-block[open] {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .work-bundle-stats span {
@@ -1755,7 +1755,7 @@ details.sources-inspector-block[open] {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .work-bundle-source-main {

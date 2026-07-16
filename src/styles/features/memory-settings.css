@@ -250,7 +250,7 @@
   padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: white;
+  background: var(--panel);
   text-align: center;
   cursor: pointer;
   transition:
@@ -567,7 +567,7 @@
   padding: 6px 9px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: white;
+  background: var(--panel);
   cursor: pointer;
   line-height: 1;
 }
@@ -667,7 +667,7 @@
   padding: 30px 40px 36px;
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-lg);
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
   /* The rendered report is a long document. Bound it to the viewport and scroll
      it INSIDE the paper, so a long report no longer spills out of its box and
@@ -1174,7 +1174,7 @@
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
 }
 
@@ -1189,7 +1189,7 @@
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
 }
 
 .consolidation-empty-hero-icon {
@@ -2589,7 +2589,7 @@
   gap: 6px;
   border: 1px solid var(--line, #e6e3f1);
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--panel);
 }
 
 .consolidation-card.is-selected {
@@ -2796,7 +2796,7 @@
   width: min(540px, 100%);
   padding: 18px 18px 14px;
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--panel);
   border: 1px solid #e6e3f1;
 }
 
@@ -3059,7 +3059,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: white;
+  background: var(--panel);
   border: 2px solid var(--line-strong);
   color: var(--muted);
   position: relative;
@@ -3152,7 +3152,7 @@
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
 }
 
 .memory-evidence-icon,
@@ -3203,7 +3203,7 @@
   padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: var(--base-radius-md);
-  background: white;
+  background: var(--panel);
   text-align: left;
   cursor: pointer;
 }
@@ -3267,7 +3267,7 @@
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
 }
 
 .memory-reports-list li > div {
@@ -3302,7 +3302,7 @@
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-soft);
   position: sticky;
   top: 88px;
@@ -3407,7 +3407,7 @@
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .memory-summary-risks li svg {
@@ -3488,7 +3488,7 @@
   font-size: 11.5px;
   border: 1px solid #d9d0ff;
   border-radius: 6px;
-  background: #fff;
+  background: var(--panel);
   color: #2c2549;
 }
 
@@ -3562,7 +3562,7 @@
 }
 
 .settings-rail-item:hover:not(:disabled) {
-  background: white;
+  background: var(--panel);
   color: var(--text);
 }
 
@@ -3910,7 +3910,7 @@
   padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
   text-align: left;
 }
@@ -3967,7 +3967,7 @@ button.settings-option {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
   text-align: left;
   cursor: pointer;
@@ -4058,7 +4058,7 @@ button.settings-option {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
   text-align: left;
   cursor: pointer;
@@ -4134,7 +4134,7 @@ button.settings-option {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .settings-ai-diagnostics {
@@ -4231,7 +4231,7 @@ button.settings-option {
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
   font: inherit;
   font-size: 12px;
@@ -4256,7 +4256,7 @@ button.settings-option {
   height: 34px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--muted);
   cursor: pointer;
 }
@@ -4414,7 +4414,7 @@ button.settings-option {
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--text);
   font: inherit;
   font-size: 12px;
@@ -4637,7 +4637,7 @@ button.settings-option {
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .settings-ai-run-item-top {
@@ -4844,7 +4844,7 @@ button.settings-option {
   padding: 0 9px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: white;
+  background: var(--panel);
   color: var(--muted);
   font-size: 11.5px;
   font-weight: 700;
@@ -4919,7 +4919,7 @@ button.settings-option {
   padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .settings-status-pill {

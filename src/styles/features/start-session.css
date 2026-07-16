@@ -166,7 +166,7 @@ input,
   color: #161e2d;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
 }
 
 .select-like {
@@ -730,7 +730,7 @@ hr {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   font: inherit;
   font-size: 13px;
   line-height: 1.5;
@@ -771,7 +771,7 @@ hr {
   padding: 0 12px 0 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: #161e2d;
   font: inherit;
   font-size: 13px;
@@ -824,7 +824,7 @@ hr {
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--panel);
   box-shadow: var(--shadow-pop, 0 12px 32px rgba(20, 30, 45, 0.16));
 }
 
@@ -1248,7 +1248,7 @@ hr {
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--muted);
 }
 
@@ -1280,7 +1280,7 @@ hr {
   flex-shrink: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel);
   color: var(--muted);
   cursor: pointer;
   transition:

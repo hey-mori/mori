@@ -808,7 +808,7 @@
   padding: 7px 10px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: white;
+  background: var(--panel);
 }
 
 .companion-inbox-rail-counts dt {

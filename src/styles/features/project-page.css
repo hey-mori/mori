@@ -724,7 +724,7 @@
 .project-timeline-band {
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: white;
+  background: var(--panel);
   transition:
     border-color 130ms ease,
     background 130ms ease;

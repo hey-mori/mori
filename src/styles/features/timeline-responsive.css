@@ -16,7 +16,7 @@
 .timeline-axis-col {
   position: relative;
   flex: 0 0 auto;
-  background: #fff;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-right: 1px solid var(--line-strong);
   border-radius: 12px 0 0 12px;

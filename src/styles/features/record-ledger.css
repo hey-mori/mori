@@ -1406,7 +1406,7 @@
 }
 
 .mini-cal-cell.is-selected .mini-cal-dot {
-  background: #fff;
+  background: var(--panel);
 }
 
 /* ── Ledger calendar (R5 · M4 body takeover) ─────────────────────────────── */
