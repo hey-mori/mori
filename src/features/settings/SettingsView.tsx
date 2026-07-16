@@ -90,6 +90,10 @@ export function SettingsView() {
         {activeTab === "connections" ? (
           <>
             <AutoImportCard />
+            <p className="settings-inline-note">
+              세션을 하나씩 직접 가져오려면 왼쪽 위 <strong>+</strong> · <strong>새 세션</strong>을
+              쓰세요. 아래는 에이전트 연결 상태와 설정입니다.
+            </p>
             <SourcesView embedded />
           </>
         ) : null}

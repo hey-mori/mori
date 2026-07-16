@@ -3596,6 +3596,18 @@
   font-weight: 700;
 }
 
+.settings-inline-note {
+  margin: -4px 2px 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.settings-inline-note strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
 .settings-content-stack {
   display: grid;
   gap: 16px;
