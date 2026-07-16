@@ -17,6 +17,7 @@ import type { ThemeId } from "../settings/themePreference";
 
 export type CommandGroup =
   | "navigate"
+  | "record"
   | "session"
   | "action"
   | "theme"
@@ -25,6 +26,7 @@ export type CommandGroup =
 /** The intent the renderer should act on when the user picks a command. */
 export type CommandTarget =
   | { kind: "navigate"; view: ViewKey }
+  | { kind: "openRecord"; recordId: string }
   | { kind: "openSession"; sessionId: string; tab?: "overview" | "flow" | "evidence" | "insights" | "report" }
   | { kind: "openSettings"; segment?: SettingsTab }
   | { kind: "toggleSidebarCollapsed" }
@@ -230,6 +232,7 @@ function scoreCommand(entry: CommandEntry, term: string): number {
 /** Korean label shown above each group in the palette renderer. */
 export const COMMAND_GROUP_LABEL: Record<CommandGroup, string> = {
   navigate: "이동",
+  record: "기록",
   session: "세션",
   action: "작업",
   theme: "테마",
@@ -243,6 +246,7 @@ export const COMMAND_GROUP_LABEL: Record<CommandGroup, string> = {
  */
 export const COMMAND_GROUP_ORDER: ReadonlyArray<CommandGroup> = [
   "navigate",
+  "record",
   "session",
   "action",
   "theme",

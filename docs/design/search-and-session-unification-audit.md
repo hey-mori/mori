@@ -130,11 +130,16 @@ grow on the legacy shape.
 Ordered so each slice is independently shippable and none blocks the
 concurrent 세션 workspace work:
 
-- **S1 · 검색 wiring (smallest, highest leverage).** Palette record
-  producer over `searchRecords` + `openRecord` target + snippet rows.
-  Done when a captured agent-session and a workout note are both
-  findable from 검색 with honest desktop/browser labels. No schema work.
-  Implementation contract: [`global-search-spec.md`](global-search-spec.md).
+- **S1 · 검색 wiring (smallest, highest leverage).** ✅ Shipped
+  2026-07-16. The command palette now runs a debounced FTS pass over
+  `kernelRepository.searchRecords` at 2+ chars, renders matches under a
+  `기록` section (kind icon + title/snippet + schema · date · context
+  meta), routes Enter/click through `openRecordInLedger`, and shows the
+  honest `간단 검색 · 데스크톱에서 전체 검색` (browser) / `로컬 저장소`
+  (desktop fallback) footer. `CommandTarget` gained an `openRecord`
+  variant; verified in-browser (a captured note is findable by body
+  text and opens in 기록). Implementation contract:
+  [`global-search-spec.md`](global-search-spec.md).
 - **S2 · auto-import writes kernel records too.** Reuse the stable
   auto-id as the kernel record id seed; upsert an `agent-session` record
   per discovered session alongside the legacy draft (dual-write during

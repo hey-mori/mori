@@ -1,5 +1,6 @@
 import {
   CornerDownLeft,
+  FileText,
   FolderGit2,
   Layers,
   Palette,
@@ -23,6 +24,14 @@ import {
   type CommandEntry,
   type CommandTarget,
 } from "../../lib/commandPalette/commandPalette";
+import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
+import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
+import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import {
+  displayTime,
+  schemaLabel,
+} from "../../features/record-ledger/recordPresentation";
+import { formatDate } from "../../lib/formatting/time";
 
 /**
  * Command palette — the keyboard-first front door to every navigation,
@@ -47,6 +56,7 @@ export function CommandPalette({
   const currentView = useAppStore((state) => state.currentView);
   const navigate = useAppStore((state) => state.navigate);
   const openSession = useAppStore((state) => state.openSession);
+  const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const loadBrowserSession = useSessionStore(
     (state) => state.loadBrowserSession,
@@ -62,6 +72,16 @@ export function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Kernel-record search (S1): the palette additionally queries the ledger's
+  // FTS engine so captured records are findable, not just sessions + commands.
+  // Records arrive async and query-relevant, so they bypass `filterCommands`
+  // (which would drop a body-text match whose title lacks the query).
+  const [recordEntries, setRecordEntries] = useState<CommandEntry[]>([]);
+  const [recordNote, setRecordNote] = useState<string | null>(null);
+  const [recordError, setRecordError] = useState(false);
+  const contextNamesRef = useRef<Map<string, string>>(new Map());
+  const registry = useMemo(() => createSchemaRegistry(), []);
+
   // Reset the input + cursor whenever the palette opens so a fresh trigger
   // never inherits the previous run's typed query.
   useEffect(() => {
@@ -71,6 +91,72 @@ export function CommandPalette({
     // Defer focus to the next tick — the input is just being mounted.
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
+
+  // Load the context id → name map once per open so a record row can name its
+  // project without a per-keystroke query. Best-effort: a failure just drops
+  // the context name from the meta line.
+  useEffect(() => {
+    if (!open) {
+      setRecordEntries([]);
+      setRecordNote(null);
+      setRecordError(false);
+      return;
+    }
+    let cancelled = false;
+    getKernelRepository()
+      .listContexts()
+      .then((result) => {
+        if (cancelled) return;
+        contextNamesRef.current = new Map(
+          result.data.map((context) => [context.id, context.name]),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  // Debounced FTS over the ledger. Fires at 2+ characters, drops stale
+  // in-flight results by query token, and caps at 8 rows per the spec.
+  useEffect(() => {
+    const text = query.trim();
+    if (text.length < 2) {
+      setRecordEntries([]);
+      setRecordNote(null);
+      setRecordError(false);
+      return;
+    }
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      getKernelRepository()
+        .searchRecords(text, 8)
+        .then((result) => {
+          if (cancelled) return;
+          const entries = result.data
+            .filter(
+              (record) =>
+                record.status !== "discarded" && record.status !== "archived",
+            )
+            .map((record) =>
+              recordToEntry(record, registry, contextNamesRef.current),
+            );
+          setRecordEntries(entries);
+          setRecordError(false);
+          setRecordNote(recordSearchNote(result.source, result.fellBack));
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setRecordEntries([]);
+          setRecordNote(null);
+          setRecordError(true);
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [query, registry]);
 
   // Sessions are re-read every time the palette opens — the live sidebar
   // already tracks them, but reading fresh here means a new import is
@@ -87,7 +173,12 @@ export function CommandPalette({
     () => (query.trim() ? filterCommands(commands, query) : capBrowseCommands(commands)),
     [commands, query],
   );
-  const sections = useMemo(() => groupCommands(filtered), [filtered]);
+  // Record entries are already query-relevant from the FTS pass, so they join
+  // the sections directly (groupCommands only buckets + orders, never filters).
+  const sections = useMemo(
+    () => groupCommands([...filtered, ...recordEntries]),
+    [filtered, recordEntries],
+  );
   // Flatten in display order so arrow-key navigation walks the same list
   // the user sees on screen.
   const flatVisible = useMemo(
@@ -101,6 +192,9 @@ export function CommandPalette({
       switch (target.kind) {
         case "navigate":
           navigate(target.view);
+          break;
+        case "openRecord":
+          openRecordInLedger(target.recordId);
           break;
         case "openSession":
           if (target.sessionId !== activeSessionId) {
@@ -126,6 +220,7 @@ export function CommandPalette({
       loadBrowserSession,
       navigate,
       onToggleSidebarCollapsed,
+      openRecordInLedger,
       openSession,
       openSettingsSheet,
       setTheme,
@@ -211,49 +306,59 @@ export function CommandPalette({
           <kbd className="command-palette-hint">ESC</kbd>
         </header>
         <div className="command-palette-list base-scroll" ref={listRef}>
-          {sections.length === 0 ? (
-            <p className="command-palette-empty">일치하는 명령이 없습니다.</p>
-          ) : (
-            sections.map((section) => (
-              <section key={section.group}>
-                <p className="command-palette-section">{section.label}</p>
-                <ul>
-                  {section.entries.map((entry) => {
-                    const index = flatVisible.indexOf(entry);
-                    const isActive = index === highlight;
-                    return (
-                      <li key={entry.id}>
-                        <button
-                          type="button"
-                          data-cmd-index={index}
-                          className={`command-palette-row${isActive ? " is-active" : ""}`}
-                          onMouseEnter={() => setHighlight(index)}
-                          onClick={() => runCommand(entry)}
-                        >
-                          <CommandIcon entry={entry} />
-                          <span className="command-palette-row-label">
-                            {entry.label}
+          {sections.map((section) => (
+            <section key={section.group}>
+              <p className="command-palette-section">{section.label}</p>
+              <ul>
+                {section.entries.map((entry) => {
+                  const index = flatVisible.indexOf(entry);
+                  const isActive = index === highlight;
+                  return (
+                    <li key={entry.id}>
+                      <button
+                        type="button"
+                        data-cmd-index={index}
+                        className={`command-palette-row${isActive ? " is-active" : ""}`}
+                        onMouseEnter={() => setHighlight(index)}
+                        onClick={() => runCommand(entry)}
+                      >
+                        <CommandIcon entry={entry} />
+                        <span className="command-palette-row-label">
+                          {entry.label}
+                        </span>
+                        {entry.hint ? (
+                          <span className="command-palette-row-hint">
+                            {entry.hint}
                           </span>
-                          {entry.hint ? (
-                            <span className="command-palette-row-hint">
-                              {entry.hint}
-                            </span>
-                          ) : null}
-                          {isActive ? (
-                            <CornerDownLeft
-                              size={12}
-                              aria-hidden="true"
-                              className="command-palette-row-enter"
-                            />
-                          ) : null}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ))
-          )}
+                        ) : null}
+                        {isActive ? (
+                          <CornerDownLeft
+                            size={12}
+                            aria-hidden="true"
+                            className="command-palette-row-enter"
+                          />
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {section.group === "record" && recordNote ? (
+                <p className="command-palette-caption">{recordNote}</p>
+              ) : null}
+            </section>
+          ))}
+          {recordError ? (
+            <section>
+              <p className="command-palette-section">기록</p>
+              <p className="command-palette-caption">
+                검색을 사용할 수 없습니다.
+              </p>
+            </section>
+          ) : null}
+          {sections.length === 0 && !recordError ? (
+            <p className="command-palette-empty">일치하는 명령이 없습니다.</p>
+          ) : null}
         </div>
       </div>
     </div>
@@ -264,6 +369,8 @@ function CommandIcon({ entry }: { entry: CommandEntry }) {
   switch (entry.group) {
     case "navigate":
       return <Layers size={13} aria-hidden="true" />;
+    case "record":
+      return <FileText size={13} aria-hidden="true" />;
     case "session":
       return <FolderGit2 size={13} aria-hidden="true" />;
     case "action":
@@ -273,6 +380,54 @@ function CommandIcon({ entry }: { entry: CommandEntry }) {
     case "settings":
       return <Settings size={13} aria-hidden="true" />;
   }
+}
+
+/** Build a calm palette row from a kernel record: title (or a body snippet)
+ *  plus one quiet meta line (schema · activity date · first context name). */
+function recordToEntry(
+  record: MoriRecord,
+  registry: ReturnType<typeof createSchemaRegistry>,
+  contextNames: Map<string, string>,
+): CommandEntry {
+  const label = record.title.trim() || bodySnippet(record.body) || "제목 없음";
+  const activity = displayTime(record);
+  const contextName = record.contextIds
+    .map((id) => contextNames.get(id))
+    .find(Boolean);
+  const hint = [
+    schemaLabel(record, registry),
+    activity.iso ? formatDate(activity.iso) : null,
+    contextName,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    id: `record:${record.id}`,
+    group: "record",
+    label,
+    hint: hint || undefined,
+    target: { kind: "openRecord", recordId: record.id },
+  };
+}
+
+function bodySnippet(body: string): string {
+  const clean = body.trim().replace(/\s+/g, " ");
+  return clean.length > 64 ? `${clean.slice(0, 64)}…` : clean;
+}
+
+/** Honest footer for the 기록 section: name the weaker search path so browser
+ *  substring or a desktop localStorage fallback is never faked as full FTS. */
+function recordSearchNote(
+  source: "browser-local-storage" | "desktop-sqlite",
+  fellBack: boolean,
+): string | null {
+  if (source === "browser-local-storage") {
+    return "간단 검색 · 데스크톱에서 전체 검색";
+  }
+  if (fellBack) {
+    return "간단 검색 · 로컬 저장소";
+  }
+  return null;
 }
 
 function safeListSessions() {

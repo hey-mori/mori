@@ -1,7 +1,11 @@
 # 검색 S1 · kernel records in the search surface (spec)
 
-Status: **proposal spec, 2026-07-15.** The implementation contract for
-slice S1 of
+Status: **implemented 2026-07-16.** The command palette wires a
+debounced FTS pass over `kernelRepository.searchRecords` into a `기록`
+section with an `openRecord` target and honest desktop/browser labels;
+see `src/components/layout/CommandPalette.tsx` and
+`src/lib/commandPalette/commandPalette.ts`. This is the implementation
+contract for slice S1 of
 [`search-and-session-unification-audit.md`](search-and-session-unification-audit.md):
 make kernel records findable from the 검색 surface. S1 is a wiring
 slice; the FTS engine already exists end-to-end

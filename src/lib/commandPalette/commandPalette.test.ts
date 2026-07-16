@@ -5,6 +5,7 @@ import {
   capBrowseCommands,
   filterCommands,
   groupCommands,
+  type CommandEntry,
 } from "./commandPalette";
 
 function summary(partial: Partial<StoredSessionSummary>): StoredSessionSummary {
@@ -171,5 +172,32 @@ describe("groupCommands", () => {
     const cmds = buildCommands({ sessions: [] });
     const sections = groupCommands(cmds);
     expect(sections.find((s) => s.group === "session")).toBeUndefined();
+  });
+
+  it("places record entries in a 기록 section between 이동 and 세션 (S1)", () => {
+    const record: CommandEntry = {
+      id: "record:r-1",
+      group: "record",
+      label: "운동 기록",
+      target: { kind: "openRecord", recordId: "r-1" },
+    };
+    const cmds = buildCommands({
+      sessions: [summary({ sessionId: "s-a", title: "Auth" })],
+    });
+    const sections = groupCommands([...cmds, record]);
+    expect(sections.map((s) => s.group)).toEqual([
+      "navigate",
+      "record",
+      "session",
+      "action",
+      "theme",
+      "settings",
+    ]);
+    const recordSection = sections.find((s) => s.group === "record");
+    expect(recordSection?.entries).toHaveLength(1);
+    expect(recordSection?.entries[0]?.target).toEqual({
+      kind: "openRecord",
+      recordId: "r-1",
+    });
   });
 });
