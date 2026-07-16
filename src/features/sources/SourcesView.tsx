@@ -14,6 +14,7 @@ import {
   MousePointer2,
   Package,
   Plug,
+  Radio,
   RefreshCw,
   Rocket,
   Sparkles,
@@ -48,6 +49,7 @@ import {
   type SourceWorkspaceCategory,
   type SourceWorkspaceSource,
 } from "../../lib/sources/sourceWorkspace";
+import { loadAutoImportSettings } from "../../lib/agents/autoImportSettings";
 import {
   ANCHOR_AGENT_IDS,
   buildSourceProviderGroups,
@@ -642,6 +644,7 @@ function SourceInspector({
 }) {
   const source = method.source;
   const Icon = providerIcon(provider);
+  const autoImportOn = loadAutoImportSettings().enabled;
   const detail = recordsSelected ? recordsDetail(provider.name) : null;
   // docs-template methods (Code 훅 / CLI 래퍼 / OpenCode / 터미널 브릿지 / MCP)
   // carry copyable in-app setup steps. The 기록에서 불러오기 way-in needs none.
@@ -665,6 +668,15 @@ function SourceInspector({
           <p>{subtitle}</p>
         </div>
       </header>
+
+      {ANCHOR_AGENT_IDS.has(provider.id) ? (
+        <p className={`sources-autoimport-note${autoImportOn ? " is-on" : ""}`}>
+          <Radio size={13} aria-hidden="true" />
+          {autoImportOn
+            ? "이 에이전트의 세션은 자동으로 수집됩니다. 아래에서 직접 가져올 수도 있습니다."
+            : "자동 수집이 꺼져 있습니다. 아래에서 세션을 직접 가져올 수 있습니다."}
+        </p>
+      ) : null}
 
       <InspectorBlock title="연동 방법" icon={Plug}>
         <ul className="sources-method-picker">
