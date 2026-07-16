@@ -167,7 +167,34 @@ doctrine and code disagree in writing today.
 - **Q7 · Doctrine decision (user, writing only).** Resolve F6 in
   `mori-project-goal.md`: amend rail 3 to name registration-only sync
   as allowed-by-default under scope+transparency, or flip the
-  default. One paragraph either way.
+  default. Drafted wording for both options in Appendix A; pick one.
+
+## Appendix A · Q7 draft amendments (pick one)
+
+**Option 1 (recommended) · amend rail 3 to grade by what the
+background act does.** Replace the rail-3 sentence in
+`mori-project-goal.md` (line ~714) with:
+
+> **Transparency.** An always-visible on/off state and one-tap off,
+> never hidden in the tray. Background work that only *registers*
+> already-connected sources (makes them visible and openable, writes
+> nothing durable beyond the registration row, reversible) may default
+> on, disclosed by a notification per sync. Background work that
+> *interprets* (headless analysis, proposals) or otherwise writes
+> toward durable memory stays **explicit opt-in**.
+
+Rationale: this matches the §6 approved-scope-sync policy bullet, the
+shipped watcher (opt-in, it analyzes) and the shipped auto-import
+(default-on, it only registers) without changing either
+implementation; the grading criterion (register vs interpret) is the
+same act-based line §5 draws for capture vs interpretation.
+
+**Option 2 · keep rail 3 absolute, flip the default.** Keep the
+"explicit opt-in" wording; change `DEFAULT_AUTO_IMPORT_SETTINGS` to
+`{ enabled: false }` and add a one-time 연동 nudge offering to turn it
+on. Cost: the 과거 list is empty until the user finds the toggle,
+weakening the 세션 workspace's first-run value; benefit: the strictest
+reading of the rail survives unmodified.
 
 Priority relative to standing work: Q1 immediately (correctness);
 Q2 next (cheap durability); Q4/Q5 are the extensibility payoff and
