@@ -27,8 +27,10 @@ import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import {
   applyRecordPatch,
   createKernelId,
+  createRecord,
   type RecordPatch,
 } from "../../lib/record-kernel/recordFactory";
+import { deriveNoteTitle } from "./noteWorkspace";
 import { projectContextId, projectToContext } from "../../lib/record-kernel/projectContextConverter";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type {
@@ -101,6 +103,13 @@ export type RecordLedger = {
   /** Applies a user edit (title, body, type, context, ...) as an audited
    *  revision on top of the record's history. */
   updateRecord: (record: MoriRecord, patch: RecordPatch) => Promise<void>;
+  /** Note-first (v4): create a `note` record from the just-written text. The
+   *  note is the user-owned artifact; its title is the first line. Returns the
+   *  created record so the editor can keep editing it. */
+  createNote: (body: string) => Promise<MoriRecord | null>;
+  /** Confirms a live extraction (a typed record Mori pulled out of a note) into
+   *  a durable record linked back to the note with a `derived-from` relation. */
+  confirmExtraction: (note: MoriRecord, proposal: RecordProposal) => Promise<MoriRecord>;
   /** Renames an entity by id (ID-stable) and teaches Mori the old name as an
    *  alias, so every record referencing it reads the new name. */
   renameEntity: (entityId: string, newName: string) => Promise<void>;
@@ -229,6 +238,66 @@ export function useRecordLedger(): RecordLedger {
       return outcome;
     },
     [registry, rules, entities, persistOutcome],
+  );
+
+  const createNote = useCallback(
+    async (body: string): Promise<MoriRecord | null> => {
+      // NFC guards typed Korean at every write boundary (WKWebView delivers NFD).
+      const text = body.normalize("NFC");
+      if (text.trim().length === 0) return null;
+      const repo = getKernelRepository();
+      const { record, revision } = createRecord(
+        {
+          schemaId: "note",
+          title: deriveNoteTitle(text) || "새 기록",
+          body: text,
+          origin: "user",
+          // A note's time is when it was written: capture-fallback is a decided
+          // state, so a fresh note lands on today's day group, not in 확인할 것.
+          timeBasis: "capture-fallback",
+        },
+        registry,
+      );
+      await repo.saveRecord(record, revision);
+      await reload();
+      return record;
+    },
+    [registry, reload],
+  );
+
+  const confirmExtraction = useCallback(
+    async (note: MoriRecord, proposal: RecordProposal): Promise<MoriRecord> => {
+      const repo = getKernelRepository();
+      // The extraction is Mori's derivation (origin derived), but the user
+      // confirmed it, so it lands active. It inherits the note's context and is
+      // linked back to the note with a derived-from relation.
+      const { record, revision } = createRecord(
+        {
+          schemaId: proposal.schemaId,
+          title: proposal.title,
+          body: proposal.body,
+          occurredStart: proposal.occurredStart,
+          timeBasis: proposal.timeBasis,
+          timeConfidence: proposal.timeConfidence,
+          origin: "derived",
+          status: "active",
+          contextIds: note.contextIds,
+          properties: proposal.properties,
+        },
+        registry,
+      );
+      await repo.saveRecord(record, revision);
+      await repo.saveRelation({
+        id: createKernelId("rel"),
+        fromRecordId: record.id,
+        type: "derived-from",
+        toRecordId: note.id,
+        createdAt: new Date().toISOString(),
+      });
+      await reload();
+      return record;
+    },
+    [registry, reload],
   );
 
   const proposeWith = useCallback(
@@ -472,6 +541,8 @@ export function useRecordLedger(): RecordLedger {
     setStatus,
     setActivityDate,
     updateRecord,
+    createNote,
+    confirmExtraction,
     renameEntity,
     createRoutine,
     createDateInferenceRule,

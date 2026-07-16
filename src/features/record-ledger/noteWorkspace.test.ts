@@ -1,0 +1,84 @@
+import { describe, expect, it } from "vitest";
+import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import {
+  buildNoteExtractionPanel,
+  deriveNoteTitle,
+  extractFromNote,
+  extractionIdentity,
+} from "./noteWorkspace";
+
+const now = new Date("2026-07-16T09:00:00.000Z");
+
+function confirmed(schemaId: string, title: string): MoriRecord {
+  return {
+    id: `rec-${title}`,
+    schemaId,
+    title,
+    body: title,
+    capturedAt: now.toISOString(),
+    timeBasis: "unknown",
+    status: "active",
+    origin: "user",
+    ownership: "db",
+    contextIds: [],
+    properties: {},
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
+}
+
+describe("deriveNoteTitle", () => {
+  it("uses the first non-empty line", () => {
+    expect(deriveNoteTitle("\n\n점심 먹고 러닝\n다음 줄")).toBe("점심 먹고 러닝");
+  });
+  it("is empty for a blank body and clips long first lines", () => {
+    expect(deriveNoteTitle("   \n  ")).toBe("");
+    expect(deriveNoteTitle("가".repeat(120)).endsWith("…")).toBe(true);
+  });
+});
+
+describe("extractFromNote", () => {
+  it("pulls typed records out of a note and drops the plain-note fallback", () => {
+    const items = extractFromNote(
+      "점심 먹고 러닝 30분 했다. 다음 주 스프린트 회고를 준비해야 한다.",
+      now,
+    );
+    const schemas = items.map((i) => i.schemaId);
+    expect(schemas).toContain("workout");
+    expect(schemas).toContain("task");
+    expect(schemas).not.toContain("note");
+  });
+
+  it("extracts nothing from short or pure-prose bodies", () => {
+    expect(extractFromNote("", now)).toEqual([]);
+    expect(extractFromNote("오늘은 날씨가 좋았다.", now)).toEqual([]);
+  });
+
+  it("gives duplicate extractions distinct keys", () => {
+    const items = extractFromNote("러닝 30분 했다. 러닝 30분 했다.", now);
+    const keys = items.map((i) => i.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe("buildNoteExtractionPanel", () => {
+  it("lists confirmed records and drops previews already confirmed", () => {
+    const body = "점심 먹고 러닝 30분 했다. 다음 주 회고를 준비해야 한다.";
+    const first = extractFromNote(body, now);
+    const workout = first.find((i) => i.schemaId === "workout");
+    expect(workout).toBeTruthy();
+    const panel = buildNoteExtractionPanel(
+      body,
+      [confirmed("workout", workout!.title)],
+      now,
+    );
+    expect(panel.confirmed).toHaveLength(1);
+    expect(
+      panel.pending.some(
+        (p) => extractionIdentity(p.schemaId, p.title) === extractionIdentity("workout", workout!.title),
+      ),
+    ).toBe(false);
+    // the task is still pending
+    expect(panel.pending.some((p) => p.schemaId === "task")).toBe(true);
+  });
+});

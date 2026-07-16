@@ -12,6 +12,7 @@ import { useAppStore } from "../../app/store";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
 import { NoteExplorer } from "./NoteExplorer";
+import { NoteEditorPane } from "./NoteEditorPane";
 import { DocumentEditor } from "./DocumentEditor";
 import { isDateUndecided } from "./dateResolution";
 import type { ExplorerSort } from "./noteExplorerModel";
@@ -48,30 +49,39 @@ export function LedgerWorkspace() {
     clearNewRecordRequest();
   }, [newRecordRequest, clearNewRecordRequest]);
 
+  // Extractions (derived-from a note) are sub-items of their note, resolved in
+  // the note's 추출 panel — never surfaced as standalone 확인할 것 rows.
+  const derivedIds = useMemo(
+    () =>
+      new Set(
+        ledger.relations
+          .filter((relation) => relation.type === "derived-from")
+          .map((relation) => relation.fromRecordId),
+      ),
+    [ledger.relations],
+  );
   const candidates = useMemo(
-    () => byNewest(ledger.records.filter((record) => record.status === "candidate")),
-    [ledger.records],
+    () =>
+      byNewest(
+        ledger.records.filter(
+          (record) => record.status === "candidate" && !derivedIds.has(record.id),
+        ),
+      ),
+    [ledger.records, derivedIds],
   );
   const dateUnknown = useMemo(
-    () => byNewest(ledgerVisibleRecords(ledger.records).filter(isDateUndecided)),
-    [ledger.records],
+    () =>
+      byNewest(
+        ledgerVisibleRecords(ledger.records).filter(
+          (record) => isDateUndecided(record) && !derivedIds.has(record.id),
+        ),
+      ),
+    [ledger.records, derivedIds],
   );
   const selected = useMemo(
     () => ledger.records.find((record) => record.id === selectedId) ?? null,
     [ledger.records, selectedId],
   );
-  // The capture canvas's 오늘 section: today's ledger-visible records (agent
-  // sessions live in 세션), newest first.
-  const todayRecords = useMemo(() => {
-    const todayIso = localIsoDay(now);
-    return byNewest(
-      ledgerVisibleRecords(ledger.records).filter(
-        (record) =>
-          record.schemaId !== "agent-session" &&
-          displayTime(record).iso.slice(0, 10) === todayIso,
-      ),
-    );
-  }, [ledger.records, now]);
 
   const openRecord = (recordId: string) => {
     setSelectedId(recordId);
@@ -81,53 +91,65 @@ export function LedgerWorkspace() {
     setComposing(true);
     setSelectedId(null);
   };
-  // Saving stays on the canvas: the new record appears in the 오늘 section
-  // right below the composer (Journal feedback loop), and the composer's own
-  // post-save state offers 이어서 쓰기 / 되돌리기.
-  const onSaved = (_savedRecordIds: string[]) => {};
+  const handleNoteCreated = (recordId: string) => {
+    setComposing(false);
+    setSelectedId(recordId);
+  };
 
   // A selected record that vanishes (discarded from the editor) clears the pane.
   useEffect(() => {
     if (selectedId && !ledger.loading && !selected) setSelectedId(null);
   }, [selectedId, selected, ledger.loading]);
 
+  // The note workspace shows the note editor + 추출 panel when writing a new
+  // note, when nothing is selected, or when the selection is a note. A non-note
+  // record (a standalone workout / imported item / an extraction opened by id)
+  // reads as a document instead.
+  const editingNote = !composing && selected?.schemaId === "note" ? selected : null;
+  const showNoteEditor = composing || !selected || selected.schemaId === "note";
+
   return (
     <div className="ledger-workspace">
-        <NoteExplorer
+      <NoteExplorer
+        ledger={ledger}
+        query={query}
+        onQuery={setQuery}
+        sort={sort}
+        onSort={setSort}
+        selectedId={selectedId}
+        candidates={candidates}
+        dateUnknown={dateUnknown}
+        composing={composing}
+        onSelect={openRecord}
+        onNew={startNew}
+        now={now}
+      />
+      {showNoteEditor ? (
+        <NoteEditorPane
+          key={editingNote?.id ?? "new-note"}
+          note={editingNote}
           ledger={ledger}
-          query={query}
-          onQuery={setQuery}
-          sort={sort}
-          onSort={setSort}
-          selectedId={selectedId}
-          candidates={candidates}
-          dateUnknown={dateUnknown}
-          composing={composing}
-          onSelect={openRecord}
-          onNew={startNew}
+          onNoteCreated={handleNoteCreated}
           now={now}
         />
+      ) : (
         <DocumentEditor
           record={selected}
-          composing={composing}
+          composing={false}
           ledger={ledger}
-          todayRecords={todayRecords}
+          todayRecords={[]}
           onOpenRecord={openRecord}
           onUpdate={(patch) => {
             if (selected) void ledger.updateRecord(selected, patch);
           }}
-          onSaved={onSaved}
+          onSaved={() => {}}
           now={now}
         />
+      )}
     </div>
   );
 }
 
 function byNewest(records: MoriRecord[]): MoriRecord[] {
   return [...records].sort((a, b) => displayTime(b).iso.localeCompare(displayTime(a).iso));
-}
-
-function localIsoDay(date: Date): string {
-  const pad = (value: number) => value.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

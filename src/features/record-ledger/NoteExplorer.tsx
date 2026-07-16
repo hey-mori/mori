@@ -75,11 +75,24 @@ export function NoteExplorer({
     [candidates, dateUnknown, text, ledger.registry],
   );
 
+  // Extractions (records derived-from a note) live inside their note's 추출
+  // panel, not as separate list rows — so the list stays one row per note.
+  const derivedIds = useMemo(
+    () =>
+      new Set(
+        ledger.relations
+          .filter((relation) => relation.type === "derived-from")
+          .map((relation) => relation.fromRecordId),
+      ),
+    [ledger.relations],
+  );
+
   const groups = useMemo(() => {
     const visible = visibleRecords.filter(
       (record) =>
         matches(record) &&
         !pinnedIds.has(record.id) &&
+        !derivedIds.has(record.id) &&
         // 기록 is the notes experience; AI work has its own home (세션). Agent
         // sessions are excluded from the default view so a 400-session backfill
         // never floods it, but the 에이전트 세션 facet chip still opts them in.
@@ -89,7 +102,7 @@ export function NoteExplorer({
     );
     return buildExplorerGroups(visible, ledger.contexts, ledger.relations, sort, groupMode, now);
     // matches closes over `text`.
-  }, [visibleRecords, ledger.contexts, ledger.relations, sort, groupMode, typeFilter, text, pinnedIds, ledger.registry, now]);
+  }, [visibleRecords, ledger.contexts, ledger.relations, sort, groupMode, typeFilter, text, pinnedIds, derivedIds, ledger.registry, now]);
 
   return (
     <div className="note-explorer">
