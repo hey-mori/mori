@@ -39,6 +39,9 @@ export function NoteEditorPane({
   // The id of the note record this pane is bound to (null until first save).
   const noteIdRef = useRef<string | null>(note?.id ?? null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Serializes the first note creation so a debounced save and a 확인 click can
+  // never mint two note records for the same fresh note.
+  const createInFlight = useRef<Promise<MoriRecord | null> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load a different note's body when the workspace selects one; a brand-new
@@ -59,23 +62,37 @@ export function NoteEditorPane({
   }, [note?.id]);
 
   const flushSave = useCallback(
-    async (text: string): Promise<string | null> => {
+    async (text: string): Promise<MoriRecord | null> => {
       const id = noteIdRef.current;
       if (id) {
         const current = ledger.records.find((record) => record.id === id);
-        if (current && (current.body !== text || current.title !== (deriveNoteTitle(text) || current.title))) {
+        if (
+          current &&
+          (current.body !== text || current.title !== (deriveNoteTitle(text) || current.title))
+        ) {
           await ledger.updateRecord(current, { body: text, title: deriveNoteTitle(text) || "새 기록" });
         }
-        return id;
+        return current ?? null;
       }
       if (text.trim().length === 0) return null;
-      const created = await ledger.createNote(text);
+      // If a create is already running for this fresh note, wait for it and
+      // update instead of creating a second record.
+      if (createInFlight.current) {
+        const created = await createInFlight.current;
+        if (created) {
+          await ledger.updateRecord(created, { body: text, title: deriveNoteTitle(text) || "새 기록" });
+        }
+        return created;
+      }
+      const pending = ledger.createNote(text);
+      createInFlight.current = pending;
+      const created = await pending;
+      createInFlight.current = null;
       if (created) {
         noteIdRef.current = created.id;
         onNoteCreated(created.id);
-        return created.id;
       }
-      return null;
+      return created;
     },
     [ledger, onNoteCreated],
   );
@@ -123,15 +140,13 @@ export function NoteEditorPane({
 
   const onConfirm = useCallback(
     async (item: NoteExtraction) => {
-      // The note must exist before an extraction can link to it.
-      const id = await flushSave(body);
-      const target = id ? ledger.records.find((record) => record.id === id) : null;
-      const noteRecord =
-        target ?? (id ? { id, contextIds: note?.contextIds ?? [] } as MoriRecord : null);
+      // The note must exist before an extraction can link to it; flushSave
+      // returns the real note record (created or existing).
+      const noteRecord = await flushSave(body);
       if (!noteRecord) return;
       await ledger.confirmExtraction(noteRecord, item.proposal);
     },
-    [body, flushSave, ledger, note?.contextIds],
+    [body, flushSave, ledger],
   );
 
   const hasExtractions = panel.confirmed.length > 0 || panel.pending.length > 0;
