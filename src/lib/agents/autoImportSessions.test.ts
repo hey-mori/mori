@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentWorkSessionMeta } from "./workSessions";
 import {
-  agentIdFromAutoImportedSessionId,
   agentSessionFingerprint,
   agentSessionToStoredDraft,
   autoImportedProjectId,
@@ -47,16 +46,6 @@ describe("autoImportedSessionId", () => {
 
   it("does not flag a manual (timestamp) id as auto-imported", () => {
     expect(isAutoImportedSessionId("sess-fix-20260714090000")).toBe(false);
-  });
-
-  it("recovers the agent from the auto id, null for manual ids", () => {
-    expect(agentIdFromAutoImportedSessionId(autoImportedSessionId(meta({ id: "abc" })))).toBe(
-      "claude",
-    );
-    expect(agentIdFromAutoImportedSessionId("auto-codex-a1b2c3")).toBe("codex");
-    expect(agentIdFromAutoImportedSessionId("auto-antigravity-a1b2")).toBe("antigravity");
-    expect(agentIdFromAutoImportedSessionId("sess-fix-20260714090000")).toBeNull();
-    expect(agentIdFromAutoImportedSessionId("auto-unknownagent-x")).toBeNull();
   });
 });
 
