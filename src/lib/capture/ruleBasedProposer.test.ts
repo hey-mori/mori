@@ -114,6 +114,41 @@ describe("proposeRecords · pilot schemas", () => {
   });
 });
 
+describe("proposeRecords · capture-quality guards", () => {
+  it("does not log a workout for a negated exercise sentence", () => {
+    const [proposal, ...rest] = proposeRecords(
+      textInput("운동을 안 해서 몸이 무겁다"),
+    );
+    expect(rest).toHaveLength(0);
+    expect(proposal.schemaId).toBe("note");
+  });
+
+  it("keeps '하지 않았다' negation out of a workout too", () => {
+    const [proposal] = proposeRecords(textInput("오늘은 러닝하지 않았다"));
+    expect(proposal.schemaId).toBe("note");
+  });
+
+  it("does not misread 제안했다 as a negation (안 mid-word)", () => {
+    const [proposal] = proposeRecords(textInput("러닝 코스를 제안했다"));
+    expect(proposal.schemaId).toBe("workout");
+  });
+
+  it("demotes a generic-word-only workout below the auto ceiling", () => {
+    // "헬스체크" trips the 헬스 keyword but is not a workout; with no concrete
+    // exercise, duration, or sets it must not reach the 0.75 auto ceiling.
+    const [proposal] = proposeRecords(textInput("다음엔 헬스체크를 추가하자"));
+    expect(proposal.schemaId).toBe("workout");
+    expect(proposal.confidence).toBeLessThan(0.75);
+    expect(proposal.entityMentions).toHaveLength(0);
+  });
+
+  it("keeps a concrete workout at the auto ceiling", () => {
+    const [proposal] = proposeRecords(textInput("러닝 30분 했다"));
+    expect(proposal.schemaId).toBe("workout");
+    expect(proposal.confidence).toBe(0.75);
+  });
+});
+
 describe("proposeRecords · segmentation (record-workspace vertical slice)", () => {
   const now = () => new Date("2026-07-15T09:00:00Z");
 

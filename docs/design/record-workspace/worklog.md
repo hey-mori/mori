@@ -8,6 +8,18 @@ Legacy 메모리 surface retired from bell·palette·home (2026-07-15). **세션
 workspace shipped** (2026-07-15): two-pane 진행 중 / 과거 index + inline live/review.
 Next: slim icon rail (홈·기록·세션·프로젝트·캘린더·검색 + 설정).
 
+## Done (capture-quality guards, 2026-07-16)
+
+- The rule proposer no longer auto-applies false 운동 records. A negation
+  guard (`NEGATION_RE`) keeps "운동을 안 해서 몸이 무겁다" a note instead of a
+  workout (negation blocks 운동/학습/활동, but insight/task still fire); a
+  generic-word-only workout (운동·헬스·웨이트 with no concrete exercise,
+  duration, or sets, e.g. "헬스체크") is demoted to 0.6 so it lands in 확인
+  필요 rather than the live ledger, and the generic words are no longer minted
+  as exercise entities. Concrete workouts keep 0.75. Tested + verified
+  in-browser. Also wired 검색 to the kernel FTS this pass (see the search
+  unification audit S1). Files: `src/lib/capture/ruleBasedProposer.ts`.
+
 ## Done (프로젝트 labeled sections, 2026-07-15)
 
 - A context's records now read as labeled sections (세션 · 결정 · 노트 · 활동 ·

@@ -49,6 +49,12 @@ const EXERCISE_WORDS = [
   "자전거",
 ];
 
+/** Generic, ambiguous exercise words: they name "exercise in general" or are a
+ *  substring of unrelated compounds ("헬스체크", "웨이트리스"). On their own,
+ *  with no concrete exercise / duration / sets, they are too weak to auto-apply
+ *  a workout, and they are not real exercise entities. */
+const GENERIC_EXERCISE = new Set(["운동", "헬스", "웨이트"]);
+
 const STUDY_WORDS = [
   "공부",
   "학습",
@@ -124,6 +130,13 @@ const DURATION_MIN_RE = /(\d+)\s*분/;
 const DURATION_HOUR_RE = /(\d+)\s*시간(?:\s*(\d+)\s*분)?/;
 const SETS_RE = /(\d+)\s*세트/;
 const URL_RE = /https?:\/\/[^\s]+/i;
+
+/** "I did NOT do it" markers. A negated action reads as a reflection, not a
+ *  log, so it must never structure into a 운동 / 학습 / 활동 record ("운동을 안
+ *  해서 몸이 무겁다" is a note about not exercising). The lookbehind keeps the
+ *  안 / 못 adverb from matching mid-word ("제안했다" is not a negation). */
+const NEGATION_RE =
+  /(?<![가-힣])(안|못)\s*(했|하|해|가|감|갔|와|왔|다녀)|하지\s*(않|못)|(?<![가-힣])안\s*[가-힣]{0,3}(했|함)/;
 /** Sentence boundaries: terminal punctuation or a newline. */
 const SENTENCE_RE = /(?<=[.!?…])\s+|\n+/;
 /** Intra-sentence connective "~고 " after a hangul syllable. */
@@ -185,11 +198,15 @@ function parseExercises(content: string): { mentions: string[]; durationMinutes?
 type SegmentKind = "workout" | "study" | "insight" | "task" | "activity" | "note";
 
 function classifySegment(segment: string): SegmentKind {
-  if (includesAny(segment, EXERCISE_WORDS) || SETS_RE.test(segment)) return "workout";
-  if (includesAny(segment, STUDY_WORDS)) return "study";
+  // A negated action ("~을 안 했다") is a reflection, not a "thing I did", so it
+  // never structures into workout / study / activity. Insight and task still
+  // fire — a negated thought or intent is still that thought or intent.
+  const negated = NEGATION_RE.test(segment);
+  if (!negated && (includesAny(segment, EXERCISE_WORDS) || SETS_RE.test(segment))) return "workout";
+  if (!negated && includesAny(segment, STUDY_WORDS)) return "study";
   if (includesAny(segment, INSIGHT_MARKERS)) return "insight";
   if (includesAny(segment, TASK_MARKERS)) return "task";
-  if (includesAny(segment, ACTIVITY_WORDS)) return "activity";
+  if (!negated && includesAny(segment, ACTIVITY_WORDS)) return "activity";
   return "note";
 }
 
@@ -256,8 +273,15 @@ function proposalForSegment(segment: Segment, known: Set<string>): RecordProposa
   switch (kind) {
     case "workout": {
       const { mentions, durationMinutes } = parseExercises(text);
+      // Only a concrete exercise entity (러닝 · 스쿼트 · …), a duration, or a
+      // set count is real workout signal. A bare generic word (운동 · 헬스) with
+      // none of these is too weak to auto-apply — it stays below the ceiling so
+      // a false positive like "헬스체크" lands in 확인 필요, not the live ledger.
+      const concreteMentions = mentions.filter((name) => !GENERIC_EXERCISE.has(name));
+      const hasConcreteSignal =
+        concreteMentions.length > 0 || durationMinutes !== undefined || SETS_RE.test(text);
       const properties: RecordProposal["properties"] = {
-        exercises: { raw: text, items: mentions.map((name) => ({ name })) },
+        exercises: { raw: text, items: concreteMentions.map((name) => ({ name })) },
       };
       if (durationMinutes !== undefined) properties.durationMinutes = durationMinutes;
       return {
@@ -266,10 +290,12 @@ function proposalForSegment(segment: Segment, known: Set<string>): RecordProposa
         body: text,
         properties,
         ...common,
-        confidence: 0.75,
-        rationale: "운동 관련 표현을 찾아 운동 기록으로 정리합니다",
-        entityMentions: mentions.map((name) => ({ type: "exercise", canonicalName: name })),
-        introducesNewEntity: mentions.some((name) => !known.has(name)),
+        confidence: hasConcreteSignal ? 0.75 : 0.6,
+        rationale: hasConcreteSignal
+          ? "운동 관련 표현을 찾아 운동 기록으로 정리합니다"
+          : "운동일 수 있어 잠정으로 두었습니다, 확인해 주세요",
+        entityMentions: concreteMentions.map((name) => ({ type: "exercise", canonicalName: name })),
+        introducesNewEntity: concreteMentions.some((name) => !known.has(name)),
       };
     }
     case "study": {
