@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import { CalendarClock, ChevronLeft, ChevronRight, ListTree } from "lucide-react";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
-import { recordsByDate } from "./calendarGrouping";
+import { dayLabel, recordsByDate } from "./calendarGrouping";
 import { isDateUndecided } from "./dateResolution";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 
@@ -52,6 +52,8 @@ export function LedgerCalendarView({
   const byDate = useMemo(() => recordsByDate(records), [records]);
   const undecided = useMemo(() => records.filter(isDateUndecided), [records]);
   const todayIso = iso(now.getFullYear(), now.getMonth(), now.getDate());
+  const agenda = selectedDate ? (byDate.get(selectedDate) ?? []) : [];
+  const isEmpty = byDate.size === 0 && undecided.length === 0;
 
   const cells = useMemo(() => {
     const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
@@ -147,6 +149,39 @@ export function LedgerCalendarView({
           ),
         )}
       </div>
+
+      {isEmpty ? (
+        <div className="ledger-calendar-empty">
+          <p>아직 기록이 없어요. 오늘 한 일을 남기면 이 달력에 쌓입니다.</p>
+          <button type="button" className="ledger-calendar-empty-cta" onClick={onClose}>
+            새 기록 쓰기
+          </button>
+        </div>
+      ) : null}
+
+      {selectedDate && agenda.length > 0 ? (
+        <section className="ledger-agenda">
+          <header className="ledger-agenda-head">
+            <span className="ledger-agenda-day">{dayLabel(selectedDate, now)}</span>
+            <span className="ledger-agenda-count">{agenda.length}건</span>
+          </header>
+          <ul className="ledger-agenda-list">
+            {agenda.map((record) => (
+              <li key={record.id}>
+                <button
+                  type="button"
+                  className="ledger-agenda-item"
+                  onClick={() => onSelectRecord(record.id)}
+                >
+                  <span className={`ledger-cell-dot ${kindColorClass(record.schemaId)}`} aria-hidden="true" />
+                  <span className="ledger-agenda-title">{record.title}</span>
+                  <span className="ledger-agenda-kind">{schemaLabel(record, registry)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {undecided.length > 0 ? (
         <section className="ledger-tray">
