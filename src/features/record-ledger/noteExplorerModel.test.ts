@@ -159,6 +159,12 @@ describe("recordSnippet · row preview", () => {
     expect(recordSnippet(r).length).toBeLessThanOrEqual(97);
     expect(recordSnippet(r).endsWith("…")).toBe(true);
   });
+
+  it("strips inline markdown so the row reads as prose", () => {
+    const r = { ...record("a", "2026-07-16", "주간 회고 노트") };
+    r.body = "주간 회고 노트\n오늘 러닝 30분 했다. **다음 주**에 [문서](http://x)를 봤다.";
+    expect(recordSnippet(r)).toBe("오늘 러닝 30분 했다. 다음 주에 문서를 봤다.");
+  });
 });
 
 describe("timeOfDayLabel", () => {

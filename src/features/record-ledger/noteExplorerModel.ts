@@ -11,6 +11,7 @@ import type {
 } from "../../lib/record-kernel/kernelTypes";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { displayTime, schemaLabel } from "./recordPresentation";
+import { stripInlineMarkdown } from "./noteWorkspace";
 
 export type ExplorerSort = "date" | "title";
 export type ExplorerGroupMode = "day" | "project" | "recent";
@@ -67,7 +68,9 @@ export function shortDateLabel(iso: string): string {
 export function recordSnippet(record: MoriRecord): string {
   const title = record.title.trim();
   for (const rawLine of record.body.split(/\r?\n/)) {
-    const line = rawLine.replace(/\s+/g, " ").trim();
+    // Strip inline markdown so the row reads as prose (**다음 주** → 다음 주),
+    // matching the already-stripped title it is compared against.
+    const line = stripInlineMarkdown(rawLine).replace(/\s+/g, " ").trim();
     if (!line || line === title) continue;
     // The proposer often titles a record with its (clipped) first line; a
     // snippet that just repeats it adds noise, not scent.
