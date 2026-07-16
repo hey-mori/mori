@@ -3,7 +3,7 @@
  * editor: clickable task checkboxes, list / task auto-continuation on Enter,
  * and ⌘B / ⌘I / ⌘E wrapping. Pure editor behavior — no app state, no kernel.
  */
-import { EditorSelection, type Extension } from "@codemirror/state";
+import { EditorSelection, RangeSetBuilder, type Extension } from "@codemirror/state";
 import {
   Decoration,
   EditorView,
@@ -13,6 +13,7 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from "@codemirror/view";
+import { syntaxTree } from "@codemirror/language";
 
 const TASK_RE = /^(\s*[-*+]\s+)\[([ xX])\]/;
 const LIST_RE = /^(\s*)([-*+]\s(?:\[[ xX]\]\s)?|\d+\.\s)/;
@@ -145,9 +146,77 @@ function continueList(view: EditorView): boolean {
   return true;
 }
 
+/**
+ * Live preview (the move that makes CodeMirror feel like Obsidian): on any line
+ * the cursor is NOT on, the raw markdown punctuation is hidden so the text reads
+ * as prose — `**중요**` shows as 중요 in bold, `# 제목` drops its hashes, a
+ * `[label](url)` shows just label. Put the caret on the line and the markers
+ * reappear, so editing stays exact and nothing is ever actually removed.
+ */
+const CONCEAL_MARKS = new Set([
+  "EmphasisMark",
+  "StrongEmphasisMark",
+  "StrikethroughMark",
+  "HeaderMark",
+  "LinkMark",
+]);
+const concealed = Decoration.replace({});
+
+const concealMarkdown = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(update: ViewUpdate) {
+      // Selection moves change which line is "active", so rebuild on it too.
+      if (update.docChanged || update.viewportChanged || update.selectionSet) {
+        this.decorations = this.build(update.view);
+      }
+    }
+    build(view: EditorView): DecorationSet {
+      const { state } = view;
+      // Lines touched by any cursor / selection stay raw for precise editing.
+      const activeLines = new Set<number>();
+      for (const range of state.selection.ranges) {
+        const first = state.doc.lineAt(range.from).number;
+        const last = state.doc.lineAt(range.to).number;
+        for (let n = first; n <= last; n++) activeLines.add(n);
+      }
+      const builder = new RangeSetBuilder<Decoration>();
+      const tree = syntaxTree(state);
+      for (const { from, to } of view.visibleRanges) {
+        tree.iterate({
+          from,
+          to,
+          enter: (node) => {
+            const name = node.name;
+            let end = node.to;
+            let hide = CONCEAL_MARKS.has(name);
+            if (name === "HeaderMark") {
+              // Swallow the single space after the # so the text sits flush.
+              if (state.doc.sliceString(end, end + 1) === " ") end += 1;
+            } else if (name === "CodeMark") {
+              hide = node.matchContext(["InlineCode"]); // keep fenced-code fences
+            } else if (name === "URL") {
+              hide = node.matchContext(["Link"]); // hide only a link's target
+            }
+            if (!hide || node.from >= end) return;
+            if (activeLines.has(state.doc.lineAt(node.from).number)) return;
+            builder.add(node.from, end, concealed);
+          },
+        });
+      }
+      return builder.finish();
+    }
+  },
+  { decorations: (plugin) => plugin.decorations },
+);
+
 export function noteMarkdownEditing(): Extension {
   return [
     taskCheckboxes,
+    concealMarkdown,
     keymap.of([
       { key: "Enter", run: continueList },
       { key: "Mod-b", run: (view) => wrapSelection(view, "**") },
