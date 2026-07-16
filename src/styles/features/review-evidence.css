@@ -705,10 +705,6 @@ td a {
 }
 
 @media (max-width: 1180px) {
-  :root {
-    --base-sidebar-w: 220px;
-  }
-
   .content-grid,
   .report-layout,
   .setup-grid {
@@ -733,12 +729,6 @@ td a {
   .form-row {
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
-  }
-}
-
-@media (max-width: 1340px) {
-  :root {
-    --base-sidebar-w: 232px;
   }
 }
 
