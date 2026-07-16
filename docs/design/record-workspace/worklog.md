@@ -1,5 +1,28 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (v5 · nature + editor + search, 2026-07-17)
+
+- **Nature-gated extraction (N1)**: `noteNature.ts` reads a note's kind
+  (일지/회의록/회고/학습/에세이/스크랩) with a deterministic detector that only
+  claims the structurally-clear natures (URL-dominant → 스크랩, attendee/agenda
+  → 회의록, retro/study keywords) and defaults to 일지. The 추출 panel now leads
+  with proposals that fit the nature and folds the rest under "이 성격과 결이
+  다른 N개" (never dropped); a correctable nature chip sits in the panel header
+  and resets per note. Essay stays a manual correction because essay-vs-prose-
+  journal is not reliably rule-separable. Confirmed records always show.
+- **Editor live preview**: `concealMarkdown` (in `noteEditorExtensions.ts`)
+  walks the lezer tree and collapses emphasis/strong/strikethrough/heading/
+  inline-code/link punctuation on every line the caret is not on, revealing the
+  raw markers again when the caret enters the line (fenced fences + bare URLs
+  kept). `**굵게**` now reads as 굵게 — the Obsidian source-mode feel.
+- **List/search**: `recordSnippet` strips inline markdown (rows read as prose,
+  list markers kept) and, while searching, surfaces the body line holding the
+  query so the match is visible; `matchSegments` wraps each case-insensitive
+  hit in a `.note-item-mark` (calm purple wash) across title + snippet.
+- Verified in the browser preview: nature chip detect/correct/fold, concealment
+  reveal-on-caret, snippet stripping, and highlight + hit-line surfacing.
+  check:full 2893 green, build + style clean.
+
 ## Done (v5 · note-tool bar, 2026-07-17)
 
 - 기획 doc `v5-note-tool-bar.md`: references (Obsidian/Bear/iA/Granola…),
