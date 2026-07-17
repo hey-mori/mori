@@ -1,5 +1,46 @@
 # Worklog · 기록 Workspace redesign
 
+## Plan (v7 · document understanding, 2026-07-17)
+
+`v7-document-understanding.md`. Grounded in competitive research across 13 AI
+note tools, not judgement alone.
+
+**The finding that reframes everything: not one of the 13 emits "a list of things
+the writer did" from a prose document.** The four that extract action items do it
+only from meeting transcripts, where speaker diarization says who committed to
+what. Mori took a transcript primitive and pointed it at a reading document. The
+Kotlin article that produced four 활동 records was the wrong question, not a bad
+word list.
+
+The inversion: **understanding is the product; "what you did" is one output of
+it, emitted only when the document is a log.** Regions run 요약 → 용어 →
+인사이트 → 남길 기록, records last and routinely empty.
+
+- 요약 always, gated by LENGTH not nature (length is observable, nature is
+  guessed; a length gate cannot hide a true record).
+- 용어 is the differentiator: only NotebookLM does it, and nobody does it
+  Korean-first.
+- 인사이트 adopts Heptabase's provenance-by-construction (every insight points at
+  its source span, so it cannot hallucinate). Ships EMPTY until the engine lands.
+- Nature inferred, never asked (NotebookLM Reports is the reference: the model
+  classifies, the user never sees a picker, and classification only decides which
+  outputs are offered). Mechanism is embedding + nearest-centroid, ~150ms, no
+  LLM; the correction IS the training signal, Gmail-style.
+- Organization: **`KernelContext.parentId` already exists and is 100% dead code**
+  (one hit: the declaration). Nesting costs zero migration, zero SQL, zero Rust.
+  Path is derived from the parent chain, never stored (Logseq migrated away from
+  name-embedded namespaces for exactly this reason).
+- Layout: killing `.note-extract` (264px) lets the writing measure hit its
+  designed 720px on a 1280 laptop for the first time.
+- Naming: the surface is 읽기, with no visible title; regions title themselves.
+
+**The one decision (§8): does 기록 depend on a local model for 요약/용어/인사이트?**
+Note this is NOT a request for a new capability: the plumbing already exists
+(`ollamaProvider.ts`, `quickPassCapability.ts`, `LocalAiCard.tsx`, default
+`localhost:11434`), as does the learning seam (`personalization.ts`, KernelRule
+`classification` with `learnedFromRevisionIds`). Mori needs to POINT the engine
+it already owns at the note.
+
 ## Done (v6 · honest notes, 2026-07-17)
 
 Direction + evidence: `v6-honest-notes.md`. A six-dimension audit of 기록 (33

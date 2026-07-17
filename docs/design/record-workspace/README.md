@@ -47,6 +47,7 @@ is the input to the audit, not the baseline for the design.
 | `implementation-roadmap.md` | R1-R6 stages, scope, done criteria, transition and removal plan |
 | `v5-note-tool-bar.md` | References (Obsidian/Bear/iA), editor decision, extraction extensibility, vault bridge direction |
 | `v6-honest-notes.md` | What a day of use exposed: the lies removed, why the rule proposer cannot do the job, nature demoted, project filing, revision granularity, layout doctrine. **Carries the two open decisions.** |
+| `v7-document-understanding.md` | **Newest.** Understanding is the product; "what you did" is one output of it. Competitive research (13 tools), the 요약/용어/인사이트 contract, nature by embedding, the parentId organization model, the vault path mapping, and the one open decision |
 | `worklog.md` | Current stage, done work, changed files, next exact action |
 
 ## Implementation stages and current status
