@@ -13,7 +13,7 @@ import type { RecordPatch } from "../../lib/record-kernel/recordFactory";
 import type { RecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
 import { ActivityDateEditor, InlineEditable, RecordHistory } from "./recordEditing";
-import { kindColorClass, schemaLabel, sourceKindLabel } from "./recordPresentation";
+import { kindColorClass, originLabel, schemaLabel, sourceKindLabel } from "./recordPresentation";
 import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
 
@@ -128,7 +128,7 @@ function RecordDocument({
   }, [record.contextIds, ledger.contexts]);
 
   const isCandidate = record.status === "candidate";
-  const isDerived = record.origin === "derived";
+  const provenance = originLabel(record.origin);
   return (
     <div className="doc-editor">
       <div className="doc-editor-bar">
@@ -136,9 +136,9 @@ function RecordDocument({
           {contextName ? `${contextName} · ` : ""}
           {schemaLabel(record, ledger.registry)}
         </span>
-        <span className={`doc-prov${isDerived ? " is-mori" : " is-user"}`}>
+        <span className={`doc-prov is-${provenance.tone}`}>
           <span className="doc-prov-dot" aria-hidden="true" />
-          {isDerived ? "Mori가 정리" : "직접 입력"}
+          {provenance.label}
         </span>
         <span className="doc-bar-sp" />
         {source?.rawBody ? (
@@ -173,7 +173,21 @@ function RecordDocument({
           <Button variant="primary" size="sm" icon={Check} onClick={() => void ledger.setStatus(record, "active")}>
             반영
           </Button>
-          <Button variant="ghost" size="sm" icon={X} onClick={() => void ledger.setStatus(record, "discarded")}>
+          {/* 무시 is the same kernel effect as 버리기 on the bar above (both patch
+              status to discarded), so it must raise the same 되돌리기. Without
+              onDiscarded it destroyed silently: the pane clears, every surface
+              filters discarded out, and restoreRecords is only ever reached from
+              the strip this path never raised. Two buttons, one outcome, and
+              only one of them was reversible. */}
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={X}
+            onClick={() => {
+              onDiscarded(record.id, record.title);
+              void ledger.setStatus(record, "discarded");
+            }}
+          >
             무시
           </Button>
         </div>

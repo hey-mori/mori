@@ -6,6 +6,7 @@
 import type { BaseStatusBadgeTone } from "../../components/ui/BaseStatusBadge";
 import type {
   MoriRecord,
+  RecordOrigin,
   SourceKind,
   RecordStatus,
   TimeBasis,
@@ -45,6 +46,35 @@ export function ledgerVisibleRecords(records: MoriRecord[]): MoriRecord[] {
 }
 
 /** Plain-language label for how an activity time was established. */
+/**
+ * Who actually made this record, for the provenance chip.
+ *
+ * `RecordOrigin` has five values and the chip used to test only `derived`,
+ * dropping `import`, `agent` and `automation` into the "직접 입력" branch. So a
+ * session the background watcher discovered and wrote unattended told the user
+ * they had typed it by hand. In an app whose whole claim is that it does not
+ * fabricate, the provenance line is the last place to guess: `recordFactory`
+ * already attributes these origins to "자동"/"Mori" in the revision trail, so the
+ * chip was also contradicting the record's own history.
+ *
+ * `tone` drives the existing is-mori / is-user classes, so nothing user-authored
+ * changes colour: only the machine origins stop claiming to be the user.
+ */
+export function originLabel(origin: RecordOrigin): { label: string; tone: "mori" | "user" } {
+  switch (origin) {
+    case "user":
+      return { label: "직접 입력", tone: "user" };
+    case "derived":
+      return { label: "Mori가 정리", tone: "mori" };
+    case "automation":
+      return { label: "자동 수집", tone: "mori" };
+    case "agent":
+      return { label: "에이전트 기록", tone: "mori" };
+    case "import":
+      return { label: "가져옴", tone: "mori" };
+  }
+}
+
 export function timeBasisLabel(basis: TimeBasis): string {
   switch (basis) {
     case "source-exact":

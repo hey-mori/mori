@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest";
 import { runCapturePipeline } from "../../lib/capture";
 import { applyRecordPatch } from "../../lib/record-kernel/recordFactory";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
-import { buildCommitPatch } from "./useRecordLedger";
+import type { KernelRevision } from "../../lib/record-kernel/kernelTypes";
+import { buildCommitPatch, statusToRestore } from "./useRecordLedger";
 
 const registry = createSchemaRegistry();
 const now = () => new Date("2026-07-15T09:00:00Z");
@@ -74,5 +75,67 @@ describe("buildCommitPatch", () => {
     const before = updated.revision.before as { title: string };
     expect(before.title).toBe(item.created.record.title);
     expect(updated.record.title).toBe("저녁 러닝");
+  });
+});
+
+describe("statusToRestore", () => {
+  const rev = (
+    id: string,
+    createdAt: string,
+    beforeStatus: string | null,
+    afterStatus: string,
+  ): KernelRevision => ({
+    id,
+    recordId: "r1",
+    actor: "user",
+    operation: beforeStatus ? "status-change" : "create",
+    before: beforeStatus ? ({ status: beforeStatus } as never) : undefined,
+    after: { status: afterStatus } as never,
+    createdAt,
+  });
+
+  it("brings a candidate back as a candidate, not as confirmed", () => {
+    // The bug this pins: restoreRecords hardcoded "active", so throwing away a
+    // 확인할 것 candidate and pressing 되돌리기 CONFIRMED it. An undo that changes
+    // anything besides the thing it undoes is a lie, and this one silently put a
+    // record the user never confirmed into the ledger as confirmed.
+    const revisions = [
+      rev("v1", "2026-07-17T00:00:00Z", null, "candidate"),
+      rev("v2", "2026-07-17T01:00:00Z", "candidate", "discarded"),
+    ];
+    expect(statusToRestore(revisions)).toBe("candidate");
+  });
+
+  it("brings a provisional back as provisional", () => {
+    expect(
+      statusToRestore([
+        rev("v1", "2026-07-17T00:00:00Z", null, "provisional"),
+        rev("v2", "2026-07-17T01:00:00Z", "provisional", "discarded"),
+      ]),
+    ).toBe("provisional");
+  });
+
+  it("reads the NEWEST discard, so an earlier discard does not win", () => {
+    const revisions = [
+      rev("v1", "2026-07-17T00:00:00Z", "candidate", "discarded"),
+      rev("v2", "2026-07-17T01:00:00Z", "discarded", "active"),
+      rev("v3", "2026-07-17T02:00:00Z", "active", "discarded"),
+    ];
+    expect(statusToRestore(revisions)).toBe("active");
+  });
+
+  it("falls back to active when no revision recorded the discard", () => {
+    // A store written before this was audited. Coming back visible beats coming
+    // back invisible, so the fallback is active rather than discarded.
+    expect(statusToRestore([])).toBe("active");
+  });
+
+  it("ignores a revision that did not do the discarding", () => {
+    expect(
+      statusToRestore([
+        rev("v1", "2026-07-17T00:00:00Z", "active", "active"),
+        rev("v2", "2026-07-17T01:00:00Z", "candidate", "discarded"),
+      ]),
+    ).toBe("candidate");
   });
 });

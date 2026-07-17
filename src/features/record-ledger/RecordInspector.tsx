@@ -3,7 +3,7 @@
  *
  * Not a viewer: the title, body, type, and activity date are editable in
  * place (each edit is an audited user revision), the origin is shown as a
- * provenance dot (Mori-derived vs user-entered), related entities rename, the
+ * provenance dot (who actually made the record), related entities rename, the
  * preserved raw source is revealed on request, and the history offers a
  * 되돌리기 on the most recent change. Short records live here in the rail;
  * the roomy full-detail variant is a follow-up.
@@ -24,12 +24,7 @@ import type { RecordPatch } from "../../lib/record-kernel/recordFactory";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { useRecordProvenance } from "./useRecordProvenance";
 import { ActivityDateEditor, InlineEditable, revertPatch } from "./recordEditing";
-import {
-  displayProperties,
-  schemaLabel,
-  sourceKindLabel,
-  statusBadge,
-} from "./recordPresentation";
+import { displayProperties, originLabel, schemaLabel, sourceKindLabel, statusBadge } from "./recordPresentation";
 
 const REVISION_LABEL: Record<string, string> = {
   create: "만듦",
@@ -65,7 +60,7 @@ export function RecordInspector({
 
   const badge = statusBadge(record.status);
   const properties = displayProperties(record, registry);
-  const isDerived = record.origin === "derived";
+  const provenance = originLabel(record.origin);
   const relatedEntities = useMemo(() => {
     const byId = new Map(entities.map((entity) => [entity.id, entity]));
     const seen = new Set<string>();
@@ -98,9 +93,9 @@ export function RecordInspector({
         <>
           <span>{schemaLabel(record, registry)}</span>
           {badge ? <BaseStatusBadge tone={badge.tone}>{badge.label}</BaseStatusBadge> : null}
-          <span className={`record-provenance${isDerived ? " is-mori" : " is-user"}`}>
+          <span className={`record-provenance is-${provenance.tone}`}>
             <span className="record-provenance-dot" aria-hidden="true" />
-            {isDerived ? "Mori가 정리" : "직접 입력"}
+            {provenance.label}
           </span>
         </>
       }

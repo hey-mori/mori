@@ -32,10 +32,17 @@ export function useRecordProvenance(
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Clear FIRST, on every id change, not only when the id goes null. The reset
+    // used to live inside the !recordId branch, so switching from record A to
+    // record B left A's history, relations and 원문 on screen under B's title
+    // until B's async read landed. Provenance that belongs to another record is
+    // worse than no provenance: it is the one thing this app promises not to get
+    // wrong, and a stale trail is indistinguishable from a true one.
+    setSource(null);
+    setRevisions([]);
+    setRelations([]);
     if (!recordId) {
-      setSource(null);
-      setRevisions([]);
-      setRelations([]);
+      setLoading(false);
       return;
     }
     let cancelled = false;

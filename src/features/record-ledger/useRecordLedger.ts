@@ -142,6 +142,29 @@ export type RecordLedger = {
   createDateInferenceRule: () => Promise<void>;
 };
 
+/**
+ * The status a discarded record should return to: the one the discarding
+ * revision recorded as its `before`. Falls back to "active" only when no such
+ * revision exists (a store written before this was audited), because coming back
+ * visible is better than coming back invisible.
+ *
+ * Exported for tests; `restoreRecords` is its only runtime caller.
+ */
+export function statusToRestore(revisions: KernelRevision[]): RecordStatus {
+  const discarding = revisions
+    .filter((revision) => {
+      const after = revision.after as MoriRecord | undefined;
+      const before = revision.before as MoriRecord | undefined;
+      return after?.status === "discarded" && before?.status && before.status !== "discarded";
+    })
+    .reduce<KernelRevision | null>(
+      (latest, revision) => (!latest || revision.createdAt > latest.createdAt ? revision : latest),
+      null,
+    );
+  const before = discarding?.before as MoriRecord | undefined;
+  return before?.status ?? "active";
+}
+
 /** Turns one candidate's staged edit into a `RecordPatch`, or null when
  *  nothing changes. Retyping filters properties to what the new schema
  *  defines; a date edit is `user-provided` (or `unknown` when cleared); a
@@ -416,7 +439,18 @@ export function useRecordLedger(): RecordLedger {
    * its history always survived; what was missing was a door back, since every
    * surface filters discarded out. Without this, 버리기 was unrecoverable through
    * the UI even though the kernel had lost nothing.
+   *
+   * The restored status is read back out of the revision that did the discarding,
+   * never assumed. Hardcoding "active" here made 되돌리기 do MORE than undo: a
+   * 확인할 것 candidate thrown away and brought back came back CONFIRMED, which is
+   * a state the user never chose. An undo that changes anything besides the thing
+   * it undoes is its own kind of lie.
    */
+  const previousStatusBeforeDiscard = async (
+    repo: ReturnType<typeof getKernelRepository>,
+    recordId: string,
+  ): Promise<RecordStatus> => statusToRestore((await repo.listRevisions(recordId)).data);
+
   const restoreRecords = useCallback(
     async (recordIds: string[]) => {
       const repo = getKernelRepository();
@@ -424,9 +458,10 @@ export function useRecordLedger(): RecordLedger {
       for (const id of recordIds) {
         const record = current.data.find((candidate) => candidate.id === id);
         if (!record || record.status !== "discarded") continue;
+        const previous = await previousStatusBeforeDiscard(repo, id);
         const { record: next, revision } = applyRecordPatch(
           record,
-          { status: "active" },
+          { status: previous },
           "user",
           registry,
         );
