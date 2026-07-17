@@ -19,15 +19,17 @@ import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import { useSessionResolver } from "../session/useSessionResolver";
 import { useRecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
-import { RecordInspector } from "./RecordInspector";
 import { groupRecordsBySection } from "./contextGrouping";
 import { buildProjectGroups } from "./projectGroups";
 import { ledgerVisibleRecords } from "./recordPresentation";
 
 export function ContextView() {
-  const { records, registry, entities, relations, contexts, loading, renameEntity, updateRecord } =
-    useRecordLedger();
+  const { records, registry, relations, contexts, loading } = useRecordLedger();
   const navigate = useAppStore((state) => state.navigate);
+  // The same door 캘린더 and the command palette already use. 프로젝트 was the only
+  // surface that did not, so one note opened as a real document from the
+  // calendar and as a 340px textarea from here.
+  const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const openSession = useAppStore((state) => state.openSession);
   const resolveSession = useSessionResolver();
   const [summaries] = useState(() => safeSummaries());
@@ -41,7 +43,6 @@ export function ContextView() {
     });
   };
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
 
   const groups = useMemo(
     () =>
@@ -63,8 +64,13 @@ export function ContextView() {
     }
   }, [groups, selectedProjectId]);
 
+  const ambiguousNames = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const group of groups) counts.set(group.name, (counts.get(group.name) ?? 0) + 1);
+    return new Set([...counts].filter(([, n]) => n > 1).map(([name]) => name));
+  }, [groups]);
+
   const activeGroup = groups.find((group) => group.id === selectedProjectId) ?? null;
-  const selectedRecord = activeGroup?.records.find((record) => record.id === selectedRecordId) ?? null;
   const recordSections = useMemo(
     () => (activeGroup ? groupRecordsBySection(activeGroup.records) : []),
     [activeGroup],
@@ -79,20 +85,22 @@ export function ContextView() {
           description="AI 세션을 연동하거나 기록을 프로젝트에 담으면, 프로젝트별로 여기에 모입니다."
         />
       ) : (
-        <div className={`context-page${selectedRecord ? " has-inspector" : ""}`}>
+        <div className="context-page">
           <aside className="context-list" aria-label="프로젝트 목록">
             {groups.map((group) => (
               <button
                 key={group.id}
                 type="button"
                 className={`context-item${group.id === selectedProjectId ? " is-active" : ""}`}
-                onClick={() => {
-                  setSelectedProjectId(group.id);
-                  setSelectedRecordId(null);
-                }}
+                onClick={() => setSelectedProjectId(group.id)}
               >
                 <FolderGit2 size={13} aria-hidden="true" />
-                <span className="context-item-name">{group.name}</span>
+                <span className="context-item-name">
+                  {group.parentPath && ambiguousNames.has(group.name) ? (
+                    <span className="context-item-parent">{group.parentPath}/</span>
+                  ) : null}
+                  {group.name}
+                </span>
                 <span className="context-item-count">
                   {group.sessions.length + group.records.length}
                 </span>
@@ -143,12 +151,8 @@ export function ContextView() {
                           key={record.id}
                           record={record}
                           registry={registry}
-                          selected={record.id === selectedRecordId}
-                          onSelect={() =>
-                            setSelectedRecordId((current) =>
-                              current === record.id ? null : record.id,
-                            )
-                          }
+                          selected={false}
+                          onSelect={() => openRecordInLedger(record.id)}
                         />
                       ))}
                     </ul>
@@ -164,16 +168,6 @@ export function ContextView() {
             ) : null}
           </div>
 
-          {selectedRecord ? (
-            <RecordInspector
-              record={selectedRecord}
-              registry={registry}
-              entities={entities}
-              onRenameEntity={(entityId, newName) => void renameEntity(entityId, newName)}
-              onUpdate={(patch) => void updateRecord(selectedRecord, patch)}
-              onClose={() => setSelectedRecordId(null)}
-            />
-          ) : null}
         </div>
       )}
     </PageShell>

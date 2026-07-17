@@ -2190,6 +2190,13 @@
   font-weight: 600;
 }
 
+/* The parent path, dim, so 회사/mori and 개인/mori read apart without the leaf
+   itself losing weight. */
+.context-item-parent {
+  color: var(--muted-2);
+  font-weight: 500;
+}
+
 .context-item-type {
   font-size: 10.5px;
   color: var(--muted-2);
