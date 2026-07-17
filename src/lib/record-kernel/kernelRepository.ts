@@ -321,6 +321,48 @@ export class KernelRepository {
     return this.listObjects<KernelRelation>("relation", () => this.store().listRelations());
   }
 
+  /**
+   * A record's reading (기록 v7). Keyed by RECORD id, so a note has exactly one
+   * and a re-read overwrites in place rather than accumulating, which is the
+   * mistake revision history made.
+   *
+   * A reading is derived, never authored. A failure here is therefore never data
+   * loss: the worst case is a re-read, so unlike saveRecord this swallows rather
+   * than propagating, and the caller treats a miss as "not read yet".
+   */
+  async saveReading(recordId: string, reading: unknown): Promise<void> {
+    if (!this.isDesktop()) {
+      try {
+        this.store().saveReading(recordId, reading);
+      } catch {
+        // Storage full: the note's own words matter, a reading does not.
+      }
+      return;
+    }
+    try {
+      await this.commands.saveKernelObjectRows([
+        toSqliteKernelObjectRow("reading", recordId, reading),
+      ]);
+    } catch {
+      try {
+        this.store().saveReading(recordId, reading);
+      } catch {
+        // Same: derived, so losing it costs a re-read and nothing else.
+      }
+    }
+  }
+
+  async getReading<T>(recordId: string): Promise<T | null> {
+    if (!this.isDesktop()) return this.store().readReading<T>(recordId);
+    try {
+      const rows = await this.commands.listKernelObjectRows("reading");
+      const row = rows.find((candidate) => candidate.id === recordId);
+      return row ? (JSON.parse(row.payload_json) as T) : null;
+    } catch {
+      return this.store().readReading<T>(recordId);
+    }
+  }
+
   async listRelationsForRecord(recordId: string): Promise<KernelResult<KernelRelation[]>> {
     if (!this.isDesktop()) {
       return browserResult(

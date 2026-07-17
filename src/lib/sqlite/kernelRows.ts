@@ -65,6 +65,7 @@ export type SqliteKernelWriteResult = { rowsWritten: number };
 /** The `kernel_objects` collections. Must stay in sync with the Rust
  *  `KERNEL_OBJECT_COLLECTIONS` allowlist. */
 export type KernelObjectCollection =
+  | "reading"
   | "context"
   | "entity"
   | "entityAliases"

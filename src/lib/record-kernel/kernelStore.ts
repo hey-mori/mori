@@ -49,6 +49,7 @@ const PREFIX = {
   revision: "mori.kernel.revision.",
   rule: "mori.kernel.rule.",
   userSchema: "mori.kernel.userSchema.",
+  reading: "mori.kernel.reading.",
 } as const;
 
 export class KernelBrowserStore {
@@ -104,6 +105,17 @@ export class KernelBrowserStore {
 
   listRelations(): KernelRelation[] {
     return this.list<KernelRelation>(PREFIX.relation);
+  }
+
+  /** A record's reading (기록 v7), keyed BY RECORD so a note has exactly one and
+   *  a re-read overwrites rather than accumulating. A reading is derived, never
+   *  authored: losing it costs a re-read, never the user's words. */
+  saveReading(recordId: string, reading: unknown): void {
+    this.write(`${PREFIX.reading}${recordId}`, reading);
+  }
+
+  readReading<T>(recordId: string): T | null {
+    return this.read<T>(`${PREFIX.reading}${recordId}`);
   }
 
   saveSource(source: KernelSource): void {

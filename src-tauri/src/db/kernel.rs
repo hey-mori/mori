@@ -58,6 +58,7 @@ pub struct KernelWriteResult {
 /// The collections `kernel_objects` accepts. Mirrors the browser store's
 /// key prefixes; an unknown name is a caller bug, not new data.
 pub const KERNEL_OBJECT_COLLECTIONS: &[&str] = &[
+    "reading",
     "context",
     "entity",
     "entityAliases",
