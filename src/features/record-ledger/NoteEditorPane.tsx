@@ -4,7 +4,7 @@
  * You write a note freely (one surface, the first line is its title, it saves
  * itself); Mori extracts the typed records it can pull out of the text and shows
  * them in the right 추출 panel, where each is confirmed into a durable record
- * linked back to the note. No composer box, no 정리 button — writing is capture.
+ * linked back to the note. No composer box, no 정리 button: writing is capture.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Sparkles, PanelRightClose, PanelRightOpen, Link2 as LinkIcon } from "lucide-react";
@@ -34,14 +34,18 @@ export function NoteEditorPane({
   ledger,
   onNoteCreated,
   onOpenRecord,
+  paneId,
   now,
 }: {
   /** The selected note record, or null for a brand-new note. */
   note: MoriRecord | null;
   ledger: RecordLedger;
+  /** This pane instance's identity, echoed back on create so the workspace can
+   *  ignore a save that lands after the user already navigated away. */
+  paneId: number;
   /** Fires with the new record id the first time a fresh note is saved, so the
    *  workspace can select it. */
-  onNoteCreated: (recordId: string) => void;
+  onNoteCreated: (recordId: string, paneId: number) => void;
   /** Open another note by id (a clicked [[wiki-link]]); routes through the
    *  workspace so the current note flushes on the switch. */
   onOpenRecord: (recordId: string) => void;
@@ -124,11 +128,11 @@ export function NoteEditorPane({
       createInFlight.current = null;
       if (created) {
         noteIdRef.current = created.id;
-        onNoteCreated(created.id);
+        onNoteCreated(created.id, paneId);
       }
       return created;
     },
-    [ledger, onNoteCreated],
+    [ledger, onNoteCreated, paneId],
   );
 
   // Keep the flush closure fresh: the unmount cleanup below has [] deps, so it
@@ -182,7 +186,7 @@ export function NoteEditorPane({
   );
 
   // The note's nature (일지/회의록/…): a user pick wins, else the detector reads
-  // the body. It gates which pending extractions read as on-topic — off-nature
+  // the body. It gates which pending extractions read as on-topic, and
   // ones fold under a disclosure rather than compete with the fitting ones.
   const nature = useMemo<NoteNature>(
     () => natureOverride ?? detectNoteNature(body).nature,
@@ -354,7 +358,7 @@ const NON_RETYPE_KINDS = new Set(["agent-session", "source-document", "qa"]);
 /**
  * One pending extraction, editable before confirming: a wrong kind (an essay
  * line read as 할 일) or a wrong date costs one correction instead of
- * polluting the ledger. Confirming applies the edits onto the proposal —
+ * polluting the ledger. Confirming applies the edits onto the proposal:
  * properties are filtered to the target schema so the record stays valid.
  */
 function PendingExtractionCard({

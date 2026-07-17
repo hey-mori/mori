@@ -1,12 +1,13 @@
 /**
  * Wiki-links (기록 v5) · [[제목]] links between notes, resolved from note text
- * rather than a persisted graph — the note body is the source of truth, so
+ * rather than a persisted graph. The note body is the source of truth, so
  * forward links and backlinks are pure derivations (no relation rows to keep in
  * sync, no stale edges), matching how Obsidian reads a vault.
  */
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { clipNoteTitle } from "./noteWorkspace";
 
-/** [[title]] — anything but brackets or a newline between the doubled brackets. */
+/** [[title]] · anything but brackets or a newline between the doubled brackets. */
 const WIKI_LINK = /\[\[([^[\]\n]+)\]\]/g;
 
 /**
@@ -16,7 +17,11 @@ const WIKI_LINK = /\[\[([^[\]\n]+)\]\]/g;
  * lower-case so "[[다음 주]]" resolves "다음  주" and "Note"/"note" alike.
  */
 export function wikiLinkKey(title: string): string {
-  return title.normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
+  // Clip exactly as deriveNoteTitle clipped the stored title, so a full-length
+  // [[title]] still keys to the note whose stored title was truncated at 80.
+  return clipNoteTitle(title.normalize("NFC").trim())
+    .replace(/\s+/g, " ")
+    .toLowerCase();
 }
 
 /** Every distinct [[title]] a body references, in first-seen order. */
@@ -42,7 +47,7 @@ function isLinkableNote(record: MoriRecord): boolean {
 /**
  * Resolve a [[title]] to the best-matching note, or null. Titles are not unique
  * (the "새 기록" fallback, 80-char truncation), so the most recently touched
- * note wins the tie — the one the writer most likely meant.
+ * note wins the tie: the one the writer most likely meant.
  */
 export function resolveNoteByTitle(title: string, records: MoriRecord[]): MoriRecord | null {
   const key = wikiLinkKey(title);

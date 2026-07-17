@@ -32,16 +32,26 @@ export function stripInlineMarkdown(text: string): string {
 
 /** A note's title is its first non-empty line (Bear / Apple Notes model): you
  *  write, and the first line names the note. Empty until the user types. */
+/**
+ * The one title-length rule. Exported so wiki-link resolution can clip an
+ * incoming [[title]] exactly the way a stored title was clipped, otherwise a
+ * link to a long title could never match its own note. Idempotent: re-clipping
+ * an already clipped title returns it unchanged.
+ */
+export function clipNoteTitle(line: string): string {
+  return line.length > 80 ? `${line.slice(0, 80)}…` : line;
+}
+
 export function deriveNoteTitle(body: string): string {
   for (const rawLine of body.split(/\r?\n/)) {
     const line = stripInlineMarkdown(rawLine).trim();
-    if (line) return line.length > 80 ? `${line.slice(0, 80)}…` : line;
+    if (line) return clipNoteTitle(line);
   }
   return "";
 }
 
 /** A single thing Mori pulled out of a note: a typed record candidate. Pure and
- *  ephemeral — recomputed from the current body, never persisted here. */
+ *  ephemeral: recomputed from the current body, never persisted here. */
 export type NoteExtraction = {
   /** Stable within one body so React keys and confirm-dedup are consistent. */
   key: string;
@@ -53,7 +63,7 @@ export type NoteExtraction = {
 
 /**
  * Live extraction preview for a note body. Runs the deterministic proposer and
- * keeps only the typed records — the plain `note` fallback is dropped, because
+ * keeps only the typed records. The plain `note` fallback is dropped, because
  * the note itself already IS the note record. Short / empty / pure-prose bodies
  * extract nothing.
  */

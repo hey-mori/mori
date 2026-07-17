@@ -4,10 +4,10 @@
  *
  * A full-bleed two-pane surface, the same skeleton as 세션: a flush ledger rail
  * on the left (day-grouped records) and a document/capture canvas filling the
- * rest — no floating card, no PageShell. Records that need a decision surface in
+ * rest: no floating card, no PageShell. Records that need a decision surface in
  * the rail's pinned 확인할 것 group; the calendar is a separate global view.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../app/store";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
@@ -50,7 +50,7 @@ export function LedgerWorkspace() {
   }, [newRecordRequest, clearNewRecordRequest]);
 
   // Extractions (derived-from a note) are sub-items of their note, resolved in
-  // the note's 추출 panel — never surfaced as standalone 확인할 것 rows.
+  // the note's 추출 panel, never as standalone 확인할 것 rows.
   const derivedIds = useMemo(
     () =>
       new Set(
@@ -84,21 +84,35 @@ export function LedgerWorkspace() {
   );
 
   // The editor remounts only on a USER-driven switch (open another note, 새
-  // 기록) — never on the fresh-note → created transition, which would unmount
+  // 기록), never on the fresh-note → created transition, which would unmount
   // the pane mid-typing and drop the keystrokes typed during the save window.
   const [editorNonce, setEditorNonce] = useState(0);
+  // The nonce doubles as the mounted pane's identity, and a ref mirrors it so a
+  // pane that has already unmounted can still be recognised as stale from its
+  // captured closure.
+  const nonceRef = useRef(0);
+  const remount = () => {
+    nonceRef.current += 1;
+    setEditorNonce(nonceRef.current);
+  };
   const openRecord = (recordId: string) => {
-    if (recordId !== selectedId || composing) setEditorNonce((n) => n + 1);
+    if (recordId !== selectedId || composing) remount();
     setSelectedId(recordId);
     setComposing(false);
   };
   const startNew = () => {
-    setEditorNonce((n) => n + 1);
+    remount();
     setComposing(true);
     setSelectedId(null);
   };
-  const handleNoteCreated = (recordId: string) => {
+  const handleNoteCreated = (recordId: string, paneId: number) => {
     // Adopt the created id in place: same pane instance, typing continues.
+    // Only the pane that is STILL mounted may do so. Navigating away from a
+    // brand-new note (clicking a [[wiki-link]] or another row) unmounts its
+    // pane, and that pane's pending save still lands, creating the note and
+    // calling back here. Without this guard that late callback would win the
+    // last write and yank the user back to the note they just left.
+    if (paneId !== nonceRef.current) return;
     setComposing(false);
     setSelectedId(recordId);
   };
@@ -134,6 +148,7 @@ export function LedgerWorkspace() {
       {showNoteEditor ? (
         <NoteEditorPane
           key={editorNonce}
+          paneId={editorNonce}
           note={editingNote}
           ledger={ledger}
           onNoteCreated={handleNoteCreated}

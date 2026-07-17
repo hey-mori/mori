@@ -64,7 +64,7 @@ export function NoteExplorer({
 
   const visibleRecords = useMemo(() => ledgerVisibleRecords(ledger.records), [ledger.records]);
   // Extractions (records derived-from a note) live inside their note's 추출
-  // panel, not as separate list rows — so the list stays one row per note.
+  // panel, not as separate list rows, so the list stays one row per note.
   const derivedIds = useMemo(
     () =>
       new Set(

@@ -41,7 +41,7 @@ function localIsoDay(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-/** ISO day (local) a record displays on — activity time, else capture time. */
+/** ISO day (local) a record displays on: activity time, else capture time. */
 export function recordDisplayDay(record: MoriRecord): string {
   return displayTime(record).iso.slice(0, 10);
 }

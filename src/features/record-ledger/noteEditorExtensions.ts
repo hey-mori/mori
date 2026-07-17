@@ -1,7 +1,7 @@
 /**
  * CodeMirror extensions that make 기록's markdown surface feel like a real note
  * editor: clickable task checkboxes, list / task auto-continuation on Enter,
- * and ⌘B / ⌘I / ⌘E wrapping. Pure editor behavior — no app state, no kernel.
+ * and ⌘B / ⌘I / ⌘E wrapping. Pure editor behavior: no app state, no kernel.
  */
 import { EditorSelection, RangeSetBuilder, type Extension } from "@codemirror/state";
 import {
@@ -149,7 +149,7 @@ function continueList(view: EditorView): boolean {
 /**
  * Live preview (the move that makes CodeMirror feel like Obsidian): on any line
  * the cursor is NOT on, the raw markdown punctuation is hidden so the text reads
- * as prose — `**중요**` shows as 중요 in bold, `# 제목` drops its hashes, a
+ * as prose: `**중요**` shows as 중요 in bold, `# 제목` drops its hashes, a
  * `[label](url)` shows just label. Put the caret on the line and the markers
  * reappear, so editing stays exact and nothing is ever actually removed.
  */

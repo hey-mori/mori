@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { deriveNoteTitle } from "./noteWorkspace";
 import { noteBacklinks, parseWikiTitles, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
 
 function note(id: string, title: string, body: string, over: Partial<MoriRecord> = {}): MoriRecord {
@@ -55,6 +56,16 @@ describe("resolveNoteByTitle", () => {
 
   it("skips discarded notes and returns null on a miss", () => {
     expect(resolveNoteByTitle("없는 제목", records)).toBeNull();
+  });
+
+  it("resolves a full-length link to a note whose stored title was clipped at 80", () => {
+    // deriveNoteTitle stores 80 chars + …, but the link carries the full text.
+    const long = "가".repeat(120);
+    const stored = { ...note("long", deriveNoteTitle(long), long) };
+    expect(stored.title.endsWith("…")).toBe(true);
+    expect(resolveNoteByTitle(long, [stored])?.id).toBe("long");
+    // The clipped form the user actually sees still resolves too.
+    expect(resolveNoteByTitle(stored.title, [stored])?.id).toBe("long");
   });
 
   it("breaks title collisions by most recently updated", () => {

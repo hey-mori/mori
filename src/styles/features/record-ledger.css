@@ -2512,7 +2512,7 @@
   background: var(--panel, #fff);
 }
 
-/* The ledger rail — a flush left sidebar matching .session-index (fixed width,
+/* The ledger rail, a flush left sidebar matching .session-index (fixed width,
    border-right, app-bg), so 기록 and 세션 read as siblings. */
 .note-explorer {
   flex: 0 0 var(--ledger-rail, 248px);
@@ -2899,7 +2899,7 @@
   color: var(--text);
 }
 
-/* The writing surface: no box, no chrome — the note IS the page. CodeMirror
+/* The writing surface: no box, no chrome, the note IS the page. CodeMirror
    supplies markdown styling + the first-line title; this host just gives it
    room and the app text color. */
 .note-md-editor {

@@ -1,7 +1,7 @@
 /**
  * Note nature (기록 v5 · N1) · what KIND of note this is, before deciding what
- * to extract from it. A note is not always a task list — it may be an essay, a
- * meeting record, or a clipped article — so Mori guesses the nature and lets
+ * to extract from it. A note is not always a task list: it may be an essay, a
+ * meeting record, or a clipped article, so Mori guesses the nature and lets
  * the nature gate which extractions read as signal vs noise. Deterministic
  * floor; a wrong guess is one tap to correct and (later) teaches Mori.
  */

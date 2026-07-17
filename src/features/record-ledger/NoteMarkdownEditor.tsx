@@ -1,9 +1,9 @@
 /**
  * NoteMarkdownEditor · the 기록 writing surface, on CodeMirror 6 (the editor
- * engine Obsidian itself uses — local, MIT, no cloud).
+ * engine Obsidian itself uses: local, MIT, no cloud).
  *
  * A markdown-aware live surface: the first line renders as the note's title
- * (Bear model — the data model already derives the title from line 1),
+ * (Bear model: the data model already derives the title from line 1),
  * headings/bold/italic/code/quote style as you type, undo history and Korean
  * IME handling come from the engine. Uncontrolled with a prop-sync seam: an
  * external body change (note switch adoption, undo/revert) is applied only
