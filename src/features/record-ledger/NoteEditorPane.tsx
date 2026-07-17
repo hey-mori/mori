@@ -455,6 +455,7 @@ export function NoteEditorPane({
             />
             <NoteMarkdownEditor
               value={body}
+              docId={note?.id ?? null}
               onChange={onChange}
               placeholder={"무엇이든 적어보세요"}
               autoFocus

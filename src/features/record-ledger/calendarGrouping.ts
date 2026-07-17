@@ -14,12 +14,33 @@ export type CalendarDayGroup = {
   records: MoriRecord[];
 };
 
+/**
+ * The LOCAL calendar day an activity time falls on.
+ *
+ * Slicing the ISO string was wrong in both directions and quietly so. A note has
+ * no `occurredStart`, so its day comes from `capturedAt`, which the factory
+ * writes with `toISOString()` (UTC). Every "today" on these surfaces is built
+ * from local getters, so in KST (UTC+9) a note written before 09:00 keyed to the
+ * PREVIOUS day: written this morning, filed under yesterday, and on the 1st it
+ * fell out of the visible month entirely. Mori's whole claim is that it places
+ * work on honest activity time, so being a day out is not a rounding error.
+ *
+ * A bare `YYYY-MM-DD` (what `setActivityDate` stores) is returned untouched: it
+ * is already a calendar day, not an instant, and parsing it would drag it
+ * through UTC midnight and shift it a day the other way in any negative offset.
+ */
+export function activityDay(iso: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const at = new Date(iso);
+  return Number.isNaN(at.getTime()) ? iso.slice(0, 10) : isoDay(at);
+}
+
 /** Groups records by activity day, newest day first, with the date-unknown
  *  group always last. Within a day, newest first. */
 export function groupByActivityDay(records: MoriRecord[]): CalendarDayGroup[] {
   const byDay = new Map<string, MoriRecord[]>();
   for (const record of records) {
-    const key = record.occurredStart ? record.occurredStart.slice(0, 10) : "unknown";
+    const key = record.occurredStart ? activityDay(record.occurredStart) : "unknown";
     const bucket = byDay.get(key);
     if (bucket) bucket.push(record);
     else byDay.set(key, [record]);
@@ -46,7 +67,7 @@ export function recordCountByDate(records: MoriRecord[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const record of records) {
     if (!record.occurredStart) continue;
-    const day = record.occurredStart.slice(0, 10);
+    const day = activityDay(record.occurredStart);
     counts.set(day, (counts.get(day) ?? 0) + 1);
   }
   return counts;
@@ -64,7 +85,7 @@ export function recordsByDate(records: MoriRecord[]): Map<string, MoriRecord[]> 
   const byDay = new Map<string, MoriRecord[]>();
   for (const record of records) {
     if (isDateUndecided(record)) continue;
-    const day = displayTime(record).iso.slice(0, 10);
+    const day = activityDay(displayTime(record).iso);
     const bucket = byDay.get(day);
     if (bucket) bucket.push(record);
     else byDay.set(day, [record]);

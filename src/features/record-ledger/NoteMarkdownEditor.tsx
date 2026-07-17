@@ -106,6 +106,7 @@ const baseTheme = EditorView.theme({
 
 export function NoteMarkdownEditor({
   value,
+  docId,
   onChange,
   placeholder,
   autoFocus,
@@ -113,6 +114,10 @@ export function NoteMarkdownEditor({
   revealSpan,
 }: {
   value: string;
+  /** Which note this editor is showing (null for an unsaved new note). A CHANGE
+   *  means a different document, and a different document must load even while
+   *  the editor holds focus. */
+  docId: string | null;
   onChange: (text: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
@@ -194,8 +199,25 @@ export function NoteMarkdownEditor({
     view.focus();
   }, [revealSpan]);
 
-  // Prop-sync seam: adopt an external body (note switch, undo) only while the
-  // user is not typing here, so the engine never fights the keyboard.
+  // A DIFFERENT document must load, focus or not. The guard below exists to stop
+  // an external value fighting the user's typing in the SAME note, but it also
+  // silently refused to load a note that resolved after mount: arriving from
+  // 프로젝트 or 캘린더 mounts this pane before the record does, autoFocus takes
+  // focus, and the note then landed in React state while the editor stayed
+  // blank. A blank editor over a real note is not just wrong on screen, it is a
+  // loaded gun: the next keystroke would save the empty doc over the note.
+  const docIdRef = useRef(docId);
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || docIdRef.current === docId) return;
+    docIdRef.current = docId;
+    const current = view.state.doc.toString();
+    if (value === current) return;
+    view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
+  }, [docId, value]);
+
+  // Prop-sync seam: adopt an external body for the SAME note (an undo, a revert)
+  // only while the user is not typing here, so nothing fights the keyboard.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
