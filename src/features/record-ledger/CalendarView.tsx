@@ -1,42 +1,181 @@
 /**
- * CalendarView · the global calendar surface (v2), reached from the sidebar
- * head. It scopes over all ledger records, so it spans 기록 and AI sessions
- * (agent sessions are captured as records). Reuses `LedgerCalendarView`;
- * selecting a day filters the agenda, and opening a note routes to the 기록
- * editor with that record selected.
+ * 캘린더 · the ledger's month, in two densities side by side (기록 v8 §6).
+ *
+ * This is a RETROSPECTIVE calendar, not a scheduler: records land on the day the
+ * activity happened (architecture doc §22, activity time, never fabricated), and
+ * the screen's jobs are seeing the month's rhythm, opening a day, and placing
+ * the records whose date is still undecided.
+ *
+ * The arrangement is Fantastical's, and it is why the rail is not empty: the
+ * rail carries the month as a readable agenda, the pane carries it as a grid,
+ * and selecting a day scrolls the rail to it. The old screen stacked grid,
+ * then agenda, then tray, so reading one day meant bouncing between the top and
+ * the bottom of the window, and each cell scrolled inside 90px of itself.
  */
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNow } from "../../lib/time/useNow";
-import { PageShell } from "../../components/layout/PageShell";
-import { ActionBar } from "../../components/layout/ActionBar";
 import { useAppStore } from "../../app/store";
 import { useRecordLedger } from "./useRecordLedger";
-import { LedgerCalendarView } from "./LedgerCalendarView";
 import { ledgerVisibleRecords } from "./recordPresentation";
+import { LedgerCalendarView } from "./LedgerCalendarView";
+import { CalendarAgendaRail } from "./CalendarAgendaRail";
+import { recordsByDate } from "./calendarGrouping";
+import { isDateUndecided } from "./dateResolution";
+import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+
+function pad(value: number): string {
+  return value.toString().padStart(2, "0");
+}
 
 export function CalendarView() {
   const ledger = useRecordLedger();
   const navigate = useAppStore((state) => state.navigate);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const now = useNow();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [cursor, setCursor] = useState(() => ({ year: now.getFullYear(), month: now.getMonth() }));
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+
   const records = useMemo(() => ledgerVisibleRecords(ledger.records), [ledger.records]);
+  const byDate = useMemo(() => recordsByDate(records), [records]);
+  const undecided = useMemo(() => records.filter(isDateUndecided), [records]);
+
+  const monthPrefix = `${cursor.year}-${pad(cursor.month + 1)}`;
+  const monthCount = useMemo(() => {
+    let total = 0;
+    for (const [date, list] of byDate) if (date.startsWith(monthPrefix)) total += list.length;
+    return total;
+  }, [byDate, monthPrefix]);
+
+  const shiftMonth = (delta: number) =>
+    setCursor((current) => {
+      const next = new Date(current.year, current.month + delta, 1);
+      return { year: next.getFullYear(), month: next.getMonth() };
+    });
+
+  const goToday = () => {
+    setCursor({ year: now.getFullYear(), month: now.getMonth() });
+    setSelectedDate(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
+  };
+
+  // Selecting a day in the grid scrolls the rail to it: the two densities are
+  // one month, so they must never disagree about where the user is looking.
+  const railRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedDate) return;
+    const target = railRef.current?.querySelector(`[data-day="${selectedDate}"]`);
+    target?.scrollIntoView({ block: "nearest" });
+  }, [selectedDate]);
+
+  const selectDate = useCallback(
+    (date: string | null) => setSelectedDate((current) => (current === date ? null : date)),
+    [],
+  );
+
+  const assign = (record: MoriRecord, date: string) => {
+    void ledger.setActivityDate(record, date);
+    setDropTarget(null);
+  };
+
+  if (ledger.loading) return <div className="cal-workspace" />;
 
   return (
-    <PageShell className="calendar-page" maxWidth="full" actionBar={<ActionBar label="캘린더" />}>
-      {ledger.loading ? null : (
+    <div className="cal-workspace">
+      <CalendarAgendaRail
+        ref={railRef}
+        byDate={byDate}
+        monthPrefix={monthPrefix}
+        monthCount={monthCount}
+        registry={ledger.registry}
+        selectedDate={selectedDate}
+        onSelectDate={selectDate}
+        onSelectRecord={openRecordInLedger}
+        onOpenSessions={() => navigate("sessions")}
+        now={now}
+      />
+
+      <div className="cal-pane">
+        <header className="cal-band">
+          <div className="cal-nav">
+            <button type="button" onClick={() => shiftMonth(-1)} aria-label="이전 달">
+              <ChevronLeft size={16} aria-hidden="true" />
+            </button>
+            <span className="cal-month">
+              {cursor.year}년 {cursor.month + 1}월
+            </span>
+            <button type="button" onClick={() => shiftMonth(1)} aria-label="다음 달">
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
+          </div>
+          <button type="button" className="cal-today" onClick={goToday}>
+            오늘
+          </button>
+          <span className="cal-band-sp" />
+          {undecided.length > 0 ? (
+            <button
+              type="button"
+              className={`cal-tray-toggle${trayOpen ? " is-on" : ""}`}
+              onClick={() => setTrayOpen((value) => !value)}
+              aria-expanded={trayOpen}
+            >
+              <CalendarClock size={13} aria-hidden="true" />
+              날짜 미정 {undecided.length}
+            </button>
+          ) : null}
+        </header>
+
+        {/* The tray docks under the band as a strip, never a tall bottom section:
+            undated records are a small job, and they used to push the month up. */}
+        {trayOpen && undecided.length > 0 ? (
+          <div className="cal-tray">
+            <span className="cal-tray-hint">
+              {selectedDate ? "선택한 날에 배정하거나 셀로 끌어다 놓으세요" : "날짜를 고르거나 셀로 끌어다 놓으세요"}
+            </span>
+            <div className="cal-tray-items base-scroll">
+              {undecided.map((record) => (
+                <span
+                  key={record.id}
+                  className="cal-tray-chip"
+                  draggable
+                  onDragStart={(event) => event.dataTransfer.setData("text/plain", record.id)}
+                >
+                  <button
+                    type="button"
+                    className="cal-tray-open"
+                    onClick={() => openRecordInLedger(record.id)}
+                    title={record.title}
+                  >
+                    {record.title}
+                  </button>
+                  {selectedDate ? (
+                    <button
+                      type="button"
+                      className="cal-tray-assign"
+                      onClick={() => assign(record, selectedDate)}
+                    >
+                      이 날에
+                    </button>
+                  ) : null}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <LedgerCalendarView
-          records={records}
-          registry={ledger.registry}
+          cursor={cursor}
+          byDate={byDate}
+          undecided={undecided}
           selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          onAssignDate={(record, date) => void ledger.setActivityDate(record, date)}
-          onSelectRecord={(recordId) => openRecordInLedger(recordId)}
-          onOpenSessions={() => navigate("sessions")}
-          onClose={() => navigate("ledger")}
+          dropTarget={dropTarget}
+          onSelectDate={selectDate}
+          onDropTarget={setDropTarget}
+          onAssignDate={assign}
           now={now}
         />
-      )}
-    </PageShell>
+      </div>
+    </div>
   );
 }

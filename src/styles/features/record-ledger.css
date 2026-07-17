@@ -1412,54 +1412,170 @@
 
 /* ── Ledger calendar (R5 · M4 body takeover) ─────────────────────────────── */
 
-/* The month grid IS the page, so it takes the shell's height rather than parking
-   a short block at the top of a tall screen. Scoped to .calendar-page: every
-   other PageShell keeps the shared align-content: start. */
-.calendar-page .page-shell-content {
-  min-height: 100%;
-  align-content: stretch;
-}
-
-.ledger-calendar {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 10px;
+/* 캘린더 · the month in two densities (v8 §6). Same skeleton as 기록/세션/프로젝트:
+   a rail and a pane, both on the 52px band. The old screen was a PageShell card
+   stacking grid, then agenda, then tray, so reading a day meant travelling from
+   the top of the window to the bottom. */
+.cal-workspace {
+  display: flex;
+  height: 100%;
   min-height: 0;
+  background: var(--panel, #fff);
 }
 
-.ledger-calendar-head {
+/* The rail is NOT empty chrome: it holds the month as a readable agenda, which
+   is the thing a grid cannot show. Fantastical's arrangement. */
+.cal-rail {
+  flex: 0 0 var(--ledger-rail, 248px);
+  width: var(--ledger-rail, 248px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+}
+
+.cal-rail-band {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-shrink: 0;
+  height: var(--workspace-band);
+  box-sizing: border-box;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
 }
 
-.ledger-calendar-back {
-  display: inline-flex;
+.cal-rail-count {
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--muted-2);
+}
+
+.cal-rail-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.cal-rail-empty {
+  margin: 10px 8px;
+  font-size: 12px;
+  color: var(--muted-2);
+}
+
+.cal-day + .cal-day {
+  margin-top: 10px;
+}
+
+.cal-day.is-selected {
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--purple) 7%, transparent);
+}
+
+.cal-day-head {
+  display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--muted);
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  padding: 5px 11px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  background: none;
   cursor: pointer;
+  text-align: left;
 }
 
-.ledger-calendar-back:hover {
+.cal-day-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.cal-day-head.is-today .cal-day-label {
+  color: var(--purple);
+}
+
+.cal-day-count {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--muted-2);
+}
+
+.cal-day-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cal-day-row:hover {
   background: var(--panel-soft);
+}
+
+.cal-day-row.is-planned {
+  opacity: 0.7;
+}
+
+.cal-day-session-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+
+.cal-day-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
   color: var(--text);
 }
 
-.ledger-calendar-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 auto;
+.cal-day-kind {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--muted-2);
 }
 
-.ledger-calendar-nav button {
+.cal-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The controls live UP here, on the band, instead of a header inside the body. */
+.cal-band {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  height: var(--workspace-band);
+  box-sizing: border-box;
+  padding: 0 16px 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cal-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cal-nav button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1468,367 +1584,266 @@
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.ledger-calendar-nav button:hover {
-  background: var(--panel-soft);
-  color: var(--text);
-}
-
-.ledger-calendar-month {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text);
-  min-width: 96px;
-  text-align: center;
-}
-
-.ledger-calendar-count {
-  font-size: 11.5px;
   color: var(--muted-2);
+  cursor: pointer;
 }
 
-.ledger-calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  border-bottom: 1px solid var(--line);
-}
-
-.ledger-calendar-weekdays span {
-  text-align: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted-2);
-  padding: 6px 0;
-}
-
-/* Every week row gets an equal share of the height, with 92px as the floor so a
-   light month never collapses and a heavy one never makes one row tower over its
-   neighbours. The cell scrolls internally past that, so the grid itself is
-   always exactly the month. */
-.ledger-calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-auto-rows: minmax(92px, 1fr);
-  min-height: 0;
-  border-left: 1px solid var(--line);
-  border-top: 1px solid var(--line);
-  border-radius: 0 0 10px 10px;
-  overflow: hidden;
-}
-
-.ledger-calendar-cell {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 3px;
-  /* Height comes from the row now; this only stops the box collapsing. */
-  min-height: 0;
-  overflow: hidden;
-  padding: 5px 6px;
-  text-align: left;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: var(--panel, #fff);
-  transition: background 0.1s ease;
-}
-
-.ledger-calendar-cell.is-blank {
+.cal-nav button:hover {
   background: var(--panel-soft);
+  color: var(--text);
 }
 
-.ledger-calendar-cell.is-selected {
-  background: color-mix(in srgb, var(--purple) 7%, var(--panel, #fff));
-  box-shadow: inset 0 0 0 1.5px var(--purple);
+.cal-month {
+  min-width: 104px;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
 }
 
-.ledger-calendar-cell.is-drop {
-  background: color-mix(in srgb, var(--purple) 12%, var(--panel, #fff));
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--purple) 55%, transparent);
-}
-
-.ledger-calendar-num {
-  align-self: flex-start;
+.cal-today {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
   font-size: 11.5px;
-  font-weight: 700;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  background: transparent;
-  border: 0;
-  padding: 1px 4px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.ledger-calendar-num:hover {
-  background: var(--panel-soft);
-  color: var(--text);
-}
-
-.ledger-calendar-cell.is-today .ledger-calendar-num {
-  color: var(--purple);
-}
-
-/* Takes the cell's leftover height and scrolls past it: a busy day stays fully
-   reachable without its week row towering over the others. */
-.ledger-cell-entries {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  min-width: 0;
-  min-height: 0;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.ledger-cell-entry {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  padding: 1px 3px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.ledger-cell-entry:hover {
-  background: color-mix(in srgb, var(--purple) 9%, transparent);
-}
-
-/* The collapsed 세션 N chip reads as a quiet count, not a titled record. */
-.ledger-cell-session .ledger-cell-title {
-  color: var(--muted);
-  font-weight: 650;
-}
-
-.ledger-cell-dot {
-  flex-shrink: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 2px;
-  background: var(--muted-2);
-}
-
-.ledger-cell-dot.is-work {
-  background: var(--blue, #2369f6);
-}
-.ledger-cell-dot.is-exercise {
-  background: var(--green, #15955a);
-}
-.ledger-cell-dot.is-study {
-  background: var(--color-warning-base, #b87812);
-}
-.ledger-cell-dot.is-insight {
-  background: var(--purple, #6246f5);
-}
-.ledger-cell-dot.is-task {
-  background: var(--red, #d43a3a);
-}
-
-.ledger-cell-entry.is-planned .ledger-cell-dot {
-  background: transparent;
-  box-shadow: inset 0 0 0 1.2px var(--muted-2);
-}
-
-.ledger-cell-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10.5px;
-  color: var(--text);
-}
-
-.ledger-cell-entry.is-planned .ledger-cell-title {
-  color: var(--muted);
-}
-
-.ledger-cell-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-
-/* 날짜 미정 tray under the grid: the drag source + click-assign fallback. */
-.ledger-calendar-empty {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  padding: 28px 16px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.ledger-calendar-empty-cta {
-  padding: 7px 14px;
-  border: 1px solid var(--line-strong, #d7dbea);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--text);
-  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.ledger-calendar-empty-cta:hover {
-  border-color: var(--purple);
+.cal-today:hover {
+  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
   color: var(--purple);
 }
 
-.ledger-agenda {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 12px;
+.cal-band-sp {
+  flex: 1;
+}
+
+.cal-tray-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
-}
-
-.ledger-agenda-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.ledger-agenda-day {
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--text);
-}
-
-.ledger-agenda-count {
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
   font-size: 11.5px;
-  color: var(--muted-2);
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.ledger-agenda-list {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.cal-tray-toggle.is-on,
+.cal-tray-toggle:hover {
+  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
+  color: var(--purple);
 }
 
-.ledger-agenda-item {
+/* A strip, not a section: undated records are a small job and used to shove the
+   month up the screen. */
+.cal-tray {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  color: var(--text);
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-soft, #fbfbfd);
 }
 
-.ledger-agenda-item:hover {
-  background: var(--panel-soft);
-}
-
-.ledger-agenda-title {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12.5px;
-}
-
-.ledger-agenda-kind {
+.cal-tray-hint {
   flex-shrink: 0;
   font-size: 11px;
   color: var(--muted-2);
 }
 
-.ledger-tray {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px dashed var(--line-strong, #d7dbea);
-  border-radius: 12px;
-  background: var(--panel-soft, #fbfbfd);
-}
-
-.ledger-tray-head {
+.cal-tray-items {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.ledger-tray-hint {
-  font-weight: 500;
-  color: var(--muted-2);
-}
-
-.ledger-tray-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
 }
 
-.ledger-tray-item {
+.cal-tray-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 6px 4px 9px;
-  background: var(--panel, #fff);
+  flex-shrink: 0;
+  padding: 3px 4px 3px 9px;
   border: 1px solid var(--line);
   border-radius: 999px;
+  background: var(--panel, #fff);
   cursor: grab;
 }
 
-.ledger-tray-item:active {
-  cursor: grabbing;
-}
-
-.ledger-tray-open {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 200px;
-  background: transparent;
+.cal-tray-open {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border: 0;
-  padding: 0;
+  background: none;
+  color: var(--text);
+  font-size: 11.5px;
   cursor: pointer;
 }
 
-.ledger-tray-title {
+.cal-tray-assign {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--purple-50, #f2efff);
+  color: var(--purple);
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cal-grid-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px 16px 16px;
+}
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  flex-shrink: 0;
+  padding-bottom: 6px;
+}
+
+.cal-weekdays > span {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+/* Week rows share the height equally with a floor, so the month fills the pane
+   without a tall row towering over a short one. */
+.cal-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(92px, 1fr);
+  gap: 4px;
+  min-height: 0;
+}
+
+.cal-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel, #fff);
+  overflow: hidden;
+}
+
+.cal-cell.is-blank {
+  border-color: transparent;
+  background: transparent;
+}
+
+.cal-cell.is-selected {
+  border-color: color-mix(in srgb, var(--purple) 45%, var(--line));
+  background: color-mix(in srgb, var(--purple) 6%, transparent);
+}
+
+.cal-cell.is-drop {
+  border-color: var(--purple);
+  border-style: dashed;
+}
+
+.cal-cell-num {
+  align-self: flex-start;
+  flex-shrink: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-cell.is-today .cal-cell-num {
+  background: var(--purple);
+  color: #fff;
+}
+
+.cal-cell-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+
+.cal-entry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  height: 16px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cal-entry:hover {
+  background: var(--panel-soft);
+}
+
+.cal-entry.is-planned {
+  opacity: 0.62;
+}
+
+.cal-entry-dot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.cal-entry-title {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text);
 }
 
-.ledger-tray-assign {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--purple);
-  background: var(--purple-50, #f2efff);
+/* The rest of a busy day lives in the rail, where it is readable. The cell never
+   hides content behind a scrollbar of its own. */
+.cal-more {
+  align-self: flex-start;
+  padding: 0 3px;
   border: 0;
-  border-radius: 999px;
-  padding: 3px 9px;
+  background: none;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.cal-more:hover {
+  color: var(--purple);
 }
 
 /* ── Weekly review (R6 · M8 body takeover) ───────────────────────────────── */
