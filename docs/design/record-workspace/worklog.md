@@ -220,6 +220,69 @@ header (`ledger-calendar-back/nav/month/count`), which S3 removed. If it is ever
 re-wired it needs its own header styles; the v8 skeleton would have required
 restyling it regardless.
 
+## Done (v8 review pass · 10 real bugs in the new code, 2026-07-17)
+
+v8 shipped ~1500 lines of new UI in one day with no review, and four bugs had
+already surfaced by hand during the build. So the whole v8 surface got an
+adversarial review (two independent reviewers, 프로젝트 and 캘린더) plus the first
+end-to-end user-flow run: write a note, file it, follow it to 프로젝트, follow it
+back. Every finding below was verified in the code before fixing.
+
+**Found by the flow run (the worst one, and no test would have caught it):**
+opening a note from 프로젝트 or 캘린더 showed a BLANK editor over real text.
+The pane mounts before the record resolves, `autoFocus` takes focus, and
+`NoteMarkdownEditor`'s prop-sync only adopts a value while the view is NOT
+focused, so the note landed in React state (`32자` in the status line) while the
+editor stayed empty. The next keystroke would have saved the empty document over
+the note. The guard exists to stop an external value fighting the keyboard for
+the SAME note; a change of DOCUMENT must load regardless, so it now keys on
+`docId`.
+
+**Found by review · 캘린더:**
+
+- **Days were keyed by the UTC date.** A note has no `occurredStart`, so its day
+  came from `capturedAt`, written with `toISOString()`, and `recordsByDate`
+  sliced that string while every "today" on the surface is local. In KST a note
+  written before 09:00 sat on YESTERDAY, and on the 1st it fell out of the
+  visible month. Mori's claim is that it places work on honest activity time,
+  so a day out is not a rounding error. `activityDay` now converts an instant to
+  the local day and leaves a bare `YYYY-MM-DD` alone (parsing that would shift it
+  the other way in a negative offset). Three existing tests encoded the slice and
+  were rewritten; the new ones fail against the old code, checked both ways.
+- `selectedDate` survived month paging, so 이 날에 stayed live pointing at an
+  invisible day two months back: one click filed the record there and it read as
+  vanishing. The keyboard path already moved the cursor with the day; the month
+  buttons now drop the selection.
+- `dragleave` bubbles, so the drop highlight strobed as the pointer crossed the
+  entries inside a cell, worst on the busiest cells.
+- The `+N` button is itself a row and was not budgeted, so every overflowing cell
+  rendered `fit + 1` rows into a `fit`-row budget.
+
+**Found by review · 프로젝트:**
+
+- **Archiving the busiest (or only) project crashed the screen.** The tree hides
+  an archived subtree but `buildProjectGroups` does not filter archived, so the
+  selection went invalid and the repair picked that same archived project back
+  out of `groups` as a fresh object each run. `Object.is` never bailed and the
+  effect depends on `selection`: Maximum update depth exceeded. A selection is
+  now valid when the context EXISTS, which also un-breaks 보관됨 (clicking an
+  archived project was being undone on the next tick).
+- 이동 offered archived projects as targets, and moving into one swallowed the
+  project: gone from the tree as an archived descendant, and absent from 보관됨,
+  which lists archived TOPS.
+- Rename and re-parent could give two siblings one name. The derived path is the
+  group KEY, so that merged two projects: one project's records rendered under
+  the other while its own page read empty. `planProjectPath` upheld this at
+  create; the other two writes now do too, and a rename refuses a "/".
+- 하위 프로젝트 threw away the known `parentId` and re-derived it through a path
+  string that `planProjectPath` re-matched by NAME.
+
+Both reviewers also cleared things worth recording: the dependency-free keyboard
+effect is correct (cleanup removes the previous listener, so exactly one exists
+and the closure is always fresh), the date math is right, the ResizeObserver
+cannot loop (rows are sized independently of cell content), `dragging` is never
+left stale, and a drag cannot start from the rename field.
+
 ## Done (v8 S4 · accelerators, and the 보관 question answered, 2026-07-17)
 
 v8 is now built end to end (S1-S4). The one thing still open by choice is the
