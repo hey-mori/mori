@@ -175,6 +175,51 @@ Verified end to end in the browser: discard flips status `active → discarded`
 (never a delete, so nothing is lost), the row leaves, the strip appears, the
 writer stays put, and 되돌리기 puts it all back.
 
+## Done (v8 S1-S3 · the layer rule, 프로젝트, 캘린더, 2026-07-17)
+
+Built to `v8-project-calendar-surfaces.md`. S4 (drag-to-re-parent, keyboard day
+navigation, 프로젝트로 만들기, 보관) remains open by design: each is an
+accelerator on top of a path that already works.
+
+**S1 · the layer rule, applied.** A 남긴 것 row no longer navigates: it
+discloses 종류 · 날짜 · 프로젝트 · 버리기 in place, plus 본문에서 보기, which
+selects the sentence the record was kept from (verified: clicking selects
+"오늘 운동을 헀다" in the note, and the retype landed as an audited
+`workout → activity` user revision without leaving the note). The record's own
+document survives for 캘린더/검색 arrivals and finally renders the
+`derived-from` relation as an 출처 노트 crumb, which was stored all along and
+made that screen a dead end. `retypeTargets` is now shared: the footer and the
+document each filtered their own way.
+
+**S2 · 프로젝트 rebuilt.** House skeleton (248px rail + pane, both 52px band,
+verified). The rail is the project tree: carets, 13px-per-depth indent, roll-up
+counts, empty projects included (one you just made is a place you can file
+into). The invented hover pencil is gone, replaced by the convention every tool
+ships: a hover `⋯` that right-click also opens, holding 이름 변경 (inline
+field) · 하위 프로젝트 · 이동. Move targets are filtered by `canReparent` AND
+exclude the current parent, verified live: for 회사/mori the menu offered
+최상위/개인/개인-mori/글쓰기 실험/빈 프로젝트 and correctly omitted itself, its
+parent 회사, and its descendant docs. Renaming 회사/mori to mori-앱 left `docs`
+untouched. Session-only groups sit under a 연동 폴더 divider. The page is
+하위 프로젝트 · 최근 · 세션 · kind sections, and 최근 renders only when it
+actually interleaves records and sessions (a sessions-only project was showing
+the same list twice under two headings).
+
+**S3 · 캘린더 rebuilt.** Rail = the month as a day agenda; pane = the grid;
+selecting a day scrolls the rail to it. Month nav, 오늘 and 날짜 미정 moved onto
+the band; the tray is a strip under it. Cells show what fits then `+N`, measured
+from the real cell height via ResizeObserver: verified at 141px the cell fits
+all 5 entries with no chip, and at 92px it shows 3 + `+2` with nothing clipped
+and no internal scrollbar. `+2` selects the day and the rail reveals all 5. The
+기록으로 back button is gone, a fossil from when the calendar was a body
+takeover inside 기록.
+
+**Known consequence, recorded rather than hidden:** `WeeklyReviewView` is
+retired (zero renderers) and was borrowing four classes from the old calendar
+header (`ledger-calendar-back/nav/month/count`), which S3 removed. If it is ever
+re-wired it needs its own header styles; the v8 skeleton would have required
+restyling it regardless.
+
 ## Done (v7 step 6 · rename/re-parent + a verified audit, 2026-07-17)
 
 **Rename and re-parent shipped, guarded and reversible.** Building them first
