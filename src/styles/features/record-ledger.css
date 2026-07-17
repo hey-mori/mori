@@ -2524,10 +2524,88 @@
 /* Full-bleed two-pane, the same skeleton as .sessions-workspace: the rail is
    flush to the app sidebar and the canvas fills the rest, no floating card. */
 .ledger-workspace {
+  position: relative; /* the 버리기 undo anchors here rather than the viewport */
   display: flex;
   height: 100%;
   min-height: 0;
   background: var(--panel, #fff);
+}
+
+/* 버리기 undo · the door back from a status change that every surface filters
+   out. Floats over the canvas so it never reflows the workspace, and sits low
+   and quiet: it is a receipt, not a dialog. */
+.ledger-undo {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(520px, calc(100% - 48px));
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, #fff);
+  box-shadow: 0 12px 32px rgba(20, 25, 45, 0.16);
+}
+
+.ledger-undo-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.ledger-undo-text svg {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+
+.ledger-undo-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.ledger-undo-action {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--accent-soft, #f2efff);
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ledger-undo-action:hover {
+  background: color-mix(in srgb, var(--purple) 18%, transparent);
+}
+
+.ledger-undo-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: pointer;
+}
+
+.ledger-undo-close:hover {
+  background: var(--panel-soft);
+  color: var(--text);
 }
 
 /* The ledger rail, a flush left sidebar matching .session-index (fixed width,

@@ -35,6 +35,7 @@ export function NoteEditorPane({
   note,
   ledger,
   onNoteCreated,
+  onDiscarded,
   onOpenRecord,
   paneId,
   now,
@@ -48,6 +49,9 @@ export function NoteEditorPane({
   /** Fires with the new record id the first time a fresh note is saved, so the
    *  workspace can select it. */
   onNoteCreated: (recordId: string, paneId: number) => void;
+  /** Fires when this note is thrown away, so the workspace can offer the undo
+   *  that this pane cannot: discarding unmounts it. */
+  onDiscarded: (recordId: string, title: string) => void;
   /** Open another note by id (a clicked [[wiki-link]]); routes through the
    *  workspace so the current note flushes on the switch. */
   onOpenRecord: (recordId: string) => void;
@@ -297,11 +301,14 @@ export function NoteEditorPane({
             clearTimeout(saveTimer.current);
             saveTimer.current = null;
           }
+          // The workspace owns the undo, not this pane: discarding unmounts the
+          // pane, so an affordance living here would vanish with the note.
+          onDiscarded(id, note?.title ?? deriveNoteTitle(latestBodyRef.current));
           void ledger.discardRecords([id]);
         },
       },
     ];
-  }, [note?.id, ledger]);
+  }, [note?.id, note?.title, ledger, onDiscarded]);
 
   const hasExtractions = panel.confirmed.length > 0 || panel.pending.length > 0;
   const dateLine = useMemo(() => {

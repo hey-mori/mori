@@ -95,6 +95,9 @@ export type RecordLedger = {
   ) => Promise<CaptureCommitResult>;
   /** Post-save undo: discards the given records with a user revision each. */
   discardRecords: (recordIds: string[]) => Promise<void>;
+  /** Brings discarded records back (버리기 undo). Discard is a status change, so
+   *  nothing was ever lost; this is the door back. */
+  restoreRecords: (recordIds: string[]) => Promise<void>;
   /** Converts an agent work session into ledger records. */
   captureAgentSession: (input: AgentSessionInput) => Promise<CaptureOutcome>;
   setStatus: (record: MoriRecord, status: RecordStatus) => Promise<void>;
@@ -394,6 +397,32 @@ export function useRecordLedger(): RecordLedger {
     [registry, reload],
   );
 
+  /**
+   * Bring discarded records back. Discard is a status change, so the record and
+   * its history always survived; what was missing was a door back, since every
+   * surface filters discarded out. Without this, 버리기 was unrecoverable through
+   * the UI even though the kernel had lost nothing.
+   */
+  const restoreRecords = useCallback(
+    async (recordIds: string[]) => {
+      const repo = getKernelRepository();
+      const current = await repo.listRecords();
+      for (const id of recordIds) {
+        const record = current.data.find((candidate) => candidate.id === id);
+        if (!record || record.status !== "discarded") continue;
+        const { record: next, revision } = applyRecordPatch(
+          record,
+          { status: "active" },
+          "user",
+          registry,
+        );
+        await repo.saveRecord(next, revision);
+      }
+      await reload();
+    },
+    [registry, reload],
+  );
+
   const discardRecords = useCallback(
     async (recordIds: string[]) => {
       const repo = getKernelRepository();
@@ -574,6 +603,7 @@ export function useRecordLedger(): RecordLedger {
     proposeFormCapture,
     commitCapture,
     discardRecords,
+    restoreRecords,
     captureAgentSession,
     setStatus,
     setActivityDate,

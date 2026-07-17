@@ -9,6 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNow } from "../../lib/time/useNow";
+import { Trash2, X } from "lucide-react";
 import { useAppStore } from "../../app/store";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
@@ -115,6 +116,25 @@ export function LedgerWorkspace() {
     setComposing(true);
     setSelectedId(null);
   };
+  // 버리기 is menu-gated, but a status change the user cannot see undone is still
+  // a one-way door: every surface filters discarded records out, so the record
+  // survives in the kernel while vanishing from the product. This is the door
+  // back, offered where the note used to be.
+  const [discarded, setDiscarded] = useState<{ id: string; title: string } | null>(null);
+  const handleDiscarded = (recordId: string, title: string) => {
+    setDiscarded({ id: recordId, title });
+    remount();
+    setComposing(true);
+    setSelectedId(null);
+  };
+  const undoDiscard = async () => {
+    if (!discarded) return;
+    const { id } = discarded;
+    setDiscarded(null);
+    await ledger.restoreRecords([id]);
+    openRecord(id);
+  };
+
   const handleNoteCreated = (recordId: string, paneId: number) => {
     // Adopt the created id in place: same pane instance, typing continues.
     // Only the pane that is STILL mounted may do so. Navigating away from a
@@ -141,6 +161,28 @@ export function LedgerWorkspace() {
 
   return (
     <div className="ledger-workspace">
+      {discarded ? (
+        <div className="ledger-undo" role="status">
+          {/* No 을/를 on a user string: the particle depends on the title's final
+              consonant, so the label carries none. */}
+          <span className="ledger-undo-text">
+            <Trash2 size={13} aria-hidden="true" />
+            버렸어요
+            {discarded.title ? <span className="ledger-undo-title">{discarded.title}</span> : null}
+          </span>
+          <button type="button" className="ledger-undo-action" onClick={() => void undoDiscard()}>
+            되돌리기
+          </button>
+          <button
+            type="button"
+            className="ledger-undo-close"
+            aria-label="닫기"
+            onClick={() => setDiscarded(null)}
+          >
+            <X size={12} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       <NoteExplorer
         ledger={ledger}
         query={query}
@@ -161,6 +203,7 @@ export function LedgerWorkspace() {
           note={editingNote}
           ledger={ledger}
           onNoteCreated={handleNoteCreated}
+          onDiscarded={handleDiscarded}
           onOpenRecord={openRecord}
           now={now}
         />
