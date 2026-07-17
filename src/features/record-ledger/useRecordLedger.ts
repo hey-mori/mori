@@ -9,7 +9,7 @@
  * changes (confirm a candidate, revert a provisional) go through
  * `applyRecordPatch` so every transition is an audited revision.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   agentSessionToProposals,
   buildLateNightRule,
@@ -30,6 +30,7 @@ import {
   createRecord,
   type RecordPatch,
 } from "../../lib/record-kernel/recordFactory";
+import { coalesceRevision } from "../../lib/record-kernel/revisionCoalescing";
 import { deriveNoteTitle } from "./noteWorkspace";
 import { projectContextId, projectToContext } from "../../lib/record-kernel/projectContextConverter";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
@@ -37,6 +38,7 @@ import type {
   KernelContext,
   KernelEntity,
   KernelRelation,
+  KernelRevision,
   KernelRule,
   MoriRecord,
   RecordStatus,
@@ -182,6 +184,10 @@ export function useRecordLedger(): RecordLedger {
   const [relations, setRelations] = useState<KernelRelation[]>([]);
   const [contexts, setContexts] = useState<KernelContext[]>([]);
   const [loading, setLoading] = useState(true);
+  // The revision this session last wrote per record, so a typing burst can
+  // supersede its own previous entry without reading storage back on every
+  // keystroke. Losing it (a reload) simply starts the next burst's revision.
+  const lastRevisionRef = useRef(new Map<string, KernelRevision>());
 
   const registry = useMemo(() => {
     try {
@@ -489,7 +495,14 @@ export function useRecordLedger(): RecordLedger {
     async (record: MoriRecord, patch: RecordPatch) => {
       const repo = getKernelRepository();
       const { record: next, revision } = applyRecordPatch(record, patch, "user", registry);
-      await repo.saveRecord(next, revision);
+      // One editing burst is one revision, not one per 650ms autosave. Every
+      // revision stores a full before+after copy of the record, so appending per
+      // burst cost a note 64x its own size. Coalescing reuses the previous
+      // revision's id (the store keys by it, so this overwrites) and its
+      // starting point, keeping the burst revertible as a whole.
+      const merged = coalesceRevision(lastRevisionRef.current.get(record.id), revision);
+      await repo.saveRecord(next, merged);
+      lastRevisionRef.current.set(record.id, merged);
       await reload();
     },
     [registry, reload],
