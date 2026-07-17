@@ -2947,32 +2947,38 @@
   color: var(--purple);
 }
 
-/* Nature chip: a quiet native select that reads as a label, not a control,
-   until hovered. Right-aligned so the header title stays the anchor. */
-.note-nature-chip {
+/* Nature: Mori's own reading of the note, so it must present as a RESULT you
+   glance at, not a field you owe an answer to. Borderless muted text by default;
+   the box only appears on hover, where it becomes a correction.
+   The parent is in the selector on purpose: theme-application.css themes every
+   bare `select` as an input via html[data-base-theme] :where(… select …), which
+   outranks a lone class, and would paint this chip as a form field. */
+.note-extract-head .note-nature-chip {
   margin-left: auto;
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 2px 6px;
-  background: var(--panel-soft, #f4f4f7);
-  color: var(--muted);
+  background: transparent;
+  color: var(--muted-2);
   font: inherit;
   font-size: 10.5px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  transition: border-color 0.12s ease, color 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-.note-nature-chip:hover {
+.note-extract-head .note-nature-chip:hover {
+  background: var(--panel-soft, #f4f4f7);
   border-color: var(--line);
   color: var(--text);
 }
 
-.note-nature-chip:focus-visible {
+.note-extract-head .note-nature-chip:focus-visible {
   outline: none;
+  background: var(--panel-soft, #f4f4f7);
   border-color: var(--purple);
   color: var(--text);
 }
@@ -3030,7 +3036,11 @@
 }
 
 /* Pre-confirm corrections: quiet inline controls, never a form. */
-.note-extract-kind-select {
+/* Parent in the selector for the same reason as the nature chip: the theme's
+   `html[data-base-theme] :where(… select …)` input styling outranks a lone
+   class and would paint this inline control as a form field (invisible on a
+   white card in light, a real box in dark). */
+.note-extract-kind .note-extract-kind-select {
   border: 0;
   padding: 0 2px;
   background: transparent;

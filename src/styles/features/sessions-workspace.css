@@ -77,8 +77,10 @@
   min-width: 0;
 }
 
-/* Sort / group toggle beside the search field — recency ↔ project, like a
-   session browser. Calm icon button, matches the search field height. */
+/* The two controls beside the search field: 새 세션, and the recency to project
+   group toggle. One calm icon-button shape, matching the search field height and
+   the 기록 rail's controls so both workspaces' headers read the same. */
+.session-index-new,
 .session-index-sort {
   display: inline-flex;
   align-items: center;
@@ -94,6 +96,7 @@
   transition: background-color 0.12s ease, color 0.12s ease;
 }
 
+.session-index-new:hover,
 .session-index-sort:hover {
   background: var(--gray-50);
   color: var(--text);
@@ -118,7 +121,9 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 8px 12px;
+  /* Breathing room under the search divider: the first row is 라이브 피드, a
+     destination, and it should not sit flush against the rule. */
+  padding: 8px 8px 12px;
 }
 
 .session-index-group + .session-index-group {

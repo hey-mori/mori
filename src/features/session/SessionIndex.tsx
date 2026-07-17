@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarClock, FolderGit2 } from "lucide-react";
+import { CalendarClock, FolderGit2, Plus } from "lucide-react";
+import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
   useSessionStore,
@@ -58,6 +59,7 @@ export function SessionIndex({
   onSelectLive: (focusSessionId?: string) => void;
   onSelectPast: (sessionId: string) => void;
 }) {
+  const requestStartRecords = useAppStore((state) => state.requestStartRecords);
   const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
   const sessionListNonce = useSessionStore((state) => state.sessionListNonce);
   const activeSessionId = useSessionStore(
@@ -151,6 +153,15 @@ export function SessionIndex({
           placeholder="세션 검색"
           ariaLabel="세션 검색"
         />
+        <button
+          type="button"
+          className="session-index-new"
+          onClick={() => requestStartRecords()}
+          aria-label="새 세션"
+          title="새 세션"
+        >
+          <Plus size={15} aria-hidden="true" />
+        </button>
         <button
           type="button"
           className="session-index-sort"
