@@ -64,11 +64,14 @@
   background: var(--base-bg);
 }
 
+/* The rail's share of the workspace band, same token as every other top strip. */
 .session-index-search {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 12px 12px 9px;
+  height: var(--workspace-band);
+  box-sizing: border-box;
+  padding: 0 12px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -103,9 +106,14 @@
 }
 
 /* 작업 중 badge on a live row title. */
+/* A flex item in .session-index-row-title: without these the badge shrinks
+   alongside the title and "작업 중" folds into a vertical 작/업/중 stack. The
+   title owns the ellipsis, so the badge must never give up width. */
 .session-index-working {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
   margin-left: 6px;
   padding: 0 6px;
   height: 15px;

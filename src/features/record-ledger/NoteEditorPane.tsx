@@ -310,43 +310,48 @@ export function NoteEditorPane({
 
   return (
     <div className="note-pane">
-      <div className="note-pane-doc base-scroll" ref={docRef}>
-        <div className="note-pane-doc-inner">
-          <header className="note-pane-head">
-            <span className="note-pane-date">{note ? formatDate(note.occurredStart ?? note.capturedAt) : `오늘 · ${dateLine}`}</span>
-            <span
-              className={`note-pane-status${saveState === "error" ? " is-error" : ""}`}
-              aria-live="polite"
-            >
-              {body.length > 0 ? `${body.length.toLocaleString("ko-KR")}자` : ""}
-              {saveState === "error"
-                ? " · 저장 실패"
-                : saveState === "saved"
-                  ? " · 저장됨"
-                  : saveState === "dirty"
-                    ? " · 쓰는 중"
-                    : ""}
-            </span>
-            {noteActions.length > 0 ? (
-              <BaseOverflowMenu items={noteActions} label="기록 작업" className="note-pane-menu" />
-            ) : null}
-            <button
-              type="button"
-              className="note-pane-toggle"
-              onClick={() => setPanelOpen((v) => !v)}
-              aria-label={panelOpen ? "추출 패널 접기" : "추출 패널 펼치기"}
-              title={panelOpen ? "추출 패널 접기" : "추출 패널 펼치기"}
-            >
-              {panelOpen ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
-            </button>
-          </header>
-          <NoteMarkdownEditor
-            value={body}
-            onChange={onChange}
-            placeholder={"무엇이든 적어보세요"}
-            autoFocus
-            onOpenLink={handleOpenLink}
-          />
+      <div className="note-pane-body">
+        {/* The pane's share of the workspace band: pinned, not scrolling away
+            with the document, so its rule lines up with the rail's and the
+            panel's instead of stepping at the seam. */}
+        <header className="note-pane-head">
+          <span className="note-pane-date">{note ? formatDate(note.occurredStart ?? note.capturedAt) : `오늘 · ${dateLine}`}</span>
+          <span
+            className={`note-pane-status${saveState === "error" ? " is-error" : ""}`}
+            aria-live="polite"
+          >
+            {body.length > 0 ? `${body.length.toLocaleString("ko-KR")}자` : ""}
+            {saveState === "error"
+              ? " · 저장 실패"
+              : saveState === "saved"
+                ? " · 저장됨"
+                : saveState === "dirty"
+                  ? " · 쓰는 중"
+                  : ""}
+          </span>
+          {noteActions.length > 0 ? (
+            <BaseOverflowMenu items={noteActions} label="기록 작업" className="note-pane-menu" />
+          ) : null}
+          <button
+            type="button"
+            className="note-pane-toggle"
+            onClick={() => setPanelOpen((v) => !v)}
+            aria-label={panelOpen ? "추출 패널 접기" : "추출 패널 펼치기"}
+            title={panelOpen ? "추출 패널 접기" : "추출 패널 펼치기"}
+          >
+            {panelOpen ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
+          </button>
+        </header>
+        <div className="note-pane-doc base-scroll" ref={docRef}>
+          <div className="note-pane-doc-inner">
+            <NoteMarkdownEditor
+              value={body}
+              onChange={onChange}
+              placeholder={"무엇이든 적어보세요"}
+              autoFocus
+              onOpenLink={handleOpenLink}
+            />
+          </div>
         </div>
       </div>
 

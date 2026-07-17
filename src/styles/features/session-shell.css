@@ -49,6 +49,7 @@
   position: relative;
   z-index: 2;
   background: var(--base-bg);
+  border-bottom: 1px solid var(--line);
 }
 
 /* The single scroll region. Everything below the header lives here.
@@ -162,10 +163,19 @@
 /* Headerless surfaces: the sidebar names the destination, so there is no
    duplicate title band. The action bar becomes the thin pinned top band and
    carries a touch more vertical breathing room since nothing sits above it. */
+/* Headerless: the action bar IS the workspace band, so the band's height is the
+   token and it includes its own rule, exactly like the rails. This pair used to
+   hard-code 56px + a 1px border, which is the step you could see where the 52px
+   rail met the main pane. */
+.page-shell.is-headerless .page-shell-top {
+  height: var(--workspace-band);
+  box-sizing: border-box;
+}
+
 .page-shell.is-headerless .page-shell-top .action-bar {
-  min-height: 56px;
-  padding-top: var(--base-space-5);
-  padding-bottom: var(--base-space-5);
+  height: 100%;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 /* ── PageHeader ─────────────────────────────────────────────────────────── */
@@ -220,13 +230,17 @@
 
 /* ── ActionBar ──────────────────────────────────────────────────────────── */
 
+/* The band's height is the token, not min-height plus padding: the padding was
+   pushing it to 56 against the 52px rails, which is the step you see at the seam
+   between the rail and the main pane. */
 .action-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--base-space-4);
-  min-height: 52px;
-  padding: var(--base-space-3) 0 var(--base-space-4);
+  height: var(--workspace-band);
+  box-sizing: border-box;
+  padding: 0;
 }
 
 .action-bar-start {

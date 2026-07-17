@@ -44,4 +44,10 @@
   --base-space-8: 32px;
   --base-space-9: 36px;
   --base-space-10: 40px;
+
+  /* Workspace top band · every screen's top strip is exactly this tall: the
+     rail's search row, the main pane's header, and any right panel's header.
+     One value so the rule under them runs unbroken across the window instead of
+     each column landing at its own height and stepping at the seams. */
+  --workspace-band: 52px;
 }
