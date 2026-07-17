@@ -229,6 +229,7 @@ export function LedgerWorkspace() {
             if (selected) void ledger.updateRecord(selected, patch);
           }}
           onSaved={() => {}}
+          onDiscarded={handleDiscarded}
           now={now}
         />
       )}

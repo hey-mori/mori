@@ -3518,11 +3518,18 @@
   background: var(--bg);
 }
 
+/* The record editor's share of the workspace band. It used to set its own
+   10px padding, so its rule sat a few px off every neighbouring header and the
+   seam visibly stepped when you moved between them. The band is a token for
+   exactly this reason: one ruler, every screen. */
 .doc-editor-bar {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 10px;
-  padding: 10px 20px;
+  height: var(--workspace-band);
+  box-sizing: border-box;
+  padding: 0 20px;
   border-bottom: 1px solid var(--line);
   background: var(--panel, #fff);
 }
@@ -3566,6 +3573,13 @@
 .doc-bar-act:hover {
   background: var(--panel-soft);
   color: var(--text);
+}
+
+/* 버리기 stays a peer of 원문 and 이력 at rest and only turns red under the
+   pointer: it is reversible, so it does not get to shout. */
+.doc-bar-act.is-discard:hover {
+  border-color: color-mix(in srgb, var(--red, #d43a3a) 40%, var(--line));
+  color: var(--red, #d43a3a);
 }
 
 .doc-candidate {

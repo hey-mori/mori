@@ -34,6 +34,7 @@ export function DocumentEditor({
   onOpenRecord,
   onUpdate,
   onSaved,
+  onDiscarded,
   now,
 }: {
   record: MoriRecord | null;
@@ -44,6 +45,9 @@ export function DocumentEditor({
   onOpenRecord: (recordId: string) => void;
   onUpdate: (patch: RecordPatch) => void;
   onSaved: (savedRecordIds: string[]) => void;
+  /** Fires when this record is thrown away, so the workspace can offer the
+   *  되돌리기 this screen cannot: discarding clears the pane it lives in. */
+  onDiscarded: (recordId: string, title: string) => void;
   now: Date;
 }) {
   // Idle and composing are one state: the capture canvas (v3). "오늘" anchors
@@ -95,18 +99,29 @@ export function DocumentEditor({
       </div>
     );
   }
-  return <RecordDocument key={record.id} record={record} ledger={ledger} onUpdate={onUpdate} now={now} />;
+  return (
+    <RecordDocument
+      key={record.id}
+      record={record}
+      ledger={ledger}
+      onUpdate={onUpdate}
+      onDiscarded={onDiscarded}
+      now={now}
+    />
+  );
 }
 
 function RecordDocument({
   record,
   ledger,
   onUpdate,
+  onDiscarded,
   now,
 }: {
   record: MoriRecord;
   ledger: RecordLedger;
   onUpdate: (patch: RecordPatch) => void;
+  onDiscarded: (recordId: string, title: string) => void;
   now: Date;
 }) {
   const { source, revisions } = useRecordProvenance(record.id, record.updatedAt);
@@ -153,6 +168,19 @@ function RecordDocument({
             이력
           </button>
         ) : null}
+        {/* A record could be opened, edited and read here but never thrown away:
+            the only 버리기 lived on the note that produced it, and a record
+            captured any other way had no door at all. */}
+        <button
+          type="button"
+          className="doc-bar-act is-discard"
+          onClick={() => {
+            onDiscarded(record.id, record.title);
+            void ledger.discardRecords([record.id]);
+          }}
+        >
+          버리기
+        </button>
       </div>
 
       {isCandidate ? (
