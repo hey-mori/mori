@@ -177,9 +177,9 @@ export function SessionIndex({
         </button>
       </div>
 
-      <div className="session-index-list base-scroll">
-        {/* 라이브 피드 · always reachable; lists only what is live right now. */}
-        <section className="session-index-group is-live">
+      {/* 라이브 피드 · a destination, not a row of 과거, so it is pinned beside the
+          search rather than scrolling away with the list below it. */}
+      <section className="session-index-live">
           <button
             type="button"
             className={`session-index-live-head${liveActive ? " is-active" : ""}`}
@@ -217,8 +217,9 @@ export function SessionIndex({
           ) : bridgeAvailable && !term ? (
             <p className="session-index-hint">지금 실행 중인 세션이 없습니다.</p>
           ) : null}
-        </section>
+      </section>
 
+      <div className="session-index-list base-scroll">
         {filteredPast.length === 0 ? (
           <p className="session-index-empty">
             {term

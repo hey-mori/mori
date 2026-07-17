@@ -1412,9 +1412,19 @@
 
 /* ── Ledger calendar (R5 · M4 body takeover) ─────────────────────────────── */
 
+/* The month grid IS the page, so it takes the shell's height rather than parking
+   a short block at the top of a tall screen. Scoped to .calendar-page: every
+   other PageShell keeps the shared align-content: start. */
+.calendar-page .page-shell-content {
+  min-height: 100%;
+  align-content: stretch;
+}
+
 .ledger-calendar {
   display: grid;
+  grid-template-rows: auto auto 1fr;
   gap: 10px;
+  min-height: 0;
 }
 
 .ledger-calendar-head {
@@ -1494,9 +1504,15 @@
   padding: 6px 0;
 }
 
+/* Every week row gets an equal share of the height, with 92px as the floor so a
+   light month never collapses and a heavy one never makes one row tower over its
+   neighbours. The cell scrolls internally past that, so the grid itself is
+   always exactly the month. */
 .ledger-calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(92px, 1fr);
+  min-height: 0;
   border-left: 1px solid var(--line);
   border-top: 1px solid var(--line);
   border-radius: 0 0 10px 10px;
@@ -1509,7 +1525,9 @@
   flex-direction: column;
   align-items: stretch;
   gap: 3px;
-  min-height: 92px;
+  /* Height comes from the row now; this only stops the box collapsing. */
+  min-height: 0;
+  overflow: hidden;
   padding: 5px 6px;
   text-align: left;
   border-right: 1px solid var(--line);
@@ -1554,10 +1572,16 @@
   color: var(--purple);
 }
 
+/* Takes the cell's leftover height and scrolls past it: a busy day stays fully
+   reachable without its week row towering over the others. */
 .ledger-cell-entries {
   display: grid;
+  align-content: start;
   gap: 2px;
   min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .ledger-cell-entry {
@@ -1624,12 +1648,6 @@
 
 .ledger-cell-entry.is-planned .ledger-cell-title {
   color: var(--muted);
-}
-
-.ledger-cell-more {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted-2);
 }
 
 .ledger-cell-sr {

@@ -1,7 +1,10 @@
 /**
- * LedgerCalendarView · the ledger calendar (R5, screen M4). A body takeover
- * opened from the rail mini-calendar: month cells show the day's records
- * (kind-colored marks + leading titles + a more count), not an empty grid.
+ * LedgerCalendarView · the ledger calendar (R5, screen M4). Month cells show
+ * everything that happened that day, written notes and agent sessions alike:
+ * kind-coloured marks + titles, with agent sessions collapsed into one 세션 N
+ * chip so a backfill cannot flood a cell. The grid fills the viewport, each week
+ * row takes an equal share with a 92px floor, and a busy cell scrolls internally
+ * rather than making its row tower over the others.
  * Selecting a day filters the rail agenda; the 날짜 미정 tray under the grid
  * assigns a day by click (the guaranteed path) or drag (an accelerator).
  * Returns to the timeline via the header.
@@ -15,7 +18,6 @@ import { isDateUndecided } from "./dateResolution";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-const MAX_TITLES = 2;
 
 function pad(value: number): string {
   return value.toString().padStart(2, "0");
@@ -249,11 +251,12 @@ function CellEntries({
   // the 세션 workspace. Other records keep their titled entries.
   const sessions = records.filter((record) => record.schemaId === "agent-session");
   const others = records.filter((record) => record.schemaId !== "agent-session");
-  const shown = others.slice(0, MAX_TITLES);
-  const more = others.length - shown.length;
   return (
-    <div className="ledger-cell-entries">
-      {shown.map((record) => {
+    // Every entry renders. The cell owns a height from its week row and scrolls
+    // past it, so a busy day is fully reachable instead of stopping at a fixed
+    // two, and a quiet day still costs nothing.
+    <div className="ledger-cell-entries base-scroll">
+      {others.map((record) => {
         const planned = (record.occurredStart?.slice(0, 10) ?? "") > todayIso;
         return (
           <button
@@ -268,7 +271,6 @@ function CellEntries({
           </button>
         );
       })}
-      {more > 0 ? <span className="ledger-cell-more">+{more}</span> : null}
       {sessions.length > 0 ? (
         <button
           type="button"

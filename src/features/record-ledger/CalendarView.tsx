@@ -23,7 +23,7 @@ export function CalendarView() {
   const records = useMemo(() => ledgerVisibleRecords(ledger.records), [ledger.records]);
 
   return (
-    <PageShell maxWidth="full" actionBar={<ActionBar label="캘린더" />}>
+    <PageShell className="calendar-page" maxWidth="full" actionBar={<ActionBar label="캘린더" />}>
       {ledger.loading ? null : (
         <LedgerCalendarView
           records={records}

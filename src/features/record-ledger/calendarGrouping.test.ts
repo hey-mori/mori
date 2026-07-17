@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
-import { dayLabel, groupByActivityDay, recordCountByDate } from "./calendarGrouping";
+import { dayLabel, groupByActivityDay, recordCountByDate, recordsByDate } from "./calendarGrouping";
 
 function record(id: string, occurredStart?: string, capturedAt = "2026-07-14T09:00:00Z"): MoriRecord {
   return {
@@ -20,6 +20,31 @@ function record(id: string, occurredStart?: string, capturedAt = "2026-07-14T09:
     updatedAt: capturedAt,
   };
 }
+
+describe("recordsByDate · what the calendar can show", () => {
+  /** A note as createNote actually writes it: written today, no occurredStart. */
+  function writtenNote(id: string, capturedAt: string): MoriRecord {
+    return { ...record(id), capturedAt, createdAt: capturedAt, updatedAt: capturedAt, occurredStart: undefined, timeBasis: "capture-fallback" };
+  }
+
+  it("puts a written note on the day it was written", () => {
+    // Regression: keying off a raw occurredStart dropped every note, so the
+    // calendar showed agent sessions and nothing the user had typed.
+    const byDay = recordsByDate([writtenNote("오늘 회고", "2026-07-14T09:00:00Z")]);
+    expect([...byDay.keys()]).toEqual(["2026-07-14"]);
+    expect(byDay.get("2026-07-14")?.map((r) => r.id)).toEqual(["오늘 회고"]);
+  });
+
+  it("still keeps a genuinely undecided record out of the grid", () => {
+    // timeBasis unknown has no honest day; it belongs in the 날짜 미정 tray.
+    expect(recordsByDate([record("날짜 없음")]).size).toBe(0);
+  });
+
+  it("keeps a user-dated record on its activity day, not its capture day", () => {
+    const byDay = recordsByDate([record("어제 일", "2026-07-13T22:00:00Z", "2026-07-14T09:00:00Z")]);
+    expect([...byDay.keys()]).toEqual(["2026-07-13"]);
+  });
+});
 
 describe("groupByActivityDay", () => {
   it("groups by activity day, newest first, unknown last", () => {

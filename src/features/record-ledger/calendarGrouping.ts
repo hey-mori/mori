@@ -6,6 +6,7 @@
  */
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { displayTime } from "./recordPresentation";
+import { isDateUndecided } from "./dateResolution";
 
 export type CalendarDayGroup = {
   /** ISO date (YYYY-MM-DD), or null for the date-unknown group. */
@@ -51,14 +52,19 @@ export function recordCountByDate(records: MoriRecord[]): Map<string, number> {
   return counts;
 }
 
-/** ISO-date → the records whose activity day is that date, newest first.
- *  Unknown-date records are excluded (they have no cell). Powers the ledger
- *  calendar's cell contents. */
+/** ISO-date → the records whose day is that date, newest first. Only records
+ *  with a genuinely undecided date are excluded (they get the 날짜 미정 tray).
+ *
+ *  Keyed by displayTime, the same rule the 기록 list groups by. Keying off a raw
+ *  occurredStart looked equivalent but silently dropped every note: a note is
+ *  written with timeBasis capture-fallback and NO occurredStart, which is a
+ *  decided day (the day it was written), so the calendar showed agent sessions
+ *  and nothing the user had actually typed. */
 export function recordsByDate(records: MoriRecord[]): Map<string, MoriRecord[]> {
   const byDay = new Map<string, MoriRecord[]>();
   for (const record of records) {
-    if (!record.occurredStart) continue;
-    const day = record.occurredStart.slice(0, 10);
+    if (isDateUndecided(record)) continue;
+    const day = displayTime(record).iso.slice(0, 10);
     const bucket = byDay.get(day);
     if (bucket) bucket.push(record);
     else byDay.set(day, [record]);

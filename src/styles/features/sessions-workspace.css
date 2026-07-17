@@ -117,12 +117,29 @@
   vertical-align: middle;
 }
 
+/* 라이브 피드 · pinned between the search and the scrolling past list. ONE
+   padding value drives its space above and below, so the two gaps are equal by
+   construction instead of by two numbers that have to be kept in sync. */
+.session-index-live {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-index-live ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
 .session-index-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  /* Breathing room under the search divider: the first row is 라이브 피드, a
-     destination, and it should not sit flush against the rule. */
+  /* Top matches .session-index-live's padding so the rhythm continues. */
   padding: 8px 8px 12px;
 }
 
@@ -130,16 +147,6 @@
   margin-top: 12px;
 }
 
-/* 라이브 피드 is a destination, not the first group of the past list, so it gets
-   a rule under it rather than sitting flush against 과거's first project label. */
-.session-index-group.is-live {
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.session-index-group.is-live + .session-index-group {
-  margin-top: 10px;
-}
 
 .session-index-group ul {
   list-style: none;
@@ -165,7 +172,6 @@
   gap: 7px;
   width: 100%;
   padding: 7px 9px;
-  margin-bottom: 2px;
   border: 0;
   border-radius: 8px;
   background: transparent;
