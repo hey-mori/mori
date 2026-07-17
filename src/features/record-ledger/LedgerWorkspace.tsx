@@ -8,6 +8,7 @@
  * the rail's pinned 확인할 것 group; the calendar is a separate global view.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNow } from "../../lib/time/useNow";
 import { useAppStore } from "../../app/store";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
@@ -27,7 +28,7 @@ export function LedgerWorkspace() {
   // flow on one screen). The explorer still opens any existing note; a calendar
   // deep-link (openRecordId) overrides this on mount to show that record.
   const [composing, setComposing] = useState(true);
-  const now = useMemo(() => new Date(), []);
+  const now = useNow();
   const openRecordId = useAppStore((state) => state.openRecordId);
   const clearOpenRecord = useAppStore((state) => state.clearOpenRecord);
   const newRecordRequest = useAppStore((state) => state.newRecordRequest);
@@ -78,8 +79,14 @@ export function LedgerWorkspace() {
       ),
     [ledger.records, derivedIds],
   );
+  // A discarded record reads as gone, so the effect below clears the pane the
+  // moment its note is thrown away. Candidates must still resolve (the 확인할 것
+  // group opens them), so this drops only the discarded.
   const selected = useMemo(
-    () => ledger.records.find((record) => record.id === selectedId) ?? null,
+    () =>
+      ledger.records.find(
+        (record) => record.id === selectedId && record.status !== "discarded",
+      ) ?? null,
     [ledger.records, selectedId],
   );
 

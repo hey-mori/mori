@@ -7,7 +7,8 @@
  * linked back to the note. No composer box, no 정리 button: writing is capture.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Sparkles, PanelRightClose, PanelRightOpen, Link2 as LinkIcon } from "lucide-react";
+import { Check, Sparkles, PanelRightClose, PanelRightOpen, Link2 as LinkIcon, Trash2 } from "lucide-react";
+import { BaseOverflowMenu, type BaseMenuItemSpec } from "../../components/ui/BaseActionMenu";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "./useRecordLedger";
 import {
@@ -234,6 +235,32 @@ export function NoteEditorPane({
     [ledger.records, note],
   );
 
+  // A note needs a way out. 기록 creates eagerly (any typed line, any clicked
+  // unresolved [[link]]), so without this a mistake is permanent. Discard is a
+  // status change, not a hard delete: the record and its history survive, it
+  // just leaves the ledger. Menu-gated so it can never be a stray click.
+  const noteActions = useMemo<BaseMenuItemSpec[]>(() => {
+    const id = note?.id ?? noteIdRef.current;
+    if (!id) return [];
+    return [
+      {
+        id: "discard",
+        label: "버리기",
+        icon: Trash2,
+        destructive: true,
+        onSelect: () => {
+          // Cancel the pending autosave first: it would otherwise re-save the
+          // body onto the record we are discarding.
+          if (saveTimer.current) {
+            clearTimeout(saveTimer.current);
+            saveTimer.current = null;
+          }
+          void ledger.discardRecords([id]);
+        },
+      },
+    ];
+  }, [note?.id, ledger]);
+
   const hasExtractions = panel.confirmed.length > 0 || panel.pending.length > 0;
   const dateLine = useMemo(() => {
     const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "long" }).format(now);
@@ -250,6 +277,9 @@ export function NoteEditorPane({
               {body.length > 0 ? `${body.length.toLocaleString("ko-KR")}자` : ""}
               {saveState === "saved" ? " · 저장됨" : saveState === "dirty" ? " · 쓰는 중" : ""}
             </span>
+            {noteActions.length > 0 ? (
+              <BaseOverflowMenu items={noteActions} label="기록 작업" className="note-pane-menu" />
+            ) : null}
             <button
               type="button"
               className="note-pane-toggle"

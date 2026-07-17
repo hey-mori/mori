@@ -6,6 +6,7 @@
  * is visible.
  */
 import { useMemo } from "react";
+import { useNow } from "../../lib/time/useNow";
 import { Sparkles } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
@@ -52,7 +53,7 @@ export function LedgerTimeline({
     }
     return groupByActivityDay(visible);
   }, [ledger.records, ledger.registry, selectedDate, query]);
-  const now = useMemo(() => new Date(), []);
+  const now = useNow();
   const newIdSet = useMemo(() => new Set(newIds), [newIds]);
 
   const contextNameFor = (record: MoriRecord): string | null => {

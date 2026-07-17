@@ -5,6 +5,7 @@
  * old collapsible LedgerCalendar, which lived in the body.
  */
 import { useMemo, useState } from "react";
+import { useNow } from "../../lib/time/useNow";
 import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { recordCountByDate } from "./calendarGrouping";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
@@ -30,7 +31,7 @@ export function MiniCalendar({
   /** Opens the full ledger calendar (body takeover), when provided. */
   onExpand?: () => void;
 }) {
-  const today = useMemo(() => new Date(), []);
+  const today = useNow();
   const [cursor, setCursor] = useState(() => {
     const base = selectedDate ? new Date(`${selectedDate}T00:00:00`) : today;
     return { year: base.getFullYear(), month: base.getMonth() };

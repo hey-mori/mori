@@ -2900,6 +2900,27 @@
   color: var(--text);
 }
 
+/* 기록 작업 (버리기) sits beside the panel toggle and must read as its twin, so
+   the header stays two quiet glyphs. The theme gives the shared trigger a
+   button surface via html[data-base-theme]; the parent here outranks it. */
+.note-pane-head .note-pane-menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: pointer;
+}
+
+.note-pane-head .note-pane-menu:hover {
+  background: var(--panel-soft);
+  color: var(--text);
+}
+
 /* The writing surface: no box, no chrome, the note IS the page. CodeMirror
    supplies markdown styling + the first-line title; this host just gives it
    room and the app text color. */

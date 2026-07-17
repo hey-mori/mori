@@ -6,6 +6,7 @@
  * editor with that record selected.
  */
 import { useMemo, useState } from "react";
+import { useNow } from "../../lib/time/useNow";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { useAppStore } from "../../app/store";
@@ -18,7 +19,7 @@ export function CalendarView() {
   const navigate = useAppStore((state) => state.navigate);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const now = useMemo(() => new Date(), []);
+  const now = useNow();
   const records = useMemo(() => ledgerVisibleRecords(ledger.records), [ledger.records]);
 
   return (
