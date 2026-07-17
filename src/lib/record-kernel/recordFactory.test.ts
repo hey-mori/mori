@@ -112,6 +112,32 @@ describe("createRecord · status, origin, revision", () => {
   });
 });
 
+describe("createRecord / applyRecordPatch · NFC normalization", () => {
+  // WKWebView hands over typed Hangul decomposed; the factory is the one door
+  // every record goes through, so the normalize cannot be a call-site habit.
+  const nfd = "가나"; // 가나, decomposed
+  const nfc = "가나";
+
+  it("normalizes a created record's title and body", () => {
+    const { record } = createRecord(
+      { schemaId: "note", title: nfd, body: nfd, origin: "user", now: fixedNow },
+      registry,
+    );
+    expect(record.title).toBe(nfc);
+    expect(record.body).toBe(nfc);
+  });
+
+  it("normalizes a patched title and body", () => {
+    const { record } = createRecord(
+      { schemaId: "note", title: "메모", origin: "user", now: fixedNow },
+      registry,
+    );
+    const updated = applyRecordPatch(record, { title: nfd, body: nfd }, "user", registry, fixedNow);
+    expect(updated.record.title).toBe(nfc);
+    expect(updated.record.body).toBe(nfc);
+  });
+});
+
 describe("applyRecordPatch", () => {
   it("applies a valid patch and emits an update revision with before/after", () => {
     const { record } = createRecord(

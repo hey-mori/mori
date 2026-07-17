@@ -23,6 +23,17 @@ export function createKernelId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Every record's text passes through here on the way in. macOS / WKWebView hand
+ * over typed Hangul decomposed (NFD), which looks identical but compares and
+ * searches as a different string, so the normalize has to be an invariant of the
+ * one door records are created and patched through, not a rule each call site is
+ * trusted to remember.
+ */
+function normalizeText(value: string): string {
+  return value.normalize("NFC");
+}
+
 export type CreateRecordInput = {
   schemaId: string;
   title: string;
@@ -119,8 +130,8 @@ export function createRecord(input: CreateRecordInput, registry: SchemaRegistry)
   const record: MoriRecord = {
     id: input.id ?? createKernelId("rec"),
     schemaId: input.schemaId,
-    title: input.title,
-    body: input.body ?? "",
+    title: normalizeText(input.title),
+    body: normalizeText(input.body ?? ""),
     occurredStart: input.occurredStart,
     occurredEnd: input.occurredEnd,
     sourceCreatedAt: input.sourceCreatedAt,
@@ -179,6 +190,8 @@ export function applyRecordPatch(
   now: () => Date = () => new Date(),
 ): UpdatedRecord {
   const next: MoriRecord = { ...record, ...patch, updatedAt: now().toISOString() };
+  if (patch.title !== undefined) next.title = normalizeText(next.title);
+  if (patch.body !== undefined) next.body = normalizeText(next.body);
   // A patch may retype the record (유형 변경 in review / detail); validation
   // then runs against the schema the record is becoming, not the one it was.
   const schema = registry.get(next.schemaId);

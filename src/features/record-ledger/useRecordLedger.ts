@@ -242,7 +242,8 @@ export function useRecordLedger(): RecordLedger {
 
   const createNote = useCallback(
     async (body: string): Promise<MoriRecord | null> => {
-      // NFC guards typed Korean at every write boundary (WKWebView delivers NFD).
+      // NFC once, here, so deriveNoteTitle below keys off the same form the
+      // factory will store (the factory normalizes again; it is idempotent).
       const text = body.normalize("NFC");
       if (text.trim().length === 0) return null;
       const repo = getKernelRepository();

@@ -34,19 +34,22 @@ export function LedgerWorkspace() {
   const newRecordRequest = useAppStore((state) => state.newRecordRequest);
   const clearNewRecordRequest = useAppStore((state) => state.clearNewRecordRequest);
 
-  // The global calendar can ask 기록 to open a specific record.
+  // Both global entry points route through the same actions the in-workspace
+  // controls use, rather than setting state behind their backs. That is what
+  // re-keys the pane: without it the sidebar ＋ over an open draft left the old
+  // pane mounted, so it silently kept the draft and never took focus.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actions are
+  // re-created each render; the effect no-ops unless its request is set.
   useEffect(() => {
     if (!openRecordId) return;
-    setSelectedId(openRecordId);
-    setComposing(false);
+    openRecord(openRecordId);
     clearOpenRecord();
   }, [openRecordId, clearOpenRecord]);
 
-  // A global create action (the sidebar +) can ask 기록 to start a capture.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- see above.
   useEffect(() => {
     if (!newRecordRequest) return;
-    setComposing(true);
-    setSelectedId(null);
+    startNew();
     clearNewRecordRequest();
   }, [newRecordRequest, clearNewRecordRequest]);
 

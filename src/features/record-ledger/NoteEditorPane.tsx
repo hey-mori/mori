@@ -24,7 +24,7 @@ import {
   NOTE_NATURE_LABEL,
   type NoteNature,
 } from "./noteNature";
-import { noteBacklinks, resolveNoteByTitle } from "./wikiLinks";
+import { noteBacklinks, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
 
@@ -60,6 +60,9 @@ export function NoteEditorPane({
   // Serializes the first note creation so a debounced save and a 확인 click can
   // never mint two note records for the same fresh note.
   const createInFlight = useRef<Promise<MoriRecord | null> | null>(null);
+  // Click-to-create for [[links]], keyed by title, so a double-click awaits the
+  // first create instead of minting a duplicate note.
+  const linkCreateInFlight = useRef(new Map<string, Promise<MoriRecord | null>>());
   // The latest typed body + the latest flushSave closure, so the unmount
   // cleanup (which captures the first render) can still persist a pending
   // edit with fresh state instead of silently discarding it.
@@ -115,9 +118,11 @@ export function NoteEditorPane({
       }
       if (text.trim().length === 0) return null;
       // If a create is already running for this fresh note, wait for it and
-      // update instead of creating a second record.
+      // update instead of creating a second record. A rejected create must read
+      // as "still no note" so the next keystroke retries, rather than poisoning
+      // every later save with the same failure.
       if (createInFlight.current) {
-        const created = await createInFlight.current;
+        const created = await createInFlight.current.catch(() => null);
         if (created) {
           await ledger.updateRecord(created, { body: text, title: deriveNoteTitle(text) || "새 기록" });
         }
@@ -125,8 +130,14 @@ export function NoteEditorPane({
       }
       const pending = ledger.createNote(text);
       createInFlight.current = pending;
-      const created = await pending;
-      createInFlight.current = null;
+      let created: MoriRecord | null;
+      try {
+        created = await pending;
+      } finally {
+        // Always clear: a create that threw used to leave this ref pointing at a
+        // rejected promise forever, wedging the editor on "쓰는 중".
+        createInFlight.current = null;
+      }
       if (created) {
         noteIdRef.current = created.id;
         onNoteCreated(created.id, paneId);
@@ -223,8 +234,22 @@ export function NoteEditorPane({
         onOpenRecord(found.id);
         return;
       }
-      const created = await ledger.createNote(title);
-      if (created) onOpenRecord(created.id);
+      // Serialize click-to-create per title: a double-click on an unresolved
+      // link fires twice before the first create lands, and both would miss the
+      // resolve above and mint a twin. The second click awaits the first.
+      const key = wikiLinkKey(title);
+      const inFlight = linkCreateInFlight.current.get(key);
+      const pending = inFlight ?? ledger.createNote(title);
+      if (!inFlight) linkCreateInFlight.current.set(key, pending);
+      try {
+        const created = await pending;
+        if (created) onOpenRecord(created.id);
+      } catch {
+        // A failed click-to-create leaves the caret where it was; the next click
+        // retries rather than opening nothing forever.
+      } finally {
+        if (!inFlight) linkCreateInFlight.current.delete(key);
+      }
     },
     [ledger, onOpenRecord],
   );

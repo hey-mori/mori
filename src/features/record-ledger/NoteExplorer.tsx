@@ -23,7 +23,8 @@ import {
   type ExplorerGroupMode,
   type ExplorerSort,
 } from "./noteExplorerModel";
-import { ledgerVisibleRecords, schemaLabel } from "./recordPresentation";
+import { displayTime, ledgerVisibleRecords, schemaLabel } from "./recordPresentation";
+import { isDateUndecided } from "./dateResolution";
 
 export function NoteExplorer({
   ledger,
@@ -53,7 +54,9 @@ export function NoteExplorer({
   const [groupMode, setGroupMode] = useState<ExplorerGroupMode>("day");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  const text = query.trim().toLowerCase();
+  // NFC the needle too: a note written before the factory normalized on write,
+  // or typed here as NFD, must still match the NFC text stored on the record.
+  const text = query.trim().normalize("NFC").toLowerCase();
   const matches = (record: MoriRecord) =>
     !text ||
     record.title.toLowerCase().includes(text) ||
@@ -356,22 +359,24 @@ function NoteItem({
   now: Date;
 }) {
   const snippet = recordSnippet(record, query);
-  // Trailing signal: the one thing the group does not already imply. Day
-  // groups carry the date, so rows show the time of day; project groups show
-  // the short date. Pinned (undecided) rows read their honest state instead.
-  const trailing = record.occurredStart
-    ? groupMode === "day"
-      ? timeOfDayLabel(record.occurredStart)
-      : shortDateLabel(record.occurredStart)
-    : record.status === "candidate"
+  // "Has no occurredStart" is NOT the same as "has no decided date": a note is
+  // written with timeBasis capture-fallback and no occurredStart, which is a
+  // decided state that files it under today. Only timeBasis unknown is undecided.
+  const undecided = isDateUndecided(record);
+  // Trailing signal: the one thing the group does not already imply. Day groups
+  // carry the date, so rows show the time of day; project groups show the short
+  // date. Undecided rows have no honest time to show and read their state.
+  const trailing = undecided
+    ? record.status === "candidate"
       ? "확인"
-      : "";
-  // A date-less record has no time to show; its state line takes the
+      : ""
+    : groupMode === "day"
+      ? timeOfDayLabel(displayTime(record).iso)
+      : shortDateLabel(displayTime(record).iso);
+  // A genuinely undecided record has no time to show; its state line takes the
   // snippet slot so the pinned group stays honest without extra chrome.
   const pinnedMeta =
-    !record.occurredStart && !snippet
-      ? `날짜 미정 · ${schemaLabel(record, ledger.registry)}`
-      : null;
+    undecided && !snippet ? `날짜 미정 · ${schemaLabel(record, ledger.registry)}` : null;
   return (
     <button
       type="button"
