@@ -124,6 +124,29 @@ band, every option always visible, nothing looking like a control. Now styled.
 derived path make them cheap, but the door is not built: a project can be nested
 at creation and not moved afterwards.
 
+## Done (v7 step 5 · the doors back, 2026-07-17)
+
+Keeping a record was one click; unkeeping it had none. Both surfaces that mint
+records now have a 버리기, and neither discard is itself a one-way door.
+
+- **Under the document:** each kept record has a 버리기, revealed on row hover
+  (always-visible would turn a quiet list into a row of red buttons), and it
+  raises the same 되돌리기 strip a discarded note raises.
+- **On the record document:** 버리기 sits beside 원문 and 이력. A record opened
+  here could be read and edited but never thrown away, and a record captured
+  outside a note had no door at all.
+- **Neither discard navigates.** The note is untouched, so yanking the writer to
+  the restored record would punish them for correcting a mistake. `undoDiscard`
+  carries a `reopen` flag: a discarded NOTE unmounts its pane and must reopen; a
+  discarded kept record must not.
+- **`.doc-editor-bar` joins `--workspace-band`** (52px, verified in the browser).
+  It set its own 10px padding, so its rule stepped against every neighbouring
+  header at the seam.
+
+Verified end to end in the browser: discard flips status `active → discarded`
+(never a delete, so nothing is lost), the row leaves, the strip appears, the
+writer stays put, and 되돌리기 puts it all back.
+
 ## Done (v6 · honest notes, 2026-07-17)
 
 Direction + evidence: `v6-honest-notes.md`. A six-dimension audit of 기록 (33
