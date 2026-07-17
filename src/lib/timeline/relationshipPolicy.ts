@@ -94,15 +94,26 @@ export function buildVisibleConnectors(args: {
   }
 
   const ordered = [...aggregated.values()];
-  if (args.maxConnectors === undefined) return ordered;
-  return ordered.slice(0, args.maxConnectors);
+  if (args.maxConnectors === undefined || ordered.length <= args.maxConnectors) return ordered;
+  // The cap bites. Aggregation preserves first-appearance order, which is event
+  // order, so slicing here would keep only the EARLIEST connectors and strand
+  // every later one: the timeline would draw lines at the start and nothing
+  // after, reading as "the feature stops working" rather than "some lines are
+  // hidden". Keep the heaviest handoffs instead, which spreads the survivors
+  // across the session. Sort is stable, so equal weights keep event order.
+  return [...ordered].sort((a, b) => b.weight - a.weight).slice(0, args.maxConnectors);
 }
 
 /**
- * Connector cap by mode. The Timeline now draws the deterministic activity-flow
- * lines in overview, so it needs enough headroom to show the handoffs across
- * lanes (not just a handful); Flow Focus stays a tighter subgraph.
+ * Connector cap by mode.
+ *
+ * This is a runaway backstop, NOT a display policy: the canvas already draws a
+ * bar per event, so a comparable number of paths is not what makes it slow, and
+ * a cap tight enough to bite on a normal session silently truncates the map.
+ * A real imported session runs to hundreds of cross-lane handoffs (483 events
+ * produced far more than the old cap of 40, so its lines died a third of the way
+ * across), hence the headroom. Flow Focus stays a deliberately tight subgraph.
  */
 export function defaultConnectorCap(mode: "timeline" | "flow"): number {
-  return mode === "flow" ? 16 : 40;
+  return mode === "flow" ? 16 : 400;
 }

@@ -158,6 +158,53 @@ describe("buildVisibleConnectors", () => {
     });
     expect(out).toHaveLength(4);
   });
+
+  it("keeps the heaviest connectors when the cap bites, not just the earliest", () => {
+    // Regression: aggregation preserves event order, so a plain slice kept only
+    // the earliest connectors and the timeline drew lines at the start and
+    // nothing after. A late-but-heavy handoff must survive the cap.
+    const relationships: Relationship[] = [];
+    const localFocus = new Set<string>();
+    const localAnchors = new Map<string, LaidOutTimelineItem>();
+    const link = (i: number, weight: number) => {
+      const fromId = `from-${i}`;
+      const toId = `to-${i}`;
+      localFocus.add(fromId);
+      localFocus.add(toId);
+      localAnchors.set(fromId, laidOutItem({ itemId: `item-from-${i}`, memberEventIds: [fromId] }));
+      localAnchors.set(toId, laidOutItem({ itemId: `item-to-${i}`, memberEventIds: [toId] }));
+      // `weight` raw relationships collapse onto the same (from, to) pair.
+      for (let n = 0; n < weight; n += 1) relationships.push(rel(`r-${i}-${n}`, fromId, toId));
+    };
+    for (let i = 0; i < 10; i += 1) link(i, 1); // early, light
+    link(99, 5); // late, heavy
+
+    const out = buildVisibleConnectors({
+      mode: "flow",
+      focusedSet: localFocus,
+      focusActive: true,
+      relationships,
+      eventAnchorIndex: localAnchors,
+      toneOfLane: () => "purple",
+      maxConnectors: 3,
+    });
+    expect(out).toHaveLength(3);
+    expect(out[0].id).toBe("item-from-99->item-to-99");
+    expect(out[0].weight).toBe(5);
+  });
+
+  it("does not reorder when everything fits under the cap", () => {
+    const out = buildVisibleConnectors({
+      mode: "flow",
+      focusedSet: focused,
+      focusActive: true,
+      relationships: [rel("r1", "a", "b"), rel("r2", "b", "c")],
+      eventAnchorIndex: anchors,
+      toneOfLane: () => "purple",
+      maxConnectors: 40,
+    });
+    expect(out.map((connector) => connector.id)).toEqual(["item-a->item-b", "item-b->item-c"]);
+  });
 });
 
 describe("defaultConnectorCap", () => {
