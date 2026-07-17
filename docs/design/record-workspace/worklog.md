@@ -41,6 +41,53 @@ Note this is NOT a request for a new capability: the plumbing already exists
 `classification` with `learnedFromRevisionIds`). Mori needs to POINT the engine
 it already owns at the note.
 
+## Done (v7 steps 1-3 · 읽기 ships, 2026-07-17)
+
+§8 answered by the user: **local LLM.** So the engine is real and the surface is
+built against it, not around it.
+
+1. **The understanding contract + engine** (`src/lib/understanding/`, 31 tests).
+   `understandingParse.ts` is the load-bearing piece: it LOCATES every quote in
+   the body and drops whatever it cannot find. Provenance is not a promise the
+   model keeps, it is a filter we apply. The length floor is enforced here too,
+   not asked of the model. Ollama and OpenAI-compatible both go through it;
+   every failure returns null, which the surface reads as "no reading".
+2. **읽기 replaces the 추출 panel** (`NoteReading.tsx`). Above the document, in
+   reading order, no title of its own. `.note-extract` (264px) is gone and the
+   measure now **measures 720px at 1280**, its designed width, for the first time.
+   Kept records and backlinks moved under the document (Obsidian's spot).
+3. **The nature `<select>` is deleted**, and with it `natureFits` /
+   `NATURE_FIT_KINDS`, the fold it drove, and the topical word lists
+   (`STUDY_RE`, `RETRO_RE`). `detectNoteNature` now returns **null** rather than
+   defaulting to 일지: a free guess must not outrank an engine that read the text.
+   Only the two structural signals survive, and they settle the nature over the
+   engine because structure genuinely proves them.
+
+**Verified against a stub engine, on the Kotlin article that started this** (the
+real 3,953-char note, stub in the scratchpad, settings restored afterwards):
+
+- 남길 기록: **0 items**. It used to invent four 활동 records. This is the fix.
+- 용어 `상호운용` kept, its span pointing at the real characters (2852-2856);
+  clicking it selects them in the editor.
+- 용어 `널 안전성` **dropped**, because the document says "Null Safety" and the
+  quote was not locatable. The filter works on output we did not write.
+- Re-opening the note re-reads nothing: cached by `bodyHash`, 0 extra calls.
+
+**Two bugs the work surfaced, both fixed:**
+
+- `runUnderstanding` treated the absent desktop bridge (`getDefaultLlmFetch()`
+  → undefined off Tauri) as "no fetch available" and returned null. A configured
+  engine silently did nothing in the browser and never said why. Every test
+  injected `fetchImpl`, so nothing covered the resolution itself; there is now a
+  test that fails without the fix.
+- The structural override first spread `{nature, confidence}` onto a
+  `natureConfidence` field, so it would have written a stray key and left the
+  confidence untouched.
+
+**Retired, not deleted:** `extractFromNote` / `buildNoteExtractionPanel` still
+exist and are still tested, but nothing renders their `pending` output. They ran
+on every keystroke to produce a list that was discarded.
+
 ## Done (v6 · honest notes, 2026-07-17)
 
 Direction + evidence: `v6-honest-notes.md`. A six-dimension audit of 기록 (33
