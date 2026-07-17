@@ -7,6 +7,7 @@ import {
   contextPath,
   contextTreeOrder,
   contextWithDescendants,
+  planProjectPath,
 } from "./contextTree";
 
 function ctx(id: string, name: string, parentId?: string): KernelContext {
@@ -93,6 +94,62 @@ describe("canReparent", () => {
     // 회사 under 회사/mori/docs would detach the whole subtree into a ring, so
     // every record beneath it becomes unreachable from any root.
     expect(canReparent("c1", "c3", CONTEXTS)).toBe(false);
+  });
+});
+
+describe("planProjectPath", () => {
+  let n = 0;
+  const mint = (name: string, parentId: string | undefined): KernelContext => {
+    n += 1;
+    return ctx(`new${n}`, name, parentId);
+  };
+
+  it("turns a typed path into a real parent chain, not a stored string", () => {
+    n = 0;
+    const { created, leaf } = planProjectPath("회사/mori", [], mint);
+    expect(created.map((c) => c.name)).toEqual(["회사", "mori"]);
+    expect(created[0].parentId).toBeUndefined();
+    expect(created[1].parentId).toBe(created[0].id);
+    expect(leaf?.name).toBe("mori");
+    // The path exists only as the chain, so a later rename of 회사 touches one
+    // name and nothing beneath it.
+    expect(contextPath(leaf!.id, created)).toBe("회사/mori");
+  });
+
+  it("reuses an existing segment instead of minting a duplicate", () => {
+    n = 0;
+    const { created, leaf } = planProjectPath("회사/docs", CONTEXTS, mint);
+    expect(created.map((c) => c.name)).toEqual(["docs"]);
+    expect(created[0].parentId).toBe("c1"); // the existing 회사
+    expect(leaf?.name).toBe("docs");
+  });
+
+  it("creates nothing and returns the leaf when the whole path exists", () => {
+    n = 0;
+    const { created, leaf } = planProjectPath("회사/mori", CONTEXTS, mint);
+    expect(created).toEqual([]);
+    expect(leaf?.id).toBe("c2");
+  });
+
+  it("matches a name only among its own siblings", () => {
+    // 개인/mori must not satisfy 회사/mori: same leaf, different parent.
+    n = 0;
+    const { created } = planProjectPath("회사/개인", [개인], mint);
+    expect(created.map((c) => c.name)).toEqual(["회사", "개인"]);
+  });
+
+  it("ignores empty segments and surrounding space", () => {
+    n = 0;
+    expect(planProjectPath("  회사 / / mori  ", [], mint).created.map((c) => c.name)).toEqual([
+      "회사",
+      "mori",
+    ]);
+  });
+
+  it("plans nothing for an empty or separator-only name", () => {
+    n = 0;
+    expect(planProjectPath("   ", [], mint)).toEqual({ created: [], leaf: null });
+    expect(planProjectPath("///", [], mint)).toEqual({ created: [], leaf: null });
   });
 });
 

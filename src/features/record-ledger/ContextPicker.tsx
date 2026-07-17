@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Check, FolderPlus } from "lucide-react";
 import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { contextPath, contextTreeOrder } from "./contextTree";
 import type { RecordLedger } from "./useRecordLedger";
 
 /** The project a record is filed under, or null. A record carries contextIds of
@@ -74,14 +75,28 @@ export function ContextPicker({
     };
   }, [open]);
 
+  // Tree order, so a nested project reads as nested and two projects that
+  // share a leaf name (회사/mori vs 개인/mori) are told apart by where they sit
+  // rather than by a name that cannot tell them apart.
   const projects = useMemo(
-    () => ledger.contexts.filter((context) => context.type === "project"),
+    () => contextTreeOrder(ledger.contexts.filter((context) => context.type === "project")),
     [ledger.contexts],
   );
   const current = useMemo(
     () => recordProject(record, ledger.contexts),
     [record, ledger.contexts],
   );
+  // Show the full path only when the leaf alone would be ambiguous: 회사/mori
+  // when another mori exists, plain mori when it does not. The calm label is the
+  // honest one right up until it stops identifying the project.
+  const currentLabel = useMemo(() => {
+    if (!current) return "";
+    const twins = ledger.contexts.filter(
+      (context) =>
+        context.type === "project" && context.name === current.name && context.id !== current.id,
+    );
+    return twins.length > 0 ? contextPath(current.id, ledger.contexts) : current.name;
+  }, [current, ledger.contexts]);
 
   const file = (projectId: string | null) => {
     void ledger.updateRecord(record, {
@@ -111,7 +126,7 @@ export function ContextPicker({
         aria-expanded={open}
         aria-label="프로젝트"
       >
-        {current ? current.name : "프로젝트 없음"}
+        {current ? currentLabel : "프로젝트 없음"}
         <ChevronDown size={11} aria-hidden="true" />
       </button>
       {open ? (
@@ -127,13 +142,14 @@ export function ContextPicker({
               프로젝트 없음
               {!current ? <Check size={12} aria-hidden="true" /> : null}
             </button>
-            {projects.map((project) => (
+            {projects.map(({ context: project, depth }) => (
               <button
                 key={project.id}
                 type="button"
                 role="menuitemradio"
                 aria-checked={project.id === current?.id}
                 className={`ctx-picker-opt${project.id === current?.id ? " is-on" : ""}`}
+                style={depth > 0 ? { paddingLeft: `${10 + depth * 13}px` } : undefined}
                 onClick={() => file(project.id)}
               >
                 {project.name}
@@ -153,8 +169,9 @@ export function ContextPicker({
                 autoFocus
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="프로젝트 이름"
+                placeholder="이름 또는 회사/mori"
                 aria-label="새 프로젝트 이름"
+                title="회사/mori 처럼 적으면 하위 프로젝트로 만듭니다"
               />
             </form>
           ) : (

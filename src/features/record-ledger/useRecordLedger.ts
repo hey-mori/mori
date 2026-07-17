@@ -32,6 +32,7 @@ import {
 } from "../../lib/record-kernel/recordFactory";
 import { coalesceRevision } from "../../lib/record-kernel/revisionCoalescing";
 import { deriveNoteTitle } from "./noteWorkspace";
+import { planProjectPath } from "./contextTree";
 import { projectContextId, projectToContext } from "../../lib/record-kernel/projectContextConverter";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type {
@@ -548,20 +549,25 @@ export function useRecordLedger(): RecordLedger {
    *  no records: a project exists before anything belongs to it. */
   const createProjectContext = useCallback(
     async (name: string): Promise<KernelContext | null> => {
-      const trimmed = name.trim().normalize("NFC");
-      if (trimmed.length === 0) return null;
-      const repo = getKernelRepository();
-      const context: KernelContext = {
+      // A typed "회사/mori" nests: planProjectPath turns it into real contexts
+      // linked by parentId and throws the string away, so renaming 회사 later
+      // touches one name and not its children. Typing a path is how Obsidian and
+      // Logseq users already make a folder in a folder, which is what keeps
+      // nesting reachable without a second surface.
+      const plan = planProjectPath(name, contexts, (segmentName, parentId) => ({
         id: createKernelId("ctx"),
         type: "project",
-        name: trimmed,
+        name: segmentName,
+        parentId,
         createdAt: new Date().toISOString(),
-      };
-      await repo.saveContext(context);
-      await reload();
-      return context;
+      }));
+      if (!plan.leaf) return null;
+      const repo = getKernelRepository();
+      for (const context of plan.created) await repo.saveContext(context);
+      if (plan.created.length > 0) await reload();
+      return plan.leaf;
     },
-    [reload],
+    [contexts, reload],
   );
 
   const createRoutine = useCallback(

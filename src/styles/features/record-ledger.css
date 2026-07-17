@@ -3002,6 +3002,153 @@
 }
 
 
+/* ContextPicker · files a note under a project.
+   This shipped with class names and no stylesheet at all, so the menu rendered
+   as a row of bare text across the header band: every option always visible,
+   nothing looking like a control. */
+.ctx-picker {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* Unfiled is not an error, so the resting state is quiet and only the filed
+   state carries the brand tint. */
+.ctx-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 220px;
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.ctx-picker-btn:hover {
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.ctx-picker-btn.is-filed {
+  background: color-mix(in srgb, var(--purple) 8%, transparent);
+  color: var(--purple);
+}
+
+.ctx-picker-btn > svg {
+  flex-shrink: 0;
+}
+
+.ctx-picker-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 40;
+  min-width: 200px;
+  max-width: 300px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, #fff);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 14%);
+}
+
+.ctx-picker-scroll {
+  display: grid;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* The base left padding the tree indents FROM: NoteEditorPane adds depth * 13px
+   on top of this 10px, so a root row and a nested row share one ruler. */
+.ctx-picker-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px 6px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.ctx-picker-opt:hover {
+  background: var(--panel-soft, #fbfbfd);
+}
+
+/* Calm tint for the current pick, never a left-border bar. */
+.ctx-picker-opt.is-on {
+  background: color-mix(in srgb, var(--purple) 9%, transparent);
+  color: var(--purple);
+  font-weight: 600;
+}
+
+.ctx-picker-opt > svg {
+  flex-shrink: 0;
+}
+
+.ctx-picker-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px 6px 10px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 7px 7px;
+  background: none;
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctx-picker-add:hover {
+  color: var(--purple);
+}
+
+.ctx-picker-new {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+/* The theme gives every bare input a surface via html[data-base-theme] :where(input),
+   which is (0,1,1) and outranks a lone class, so this needs the parent to win. */
+.ctx-picker-new input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.ctx-picker-new input:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--purple) 55%, var(--line));
+}
+
 /* 기록 작업 (버리기) sits beside the panel toggle and must read as its twin, so
    the header stays two quiet glyphs. The theme gives the shared trigger a
    button surface via html[data-base-theme]; the parent here outranks it. */

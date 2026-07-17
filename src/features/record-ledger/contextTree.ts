@@ -113,6 +113,50 @@ export function canReparent(
 }
 
 /**
+ * What a typed path ("회사/mori") implies: the contexts that must be minted, and
+ * the leaf the record should be filed under. Pure, so the caller only persists.
+ *
+ * Typing a path is INPUT, not storage. Each segment becomes a real context
+ * linked by `parentId`; the string is thrown away. An existing sibling with the
+ * same name is reused, so typing 회사/mori twice does not leave two 회사.
+ *
+ * `mint` supplies id + timestamp, which is what keeps this pure and testable.
+ */
+export function planProjectPath(
+  path: string,
+  contexts: readonly KernelContext[],
+  mint: (name: string, parentId: string | undefined) => KernelContext,
+): { created: KernelContext[]; leaf: KernelContext | null } {
+  const segments = path
+    .split(CONTEXT_PATH_SEPARATOR)
+    .map((segment) => segment.trim().normalize("NFC"))
+    .filter((segment) => segment.length > 0);
+  if (segments.length === 0) return { created: [], leaf: null };
+
+  const known = [...contexts];
+  const created: KernelContext[] = [];
+  let parentId: string | undefined;
+  let leaf: KernelContext | null = null;
+  for (const name of segments) {
+    const found = known.find(
+      (candidate) =>
+        candidate.type === "project" && candidate.parentId === parentId && candidate.name === name,
+    );
+    if (found) {
+      leaf = found;
+      parentId = found.id;
+      continue;
+    }
+    const next = mint(name, parentId);
+    created.push(next);
+    known.push(next);
+    leaf = next;
+    parentId = next.id;
+  }
+  return { created, leaf };
+}
+
+/**
  * Contexts in tree order (each parent immediately followed by its subtree),
  * with the depth to indent by. Siblings sort by name so the list is stable
  * across renders; a context with a dangling parent surfaces as a root rather
