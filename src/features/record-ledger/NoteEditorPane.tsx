@@ -2,34 +2,39 @@
  * NoteEditorPane · the center + right of the 기록 v4 note workspace.
  *
  * You write a note freely (one surface, the first line is its title, it saves
- * itself); Mori extracts the typed records it can pull out of the text and shows
- * them in the right 추출 panel, where each is confirmed into a durable record
- * linked back to the note. No composer box, no 정리 button: writing is capture.
+ * itself); Mori reads it and shows what it read ABOVE the document (기록 v7's
+ * 읽기: 요약 · 용어 · 인사이트 · 남길 기록). No composer box, no 정리 button:
+ * writing is capture.
+ *
+ * There is no right panel. It cost 264px of a 1280 laptop to show, last, the one
+ * output that is honestly empty for most documents (v7 §0). The document is the
+ * product; the reading sits above it and folds.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Sparkles, PanelRightClose, PanelRightOpen, Link2 as LinkIcon, Trash2 } from "lucide-react";
+import { Link2 as LinkIcon, Trash2 } from "lucide-react";
 import { BaseOverflowMenu, type BaseMenuItemSpec } from "../../components/ui/BaseActionMenu";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "./useRecordLedger";
-import {
-  buildNoteExtractionPanel,
-  deriveNoteTitle,
-  type NoteExtraction,
-} from "./noteWorkspace";
+import { buildNoteExtractionPanel, deriveNoteTitle } from "./noteWorkspace";
 import { NoteMarkdownEditor } from "./NoteMarkdownEditor";
-import {
-  detectNoteNature,
-  natureFits,
-  NOTE_NATURES,
-  NOTE_NATURE_LABEL,
-  type NoteNature,
-} from "./noteNature";
 import { noteBacklinks, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
 import { ContextPicker } from "./ContextPicker";
+import { NoteReading, type ReadingState } from "./NoteReading";
+import { useSessionStore } from "../../app/sessionStore";
+import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
+import { engineFromSettings, runUnderstanding } from "../../lib/understanding/runUnderstanding";
+import { hashBody } from "../../lib/understanding/understandingParse";
+import type { DocumentUnderstanding } from "../../lib/understanding/understandingTypes";
+
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
 
 const SAVE_DEBOUNCE_MS = 650;
+/** Below this a note is a fragment, not a document: reading it costs 10-20s to
+ *  learn nothing. */
+const READING_MIN_CHARS = 120;
+/** Idle before reading. Long enough that typing never triggers it. */
+const READING_IDLE_MS = 2_500;
 
 export function NoteEditorPane({
   note,
@@ -58,7 +63,6 @@ export function NoteEditorPane({
   now: Date;
 }) {
   const [body, setBody] = useState(note?.body ?? "");
-  const [panelOpen, setPanelOpen] = useState(true);
   // The id of the note record this pane is bound to (null until first save).
   const noteIdRef = useRef<string | null>(note?.id ?? null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,9 +84,13 @@ export function NoteEditorPane({
   // there reading 쓰는 중 forever, which is the most expensive lie this pane can
   // tell. A note that is not saving must never look like one that is.
   const [saveState, setSaveState] = useState<"idle" | "dirty" | "saved" | "error">("idle");
-  // A user-set nature overrides the detector until the note switches. null =
-  // trust the detector's read of the current body.
-  const [natureOverride, setNatureOverride] = useState<NoteNature | null>(null);
+  // 읽기 (v7): what the local engine read out of this note. Never synchronous
+  // with typing, and never blocking: no engine simply means no reading.
+  const [reading, setReading] = useState<ReadingState>({ kind: "none" });
+  const readingForRef = useRef<string | null>(null);
+  // The engine the user already configured in 설정; no local model means no
+  // reading, and the surface simply shows nothing.
+  const analysisSettings = useSessionStore((state) => state.analysisSettings);
 
   // Load a different note's body when the workspace selects one; a brand-new
   // note (note === null) starts blank. The just-created case is a no-op because
@@ -108,7 +116,6 @@ export function NoteEditorPane({
     noteIdRef.current = incomingId;
     setBody(note?.body ?? "");
     latestBodyRef.current = note?.body ?? "";
-    setNatureOverride(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id]);
 
@@ -211,40 +218,6 @@ export function NoteEditorPane({
     [body, confirmed, now],
   );
 
-  // The note's nature (일지/회의록/…): a user pick wins, else the detector reads
-  // the body. It gates which pending extractions read as on-topic, and
-  // ones fold under a disclosure rather than compete with the fitting ones.
-  const nature = useMemo<NoteNature>(
-    () => natureOverride ?? detectNoteNature(body).nature,
-    [natureOverride, body],
-  );
-  const { fitPending, offPending } = useMemo(() => {
-    // Only a nature the USER set may hide an extraction. A DETECTED nature is a
-    // keyword guess, and the cost of its two failures is wildly asymmetric:
-    // showing an off-topic card is a glance, hiding a true one loses the record
-    // silently, with no way for the user to know it happened. One "공부" in a
-    // journal used to fold away a real 운동. Tuning the detector only changes
-    // that rate, never the asymmetry, so the guess does not get to hide things.
-    if (!natureOverride) return { fitPending: panel.pending, offPending: [] };
-    const fit: NoteExtraction[] = [];
-    const off: NoteExtraction[] = [];
-    for (const item of panel.pending) {
-      (natureFits(nature, item.schemaId) ? fit : off).push(item);
-    }
-    return { fitPending: fit, offPending: off };
-  }, [panel.pending, nature, natureOverride]);
-
-  const onConfirm = useCallback(
-    async (proposal: NoteExtraction["proposal"]) => {
-      // The note must exist before an extraction can link to it; flushSave
-      // returns the real note record (created or existing).
-      const noteRecord = await flushSave(body);
-      if (!noteRecord) return;
-      await ledger.confirmExtraction(noteRecord, proposal);
-    },
-    [body, flushSave, ledger],
-  );
-
   // Follow a clicked [[wiki-link]]: open the matching note, or create it when
   // the name has no note yet (Obsidian's click-to-create). Routing through
   // onOpenRecord flushes the current note on the way out.
@@ -273,6 +246,98 @@ export function NoteEditorPane({
       }
     },
     [ledger, onOpenRecord],
+  );
+
+  // Read the note when it settles, never while it is being typed. The engine
+  // takes 10-20s, so the trigger is idle + a body hash: re-opening a note it has
+  // already read costs nothing, and editing it re-reads once you stop.
+  useEffect(() => {
+    const id = note?.id;
+    if (!id || body.trim().length < READING_MIN_CHARS) {
+      setReading({ kind: "none" });
+      return;
+    }
+    const engine = engineFromSettings(analysisSettings);
+    if (engine.kind === "none") {
+      setReading({ kind: "none" });
+      return;
+    }
+    const hash = hashBody(body);
+    const key = `${id}:${hash}`;
+    if (readingForRef.current === key) return;
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void (async () => {
+        const repo = getKernelRepository();
+        const cached = await repo.getReading<DocumentUnderstanding>(id);
+        if (cancelled) return;
+        if (cached?.bodyHash === hash) {
+          readingForRef.current = key;
+          setReading({ kind: "read", understanding: cached });
+          return;
+        }
+        readingForRef.current = key;
+        setReading({ kind: "reading" });
+        const understanding = await runUnderstanding({
+          engine,
+          title: deriveNoteTitle(body),
+          body,
+          itemKinds: ledger.registry
+            .list()
+            .filter((schema) => schema.layer === "occurrence" || schema.layer === "distilled")
+            .map((schema) => ({ id: schema.id, label: schema.name })),
+          knownSchemaIds: ledger.registry.list().map((schema) => schema.id),
+          now: new Date().toISOString(),
+        });
+        if (cancelled) return;
+        if (!understanding) {
+          setReading({ kind: "none" });
+          return;
+        }
+        setReading({ kind: "read", understanding });
+        await repo.saveReading(id, understanding);
+      })();
+    }, READING_IDLE_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [note?.id, body, analysisSettings, ledger.registry]);
+
+  // Clicking any reading output jumps to the span it came from. This is what
+  // makes provenance usable rather than merely stored: a claim you can check
+  // against the sentence in one click is a claim that cannot quietly be wrong.
+  const [pendingSpan, setPendingSpan] = useState<{ start: number; end: number } | null>(null);
+  const revealSpan = useCallback((span: { start: number; end: number }) => {
+    // A new object each time, so clicking the same output twice still scrolls.
+    setPendingSpan({ ...span });
+  }, []);
+
+  const confirmedTitles = useMemo(
+    () => new Set(confirmed.map((record) => record.title)),
+    [confirmed],
+  );
+
+  const onConfirmReadingItem = useCallback(
+    async (item: DocumentUnderstanding["items"][number]) => {
+      const noteRecord = await flushSave(body);
+      if (!noteRecord) return;
+      await ledger.confirmExtraction(noteRecord, {
+        schemaId: item.schemaId,
+        title: item.title,
+        body: body.slice(item.span.start, item.span.end),
+        properties: {},
+        // The engine reads what the document says; it does not date it. An
+        // undated keep is honest and lands in 확인할 것 rather than inventing a day.
+        timeBasis: "unknown",
+        confidence: 0.8,
+        rationale: "읽기에서 남긴 기록",
+        entityMentions: [],
+      });
+    },
+    [body, flushSave, ledger],
   );
 
   // Notes that link TO this one (derived from their bodies, no stored graph).
@@ -310,7 +375,6 @@ export function NoteEditorPane({
     ];
   }, [note?.id, note?.title, ledger, onDiscarded]);
 
-  const hasExtractions = panel.confirmed.length > 0 || panel.pending.length > 0;
   const dateLine = useMemo(() => {
     const weekday = new Intl.DateTimeFormat("ko-KR", { weekday: "long" }).format(now);
     return `${now.getMonth() + 1}월 ${now.getDate()}일 ${weekday}`;
@@ -343,200 +407,70 @@ export function NoteEditorPane({
           {noteActions.length > 0 ? (
             <BaseOverflowMenu items={noteActions} label="기록 작업" className="note-pane-menu" />
           ) : null}
-          <button
-            type="button"
-            className="note-pane-toggle"
-            onClick={() => setPanelOpen((v) => !v)}
-            aria-label={panelOpen ? "추출 패널 접기" : "추출 패널 펼치기"}
-            title={panelOpen ? "추출 패널 접기" : "추출 패널 펼치기"}
-          >
-            {panelOpen ? <PanelRightClose size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
-          </button>
         </header>
         <div className="note-pane-doc base-scroll" ref={docRef}>
           <div className="note-pane-doc-inner">
+            {/* 읽기 sits above the document, inside the measure, so it never
+                costs the writing column width the way the old panel did. */}
+            <NoteReading
+              state={reading}
+              ledger={ledger}
+              confirmedTitles={confirmedTitles}
+              onConfirmItem={onConfirmReadingItem}
+              onRevealSpan={revealSpan}
+            />
             <NoteMarkdownEditor
               value={body}
               onChange={onChange}
               placeholder={"무엇이든 적어보세요"}
               autoFocus
               onOpenLink={handleOpenLink}
+              revealSpan={pendingSpan}
             />
+
+            {/* What this note already put in the ledger, and what points back at
+                it. Both belong under the document (Obsidian's linked-mentions
+                position), never beside it: they are consulted after reading, not
+                while writing. */}
+            {panel.confirmed.length > 0 ? (
+              <div className="note-foot-group">
+                <p className="note-foot-label">이 기록에서 남긴 것</p>
+                {panel.confirmed.map((record) => (
+                  <button
+                    key={record.id}
+                    type="button"
+                    className="note-foot-row"
+                    onClick={() => onOpenRecord(record.id)}
+                  >
+                    <span
+                      className={`note-item-dot ${kindColorClass(record.schemaId)}`}
+                      aria-hidden="true"
+                    />
+                    <span className="note-foot-kind">{schemaLabel(record, ledger.registry)}</span>
+                    <span className="note-foot-title">{record.title}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {backlinks.length > 0 ? (
+              <div className="note-foot-group">
+                <p className="note-foot-label">이 기록을 참조하는 {backlinks.length}개</p>
+                {backlinks.map((source) => (
+                  <button
+                    key={source.id}
+                    type="button"
+                    className="note-foot-row"
+                    onClick={() => onOpenRecord(source.id)}
+                  >
+                    <LinkIcon size={12} aria-hidden="true" className="note-foot-icon" />
+                    <span className="note-foot-title">{source.title}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
-      </div>
-
-      {panelOpen ? (
-        <aside className="note-extract" aria-label="Mori가 찾은 것">
-          <header className="note-extract-head">
-            <Sparkles size={14} aria-hidden="true" />
-            <span>Mori가 찾은 것</span>
-            <select
-              className="note-nature-chip"
-              value={nature}
-              onChange={(event) => setNatureOverride(event.target.value as NoteNature)}
-              aria-label="이 기록의 성격"
-              title="이 기록의 성격 · 뽑아낼 것을 고릅니다"
-            >
-              {NOTE_NATURES.map((value) => (
-                <option key={value} value={value}>
-                  {NOTE_NATURE_LABEL[value]}
-                </option>
-              ))}
-            </select>
-          </header>
-          {hasExtractions ? (
-            <div className="note-extract-list">
-              {panel.confirmed.map((record) => (
-                <div key={record.id} className="note-extract-card is-confirmed">
-                  <div className="note-extract-kind">
-                    <span className={`note-item-dot ${kindColorClass(record.schemaId)}`} aria-hidden="true" />
-                    {schemaLabel(record, ledger.registry)}
-                    <Check size={12} aria-hidden="true" className="note-extract-confirmed-mark" />
-                  </div>
-                  <p className="note-extract-title">{record.title}</p>
-                  <p className="note-extract-meta">
-                    {record.occurredStart ? formatDate(record.occurredStart) : "날짜 없음"}
-                  </p>
-                </div>
-              ))}
-              {fitPending.map((item) => (
-                <PendingExtractionCard
-                  key={item.key}
-                  item={item}
-                  ledger={ledger}
-                  onConfirm={onConfirm}
-                />
-              ))}
-              {offPending.length > 0 ? (
-                <details className="note-extract-off">
-                  <summary>이 성격과 결이 다른 {offPending.length}개</summary>
-                  {offPending.map((item) => (
-                    <PendingExtractionCard
-                      key={item.key}
-                      item={item}
-                      ledger={ledger}
-                      onConfirm={onConfirm}
-                    />
-                  ))}
-                </details>
-              ) : null}
-            </div>
-          ) : (
-            <p className="note-extract-empty">쓰면 여기에 정리됩니다.</p>
-          )}
-          {backlinks.length > 0 ? (
-            <details className="note-backlinks" open>
-              <summary>이 기록을 참조하는 {backlinks.length}개</summary>
-              {backlinks.map((source) => (
-                <button
-                  key={source.id}
-                  type="button"
-                  className="note-backlink-row"
-                  onClick={() => onOpenRecord(source.id)}
-                >
-                  <LinkIcon size={12} aria-hidden="true" />
-                  <span className="note-backlink-title">{source.title}</span>
-                </button>
-              ))}
-            </details>
-          ) : null}
-        </aside>
-      ) : null}
-    </div>
-  );
-}
-
-/** Extraction kinds a note item can be corrected to: writeable schemas only
- *  (imported / derived-only kinds are not manual retype targets). */
-const NON_RETYPE_KINDS = new Set(["agent-session", "source-document", "qa"]);
-
-/**
- * One pending extraction, editable before confirming: a wrong kind (an essay
- * line read as 할 일) or a wrong date costs one correction instead of
- * polluting the ledger. Confirming applies the edits onto the proposal:
- * properties are filtered to the target schema so the record stays valid.
- */
-function PendingExtractionCard({
-  item,
-  ledger,
-  onConfirm,
-}: {
-  item: NoteExtraction;
-  ledger: RecordLedger;
-  onConfirm: (proposal: NoteExtraction["proposal"]) => void | Promise<void>;
-}) {
-  const [schemaId, setSchemaId] = useState(item.schemaId);
-  const initialDate = item.proposal.occurredStart?.slice(0, 10) ?? "";
-  const [date, setDate] = useState(initialDate);
-
-  const kinds = useMemo(
-    () =>
-      ledger.registry
-        .list()
-        .filter(
-          (schema) =>
-            (schema.layer === "occurrence" || schema.layer === "distilled") &&
-            !NON_RETYPE_KINDS.has(schema.id),
-        ),
-    [ledger.registry],
-  );
-
-  const confirm = () => {
-    const proposal = { ...item.proposal };
-    if (schemaId !== item.schemaId) {
-      proposal.schemaId = schemaId;
-      const allowed = new Set(ledger.registry.get(schemaId)?.properties.map((p) => p.key) ?? []);
-      proposal.properties = Object.fromEntries(
-        Object.entries(item.proposal.properties).filter(([key]) => allowed.has(key)),
-      );
-    }
-    if (date !== initialDate) {
-      if (date) {
-        proposal.occurredStart = date;
-        proposal.timeBasis = "user-provided";
-      } else {
-        proposal.occurredStart = undefined;
-        proposal.timeBasis = "unknown";
-      }
-      proposal.timeConfidence = undefined;
-      proposal.dateEvidence = undefined;
-    }
-    void onConfirm(proposal);
-  };
-
-  return (
-    <div className="note-extract-card">
-      <div className="note-extract-kind">
-        <span className={`note-item-dot ${kindColorClass(schemaId)}`} aria-hidden="true" />
-        <select
-          className="note-extract-kind-select"
-          value={schemaId}
-          onChange={(event) => setSchemaId(event.target.value)}
-          aria-label="종류 바꾸기"
-        >
-          {kinds.map((schema) => (
-            <option key={schema.id} value={schema.id}>
-              {schema.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <p className="note-extract-title">{item.title}</p>
-      <div className="note-extract-foot">
-        <input
-          type="date"
-          className="note-extract-date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-          aria-label="날짜 바꾸기"
-        />
-        {item.proposal.dateEvidence && date === initialDate ? (
-          <span className="note-extract-meta">"{item.proposal.dateEvidence}"에서 추정</span>
-        ) : null}
-        <button type="button" className="note-extract-confirm" onClick={confirm}>
-          확인
-        </button>
       </div>
     </div>
   );

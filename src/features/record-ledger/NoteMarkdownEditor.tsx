@@ -110,6 +110,7 @@ export function NoteMarkdownEditor({
   placeholder,
   autoFocus,
   onOpenLink,
+  revealSpan,
 }: {
   value: string;
   onChange: (text: string) => void;
@@ -117,6 +118,10 @@ export function NoteMarkdownEditor({
   autoFocus?: boolean;
   /** Fired when a [[wiki-link]] is clicked, with the link's title text. */
   onOpenLink?: (title: string) => void;
+  /** Scroll to and select this range. 읽기 uses it so every output it shows can
+   *  be checked against the sentence it came from. A new object means "go
+   *  again", so clicking the same output twice still moves. */
+  revealSpan?: { start: number; end: number } | null;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -175,6 +180,19 @@ export function NoteMarkdownEditor({
     // The editor mounts once; external value changes sync via the effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !revealSpan) return;
+    const max = view.state.doc.length;
+    const from = Math.max(0, Math.min(revealSpan.start, max));
+    const to = Math.max(from, Math.min(revealSpan.end, max));
+    view.dispatch({
+      selection: { anchor: from, head: to },
+      effects: EditorView.scrollIntoView(from, { y: "center" }),
+    });
+    view.focus();
+  }, [revealSpan]);
 
   // Prop-sync seam: adopt an external body (note switch, undo) only while the
   // user is not typing here, so the engine never fights the keyboard.

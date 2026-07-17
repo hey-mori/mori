@@ -53,6 +53,22 @@ describe("runUnderstanding", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("falls back to the global fetch when the desktop bridge is absent", async () => {
+    // Off desktop `getDefaultLlmFetch()` is undefined. Reading that as "no fetch
+    // available" and bailing made 읽기 silently do nothing in the browser: a
+    // configured engine that never fires and never says why. Every other test
+    // here injects fetchImpl, so only this one covers the resolution itself.
+    const globalSpy = replyWith({ nature: "study" });
+    vi.stubGlobal("fetch", globalSpy);
+    try {
+      await runUnderstanding({ ...base, engine: ollama });
+      expect(globalSpy).toHaveBeenCalledOnce();
+      expect(String(globalSpy.mock.calls[0][0])).toContain("/api/generate");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("reads a document and verifies every output against the body", async () => {
     const fetchImpl = replyWith({
       nature: "study",

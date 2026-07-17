@@ -3001,23 +3001,6 @@
   color: var(--muted-2);
 }
 
-.note-pane-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted-2);
-  cursor: pointer;
-}
-
-.note-pane-toggle:hover {
-  background: var(--panel-soft);
-  color: var(--text);
-}
 
 /* 기록 작업 (버리기) sits beside the panel toggle and must read as its twin, so
    the header stays two quiet glyphs. The theme gives the shared trigger a
@@ -3070,393 +3053,273 @@
   font-weight: 650;
 }
 
-.note-extract {
-  flex: 0 0 264px;
-  width: 264px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-left: 1px solid var(--line);
+/* 읽기 (v7) · what Mori read, above the document and inside its measure.
+   Deliberately quiet: the document is the product, the reading is an aside that
+   happens to sit on top. It tints rather than bordering hard, so a note with a
+   reading and one without do not read as two different screens. */
+.note-reading {
+  flex-shrink: 0;
+  margin-bottom: 20px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: var(--panel-soft, #fbfbfd);
-  overflow-y: auto;
 }
 
-/* 프로젝트 picker · reads as a quiet label in the band until hovered, like the
-   nature chip. Parent in the selector so the theme's bare-control styling does
-   not repaint it as a form field. */
-.ctx-picker {
-  position: relative;
-  display: inline-flex;
+.note-reading.is-working {
+  padding: 8px 12px;
 }
 
-.note-pane-head .ctx-picker-btn {
+.note-reading-status {
+  font-size: 12px;
+  color: var(--muted-2);
+}
+
+.note-reading-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.note-reading-caret {
+  flex-shrink: 0;
+  color: var(--muted-2);
+  transition: transform 0.12s ease;
+}
+
+.note-reading:not(.is-collapsed) .note-reading-caret {
+  transform: rotate(90deg);
+}
+
+/* The nature reads as a line of prose, never a control: v7 deletes the picker
+   outright, so this must not look clickable. */
+.note-reading-nature {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+}
+
+.note-reading-nature.is-unsure {
+  color: var(--muted-2);
+}
+
+/* Collapsed, the summary stands in for the whole reading, so folding it away
+   never costs you the gist. */
+.note-reading-peek {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted-2);
+}
+
+.note-reading-body {
+  display: grid;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.note-reading-summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.note-reading-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+/* 용어 · the differentiator. A term over its gloss, not a two-column grid:
+   Korean glosses wrap, and a fixed term column would either truncate them or
+   leave a ragged gutter. */
+.note-reading-terms {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.note-reading-term > dt {
+  margin: 0;
+}
+
+.note-reading-term > dt > button {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--purple) 45%, transparent);
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.note-reading-term > dt > button:hover {
+  color: var(--purple);
+}
+
+.note-reading-term > dd {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.note-reading-insights {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Every insight is a button because every insight points at the span it came
+   from: provenance you can check in one click. */
+.note-reading-insights > li > button {
+  display: block;
+  width: 100%;
+  padding: 0 0 0 10px;
+  border: 0;
+  border-left: 2px solid color-mix(in srgb, var(--purple) 30%, transparent);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.note-reading-insights > li > button:hover {
+  border-left-color: var(--purple);
+  color: var(--text);
+}
+
+.note-reading-items {
+  display: grid;
+}
+
+.note-reading-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 5px 0;
+}
+
+.note-reading-item-kind {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+.note-reading-item-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.note-reading-item-title:hover {
+  color: var(--purple);
+}
+
+.note-reading-keep {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 6px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted-2);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-
-.note-pane-head .ctx-picker-btn.is-filed {
-  color: var(--muted);
-}
-
-.note-pane-head .ctx-picker-btn:hover {
-  background: var(--panel-soft, #f4f4f7);
-  border-color: var(--line);
-  color: var(--text);
-}
-
-.ctx-picker-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  display: grid;
-  gap: 1px;
-  min-width: 168px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel, #fff);
-  box-shadow: 0 14px 36px rgba(20, 25, 45, 0.14);
-}
-
-.ctx-picker-scroll {
-  display: grid;
-  gap: 1px;
-  max-height: 208px;
-  overflow-y: auto;
-}
-
-.ctx-picker-opt {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.ctx-picker-opt:hover {
-  background: var(--panel-soft, #fbfbfd);
-}
-
-.ctx-picker-opt.is-on {
-  color: var(--purple);
-}
-
-.ctx-picker-add {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 3px;
-  padding: 6px 8px;
-  border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0 0 7px 7px;
-  background: transparent;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.ctx-picker-add:hover {
-  color: var(--purple);
-}
-
-.ctx-picker-new input {
-  width: 100%;
-  margin-top: 3px;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--panel, #fff);
-  font: inherit;
-  font-size: 12px;
-  color: var(--text);
-}
-
-/* The panel's share of the workspace band. */
-.note-extract-head {
-  display: flex;
-  align-items: center;
   flex-shrink: 0;
-  gap: 6px;
-  height: var(--workspace-band);
-  box-sizing: border-box;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--line);
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.note-extract-head svg {
-  color: var(--purple);
-}
-
-/* Nature: Mori's own reading of the note, so it must present as a RESULT you
-   glance at, not a field you owe an answer to. Borderless muted text by default;
-   the box only appears on hover, where it becomes a correction.
-   The parent is in the selector on purpose: theme-application.css themes every
-   bare `select` as an input via html[data-base-theme] :where(… select …), which
-   outranks a lone class, and would paint this chip as a form field. */
-.note-extract-head .note-nature-chip {
-  margin-left: auto;
-  border: 1px solid transparent;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 2px 6px;
-  background: transparent;
-  color: var(--muted-2);
-  font: inherit;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-
-.note-extract-head .note-nature-chip:hover {
-  background: var(--panel-soft, #f4f4f7);
-  border-color: var(--line);
-  color: var(--text);
-}
-
-.note-extract-head .note-nature-chip:focus-visible {
-  outline: none;
-  background: var(--panel-soft, #f4f4f7);
-  border-color: var(--purple);
-  color: var(--text);
-}
-
-.note-extract-list {
-  display: grid;
-  gap: 8px;
-  padding: 2px 12px 16px;
-}
-
-.note-extract-card {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel, #fff);
-  padding: 9px 11px;
-}
-
-.note-extract-card.is-confirmed {
-  background: var(--panel-soft, #fbfbfd);
-  border-style: dashed;
-}
-
-.note-extract-kind {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.note-extract-confirmed-mark {
-  margin-left: auto;
-  color: var(--green, #15955a);
-}
-
-.note-extract-title {
-  margin: 5px 0 0;
-  font-size: 12.5px;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--text);
-}
-
-.note-extract-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.note-extract-meta {
-  font-size: 10.5px;
-  color: var(--muted-2);
-}
-
-/* Pre-confirm corrections: quiet inline controls, never a form. */
-/* Parent in the selector for the same reason as the nature chip: the theme's
-   `html[data-base-theme] :where(… select …)` input styling outranks a lone
-   class and would paint this inline control as a form field (invisible on a
-   white card in light, a real box in dark). */
-.note-extract-kind .note-extract-kind-select {
-  border: 0;
-  padding: 0 2px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 10.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* Parent in the selector, same reason as the nature chip and the 종류 control:
-   theme-application.css themes every bare input via
-   html[data-base-theme] :where(… input …), which outranks a lone class and was
-   overriding this background, border colour and text colour. */
-.note-extract-card .note-extract-date {
-  min-width: 0;
-  max-width: 118px;
-  padding: 2px 5px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--panel-soft, #fbfbfd);
-  color: var(--muted);
-  font: inherit;
-  font-size: 10.5px;
-}
-
-.note-extract-confirm {
-  margin-left: auto;
-  padding: 3px 12px;
-  border: 0;
-  border-radius: 7px;
-  background: var(--purple);
-  color: #fff;
-  font-size: 11.5px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.note-extract-confirm:hover {
-  background: color-mix(in srgb, var(--purple) 88%, #000);
-}
-
-.note-extract-empty {
-  margin: 6px 14px;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--muted-2);
-}
-
-/* Off-nature extractions: folded, never dropped, so nothing is silently lost
-   but the panel leads with what fits the note's nature. */
-.note-extract-off {
-  display: grid;
-  gap: 8px;
-}
-
-.note-extract-off > summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 5px 2px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted-2);
-}
-
-.note-extract-off > summary::-webkit-details-marker {
-  display: none;
-}
-
-.note-extract-off > summary::before {
-  content: "▸";
-  margin-right: 5px;
-  font-size: 9px;
-}
-
-.note-extract-off[open] > summary::before {
-  content: "▾";
-}
-
-.note-extract-off > summary:hover {
-  color: var(--text);
-}
-
-/* Backlinks: inbound [[wiki-links]], a quiet band below the extractions (not
-   part of "Mori가 찾은 것"), folded per the copy-diet rule. */
-.note-backlinks {
-  display: grid;
-  gap: 4px;
-  margin: 4px 12px 16px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-
-.note-backlinks > summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 2px 2px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted-2);
-}
-
-.note-backlinks > summary::-webkit-details-marker {
-  display: none;
-}
-
-.note-backlinks > summary::before {
-  content: "▸";
-  margin-right: 5px;
-  font-size: 9px;
-}
-
-.note-backlinks[open] > summary::before {
-  content: "▾";
-}
-
-.note-backlinks > summary:hover {
-  color: var(--text);
-}
-
-.note-backlink-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
   background: var(--panel, #fff);
   color: var(--muted);
-  font-size: 12px;
-  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   transition: border-color 0.12s ease, color 0.12s ease;
 }
 
-.note-backlink-row:hover {
+.note-reading-keep:hover {
   border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
-  color: var(--text);
-}
-
-.note-backlink-row svg {
-  flex-shrink: 0;
   color: var(--purple);
 }
 
-.note-backlink-title {
+/* Under the document: what it put in the ledger, and what points back at it.
+   Obsidian's linked-mentions position, and calm enough to ignore. */
+.note-foot-group {
+  flex-shrink: 0;
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.note-foot-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+.note-foot-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.note-foot-kind {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+.note-foot-icon {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+
+.note-foot-title {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
 }
+
+.note-foot-row:hover .note-foot-title {
+  color: var(--purple);
+}
+
 
 .doc-editor {
   flex: 1;
@@ -3857,13 +3720,6 @@
 
 .doc-history-undo:hover { text-decoration: underline; }
 
-@media (max-width: 1180px) {
-  .note-extract {
-    flex-basis: 220px;
-    width: 220px;
-  }
-}
-
 @media (max-width: 1000px) {
   .ledger-workspace {
     flex-direction: column;
@@ -3874,14 +3730,5 @@
     border-right: 0;
     border-bottom: 1px solid var(--line);
     max-height: 320px;
-  }
-  .note-pane {
-    flex-direction: column;
-  }
-  .note-extract {
-    flex: 0 0 auto;
-    width: 100%;
-    border-left: 0;
-    border-top: 1px solid var(--line);
   }
 }

@@ -69,11 +69,20 @@ export type RunUnderstandingArgs = UnderstandingPromptArgs & {
  * refusal, a timeout, or a reply nothing in could be verified all mean the same
  * thing to the surface, which is that there is no reading to show.
  */
+function globalFetch(): typeof fetch | undefined {
+  return typeof fetch === "function" ? fetch.bind(globalThis) : undefined;
+}
+
 export async function runUnderstanding(
   args: RunUnderstandingArgs,
 ): Promise<DocumentUnderstanding | null> {
   if (args.engine.kind === "none") return null;
-  const fetchImpl = args.fetchImpl ?? getDefaultLlmFetch();
+  // On desktop the Tauri bridge fetch dodges the webview's CORS preflight; off
+  // desktop `getDefaultLlmFetch()` is undefined and the global fetch is the
+  // right answer, not a reason to give up. Treating undefined as "no engine"
+  // made 읽기 silently do nothing in the browser, which is the same shape of
+  // lie as a note that says 쓰는 중 while failing to save.
+  const fetchImpl = args.fetchImpl ?? getDefaultLlmFetch() ?? globalFetch();
   if (!fetchImpl) return null;
 
   const prompt = buildUnderstandingPrompt(args);
