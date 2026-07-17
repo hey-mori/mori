@@ -14,7 +14,7 @@
  * so the door back is always open, unlike a discard that hides its record.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, FolderGit2, FolderPlus } from "lucide-react";
+import { Archive, ChevronRight, FolderGit2, FolderPlus } from "lucide-react";
 import {
   BaseContextMenu,
   BaseOverflowMenu,
@@ -42,6 +42,7 @@ export function ProjectTreeRow({
   onRename,
   onReparent,
   onCreateChild,
+  onArchive,
 }: {
   node: ProjectTreeNode;
   contexts: KernelContext[];
@@ -55,6 +56,7 @@ export function ProjectTreeRow({
     parentId: string | undefined,
   ) => Promise<{ parentId: string | undefined } | null>;
   onCreateChild: (parentId: string) => void;
+  onArchive: (contextId: string) => void;
 }) {
   const { context, depth, count, hasChildren } = node;
   const [renaming, setRenaming] = useState(false);
@@ -110,8 +112,17 @@ export function ProjectTreeRow({
         });
       }
     }
+    out.push({ type: "separator", id: "sep-archive" });
+    out.push({
+      // The label carries the consequence rather than a modal asking about it:
+      // archiving a parent takes its subtree out of the list with it.
+      id: "archive",
+      label: hasChildren ? "보관 (하위 포함)" : "보관",
+      icon: Archive,
+      onSelect: () => onArchive(context.id),
+    });
     return out;
-  }, [context.id, context.parentId, moveTargets, onCreateChild, onReparent]);
+  }, [context.id, context.parentId, hasChildren, moveTargets, onArchive, onCreateChild, onReparent]);
 
   const commitRename = () => {
     const trimmed = draft.trim();

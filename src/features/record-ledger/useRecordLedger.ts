@@ -135,6 +135,10 @@ export type RecordLedger = {
     contextId: string,
     parentId: string | undefined,
   ) => Promise<{ parentId: string | undefined } | null>;
+  /** Files a context away (or brings it back). ONE write: the descendants are
+   *  hidden by a view rule, never by a cascade, so 복원 is exactly symmetric and
+   *  a separately archived child stays archived (v8 §9). */
+  archiveContext: (contextId: string, archived: boolean) => Promise<void>;
   /** Creates a routine context and relates the given records to it. */
   createRoutine: (name: string, recordIds: string[]) => Promise<void>;
   /** Makes the late-night → previous-day date correction durable as a rule;
@@ -650,6 +654,16 @@ export function useRecordLedger(): RecordLedger {
     [contexts, reload],
   );
 
+  const archiveContext = useCallback(
+    async (contextId: string, archived: boolean) => {
+      const context = contexts.find((candidate) => candidate.id === contextId);
+      if (!context || (context.archived ?? false) === archived) return;
+      await getKernelRepository().saveContext({ ...context, archived });
+      await reload();
+    },
+    [contexts, reload],
+  );
+
   const createRoutine = useCallback(
     async (name: string, recordIds: string[]) => {
       if (name.trim().length === 0 || recordIds.length === 0) return;
@@ -697,6 +711,7 @@ export function useRecordLedger(): RecordLedger {
     createNote,
     confirmExtraction,
     renameEntity,
+    archiveContext,
     createProjectContext,
     renameContext,
     reparentContext,

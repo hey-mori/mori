@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { KernelContext } from "../../lib/record-kernel/kernelTypes";
 import {
+  archivedRoots,
   canReparent,
   contextChain,
   contextDepth,
   contextPath,
   contextTreeOrder,
   contextWithDescendants,
+  inArchivedSubtree,
   planProjectPath,
 } from "./contextTree";
 
@@ -94,6 +96,48 @@ describe("canReparent", () => {
     // 회사 under 회사/mori/docs would detach the whole subtree into a ring, so
     // every record beneath it becomes unreachable from any root.
     expect(canReparent("c1", "c3", CONTEXTS)).toBe(false);
+  });
+});
+
+describe("보관 (inArchivedSubtree / archivedRoots)", () => {
+  // 회사 archived, its subtree implicitly hidden. docs was archived on purpose
+  // BEFORE its grandparent was, which is the case a cascade would corrupt.
+  const 회사A = { ...회사, archived: true };
+  const docsA = { ...docs, archived: true };
+  const ARCHIVED = [회사A, mori회사, docsA, 개인, mori개인];
+
+  it("hides a context under an archived ancestor without writing to it", () => {
+    expect(inArchivedSubtree("c2", ARCHIVED)).toBe(true);
+    // The child itself was never touched: that is what makes 복원 lossless.
+    expect(mori회사.archived).toBeUndefined();
+  });
+
+  it("leaves an unrelated subtree visible", () => {
+    expect(inArchivedSubtree("c4", ARCHIVED)).toBe(false);
+    expect(inArchivedSubtree("c5", ARCHIVED)).toBe(false);
+  });
+
+  it("lists only the TOP of an archived subtree", () => {
+    // docs is archived too, but restoring it while 회사 stays archived would do
+    // nothing visible, so offering it would be offering a dead button.
+    expect(archivedRoots(ARCHIVED).map((c) => c.id)).toEqual(["c1"]);
+  });
+
+  it("surfaces an individually archived context as its own root", () => {
+    expect(archivedRoots([회사, mori회사, docsA, 개인]).map((c) => c.id)).toEqual(["c3"]);
+  });
+
+  it("remembers a separately archived child across a restore of the parent", () => {
+    // Restoring 회사 is one write. docs stays archived because nothing ever
+    // overwrote it, which a cascade could not have promised.
+    const restored = ARCHIVED.map((c) => (c.id === "c1" ? { ...c, archived: false } : c));
+    expect(inArchivedSubtree("c2", restored)).toBe(false);
+    expect(inArchivedSubtree("c3", restored)).toBe(true);
+  });
+
+  it("says nothing is archived when nothing is", () => {
+    expect(inArchivedSubtree("c3", CONTEXTS)).toBe(false);
+    expect(archivedRoots(CONTEXTS)).toEqual([]);
   });
 });
 

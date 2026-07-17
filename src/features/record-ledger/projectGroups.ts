@@ -74,9 +74,20 @@ export function buildProjectGroups(
 
   // Contexts first: they carry the tree, so they decide which keys exist before
   // a session gets to claim one.
-  const leafOwners = new Map<string, string[]>();
+  //
+  // EVERY project context gets a key, not only the ones holding records.
+  // Seeding from groupRecordsByContext alone (which drops empty contexts) meant
+  // a project that holds only SESSIONS could never be joined: its key did not
+  // exist, so its own sessions fell through to an unfiled leaf group and the
+  // project read as empty while its work sat beside it.
+  const recordsByContextId = new Map<string, MoriRecord[]>();
   for (const contextGroup of groupRecordsByContext([...contexts], [...records], [...relations])) {
-    const context = contextGroup.context;
+    recordsByContextId.set(contextGroup.context.id, contextGroup.records);
+  }
+
+  const leafOwners = new Map<string, string[]>();
+  for (const context of contexts) {
+    if (context.type !== "project") continue;
     const chain = contextChain(context.id, contexts);
     const path = chain.map((entry) => entry.name).join(CONTEXT_PATH_SEPARATOR);
     const key = normalizeKey(path);
@@ -89,7 +100,7 @@ export function buildProjectGroups(
         .join(CONTEXT_PATH_SEPARATOR),
       context,
       sessions: [],
-      records: [...contextGroup.records],
+      records: [...(recordsByContextId.get(context.id) ?? [])],
     });
     const leaf = normalizeKey(context.name);
     const owners = leafOwners.get(leaf);

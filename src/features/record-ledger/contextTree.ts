@@ -113,6 +113,36 @@ export function canReparent(
 }
 
 /**
+ * Whether this context is hidden by 보관: it is archived itself, or it sits
+ * under one that is.
+ *
+ * This answers v8 §9's open question, and the answer is that archiving is ONE
+ * write and hiding the subtree is a VIEW rule, never a cascade. A cascade would
+ * have to write `archived` onto every descendant, and then restoring the parent
+ * could not tell a child the cascade archived from a child the user had archived
+ * on purpose earlier: it would silently un-archive it. Deriving the hide instead
+ * makes 보관 and 복원 exactly symmetric and loses nothing.
+ */
+export function inArchivedSubtree(contextId: string, contexts: readonly KernelContext[]): boolean {
+  return contextChain(contextId, contexts).some((entry) => entry.archived === true);
+}
+
+/**
+ * The tops of the archived subtrees: archived, with no archived ancestor. These
+ * are what 보관됨 lists, because listing every archived descendant separately
+ * would offer a 복원 that does nothing while its parent is still archived.
+ */
+export function archivedRoots(contexts: readonly KernelContext[]): KernelContext[] {
+  return contexts.filter(
+    (context) =>
+      context.archived === true &&
+      !contextChain(context.id, contexts)
+        .slice(0, -1)
+        .some((ancestor) => ancestor.archived === true),
+  );
+}
+
+/**
  * What a typed path ("회사/mori") implies: the contexts that must be minted, and
  * the leaf the record should be filed under. Pure, so the caller only persists.
  *

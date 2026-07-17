@@ -169,6 +169,24 @@ describe("buildProjectGroups", () => {
     expect(new Set(groups.map((g) => g.id)).size).toBe(groups.length);
   });
 
+  it("joins sessions to a project that holds no records yet", () => {
+    // The flaw this pins: groups were seeded from groupRecordsByContext, which
+    // drops a context with no records. So a project holding only SESSIONS had no
+    // key, its own sessions fell through to an unfiled leaf group, and the
+    // project read as empty while its work sat in a group beside it. This is
+    // exactly what 프로젝트로 만들기 produces: a brand-new context, sessions only.
+    const fresh: KernelContext = { id: "ctx-jinga", type: "project", name: "jinga", createdAt: "x" };
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s1", sourceLabel: "C:/dev/jinga" })],
+      [fresh],
+      [],
+      [],
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].context?.id).toBe("ctx-jinga");
+    expect(groups[0].sessions.map((s) => s.sessionId)).toEqual(["s1"]);
+  });
+
   it("still joins a session to the one context that owns its leaf", () => {
     const groups = buildProjectGroups(
       [session({ sessionId: "s1", sourceLabel: "C:/dev/mori" })],

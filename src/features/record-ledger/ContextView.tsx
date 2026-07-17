@@ -14,7 +14,7 @@
  * project's page (v8 §5), ordered by what a returning user asks first.
  */
 import { useEffect, useMemo, useState } from "react";
-import { FolderGit2, FolderPlus, PenLine, Radio, Search } from "lucide-react";
+import { ArchiveRestore, FolderGit2, FolderPlus, PenLine, Radio, Search } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { useAppStore } from "../../app/store";
 import { loadStoredSessionSummaries } from "../../app/sessionStore";
@@ -26,8 +26,9 @@ import { LedgerRow } from "./LedgerRow";
 import { groupRecordsBySection } from "./contextGrouping";
 import { buildProjectGroups, type ProjectGroup } from "./projectGroups";
 import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
-import { contextPath, contextTreeOrder } from "./contextTree";
+import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
+import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 
 /** What the rail has selected. A project the user just made holds nothing yet,
@@ -44,6 +45,7 @@ export function ContextView() {
     renameContext,
     reparentContext,
     createProjectContext,
+    archiveContext,
   } = useRecordLedger();
   const navigate = useAppStore((state) => state.navigate);
   // The door 캘린더 and the command palette already use. 프로젝트 was the only
@@ -88,7 +90,9 @@ export function ContextView() {
    *  just created is a place you can file into, so it has to be visible. Only
    *  groups drop when empty; the tree does not. */
   const tree = useMemo<ProjectTreeNode[]>(() => {
-    const projects = contexts.filter((context) => context.type === "project");
+    const projects = contexts.filter(
+      (context) => context.type === "project" && !inArchivedSubtree(context.id, contexts),
+    );
     const childCount = new Map<string, number>();
     for (const project of projects) {
       if (project.parentId) childCount.set(project.parentId, (childCount.get(project.parentId) ?? 0) + 1);
@@ -108,6 +112,11 @@ export function ContextView() {
   /** Sessions whose folder leaf matches no context. Real work, not yet a
    *  project: listed apart so the tree stays the user's own structure. */
   const linkedFolders = useMemo(() => groups.filter((group) => !group.context), [groups]);
+
+  const archived = useMemo(
+    () => archivedRoots(contexts.filter((context) => context.type === "project")),
+    [contexts],
+  );
 
   const visibleTree = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -193,6 +202,14 @@ export function ContextView() {
   const count = activeGroup ? activeGroup.sessions.length + activeGroup.records.length : 0;
   const isEmpty = !loading && tree.length === 0 && linkedFolders.length === 0;
 
+  /** Turn a connected folder into a real project. Nothing is moved: once the
+   *  context exists, its leaf has exactly one owner, so buildProjectGroups joins
+   *  the sessions to it on the next read (the exact-path rule). */
+  const adoptFolder = async (name: string) => {
+    const created = await createProjectContext(name);
+    if (created) setSelection({ kind: "context", id: created.id });
+  };
+
   const submitCreate = async (name: string) => {
     const parentId = creating?.parentId;
     setCreating(null);
@@ -256,6 +273,7 @@ export function ContextView() {
                   });
                   setCreating({ parentId });
                 }}
+                onArchive={(contextId) => void archiveContext(contextId, true)}
               />
               {creating?.parentId === node.context.id ? (
                 <NameField
@@ -267,6 +285,34 @@ export function ContextView() {
               ) : null}
             </div>
           ))}
+
+          {archived.length > 0 && !query ? (
+            <details className="ctx-archived">
+              <summary>보관됨 {archived.length}개</summary>
+              {archived.map((context) => (
+                <div key={context.id} className="ctx-tree-row is-archived">
+                  <button
+                    type="button"
+                    className="ctx-tree-main"
+                    onClick={() => setSelection({ kind: "context", id: context.id })}
+                  >
+                    <span className="ctx-tree-caret is-empty" aria-hidden="true" />
+                    <FolderGit2 size={13} aria-hidden="true" className="ctx-tree-icon" />
+                    <span className="ctx-tree-name">{contextPath(context.id, contexts)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ctx-tree-restore"
+                    onClick={() => void archiveContext(context.id, false)}
+                    aria-label={`${context.name} 복원`}
+                    title="복원"
+                  >
+                    <ArchiveRestore size={12} aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
+            </details>
+          ) : null}
 
           {filteredFolders.length > 0 ? (
             <>
@@ -293,6 +339,18 @@ export function ContextView() {
                       {group.sessions.length + group.records.length}
                     </span>
                   </button>
+                  <BaseOverflowMenu
+                    className="ctx-tree-menu"
+                    label={`${group.name} 관리`}
+                    items={[
+                      {
+                        id: "adopt",
+                        label: "프로젝트로 만들기",
+                        icon: FolderPlus,
+                        onSelect: () => void adoptFolder(group.name),
+                      },
+                    ]}
+                  />
                 </div>
               ))}
             </>
