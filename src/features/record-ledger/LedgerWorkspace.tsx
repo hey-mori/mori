@@ -140,7 +140,6 @@ export function LedgerWorkspace() {
         selectedId={selectedId}
         candidates={candidates}
         dateUnknown={dateUnknown}
-        composing={composing}
         onSelect={openRecord}
         onNew={startNew}
         now={now}

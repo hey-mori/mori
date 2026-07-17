@@ -2539,7 +2539,9 @@
 .note-explorer-controls {
   display: flex;
   align-items: center;
-  gap: 7px;
+  /* 6px is the 세션 rail's gap; the two headers sit side by side in the user's
+     head, so an off-by-one here reads as "subtly wrong". */
+  gap: 6px;
   min-width: 0;
 }
 
@@ -2569,8 +2571,7 @@
   transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.note-icon-btn:hover,
-.note-icon-btn.is-active {
+.note-icon-btn:hover {
   background: var(--gray-50);
   color: var(--text);
 }

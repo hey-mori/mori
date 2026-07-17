@@ -34,7 +34,6 @@ export function NoteExplorer({
   selectedId,
   candidates,
   dateUnknown,
-  composing,
   onSelect,
   onNew,
   now,
@@ -47,7 +46,6 @@ export function NoteExplorer({
   selectedId: string | null;
   candidates: MoriRecord[];
   dateUnknown: MoriRecord[];
-  composing: boolean;
   onSelect: (recordId: string) => void;
   onNew: () => void;
   now: Date;
@@ -137,7 +135,7 @@ export function NoteExplorer({
           />
           <button
             type="button"
-            className={`note-icon-btn${composing ? " is-active" : ""}`}
+            className="note-icon-btn"
             onClick={onNew}
             title="새 기록 (n)"
             aria-label="새 기록"
