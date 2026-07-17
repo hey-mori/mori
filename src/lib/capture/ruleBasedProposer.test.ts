@@ -8,6 +8,43 @@ const textInput = (content: string, occurredHint?: string): CaptureInput => ({
   occurredHint,
 });
 
+describe("proposeRecords · reference prose is not a log", () => {
+  // From a real 4,000-char Kotlin study note the user pasted in. The panel
+  // produced four 활동 records and an English-study session out of a document
+  // in which the writer did nothing: the correct answer is no typed record.
+  // The floor still cannot know WHO did a thing (v6 §2); it can at least refuse
+  // to claim one when the text never says anything was done.
+  const proseLine = (line: string) => proposeRecords(textInput(line));
+
+  it("does not read a noun inside a word as an activity the writer performed", () => {
+    // 개발자 (a person) contains 개발 (a work verb stem).
+    expect(proseLine("개발자가 추가적으로 신경써야 합니다.")[0].schemaId).toBe("note");
+  });
+
+  it("does not read a description of how code is written as writing it", () => {
+    expect(proseLine("테스트 코드를 작성하기 쉽고, 결과 예측이 비교적 쉬워집니다.")[0].schemaId).toBe("note");
+    expect(proseLine("함수를 작성하여 가독성을 높이고 유지보수를 돕습니다.")[0].schemaId).toBe("note");
+  });
+
+  it("does not read a programming language's 문법 as an English-study session", () => {
+    expect(
+      proseLine("게터와 세터가 필요 없고, 람다를 지원하여 간결한 문법으로 사용할 수 있습니다.")[0].schemaId,
+    ).toBe("note");
+  });
+
+  it("still logs the same vocabulary when the text says it was done", () => {
+    expect(proseLine("오늘 결제 모듈을 개발했다")[0].schemaId).toBe("activity");
+    expect(proseLine("보고서를 작성했다")[0].schemaId).toBe("activity");
+    expect(proseLine("인강 들었다")[0].schemaId).toBe("study-session");
+  });
+
+  it("still logs a terse journal line, which has no verb to require", () => {
+    // The ACT of studying says it happened on its own; only the MATERIAL needs
+    // corroboration.
+    expect(proseLine("영어 표현 10개 복습")[0].schemaId).toBe("study-session");
+  });
+});
+
 describe("proposeRecords · pilot schemas", () => {
   it("structures a workout memo, extracting duration and exercise entities", () => {
     const [proposal, ...rest] = proposeRecords(

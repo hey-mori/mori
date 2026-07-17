@@ -55,20 +55,16 @@ const EXERCISE_WORDS = [
  *  a workout, and they are not real exercise entities. */
 const GENERIC_EXERCISE = new Set(["운동", "헬스", "웨이트"]);
 
-const STUDY_WORDS = [
-  "공부",
-  "학습",
-  "복습",
-  "예습",
-  "강의",
-  "인강",
-  "영어",
-  "단어",
-  "표현",
-  "문법",
-  "문제풀이",
-  "암기",
-];
+/** The ACT of studying. These say it happened on their own, so a terse journal
+ *  line ("영어 표현 10개 복습") is a record without needing a verb. */
+const STUDY_ACT_WORDS = ["공부", "학습", "복습", "예습", "문제풀이", "암기"];
+
+/** The MATERIAL studied. These are ordinary nouns that reference prose is full
+ *  of, so on their own they say nothing about the writer: a Kotlin article's
+ *  "간결한 문법으로" is not an English-study session. They only make a record when
+ *  the text also says it was done ("인강 들었다"). The file already drew this
+ *  line for SUBJECT_HINTS; STUDY_WORDS just mixed the two. */
+const STUDY_MATERIAL_WORDS = ["강의", "인강", "영어", "단어", "표현", "문법"];
 
 /** Subject-like words, distinct from activity words (복습 · 학습). The subject
  *  is the thing being studied, not the act of studying it. */
@@ -137,6 +133,22 @@ const URL_RE = /https?:\/\/[^\s]+/i;
  *  안 / 못 adverb from matching mid-word ("제안했다" is not a negation). */
 const NEGATION_RE =
   /(?<![가-힣])(안|못)\s*(했|하|해|가|감|갔|와|왔|다녀)|하지\s*(않|못)|(?<![가-힣])안\s*[가-힣]{0,3}(했|함)/;
+/**
+ * "It was actually done" markers, the line between a log and reference prose.
+ *
+ * 학습 / 활동 vocabularies are ordinary nouns (문법 · 개발 · 작성 · 영어), so a
+ * document that merely DISCUSSES a topic used to become a record of the writer
+ * having done it. A Kotlin article produced an English-study session off "간결한
+ * 문법으로" and four activities off "개발자가", "코드를 작성하는데", "작성하여",
+ * "작성하기 쉽고": descriptions of a language, not a day.
+ *
+ * Requiring a completed-action ending does NOT make the rule floor correct. It
+ * cannot know WHO did it ("친구가 개발했다" still reads as the writer's) and it
+ * never will; only the Understand engine can (v6 §2). It makes the floor claim
+ * less, which is the honest posture while that decision is open: a record is
+ * asserted only when the text says something was done.
+ */
+const DID_RE = /(했|였|끝냈|마쳤|다녀왔|완료|처리함|봤|들었|읽었)/;
 /** Sentence boundaries: terminal punctuation or a newline. */
 const SENTENCE_RE = /(?<=[.!?…])\s+|\n+/;
 /** Intra-sentence connective "~고 " after a hangul syllable. */
@@ -200,13 +212,25 @@ type SegmentKind = "workout" | "study" | "insight" | "task" | "activity" | "note
 function classifySegment(segment: string): SegmentKind {
   // A negated action ("~을 안 했다") is a reflection, not a "thing I did", so it
   // never structures into workout / study / activity. Insight and task still
-  // fire — a negated thought or intent is still that thought or intent.
+  // fire: a negated thought or intent is still that thought or intent.
   const negated = NEGATION_RE.test(segment);
+  const did = DID_RE.test(segment);
   if (!negated && (includesAny(segment, EXERCISE_WORDS) || SETS_RE.test(segment))) return "workout";
-  if (!negated && includesAny(segment, STUDY_WORDS)) return "study";
+  // The act of studying stands alone; the material studied does not, because it
+  // is an ordinary noun that reference prose is full of. A Kotlin article's
+  // "간결한 문법으로" became an English-study session off 문법 alone.
+  if (
+    !negated &&
+    (includesAny(segment, STUDY_ACT_WORDS) || (did && includesAny(segment, STUDY_MATERIAL_WORDS)))
+  ) {
+    return "study";
+  }
   if (includesAny(segment, INSIGHT_MARKERS)) return "insight";
   if (includesAny(segment, TASK_MARKERS)) return "task";
-  if (!negated && includesAny(segment, ACTIVITY_WORDS)) return "activity";
+  // Every activity word is a work-verb stem that doubles as a noun, so the text
+  // must say it was done. Without this, "개발자가 신경써야 합니다" became an
+  // activity off the 개발 inside 개발자, and "코드를 작성하기 쉽고" off 작성.
+  if (!negated && did && includesAny(segment, ACTIVITY_WORDS)) return "activity";
   return "note";
 }
 
