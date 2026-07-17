@@ -3238,7 +3238,11 @@
   cursor: pointer;
 }
 
-.note-extract-date {
+/* Parent in the selector, same reason as the nature chip and the 종류 control:
+   theme-application.css themes every bare input via
+   html[data-base-theme] :where(… input …), which outranks a lone class and was
+   overriding this background, border colour and text colour. */
+.note-extract-card .note-extract-date {
   min-width: 0;
   max-width: 118px;
   padding: 2px 5px;

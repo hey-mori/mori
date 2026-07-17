@@ -145,6 +145,13 @@ html[data-base-theme] :where(
   border-color: var(--color-border-default);
 }
 
+/* CAUTION for feature CSS: this selector's html[data-base-theme] prefix gives it
+   specificity (0,1,1), so it OUTRANKS a lone class like `.my-control`. A bare
+   input/select styled only by its own class will silently get the input surface
+   here instead: invisible on a white card in light, a real box in dark. To style
+   a control as something other than a form field, include its parent
+   (`.parent .my-control`) so the rule wins. This has bitten three controls in
+   기록 alone. */
 html[data-base-theme] :where(
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   textarea,

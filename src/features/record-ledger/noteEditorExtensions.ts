@@ -13,6 +13,8 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from "@codemirror/view";
+import { indentLess, indentMore } from "@codemirror/commands";
+import { search, searchKeymap } from "@codemirror/search";
 import { syntaxTree } from "@codemirror/language";
 
 const TASK_RE = /^(\s*[-*+]\s+)\[([ xX])\]/;
@@ -280,13 +282,31 @@ const wikiLinks = ViewPlugin.fromClass(
   { decorations: (plugin) => plugin.decorations },
 );
 
+/** Tab · indent the line, or the whole selection. Inside a list item it indents
+ *  the item, which is what nesting a bullet means to a writer. */
+function indentOrList(view: EditorView): boolean {
+  return indentMore(view);
+}
+
+function outdentLess(view: EditorView): boolean {
+  return indentLess(view);
+}
+
 export function noteMarkdownEditing(): Extension {
   return [
     taskCheckboxes,
     concealMarkdown,
     wikiLinks,
+    // ⌘F in a note searches THIS note. Without it the keystroke fell through to
+    // the browser's own find, which cannot see text the editor has not rendered.
+    // search() only supplies the panel; the bindings are a separate keymap.
+    search({ top: true }),
+    keymap.of(searchKeymap),
     keymap.of([
       { key: "Enter", run: continueList },
+      // Tab indents rather than escaping the editor to the next control, which
+      // is what a writer means by it inside a document.
+      { key: "Tab", run: indentOrList, shift: outdentLess },
       { key: "Mod-b", run: (view) => wrapSelection(view, "**") },
       { key: "Mod-i", run: (view) => wrapSelection(view, "*") },
       { key: "Mod-e", run: (view) => wrapSelection(view, "`") },

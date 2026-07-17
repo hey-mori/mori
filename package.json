@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.1",
+    "@codemirror/search": "^6.7.1",
     "@lezer/highlight": "^1.2.3",
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/api": "^2.11.0",
