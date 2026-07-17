@@ -2551,26 +2551,28 @@
 }
 
 /* Ghost icon buttons (새 기록 · 보기) share one calm outline shape so the header
-   reads as a set, not a loud purple ＋ next to a quiet control. */
+   reads as a set, not a loud purple ＋ next to a quiet control. Geometry is the
+   세션 rail's control exactly (30px square beside the 30px search field), so the
+   two workspaces' headers line up instead of each inventing a size. */
 .note-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--panel, #fff);
+  border-radius: 8px;
+  background: var(--surface-1, transparent);
   color: var(--muted);
   cursor: pointer;
-  transition: color 0.12s ease, border-color 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .note-icon-btn:hover,
 .note-icon-btn.is-active {
-  color: var(--purple);
-  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
+  background: var(--gray-50);
+  color: var(--text);
 }
 
 .note-view {
@@ -2582,19 +2584,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--panel, #fff);
+  border-radius: 8px;
+  background: var(--surface-1, transparent);
   color: var(--muted);
   cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .note-view-btn:hover,
 .note-view-btn.is-open {
-  color: var(--purple);
-  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
+  background: var(--gray-50);
+  color: var(--text);
 }
 
 .note-view-menu {

@@ -311,6 +311,13 @@
   min-width: 180px;
 }
 
+/* The magnifier is a fixed glyph, never a flex casualty: the input next to it
+   is flex:1, so without this the icon is the thing that collapses when a narrow
+   rail squeezes the field below its min-width. */
+.base-search-field > svg {
+  flex-shrink: 0;
+}
+
 .base-search-field:focus-within {
   border-color: var(--purple);
   background: var(--panel);
