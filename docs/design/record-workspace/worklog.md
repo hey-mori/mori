@@ -190,6 +190,16 @@ Each fix landed with a pinning test where the logic is pure (`statusToRestore`,
 browser on two same-named nested projects. Test data set up and torn down; the
 user's store left as found.
 
+**Rename / re-parent now have a UI door.** A hover-revealed pencil on each project
+row opens an inline name input + a 상위 select, routed through `renameContext` /
+`reparentContext` (which had been added with no caller). The parent options are
+filtered by `canReparent`, so the control cannot even offer a move the write
+would refuse. No undo toast, and that is deliberate: a renamed or moved project
+stays fully visible and re-editable, so the door back is always open, unlike a
+discard that hides the record. Verified in the browser: renaming 회사 to 팀 left
+the child `mori` untouched (`name` and `parentId` unchanged), so its derived path
+became 팀/mori for free · the whole reason the path is derived and not stored.
+
 ## Done (v6 · honest notes, 2026-07-17)
 
 Direction + evidence: `v6-honest-notes.md`. A six-dimension audit of 기록 (33
