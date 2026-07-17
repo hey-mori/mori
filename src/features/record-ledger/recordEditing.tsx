@@ -6,9 +6,65 @@
  */
 import { useState } from "react";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
-import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import type { KernelRevision, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordPatch } from "../../lib/record-kernel/recordFactory";
 import { timeBasisLabel } from "./recordPresentation";
+
+const REVISION_LABEL: Record<string, string> = {
+  create: "만듦",
+  update: "수정",
+  "status-change": "상태 변경",
+  revert: "되돌림",
+};
+const ACTOR_LABEL: Record<string, string> = { user: "사용자", ai: "Mori", rule: "자동" };
+
+/** The newest revision a 되돌리기 can restore: `create` has no before-state, and
+ *  only the newest is offered because reverting an older one would silently
+ *  discard every edit made after it. */
+export function latestUndoableRevision(revisions: KernelRevision[]): KernelRevision | null {
+  return revisions
+    .filter((revision) => revision.operation !== "create" && revision.before)
+    .reduce<KernelRevision | null>(
+      (latest, revision) => (!latest || revision.createdAt > latest.createdAt ? revision : latest),
+      null,
+    );
+}
+
+/**
+ * A record's revision list with 되돌리기 on the newest undoable entry. Shared so
+ * the note pane and the record document show one history, not two that drift.
+ */
+export function RecordHistory({
+  revisions,
+  onRevert,
+}: {
+  revisions: KernelRevision[];
+  onRevert: (patch: RecordPatch) => void;
+}) {
+  const latest = latestUndoableRevision(revisions);
+  return (
+    <ul className="doc-history">
+      {revisions.map((revision) => (
+        <li key={revision.id}>
+          <span className="doc-history-op">
+            {REVISION_LABEL[revision.operation] ?? revision.operation}
+          </span>
+          <span className="doc-history-actor">{ACTOR_LABEL[revision.actor] ?? revision.actor}</span>
+          <span className="doc-history-time">{formatClaudeRelativeKo(revision.createdAt)}</span>
+          {revision.id === latest?.id && latest.before ? (
+            <button
+              type="button"
+              className="doc-history-undo"
+              onClick={() => onRevert(revertPatch(latest.before as MoriRecord))}
+            >
+              되돌리기
+            </button>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /** The record fields a 되돌리기 restores from a revision's `before` snapshot. */
 export function revertPatch(before: MoriRecord): RecordPatch {

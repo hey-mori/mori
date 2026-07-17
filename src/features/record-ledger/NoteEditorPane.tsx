@@ -11,7 +11,7 @@
  * product; the reading sits above it and folds.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link2 as LinkIcon, Trash2 } from "lucide-react";
+import { History, Link2 as LinkIcon, Trash2 } from "lucide-react";
 import { BaseOverflowMenu, type BaseMenuItemSpec } from "../../components/ui/BaseActionMenu";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "./useRecordLedger";
@@ -19,6 +19,8 @@ import { deriveNoteTitle } from "./noteWorkspace";
 import { NoteMarkdownEditor } from "./NoteMarkdownEditor";
 import { noteBacklinks, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
 import { ContextPicker } from "./ContextPicker";
+import { RecordHistory } from "./recordEditing";
+import { useRecordProvenance } from "./useRecordProvenance";
 import { NoteReading, type ReadingState } from "./NoteReading";
 import { detectNoteNature } from "./noteNature";
 import { useSessionStore } from "../../app/sessionStore";
@@ -99,6 +101,12 @@ export function NoteEditorPane({
   // The engine the user already configured in 설정; no local model means no
   // reading, and the surface simply shows nothing.
   const analysisSettings = useSessionStore((state) => state.analysisSettings);
+  // A note's revision trail. Notes never render DocumentEditor (the workspace
+  // routes schemaId === "note" here), so its 이력 button was unreachable for the
+  // one kind of record the user writes by hand: every note edit was audited and
+  // none of it could be read or undone.
+  const [showHistory, setShowHistory] = useState(false);
+  const { revisions } = useRecordProvenance(note?.id ?? null, note?.updatedAt ?? "");
 
   // Load a different note's body when the workspace selects one; a brand-new
   // note (note === null) starts blank. The just-created case is a no-op because
@@ -373,6 +381,12 @@ export function NoteEditorPane({
     if (!id) return [];
     return [
       {
+        id: "history",
+        label: "이력",
+        icon: History,
+        onSelect: () => setShowHistory((v) => !v),
+      },
+      {
         id: "discard",
         label: "버리기",
         icon: Trash2,
@@ -484,6 +498,20 @@ export function NoteEditorPane({
                     </button>
                   </div>
                 ))}
+              </div>
+            ) : null}
+
+            {showHistory && note && revisions.length > 0 ? (
+              <div className="note-foot-group">
+                <p className="note-foot-label">이력</p>
+                {/* 되돌리기 restores the body while the editor holds the current
+                    text. The pane's prop-sync adopts an external change only
+                    while it is not focused, so this lands rather than fighting
+                    the keyboard. */}
+                <RecordHistory
+                  revisions={revisions}
+                  onRevert={(patch) => void ledger.updateRecord(note, patch)}
+                />
               </div>
             ) : null}
 

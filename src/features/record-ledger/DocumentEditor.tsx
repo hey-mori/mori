@@ -8,23 +8,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
-import type { KernelRevision, MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordPatch } from "../../lib/record-kernel/recordFactory";
 import type { RecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
-import { ActivityDateEditor, InlineEditable, revertPatch } from "./recordEditing";
+import { ActivityDateEditor, InlineEditable, RecordHistory } from "./recordEditing";
 import { kindColorClass, schemaLabel, sourceKindLabel } from "./recordPresentation";
 import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
-
-const REVISION_LABEL: Record<string, string> = {
-  create: "만듦",
-  update: "수정",
-  "status-change": "상태 변경",
-  revert: "되돌림",
-};
-const ACTOR_LABEL: Record<string, string> = { user: "사용자", ai: "Mori", rule: "자동" };
 
 export function DocumentEditor({
   record,
@@ -138,14 +129,6 @@ function RecordDocument({
 
   const isCandidate = record.status === "candidate";
   const isDerived = record.origin === "derived";
-  const latestUndoable = useMemo(() => {
-    const undoable = revisions.filter((revision) => revision.operation !== "create" && revision.before);
-    return undoable.reduce<KernelRevision | null>(
-      (latest, revision) => (!latest || revision.createdAt > latest.createdAt ? revision : latest),
-      null,
-    );
-  }, [revisions]);
-
   return (
     <div className="doc-editor">
       <div className="doc-editor-bar">
@@ -227,24 +210,7 @@ function RecordDocument({
         {showHistory && revisions.length > 0 ? (
           <section className="doc-disclosure">
             <h4>기록 이력</h4>
-            <ul className="doc-history">
-              {revisions.map((revision) => (
-                <li key={revision.id}>
-                  <span className="doc-history-op">{REVISION_LABEL[revision.operation] ?? revision.operation}</span>
-                  <span className="doc-history-actor">{ACTOR_LABEL[revision.actor] ?? revision.actor}</span>
-                  <span className="doc-history-time">{formatClaudeRelativeKo(revision.createdAt)}</span>
-                  {revision.id === latestUndoable?.id && latestUndoable.before ? (
-                    <button
-                      type="button"
-                      className="doc-history-undo"
-                      onClick={() => onUpdate(revertPatch(latestUndoable.before as MoriRecord))}
-                    >
-                      되돌리기
-                    </button>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <RecordHistory revisions={revisions} onRevert={onUpdate} />
           </section>
         ) : null}
       </div>
