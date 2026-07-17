@@ -28,6 +28,7 @@ import { buildProjectGroups, type ProjectGroup } from "./projectGroups";
 import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
 import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
+import { ProjectCreateModal } from "./ProjectCreateModal";
 import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 
@@ -223,13 +224,12 @@ export function ContextView() {
     if (created) setSelection({ kind: "context", id: created.id });
   };
 
-  const submitCreate = async (name: string) => {
-    const parentId = creating?.parentId;
+  // The parent goes through by ID. Deriving its path and re-parsing the string
+  // resolved it by NAME, so a child under the second of two same-named projects
+  // landed under the first.
+  const submitCreate = async (name: string, parentId: string | undefined) => {
     setCreating(null);
-    // The parent goes through by ID. Deriving its path and re-parsing the string
-    // resolved it by NAME, so a child under the second of two same-named
-    // projects landed under the first.
-    const created = await createProjectContext(name, parentId ?? undefined);
+    const created = await createProjectContext(name, parentId);
     if (created) setSelection({ kind: "context", id: created.id });
   };
 
@@ -270,13 +270,9 @@ export function ContextView() {
             setDragging(null);
           }}
         >
-          {creating && creating.parentId === null ? (
-            <NameField placeholder="이름 또는 회사/mori" onSubmit={submitCreate} onCancel={() => setCreating(null)} />
-          ) : null}
-
           {visibleTree.map((node) => (
-            <div key={node.context.id}>
-              <ProjectTreeRow
+            <ProjectTreeRow
+              key={node.context.id}
                 node={node}
                 contexts={contexts}
                 active={selection?.kind === "context" && selection.id === node.context.id}
@@ -302,18 +298,9 @@ export function ContextView() {
                 }}
                 onArchive={(contextId) => void archiveContext(contextId, true)}
                 dragging={dragging}
-                onDragStart={setDragging}
-                onDragEnd={() => setDragging(null)}
-              />
-              {creating?.parentId === node.context.id ? (
-                <NameField
-                  placeholder="하위 프로젝트 이름"
-                  indent={node.depth + 1}
-                  onSubmit={submitCreate}
-                  onCancel={() => setCreating(null)}
-                />
-              ) : null}
-            </div>
+              onDragStart={setDragging}
+              onDragEnd={() => setDragging(null)}
+            />
           ))}
 
           {archived.length > 0 && !query ? (
@@ -529,47 +516,16 @@ export function ContextView() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
 
-/** A one-field inline create, used for both a root and a child project. */
-function NameField({
-  placeholder,
-  indent = 0,
-  onSubmit,
-  onCancel,
-}: {
-  placeholder: string;
-  indent?: number;
-  onSubmit: (name: string) => void;
-  onCancel: () => void;
-}) {
-  const [value, setValue] = useState("");
-  return (
-    <form
-      className="ctx-tree-row is-renaming"
-      style={indent > 0 ? { paddingLeft: `${8 + indent * 13}px` } : undefined}
-      onSubmit={(event) => {
-        event.preventDefault();
-        const trimmed = value.trim();
-        if (trimmed) onSubmit(trimmed);
-        else onCancel();
-      }}
-    >
-      <input
-        autoFocus
-        className="ctx-tree-rename"
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => setValue(event.target.value)}
-        onBlur={() => (value.trim() ? onSubmit(value.trim()) : onCancel())}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") onCancel();
-        }}
-        aria-label={placeholder}
-      />
-    </form>
+      {creating ? (
+        <ProjectCreateModal
+          contexts={contexts}
+          initialParentId={creating.parentId}
+          onSubmit={(name, parentId) => void submitCreate(name, parentId)}
+          onClose={() => setCreating(null)}
+        />
+      ) : null}
+    </div>
   );
 }
 

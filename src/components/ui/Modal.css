@@ -161,6 +161,69 @@
   color: var(--muted-2);
 }
 
+/* The theme gives every bare select a surface via html[data-base-theme] :where(select),
+   which is (0,1,1) and outranks a lone class, so the parent has to win here. */
+.project-modal .project-modal-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: white;
+}
+
+.project-modal .project-modal-field select:focus {
+  outline: none;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-50);
+}
+
+/* The hint sits INSIDE the label, so it is matched by `.project-modal-field >
+   span` (0,1,1) which styles the label bold and dark. A lone class is (0,1,0)
+   and loses, which rendered the hint as a second label. */
+.project-modal-field > span.project-modal-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-2);
+}
+
+/* The preview is what makes 상위 프로젝트 and a typed path read as ONE thing
+   rather than two rules competing to place the project. */
+.project-modal-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft, #fafbfd);
+  font-size: 12px;
+}
+
+.project-modal-preview > span {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+
+.project-modal-preview > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.project-modal-error {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red, #d43a3a);
+}
+
 .project-modal-foot {
   display: flex;
   align-items: center;
