@@ -32,7 +32,7 @@ import {
 } from "../../lib/record-kernel/recordFactory";
 import { coalesceRevision } from "../../lib/record-kernel/revisionCoalescing";
 import { deriveNoteTitle } from "./noteWorkspace";
-import { planProjectPath } from "./contextTree";
+import { canReparent, planProjectPath } from "./contextTree";
 import { projectContextId, projectToContext } from "../../lib/record-kernel/projectContextConverter";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type {
@@ -122,6 +122,19 @@ export type RecordLedger = {
   /** Mints a project context a record can be filed under. Returns it so a
    *  picker can select it immediately. */
   createProjectContext: (name: string) => Promise<KernelContext | null>;
+  /** Renames a context in place. The path is derived from the parent chain, so
+   *  this touches ONE name and no descendant is rewritten (v7 §7). Returns the
+   *  previous name so the caller can offer 되돌리기; contexts carry no revision
+   *  log, so that offer is the only door back. */
+  renameContext: (contextId: string, name: string) => Promise<string | null>;
+  /** Moves a context under a new parent (undefined promotes it to a root).
+   *  Refuses a move that would build a cycle. Returns the previous parentId
+   *  (as `{ parentId }`) so the caller can offer 되돌리기, or null when the move
+   *  was refused or changed nothing. */
+  reparentContext: (
+    contextId: string,
+    parentId: string | undefined,
+  ) => Promise<{ parentId: string | undefined } | null>;
   /** Creates a routine context and relates the given records to it. */
   createRoutine: (name: string, recordIds: string[]) => Promise<void>;
   /** Makes the late-night → previous-day date correction durable as a rule;
@@ -570,6 +583,38 @@ export function useRecordLedger(): RecordLedger {
     [contexts, reload],
   );
 
+  const renameContext = useCallback(
+    async (contextId: string, name: string): Promise<string | null> => {
+      const trimmed = name.trim().normalize("NFC");
+      if (trimmed.length === 0) return null;
+      const context = contexts.find((candidate) => candidate.id === contextId);
+      if (!context || context.name === trimmed) return null;
+      const previous = context.name;
+      await getKernelRepository().saveContext({ ...context, name: trimmed });
+      await reload();
+      return previous;
+    },
+    [contexts, reload],
+  );
+
+  const reparentContext = useCallback(
+    async (
+      contextId: string,
+      parentId: string | undefined,
+    ): Promise<{ parentId: string | undefined } | null> => {
+      const context = contexts.find((candidate) => candidate.id === contextId);
+      if (!context || context.parentId === parentId) return null;
+      // Guard at the write, not only on read: tolerating a cycle keeps a bad
+      // store renderable, but creating one is a bug we can simply refuse.
+      if (!canReparent(contextId, parentId, contexts)) return null;
+      const previous = context.parentId;
+      await getKernelRepository().saveContext({ ...context, parentId });
+      await reload();
+      return { parentId: previous };
+    },
+    [contexts, reload],
+  );
+
   const createRoutine = useCallback(
     async (name: string, recordIds: string[]) => {
       if (name.trim().length === 0 || recordIds.length === 0) return;
@@ -618,6 +663,8 @@ export function useRecordLedger(): RecordLedger {
     confirmExtraction,
     renameEntity,
     createProjectContext,
+    renameContext,
+    reparentContext,
     createRoutine,
     createDateInferenceRule,
   };

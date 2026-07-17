@@ -190,8 +190,20 @@ context then appends at most one. **Folder-compatible by accident.**
   concept the user must learn first.
 - **Not `part-of` relations:** v6 §4 already made this call for `contextIds` over
   `belongs-to`: relations have no update or delete. Re-parenting is the same
-  shape of problem. `parentId` is patchable, so a re-parent is an audited
-  revision the existing 되돌리기 undoes.
+  shape of problem. `parentId` is a plain field, so a re-parent is one write
+  instead of a delete the relation store cannot do.
+
+  > **Correction, 2026-07-17 (found while building §7).** This bullet originally
+  > read "`parentId` is patchable, so a re-parent is an audited revision the
+  > existing 되돌리기 undoes." **That was false.** `KernelRevision` is keyed by
+  > `recordId` (`kernelTypes.ts:226`) and `saveContext` is a whole-object
+  > overwrite with no before/after: **contexts have no revision log at all**, so
+  > nothing about a rename or re-parent is audited or undoable by 되돌리기.
+  > The conclusion (`parentId` over relations) still stands on its own merits ·
+  > a rename touches one name and never rewrites descendants, which is the Logseq
+  > lesson · but it does NOT stand on an undo guarantee that does not exist.
+  > Consequence: rename / re-parent must ship with their own 되돌리기 offer, and
+  > "contexts are unversioned" is a real limit to state plainly, not to paper over.
 
 **Vault mapping: the path is DERIVED, never stored.**
 
