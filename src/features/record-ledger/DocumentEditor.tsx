@@ -6,14 +6,14 @@
  * panel. Long notes open in full.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, X } from "lucide-react";
+import { Check, ChevronDown, FileText, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordPatch } from "../../lib/record-kernel/recordFactory";
 import type { RecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
 import { ActivityDateEditor, InlineEditable, RecordHistory } from "./recordEditing";
-import { kindColorClass, originLabel, schemaLabel, sourceKindLabel } from "./recordPresentation";
+import { kindColorClass, originLabel, retypeTargets, schemaLabel, sourceKindLabel } from "./recordPresentation";
 import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
 
@@ -97,6 +97,7 @@ export function DocumentEditor({
       ledger={ledger}
       onUpdate={onUpdate}
       onDiscarded={onDiscarded}
+      onOpenRecord={onOpenRecord}
       now={now}
     />
   );
@@ -107,15 +108,29 @@ function RecordDocument({
   ledger,
   onUpdate,
   onDiscarded,
+  onOpenRecord,
   now,
 }: {
   record: MoriRecord;
   ledger: RecordLedger;
   onUpdate: (patch: RecordPatch) => void;
   onDiscarded: (recordId: string, title: string) => void;
+  onOpenRecord: (recordId: string) => void;
   now: Date;
 }) {
-  const { source, revisions } = useRecordProvenance(record.id, record.updatedAt);
+  const { source, revisions, relations } = useRecordProvenance(record.id, record.updatedAt);
+
+  // The note this record was kept out of. `confirmExtraction` has always stored
+  // the derived-from relation and nothing ever rendered it, so a record reached
+  // from 캘린더 or 검색 was a dead end: it showed a line of a note with no way
+  // back to the note it is a line OF.
+  const sourceNote = useMemo(() => {
+    const link = relations.find(
+      (relation) => relation.type === "derived-from" && relation.fromRecordId === record.id,
+    );
+    if (!link?.toRecordId) return null;
+    return ledger.records.find((candidate) => candidate.id === link.toRecordId) ?? null;
+  }, [relations, record.id, ledger.records]);
   const [showRaw, setShowRaw] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -136,6 +151,17 @@ function RecordDocument({
           {contextName ? `${contextName} · ` : ""}
           {schemaLabel(record, ledger.registry)}
         </span>
+        {sourceNote ? (
+          <button
+            type="button"
+            className="doc-crumb-note"
+            onClick={() => onOpenRecord(sourceNote.id)}
+            title={sourceNote.title}
+          >
+            <FileText size={11} aria-hidden="true" />
+            {sourceNote.title}
+          </button>
+        ) : null}
         <span className={`doc-prov is-${provenance.tone}`}>
           <span className="doc-prov-dot" aria-hidden="true" />
           {provenance.label}
@@ -232,10 +258,6 @@ function RecordDocument({
   );
 }
 
-/** Kinds that are derived from an external source (imported / distilled) and so
- *  are not offered as a manual retype target for a note. */
-const DERIVED_KINDS = new Set(["agent-session", "source-document", "qa"]);
-
 /**
  * The record's kind, as a picker. Retyping a record is a kernel-supported patch
  * (`applyRecordPatch` validates against the schema it becomes), so this just
@@ -270,10 +292,7 @@ function KindPicker({
     };
   }, [open]);
 
-  const options = useMemo(
-    () => ledger.registry.list().filter((schema) => !DERIVED_KINDS.has(schema.id)),
-    [ledger.registry],
-  );
+  const options = useMemo(() => retypeTargets(ledger.registry), [ledger.registry]);
 
   return (
     <span className="doc-kind-picker" ref={ref}>

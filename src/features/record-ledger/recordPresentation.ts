@@ -7,6 +7,7 @@ import type { BaseStatusBadgeTone } from "../../components/ui/BaseStatusBadge";
 import type {
   MoriRecord,
   RecordOrigin,
+  SchemaDefinition,
   SourceKind,
   RecordStatus,
   TimeBasis,
@@ -73,6 +74,29 @@ export function originLabel(origin: RecordOrigin): { label: string; tone: "mori"
     case "import":
       return { label: "가져옴", tone: "mori" };
   }
+}
+
+/** Kinds that are derived from an external source (imported / distilled) and so
+ *  are never a manual retype target. */
+const DERIVED_KINDS = new Set(["agent-session", "source-document", "qa"]);
+
+/**
+ * The kinds a record may be retyped INTO: writeable layers only, minus the
+ * imported/derived-only ones. Schemas come from the registry (schemas-as-data),
+ * so a new user kind appears in every picker with no code change.
+ *
+ * Shared so the note footer and the record document offer the same list; they
+ * each filtered their own way, and a kind offered in one place but not the other
+ * is a difference the user has to discover by being wrong.
+ */
+export function retypeTargets(registry: SchemaRegistry): SchemaDefinition[] {
+  return registry
+    .list()
+    .filter(
+      (schema) =>
+        (schema.layer === "occurrence" || schema.layer === "distilled") &&
+        !DERIVED_KINDS.has(schema.id),
+    );
 }
 
 export function timeBasisLabel(basis: TimeBasis): string {

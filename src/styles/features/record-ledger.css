@@ -3566,28 +3566,104 @@
   text-align: left;
 }
 
-/* Reveal on row hover: an always-visible 버리기 on every kept record turns a
-   quiet list into a row of red buttons. */
+/* The row expands in place rather than navigating (v8 §3), so it needs a caret
+   the way a disclosure does. */
+.note-foot-caret {
+  flex-shrink: 0;
+  color: var(--muted-2);
+  transition: transform 0.12s ease;
+}
+
+.note-foot-row.is-open .note-foot-caret {
+  transform: rotate(90deg);
+}
+
+.note-foot-row.is-open {
+  display: block;
+}
+
+.note-foot-row.is-open .note-foot-open {
+  width: 100%;
+}
+
+/* The correction strip: kind, date, project, then the two actions. Quiet, and
+   only ever one open at a time. */
+.note-foot-edit {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 8px 19px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-soft, #fbfbfd);
+}
+
+.note-foot-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.note-foot-field-label {
+  flex: 0 0 44px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+/* The theme gives every bare select a surface via html[data-base-theme] :where(select),
+   which is (0,1,1) and outranks a lone class, so this needs the parent to win. */
+.note-foot-edit .note-foot-field select {
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.note-foot-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.note-foot-locate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel, #fff);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.note-foot-locate:hover {
+  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
+  color: var(--purple);
+}
+
+/* 버리기 sits inside the expansion, so it is a labeled peer of 본문에서 보기
+   rather than a hover glyph on a row that no longer needs one. */
 .note-foot-discard {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: none;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel, #fff);
   color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.12s ease, color 0.12s ease;
-}
-
-.note-foot-row:hover .note-foot-discard,
-.note-foot-discard:focus-visible {
-  opacity: 1;
+  transition: border-color 0.12s ease, color 0.12s ease;
 }
 
 .note-foot-discard:hover {
@@ -3648,6 +3724,34 @@
 .doc-crumb {
   font-size: 11.5px;
   color: var(--muted-2);
+}
+
+.doc-crumb-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+.doc-crumb-note:hover {
+  border-color: color-mix(in srgb, var(--purple) 40%, var(--line));
+  color: var(--purple);
+}
+
+.doc-crumb-note > svg {
+  flex-shrink: 0;
 }
 
 .doc-prov {

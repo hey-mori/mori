@@ -21,6 +21,7 @@ import { noteBacklinks, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
 import { ContextPicker } from "./ContextPicker";
 import { RecordHistory } from "./recordEditing";
 import { useRecordProvenance } from "./useRecordProvenance";
+import { KeptRecordRow } from "./KeptRecordRow";
 import { NoteReading, type ReadingState } from "./NoteReading";
 import { detectNoteNature } from "./noteNature";
 import { useSessionStore } from "../../app/sessionStore";
@@ -32,7 +33,6 @@ import {
   type DocumentUnderstanding,
 } from "../../lib/understanding/understandingTypes";
 
-import { kindColorClass, schemaLabel } from "./recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
 
 const SAVE_DEBOUNCE_MS = 650;
@@ -106,6 +106,8 @@ export function NoteEditorPane({
   // one kind of record the user writes by hand: every note edit was audited and
   // none of it could be read or undone.
   const [showHistory, setShowHistory] = useState(false);
+  // One kept record open at a time: the strip is a correction, not a workspace.
+  const [openKeptId, setOpenKeptId] = useState<string | null>(null);
   const { revisions } = useRecordProvenance(note?.id ?? null, note?.updatedAt ?? "");
 
   // Load a different note's body when the workspace selects one; a brand-new
@@ -468,35 +470,18 @@ export function NoteEditorPane({
               <div className="note-foot-group">
                 <p className="note-foot-label">이 기록에서 남긴 것</p>
                 {confirmed.map((record) => (
-                  <div key={record.id} className="note-foot-row">
-                    <button
-                      type="button"
-                      className="note-foot-open"
-                      onClick={() => onOpenRecord(record.id)}
-                    >
-                      <span
-                        className={`note-item-dot ${kindColorClass(record.schemaId)}`}
-                        aria-hidden="true"
-                      />
-                      <span className="note-foot-kind">{schemaLabel(record, ledger.registry)}</span>
-                      <span className="note-foot-title">{record.title}</span>
-                    </button>
-                    {/* Keeping was one click, so unkeeping must be too. Without a
-                        door here, a wrong keep was permanent from this screen:
-                        the offer that made it is gone the moment it is taken. */}
-                    <button
-                      type="button"
-                      className="note-foot-discard"
-                      onClick={() => {
-                        void ledger.discardRecords([record.id]);
-                        onRecordDiscarded(record.id, record.title);
-                      }}
-                      aria-label={`${record.title} 버리기`}
-                      title="버리기"
-                    >
-                      <Trash2 size={12} aria-hidden="true" />
-                    </button>
-                  </div>
+                  <KeptRecordRow
+                    key={record.id}
+                    record={record}
+                    noteBody={body}
+                    ledger={ledger}
+                    open={openKeptId === record.id}
+                    onToggle={() =>
+                      setOpenKeptId((current) => (current === record.id ? null : record.id))
+                    }
+                    onRevealSpan={revealSpan}
+                    onDiscarded={onRecordDiscarded}
+                  />
                 ))}
               </div>
             ) : null}
