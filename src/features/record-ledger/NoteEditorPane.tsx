@@ -15,16 +15,20 @@ import { Link2 as LinkIcon, Trash2 } from "lucide-react";
 import { BaseOverflowMenu, type BaseMenuItemSpec } from "../../components/ui/BaseActionMenu";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "./useRecordLedger";
-import { buildNoteExtractionPanel, deriveNoteTitle } from "./noteWorkspace";
+import { deriveNoteTitle } from "./noteWorkspace";
 import { NoteMarkdownEditor } from "./NoteMarkdownEditor";
 import { noteBacklinks, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
 import { ContextPicker } from "./ContextPicker";
 import { NoteReading, type ReadingState } from "./NoteReading";
+import { detectNoteNature } from "./noteNature";
 import { useSessionStore } from "../../app/sessionStore";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { engineFromSettings, runUnderstanding } from "../../lib/understanding/runUnderstanding";
 import { hashBody } from "../../lib/understanding/understandingParse";
-import type { DocumentUnderstanding } from "../../lib/understanding/understandingTypes";
+import {
+  isLogNature,
+  type DocumentUnderstanding,
+} from "../../lib/understanding/understandingTypes";
 
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
@@ -213,11 +217,6 @@ export function NoteEditorPane({
     return ledger.records.filter((record) => derivedIds.has(record.id) && record.status !== "discarded");
   }, [ledger.relations, ledger.records, note?.id]);
 
-  const panel = useMemo(
-    () => buildNoteExtractionPanel(body, confirmed, now),
-    [body, confirmed, now],
-  );
-
   // Follow a clicked [[wiki-link]]: open the matching note, or create it when
   // the name has no note yet (Obsidian's click-to-create). Routing through
   // onOpenRecord flushes the current note on the way out.
@@ -295,8 +294,23 @@ export function NoteEditorPane({
           setReading({ kind: "none" });
           return;
         }
-        setReading({ kind: "read", understanding });
-        await repo.saveReading(id, understanding);
+        // Structure beats the reader on the two signals structure actually
+        // proves (v7 §6): a note that is mostly links is a 스크랩 and a note with
+        // a roster is a 회의록, whatever the model made of the prose. It claims
+        // nothing else, so it can never overrule a real read of a real document.
+        const structural = detectNoteNature(body);
+        const settled = structural
+          ? {
+              ...understanding,
+              nature: structural.nature,
+              natureConfidence: structural.confidence,
+              // 남길 기록 follows the settled nature: re-reading a 스크랩 as a log
+              // would keep items the settled nature says do not belong.
+              items: isLogNature(structural.nature) ? understanding.items : [],
+            }
+          : understanding;
+        setReading({ kind: "read", understanding: settled });
+        await repo.saveReading(id, settled);
       })();
     }, READING_IDLE_MS);
 
@@ -432,10 +446,10 @@ export function NoteEditorPane({
                 it. Both belong under the document (Obsidian's linked-mentions
                 position), never beside it: they are consulted after reading, not
                 while writing. */}
-            {panel.confirmed.length > 0 ? (
+            {confirmed.length > 0 ? (
               <div className="note-foot-group">
                 <p className="note-foot-label">이 기록에서 남긴 것</p>
-                {panel.confirmed.map((record) => (
+                {confirmed.map((record) => (
                   <button
                     key={record.id}
                     type="button"

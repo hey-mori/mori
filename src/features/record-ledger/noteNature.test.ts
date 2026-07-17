@@ -1,59 +1,46 @@
 import { describe, expect, it } from "vitest";
-import { detectNoteNature, natureFits } from "./noteNature";
+import { detectNoteNature } from "./noteNature";
 
 describe("detectNoteNature", () => {
-  it("reads a link-dominant note as a clipping", () => {
-    expect(detectNoteNature("https://example.com/article 참고\n메모").nature).toBe("clipping");
-    expect(
-      detectNoteNature("https://a.com/x\nhttps://b.com/y 두 링크").nature,
-    ).toBe("clipping");
+  it("reads a link-dominant note as 스크랩", () => {
+    expect(detectNoteNature("https://example.com/article 참고\n메모")?.nature).toBe("clipping");
+    expect(detectNoteNature("https://a.com/x\nhttps://b.com/y 두 링크")?.nature).toBe("clipping");
   });
 
-  it("reads attendee/agenda markers as a meeting", () => {
-    expect(detectNoteNature("스프린트 회의\n안건: 배포 일정\n액션 아이템 정리").nature).toBe("meeting");
-    expect(detectNoteNature("주간 미팅\n- 지혜: 백엔드 진행\n- 준영: 프론트 마감\n").nature).toBe("meeting");
+  it("reads an agenda or a roster as 회의록", () => {
+    expect(detectNoteNature("스프린트 회의\n안건: 배포 일정\n액션 아이템 정리")?.nature).toBe(
+      "meeting",
+    );
+    expect(detectNoteNature("주간 미팅\n- 지혜: 백엔드 진행\n- 준영: 프론트 마감\n")?.nature).toBe(
+      "meeting",
+    );
   });
 
-  it("does not claim ordinary prose that merely contains an overloaded word", () => {
-    // Each of these used to be dragged out of 일지 by one overloaded token:
-    // 정리했 (방/사진 정리), a short "장보기:" line posing as an attendee roster,
-    // and `try` matching case-insensitively.
-    expect(detectNoteNature("친구랑 카페 갔다. 사진 정리했다.").nature).toBe("journal");
-    expect(detectNoteNature("장보기: 계란, 우유. 저녁에 러닝 5km").nature).toBe("journal");
-    expect(detectNoteNature("Try the new deploy script. 러닝 5km 했다.").nature).toBe("journal");
+  it("needs two attendee-shaped lines, so one shopping line is not a roster", () => {
+    expect(detectNoteNature("장보기: 계란, 우유. 저녁에 러닝 5km")).toBeNull();
   });
 
-  it("still mis-labels a journal that genuinely mentions studying, which is why a detected nature may not hide anything", () => {
-    // Documents a KNOWN limit rather than pretending it is fixed. 공부 really is
-    // a study word, so a keyword floor cannot tell "a journal that mentions
-    // studying" from "a study note"; only the LLM engine (v5 §3) can. The label
-    // is one click to correct, and NoteEditorPane refuses to fold on a detected
-    // nature, so being wrong here costs a glance instead of a lost record.
-    expect(detectNoteNature("오늘 운동을 했다\n공부도 했다").nature).toBe("study");
+  it("claims NOTHING for ordinary prose instead of guessing", () => {
+    // The old floor answered 일지 with 0.4 confidence here. That default was a
+    // free guess dressed as a reading, and it would now outrank an engine that
+    // actually read the text. No structure, no claim.
+    expect(detectNoteNature("친구랑 카페 갔다. 사진 정리했다.")).toBeNull();
+    expect(detectNoteNature("점심 먹고 러닝 30분 했다. 오후에 회의.")).toBeNull();
+    expect(detectNoteNature("Try the new deploy script. 러닝 5km 했다.")).toBeNull();
   });
 
-  it("reads retro / study markers", () => {
-    expect(detectNoteNature("이번 주 회고. 잘한 점과 아쉬운 점을 정리했다.").nature).toBe("retro");
-    expect(detectNoteNature("리액트 훅 개념을 공부하고 정리했다.").nature).toBe("study");
+  it("no longer mistakes a journal that mentions studying for a study note", () => {
+    // The failure the word list could not be tuned out of: a journal says 공부도
+    // 했다 with the same word a study note uses. The old test asserted this as a
+    // KNOWN mislabel. The same instinct, pointed at a Kotlin article, invented
+    // four 활동 records. The words are gone, so the question is not answered
+    // wrongly, it is left to the engine that read the document.
+    expect(detectNoteNature("오늘 운동을 했다\n공부도 했다")).toBeNull();
+    expect(detectNoteNature("리액트 훅 개념을 공부하고 정리했다.")).toBeNull();
+    expect(detectNoteNature("이번 주 회고. 잘한 점과 아쉬운 점을 정리했다.")).toBeNull();
   });
 
-  it("defaults ambiguous prose to a journal (essay is a manual correction)", () => {
-    // Essay vs a prose journal is not reliably rule-separable, so the floor
-    // does not auto-claim essay; the chip lets the user set it by hand.
-    const prose =
-      "요즘 도구를 만들면서 느낀 것은, 좋은 도구는 사용자가 그 존재를 잊게 만든다는 점이다. " +
-      "복잡함을 감추되 통제를 빼앗지 않아야 한다.";
-    expect(detectNoteNature(prose).nature).toBe("journal");
-    expect(detectNoteNature("점심 먹고 러닝 30분 했다. 오후에 회의.").nature).toBe("journal");
-  });
-});
-
-describe("natureFits", () => {
-  it("a journal fits every kind; an essay fits only insight", () => {
-    expect(natureFits("journal", "workout")).toBe(true);
-    expect(natureFits("essay", "task")).toBe(false);
-    expect(natureFits("essay", "insight")).toBe(true);
-    expect(natureFits("meeting", "decision")).toBe(true);
-    expect(natureFits("meeting", "workout")).toBe(false);
+  it("claims nothing for a fragment", () => {
+    expect(detectNoteNature("메모")).toBeNull();
   });
 });

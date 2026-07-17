@@ -1,9 +1,21 @@
 /**
- * Note nature (기록 v5 · N1) · what KIND of note this is, before deciding what
- * to extract from it. A note is not always a task list: it may be an essay, a
- * meeting record, or a clipped article, so Mori guesses the nature and lets
- * the nature gate which extractions read as signal vs noise. Deterministic
- * floor; a wrong guess is one tap to correct and (later) teaches Mori.
+ * Note nature · what KIND of note this is (기록 v7 §6).
+ *
+ * The user never picks the nature: there is no chip, no `<select>`. Nature is
+ * inferred, and its only expression is which outputs 읽기 offers, so a wrong
+ * guess costs a glance at an irrelevant region, never a hidden truth.
+ *
+ * This module is the free STRUCTURAL floor, and it claims nothing else. Every
+ * topical keyword is deliberately gone: `공부|학습|복습|배웠…` read "오늘 운동을
+ * 했다 / 공부도 했다" as a 학습 노트, and the same instinct pointed at a Kotlin
+ * article produced four invented 활동 records. A word list cannot tell a journal
+ * that mentions studying from a study note, and tuning it only moves the error
+ * rate, never the error. What survives are the two signals that are structural
+ * rather than topical, and therefore actually correct: a note that is mostly
+ * links IS a 스크랩, and a note with a roster and an agenda IS a 회의록.
+ *
+ * Nuanced nature (일지 vs 에세이 vs 학습 노트) belongs to the engine that has
+ * actually read the document.
  */
 import { stripInlineMarkdown } from "./noteWorkspace";
 
@@ -15,15 +27,6 @@ export type NoteNature =
   | "essay"
   | "clipping";
 
-export const NOTE_NATURES: readonly NoteNature[] = [
-  "journal",
-  "meeting",
-  "retro",
-  "study",
-  "essay",
-  "clipping",
-] as const;
-
 export const NOTE_NATURE_LABEL: Record<NoteNature, string> = {
   journal: "일지",
   meeting: "회의록",
@@ -33,52 +36,25 @@ export const NOTE_NATURE_LABEL: Record<NoteNature, string> = {
   clipping: "스크랩",
 };
 
-/**
- * The extraction schema ids that fit each nature (shown expanded in the panel).
- * Extractions outside the set fold under a disclosure rather than vanish, so an
- * essay does not spam 할 일 rows while nothing is ever silently dropped.
- * `"all"` means every extraction fits (a daily log carries anything).
- */
-export const NATURE_FIT_KINDS: Record<NoteNature, ReadonlySet<string> | "all"> = {
-  journal: "all",
-  meeting: new Set(["decision", "task", "activity", "event"]),
-  retro: new Set(["insight", "decision", "task"]),
-  study: new Set(["study-session", "knowledge", "insight"]),
-  essay: new Set(["insight"]),
-  clipping: new Set(["source-document", "knowledge", "insight"]),
-};
-
-export function natureFits(nature: NoteNature, schemaId: string): boolean {
-  const fit = NATURE_FIT_KINDS[nature];
-  return fit === "all" || fit.has(schemaId);
-}
-
-// Every token here must be one a journal would NOT casually contain. Removed
-// after they were caught claiming ordinary prose: `정리했` (방/사진/짐 정리했다),
-// `개념` and `요약` (everyday nouns), and `keep|problem|try` under /i, which are
-// three of the most common English words a developer writes, so "Try the new
-// deploy script" read as a 회고.
 const MEETING_RE = /참석자|안건|아젠다|회의록|액션\s*아이템|attendees|agenda|minutes/i;
 // Person-shaped attendee lines: at least two of them, so a single "장보기: 계란"
 // shopping line cannot pass as a meeting roster.
 const ATTENDEE_LINE_RE = /(^\s*[-*+]?\s*[^\s:]{1,10}:\s*\S.*\n){2,}/m;
-const RETRO_RE = /회고|kpt|잘한\s?점|아쉬운\s?점|배운\s?점|retrospective/i;
-const STUDY_RE = /공부|학습|복습|예습|배웠|강의|인강|튜토리얼|문서를\s*읽/;
 const URL_RE = /https?:\/\/\S+/g;
 
 /**
- * Guess the note's nature from its text. Order encodes priority: a strong
- * structural signal (URL-dominant clipping, attendee/agenda meeting) beats a
- * softer topical one. Confidence is qualitative; the chip stays correctable.
+ * The nature this note's STRUCTURE proves, or null when the structure proves
+ * nothing, which is the common case and an honest answer. Null means "ask the
+ * engine", never "assume 일지": defaulting would let a free guess overrule a
+ * reader that actually read the text.
  */
-export function detectNoteNature(body: string): { nature: NoteNature; confidence: number } {
+export function detectNoteNature(body: string): { nature: NoteNature; confidence: number } | null {
   const text = stripInlineMarkdown(body);
-  const chars = text.replace(/\s/g, "").length;
-  if (chars < 12) return { nature: "journal", confidence: 0.3 };
+  if (text.replace(/\s/g, "").length < 12) return null;
 
   const urls = text.match(URL_RE) ?? [];
   const nonUrlChars = text.replace(URL_RE, "").replace(/\s/g, "").length;
-  // Clipping: a link is the point (several links, or a link with little prose).
+  // 스크랩: the link is the point (several links, or one link with little prose).
   if (urls.length >= 1 && (urls.length >= 2 || nonUrlChars < 400)) {
     return { nature: "clipping", confidence: urls.length >= 2 ? 0.75 : 0.6 };
   }
@@ -86,14 +62,6 @@ export function detectNoteNature(body: string): { nature: NoteNature; confidence
   if (MEETING_RE.test(text) || ATTENDEE_LINE_RE.test(text)) {
     return { nature: "meeting", confidence: 0.65 };
   }
-  if (RETRO_RE.test(text)) return { nature: "retro", confidence: 0.6 };
-  if (STUDY_RE.test(text)) return { nature: "study", confidence: 0.55 };
 
-  // Essay vs a prose daily log is not reliably separable by rule (both are
-  // continuous prose), and mis-reading a journal as an essay would wrongly
-  // suppress its 운동/할 일 extractions. So the deterministic floor only claims
-  // the structurally-clear natures above and defaults to journal; the user can
-  // still set 에세이 by hand on the chip when they want prose treatment. The
-  // LLM engine (v5 §3) takes over nuanced nature later.
-  return { nature: "journal", confidence: 0.4 };
+  return null;
 }
