@@ -25,6 +25,7 @@ import {
   type NoteNature,
 } from "./noteNature";
 import { noteBacklinks, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
+import { ContextPicker } from "./ContextPicker";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
 
@@ -316,6 +317,9 @@ export function NoteEditorPane({
             panel's instead of stepping at the seam. */}
         <header className="note-pane-head">
           <span className="note-pane-date">{note ? formatDate(note.occurredStart ?? note.capturedAt) : `오늘 · ${dateLine}`}</span>
+          {/* A note can belong to a project, like an agent session does. Only
+              once it exists: an unsaved note has no record to file. */}
+          {note ? <ContextPicker record={note} ledger={ledger} /> : null}
           <span
             className={`note-pane-status${saveState === "error" ? " is-error" : ""}`}
             aria-live="polite"

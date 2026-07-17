@@ -113,6 +113,9 @@ export type RecordLedger = {
   /** Renames an entity by id (ID-stable) and teaches Mori the old name as an
    *  alias, so every record referencing it reads the new name. */
   renameEntity: (entityId: string, newName: string) => Promise<void>;
+  /** Mints a project context a record can be filed under. Returns it so a
+   *  picker can select it immediately. */
+  createProjectContext: (name: string) => Promise<KernelContext | null>;
   /** Creates a routine context and relates the given records to it. */
   createRoutine: (name: string, recordIds: string[]) => Promise<void>;
   /** Makes the late-night → previous-day date correction durable as a rule;
@@ -499,6 +502,26 @@ export function useRecordLedger(): RecordLedger {
     await reload();
   }, [rules, reload]);
 
+  /** Mint a project a record can be filed under. Unlike createRoutine this takes
+   *  no records: a project exists before anything belongs to it. */
+  const createProjectContext = useCallback(
+    async (name: string): Promise<KernelContext | null> => {
+      const trimmed = name.trim().normalize("NFC");
+      if (trimmed.length === 0) return null;
+      const repo = getKernelRepository();
+      const context: KernelContext = {
+        id: createKernelId("ctx"),
+        type: "project",
+        name: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+      await repo.saveContext(context);
+      await reload();
+      return context;
+    },
+    [reload],
+  );
+
   const createRoutine = useCallback(
     async (name: string, recordIds: string[]) => {
       if (name.trim().length === 0 || recordIds.length === 0) return;
@@ -545,6 +568,7 @@ export function useRecordLedger(): RecordLedger {
     createNote,
     confirmExtraction,
     renameEntity,
+    createProjectContext,
     createRoutine,
     createDateInferenceRule,
   };

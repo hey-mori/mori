@@ -157,7 +157,7 @@ export function ContextView() {
 
                 {activeGroup.records.length === 0 ? (
                   <p className="context-empty-records">
-                    이 프로젝트에는 아직 기록이 없습니다. 세션에서 정리하거나 기록을 담아보세요.
+                    아직 이 프로젝트의 기록이 없습니다. 기록을 열고 위쪽에서 프로젝트를 고르면 여기 모입니다.
                   </p>
                 ) : null}
               </>

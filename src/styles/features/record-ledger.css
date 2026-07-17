@@ -3003,6 +3003,118 @@
   overflow-y: auto;
 }
 
+/* 프로젝트 picker · reads as a quiet label in the band until hovered, like the
+   nature chip. Parent in the selector so the theme's bare-control styling does
+   not repaint it as a form field. */
+.ctx-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.note-pane-head .ctx-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.note-pane-head .ctx-picker-btn.is-filed {
+  color: var(--muted);
+}
+
+.note-pane-head .ctx-picker-btn:hover {
+  background: var(--panel-soft, #f4f4f7);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.ctx-picker-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: 1px;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, #fff);
+  box-shadow: 0 14px 36px rgba(20, 25, 45, 0.14);
+}
+
+.ctx-picker-scroll {
+  display: grid;
+  gap: 1px;
+  max-height: 208px;
+  overflow-y: auto;
+}
+
+.ctx-picker-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctx-picker-opt:hover {
+  background: var(--panel-soft, #fbfbfd);
+}
+
+.ctx-picker-opt.is-on {
+  color: var(--purple);
+}
+
+.ctx-picker-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  padding: 6px 8px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 7px 7px;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ctx-picker-add:hover {
+  color: var(--purple);
+}
+
+.ctx-picker-new input {
+  width: 100%;
+  margin-top: 3px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel, #fff);
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+}
+
 /* The panel's share of the workspace band. */
 .note-extract-head {
   display: flex;
