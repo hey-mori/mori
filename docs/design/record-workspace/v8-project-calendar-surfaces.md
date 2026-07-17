@@ -126,9 +126,27 @@ fully visible in this tree and can be edited again, so the door back is always
 open, unlike a discard that hides its record. Drag-to-re-parent (Notion's blue
 highlight) is a stage-4 accelerator on top of the menu, never the only path.
 
-**새 프로젝트 (+)** in the rail band opens a single name field that accepts a
-path (`회사/mori`), Bear's typed-nesting convention, feeding the existing
-`planProjectPath`.
+**새 프로젝트 (+)** in the rail band opens a **modal** (revised 2026-07-17;
+this first specified an inline name field, and building it showed the field
+could not do the job). It reuses the house modal shape exactly · the scrim,
+headed bar, round close, Esc, focus trap and focus restore of
+`ProjectFormModal` · and carries the fields a `KernelContext` actually has:
+
+- **이름**, still accepting a typed path (`회사/mori`, Bear's convention), which
+  feeds `planProjectPath`.
+- **상위 프로젝트**, a picker the inline field had no room for. It does not
+  compete with the typed path, it composes with it: the parent is where the walk
+  STARTS and the path runs from there (`planProjectPath`'s `rootParentId`).
+- **A live preview** of the resulting path, which is what makes those two one
+  visible thing rather than two rules to hold in your head.
+- **Up-front refusal** of a duplicate sibling name, with the reason. The write
+  refuses this (siblings must have unique names, since the derived path is the
+  group key), and a write that can only refuse silently after the fact is a
+  button that does nothing.
+
+No 설명 field: a `KernelContext` has no description, and offering one would be
+offering a field that goes nowhere. 하위 프로젝트 opens the same modal with the
+parent pre-filled, so there is one create door, not two.
 
 **Session-only groups.** Sessions whose folder leaf matches no context (the
 `ng-gw`, `jinga` rows) list under a quiet 연동 폴더 divider below the tree.

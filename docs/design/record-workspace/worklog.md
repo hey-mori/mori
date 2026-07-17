@@ -220,6 +220,34 @@ header (`ledger-calendar-back/nav/month/count`), which S3 removed. If it is ever
 re-wired it needs its own header styles; the v8 skeleton would have required
 restyling it regardless.
 
+## Done (v8 · 새 프로젝트 becomes a modal, 2026-07-17)
+
+User call, and the right one: the inline rail field could not show WHERE the
+project was about to land, had nowhere to explain what a "/" in the name does,
+and answered a duplicate name by silently doing nothing (the write refuses it).
+
+`ProjectCreateModal` reuses the house modal shape exactly (`ProjectFormModal`'s
+scrim, headed bar, round close, Esc, focus trap, focus restore) and carries the
+fields a `KernelContext` actually has. No 설명 box: contexts have no description,
+and a field that goes nowhere is a lie. 상위 프로젝트 and a typed path COMPOSE
+(the parent is where the walk starts, `planProjectPath`'s `rootParentId`), with a
+live preview making them one visible thing. A colliding name is refused up front,
+with the reason. 하위 프로젝트 opens the same modal pre-filled, so there is one
+create door; `NameField` is gone.
+
+Caught while verifying: the hint span sits inside the label, so
+`.project-modal-field > span` (0,1,1) beat the lone hint class (0,1,0) and
+rendered the hint bold and dark as a second label. Same specificity trap this
+codebase keeps setting; measured, not eyeballed.
+
+**Surfaced, not taken:** the app now has TWO "새 프로젝트" dialogs making two
+different things · this one mints a `KernelContext`, while `ProjectFormModal`
+(홈 / StartSession / Workspace) mints a legacy connected project with a
+description. `projectContextConverter` shows the intended direction (architecture
+§12/§18: projects convert to contexts, dual-run, contexts win), so this is a
+transition artifact with a plan, not a bug to silently unify. Unifying them is a
+product decision and belongs to the user.
+
 ## Done (v8 review pass · 10 real bugs in the new code, 2026-07-17)
 
 v8 shipped ~1500 lines of new UI in one day with no review, and four bugs had
