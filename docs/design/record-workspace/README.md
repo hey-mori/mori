@@ -45,6 +45,8 @@ is the input to the audit, not the baseline for the design.
 | `time-and-placement-ux.md` | The three-time model in user language, date resolution flow, calendar placement semantics |
 | `screen-specifications.md` | M1-M8 screen specs with example data and empty/loading/error states |
 | `implementation-roadmap.md` | R1-R6 stages, scope, done criteria, transition and removal plan |
+| `v5-note-tool-bar.md` | References (Obsidian/Bear/iA), editor decision, extraction extensibility, vault bridge direction |
+| `v6-honest-notes.md` | What a day of use exposed: the lies removed, why the rule proposer cannot do the job, nature demoted, project filing, revision granularity, layout doctrine. **Carries the two open decisions.** |
 | `worklog.md` | Current stage, done work, changed files, next exact action |
 
 ## Implementation stages and current status

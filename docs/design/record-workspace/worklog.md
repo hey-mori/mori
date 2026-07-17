@@ -1,5 +1,55 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (v6 · honest notes, 2026-07-17)
+
+Direction + evidence: `v6-honest-notes.md`. A six-dimension audit of 기록 (33
+raw findings, 26 confirmed after adversarial verification) plus direct user
+report. The theme: several surfaces were **stating things that were not true**.
+
+- **Lies removed.** Frozen mount clock → `useNow` (`src/lib/time/useNow.ts`), so
+  오늘/어제 stop lying past midnight and an extraction stops persisting the wrong
+  date; applied at all four frozen sites. "날짜 미정" under 오늘 → gate on
+  `isDateUndecided`, show the real write time. 쓰는 중 on a failed save →
+  저장 실패 in semantic red. The calendar showed agent sessions and **nothing the
+  user had typed** (keyed off a raw `occurredStart`, which no note has) → key by
+  `displayTime`. 프로젝트's empty state advertised a path that did not exist.
+- **A note now has a way out**: `⋯ → 버리기`, a status change, menu-gated so it
+  can never be a stray click. 기록 creates eagerly, so this was the gap.
+- **A note can belong to a project** (`ContextPicker`, `createProjectContext`).
+  The kernel supported it all along; only a control was missing. Files via
+  `contextIds` so it is an audited, undoable revision.
+- **Nature demoted**: a *detected* nature may no longer hide an extraction (one
+  공부 was folding away a real 운동). Only a user-set nature folds. Detector
+  narrowed; a known keyword-floor limit is recorded in a test.
+- **Revision granularity changed deliberately** (rule change, user-authorized):
+  one editing burst is one revision, not one per 650ms autosave, which had been
+  measured at 64x a note's own size. K1 reversibility kept, granularity coarsened
+  to "each sitting".
+- **Layout doctrine**: `--workspace-band` (52px) is now the one top-band height
+  across rail / main / right panel / action bar, so the rule runs unbroken; the
+  note header left the scrolling document to become a band. 라이브 피드 pinned out
+  of the scroll with symmetric padding by construction.
+- **Editor**: ⌘F find-in-note (`search` + `searchKeymap`), Tab indent /
+  shift-Tab outdent.
+- **Timeline**: connector cap removed (it dropped every line past the first 40,
+  in event order); Flow Focus keeps 16 as a product decision.
+- Correctness: createInFlight cleared in a `finally` (a rejected first save
+  wedged the editor forever); click-to-create serialized per link title (a
+  double-click minted twins); NFC moved into `createRecord`/`applyRecordPatch`.
+- Verified in the browser: rail↔main↔panel bands measure 52/52/52 with 0 spread;
+  three typing bursts add one revision; a note reaches 프로젝트; the calendar
+  shows written notes; ⌘F opens the panel. check:full 2923 green.
+
+**Open decisions (do NOT resolve autonomously):** the local-LLM extraction engine
+(v6 §2: the rule proposer cannot represent agency, negation or context, so
+extraction stays a demo until this is answered), and the right-panel question
+(v6 §6.2: v2 already approved "no right panel"; three options are on the table).
+
+**Tool limit worth knowing:** the browser preview's `key` action sends modifiers
+in the wrong order (letter first, then Meta), so ⌘ shortcuts cannot be tested
+through it; verify those on the desktop app. It typed a stray character into a
+note during this session (caught and reverted).
+
 ## Done (v5 · nature + editor + search, 2026-07-17)
 
 - **Nature-gated extraction (N1)**: `noteNature.ts` reads a note's kind
