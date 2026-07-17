@@ -107,13 +107,22 @@ export function buildVisibleConnectors(args: {
 /**
  * Connector cap by mode.
  *
- * This is a runaway backstop, NOT a display policy: the canvas already draws a
- * bar per event, so a comparable number of paths is not what makes it slow, and
- * a cap tight enough to bite on a normal session silently truncates the map.
- * A real imported session runs to hundreds of cross-lane handoffs (483 events
- * produced far more than the old cap of 40, so its lines died a third of the way
- * across), hence the headroom. Flow Focus stays a deliberately tight subgraph.
+ * `flow` caps at 16 as a PRODUCT decision: Flow Focus is a deliberately tight
+ * 2-hop subgraph, and the number says "this is a focused view". It is not a
+ * perf guard and should not be read as a sibling of the timeline value.
+ *
+ * `timeline` has no cap, on purpose. A cap here was only ever a guess, and it
+ * guessed about the wrong quantity: the canvas is not virtualized, so it already
+ * draws one bar per event uncapped, and connectors are structurally fewer than
+ * bars (they link consecutive lane handoffs within a request). Measured on
+ * synthetic sessions: 483 events produce 483 bars but only 321 connectors, and
+ * a connector is the cheapest node in the tree, roughly a seventh of a bar's
+ * cost with no handlers, no state and no layout participation. So a connector
+ * cap can never rescue a canvas that is already dead from its bars, while a cap
+ * low enough to fire on an ordinary session silently truncates a deterministic
+ * map. If this surface ever needs saving it needs viewport culling for the bars,
+ * which is a different job.
  */
-export function defaultConnectorCap(mode: "timeline" | "flow"): number {
-  return mode === "flow" ? 16 : 400;
+export function defaultConnectorCap(mode: "timeline" | "flow"): number | undefined {
+  return mode === "flow" ? 16 : undefined;
 }

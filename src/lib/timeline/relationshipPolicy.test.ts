@@ -208,14 +208,38 @@ describe("buildVisibleConnectors", () => {
 });
 
 describe("defaultConnectorCap", () => {
-  it("gives both modes a positive cap", () => {
+  it("keeps Flow Focus a deliberately tight subgraph", () => {
+    // A product decision, not a perf guard: Flow Focus means "a focused view".
     expect(defaultConnectorCap("flow")).toBeGreaterThan(0);
-    expect(defaultConnectorCap("timeline")).toBeGreaterThan(0);
   });
 
-  it("lets the Timeline overview show the whole activity-flow map, not a handful", () => {
-    // The Timeline now draws the deterministic cross-lane flow lines in
-    // overview, so it needs more headroom than the focused Flow subgraph.
-    expect(defaultConnectorCap("timeline")).toBeGreaterThanOrEqual(defaultConnectorCap("flow"));
+  it("does not cap the Timeline overview at all", () => {
+    // The canvas draws one bar per event uncapped, and connectors are always
+    // fewer than bars and far cheaper per node, so capping them could never
+    // rescue the canvas while it did silently truncate a deterministic map.
+    expect(defaultConnectorCap("timeline")).toBeUndefined();
+  });
+
+  it("draws every connector on a session far past the old caps", () => {
+    const relationships: Relationship[] = [];
+    const localFocus = new Set<string>();
+    const localAnchors = new Map<string, LaidOutTimelineItem>();
+    for (let i = 0; i < 500; i += 1) {
+      const fromId = `from-${i}`;
+      const toId = `to-${i}`;
+      localAnchors.set(fromId, laidOutItem({ itemId: `item-from-${i}`, memberEventIds: [fromId] }));
+      localAnchors.set(toId, laidOutItem({ itemId: `item-to-${i}`, memberEventIds: [toId] }));
+      relationships.push(rel(`r-${i}`, fromId, toId));
+    }
+    const out = buildVisibleConnectors({
+      mode: "timeline",
+      focusedSet: localFocus,
+      focusActive: false,
+      relationships,
+      eventAnchorIndex: localAnchors,
+      toneOfLane: () => "purple",
+      maxConnectors: defaultConnectorCap("timeline"),
+    });
+    expect(out).toHaveLength(500);
   });
 });

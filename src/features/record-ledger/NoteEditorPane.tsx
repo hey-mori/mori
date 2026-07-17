@@ -214,13 +214,20 @@ export function NoteEditorPane({
     [natureOverride, body],
   );
   const { fitPending, offPending } = useMemo(() => {
+    // Only a nature the USER set may hide an extraction. A DETECTED nature is a
+    // keyword guess, and the cost of its two failures is wildly asymmetric:
+    // showing an off-topic card is a glance, hiding a true one loses the record
+    // silently, with no way for the user to know it happened. One "공부" in a
+    // journal used to fold away a real 운동. Tuning the detector only changes
+    // that rate, never the asymmetry, so the guess does not get to hide things.
+    if (!natureOverride) return { fitPending: panel.pending, offPending: [] };
     const fit: NoteExtraction[] = [];
     const off: NoteExtraction[] = [];
     for (const item of panel.pending) {
       (natureFits(nature, item.schemaId) ? fit : off).push(item);
     }
     return { fitPending: fit, offPending: off };
-  }, [panel.pending, nature]);
+  }, [panel.pending, nature, natureOverride]);
 
   const onConfirm = useCallback(
     async (proposal: NoteExtraction["proposal"]) => {

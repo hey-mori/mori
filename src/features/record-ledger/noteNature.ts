@@ -53,10 +53,17 @@ export function natureFits(nature: NoteNature, schemaId: string): boolean {
   return fit === "all" || fit.has(schemaId);
 }
 
-const MEETING_RE = /참석|안건|아젠다|회의록|회의\s|액션\s*아이템|attendees|agenda|minutes/i;
-const ATTENDEE_LINE_RE = /^\s*[-*+]?\s*[^\n:]{1,14}:\s*\S/m;
-const RETRO_RE = /회고|kpt|잘한\s?점|아쉬운\s?점|배운\s?점|다음엔|keep|problem|try|retrospective/i;
-const STUDY_RE = /공부|학습|복습|예습|개념|요약|정리했|배웠|강의|인강|튜토리얼|문서를\s*읽/;
+// Every token here must be one a journal would NOT casually contain. Removed
+// after they were caught claiming ordinary prose: `정리했` (방/사진/짐 정리했다),
+// `개념` and `요약` (everyday nouns), and `keep|problem|try` under /i, which are
+// three of the most common English words a developer writes, so "Try the new
+// deploy script" read as a 회고.
+const MEETING_RE = /참석자|안건|아젠다|회의록|액션\s*아이템|attendees|agenda|minutes/i;
+// Person-shaped attendee lines: at least two of them, so a single "장보기: 계란"
+// shopping line cannot pass as a meeting roster.
+const ATTENDEE_LINE_RE = /(^\s*[-*+]?\s*[^\s:]{1,10}:\s*\S.*\n){2,}/m;
+const RETRO_RE = /회고|kpt|잘한\s?점|아쉬운\s?점|배운\s?점|retrospective/i;
+const STUDY_RE = /공부|학습|복습|예습|배웠|강의|인강|튜토리얼|문서를\s*읽/;
 const URL_RE = /https?:\/\/\S+/g;
 
 /**

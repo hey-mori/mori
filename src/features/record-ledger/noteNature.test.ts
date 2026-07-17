@@ -11,7 +11,25 @@ describe("detectNoteNature", () => {
 
   it("reads attendee/agenda markers as a meeting", () => {
     expect(detectNoteNature("스프린트 회의\n안건: 배포 일정\n액션 아이템 정리").nature).toBe("meeting");
-    expect(detectNoteNature("주간 미팅\n- 지혜: 백엔드 진행\n- 준영: 프론트 마감").nature).toBe("meeting");
+    expect(detectNoteNature("주간 미팅\n- 지혜: 백엔드 진행\n- 준영: 프론트 마감\n").nature).toBe("meeting");
+  });
+
+  it("does not claim ordinary prose that merely contains an overloaded word", () => {
+    // Each of these used to be dragged out of 일지 by one overloaded token:
+    // 정리했 (방/사진 정리), a short "장보기:" line posing as an attendee roster,
+    // and `try` matching case-insensitively.
+    expect(detectNoteNature("친구랑 카페 갔다. 사진 정리했다.").nature).toBe("journal");
+    expect(detectNoteNature("장보기: 계란, 우유. 저녁에 러닝 5km").nature).toBe("journal");
+    expect(detectNoteNature("Try the new deploy script. 러닝 5km 했다.").nature).toBe("journal");
+  });
+
+  it("still mis-labels a journal that genuinely mentions studying, which is why a detected nature may not hide anything", () => {
+    // Documents a KNOWN limit rather than pretending it is fixed. 공부 really is
+    // a study word, so a keyword floor cannot tell "a journal that mentions
+    // studying" from "a study note"; only the LLM engine (v5 §3) can. The label
+    // is one click to correct, and NoteEditorPane refuses to fold on a detected
+    // nature, so being wrong here costs a glance instead of a lost record.
+    expect(detectNoteNature("오늘 운동을 했다\n공부도 했다").nature).toBe("study");
   });
 
   it("reads retro / study markers", () => {
