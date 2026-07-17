@@ -106,4 +106,78 @@ describe("buildProjectGroups", () => {
     );
     expect(groups[0].name).toBe("busy");
   });
+
+  it("keeps two same-named projects under different parents apart", () => {
+    // The leaf key used to merge these into ONE group, mixing 회사's records
+    // with 개인's under a single heading. They are different projects.
+    const 회사: KernelContext = { id: "c1", type: "area", name: "회사", createdAt: "x" };
+    const 개인: KernelContext = { id: "c2", type: "area", name: "개인", createdAt: "x" };
+    const work: KernelContext = { id: "c3", type: "project", name: "mori", parentId: "c1", createdAt: "x" };
+    const home: KernelContext = { id: "c4", type: "project", name: "mori", parentId: "c2", createdAt: "x" };
+    const groups = buildProjectGroups(
+      [],
+      [회사, 개인, work, home],
+      [record("a", ["c3"]), record("b", ["c4"])],
+      [],
+    );
+    const moris = groups.filter((g) => g.name === "mori");
+    expect(moris).toHaveLength(2);
+    expect(moris.map((g) => g.parentPath).sort()).toEqual(["개인", "회사"]);
+    // Each holds only its own record, not the other's.
+    const work그룹 = moris.find((g) => g.parentPath === "회사");
+    expect(work그룹?.records.map((r) => r.id)).toEqual(["a"]);
+  });
+
+  it("does not guess which same-named nested project a session belongs to", () => {
+    // Two contexts own the leaf "mori" and neither path IS "mori", so a
+    // filesystem path cannot say which. Filing real work under the wrong
+    // project silently is worse than leaving it visibly unfiled.
+    const 회사: KernelContext = { id: "c1", type: "area", name: "회사", createdAt: "x" };
+    const 개인: KernelContext = { id: "c2", type: "area", name: "개인", createdAt: "x" };
+    const work: KernelContext = { id: "c3", type: "project", name: "mori", parentId: "c1", createdAt: "x" };
+    const home: KernelContext = { id: "c4", type: "project", name: "mori", parentId: "c2", createdAt: "x" };
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s1", sourceLabel: "C:/dev/mori" })],
+      [회사, 개인, work, home],
+      [record("a", ["c3"]), record("b", ["c4"])],
+      [],
+    );
+    // The session landed in neither context-backed group.
+    for (const group of groups.filter((g) => g.context)) {
+      expect(group.sessions).toHaveLength(0);
+    }
+    // And it was not dropped: it is visible in a group of its own.
+    const unfiled = groups.find((g) => !g.context && g.sessions.length === 1);
+    expect(unfiled?.sessions[0].sessionId).toBe("s1");
+  });
+
+  it("joins a session to a root context whose whole path is the leaf", () => {
+    // An exact path match is not a guess, even when a nested project shares the
+    // leaf, so this must resolve rather than fall through to 'ambiguous'.
+    const 회사: KernelContext = { id: "c1", type: "area", name: "회사", createdAt: "x" };
+    const work: KernelContext = { id: "c3", type: "project", name: "mori", parentId: "c1", createdAt: "x" };
+    const root: KernelContext = { id: "c4", type: "project", name: "mori", createdAt: "x" };
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s1", sourceLabel: "C:/dev/mori" })],
+      [회사, work, root],
+      [record("a", ["c3"]), record("b", ["c4"])],
+      [],
+    );
+    const joined = groups.find((g) => g.context?.id === "c4");
+    expect(joined?.sessions.map((s) => s.sessionId)).toEqual(["s1"]);
+    // Every group still has a unique id, so navigation cannot land on two.
+    expect(new Set(groups.map((g) => g.id)).size).toBe(groups.length);
+  });
+
+  it("still joins a session to the one context that owns its leaf", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s1", sourceLabel: "C:/dev/mori" })],
+      [moriCtx],
+      [record("a", ["ctx-mori"])],
+      [],
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].sessions).toHaveLength(1);
+    expect(groups[0].records).toHaveLength(1);
+  });
 });

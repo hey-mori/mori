@@ -55,6 +55,34 @@ describe("groupRecordsByContext", () => {
     expect(groups.map((group) => group.context.id)).toEqual(["ctx-project-mori"]);
   });
 
+  it("rolls a child's records up into the parent", () => {
+    // A parent that reads as empty while its children hold everything is a
+    // folder lying about being empty.
+    const parent: KernelContext = { id: "ctx-회사", type: "area", name: "회사", createdAt: "x" };
+    const child: KernelContext = { ...projectCtx, parentId: "ctx-회사" };
+    const groups = groupRecordsByContext(
+      [parent, child],
+      [record("a", ["ctx-project-mori"]), record("b", ["ctx-회사"])],
+      [],
+    );
+    const rolled = groups.find((group) => group.context.id === "ctx-회사");
+    expect(rolled?.records.map((r) => r.id).sort()).toEqual(["a", "b"]);
+    // The child still owns its own record: roll-up is a view, not a re-filing.
+    const own = groups.find((group) => group.context.id === "ctx-project-mori");
+    expect(own?.records.map((r) => r.id)).toEqual(["a"]);
+  });
+
+  it("counts a record filed on both a parent and its child only once", () => {
+    const parent: KernelContext = { id: "ctx-회사", type: "area", name: "회사", createdAt: "x" };
+    const child: KernelContext = { ...projectCtx, parentId: "ctx-회사" };
+    const groups = groupRecordsByContext(
+      [parent, child],
+      [record("a", ["ctx-project-mori", "ctx-회사"])],
+      [],
+    );
+    expect(groups.find((group) => group.context.id === "ctx-회사")?.records).toHaveLength(1);
+  });
+
   it("does not double-count a record in both membership paths", () => {
     const groups = groupRecordsByContext(
       [projectCtx],

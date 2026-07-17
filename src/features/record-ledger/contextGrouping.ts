@@ -12,6 +12,7 @@ import type {
   KernelRelation,
   MoriRecord,
 } from "../../lib/record-kernel/kernelTypes";
+import { contextWithDescendants } from "./contextTree";
 
 export type ContextGroup = {
   context: KernelContext;
@@ -41,6 +42,15 @@ function membershipIndex(records: MoriRecord[], relations: KernelRelation[]): Ma
  * Groups records by context, most records first. Only contexts that actually
  * hold records appear. Within a context, records are newest-first by capture
  * time (a stable, always-present ordering).
+ *
+ * A context ROLLS UP its descendants (v7 §7): 회사 shows what is filed under
+ * 회사/mori too, because a parent that shows nothing while its children hold
+ * everything is a folder that lies about being empty. Membership itself stays
+ * single-placement (`withProject` strips then appends at most one), so roll-up
+ * is a view over the tree, never a second filing.
+ *
+ * A record filed on both a parent and its child is de-duplicated by the id set,
+ * so it is counted once in the parent's group.
  */
 export function groupRecordsByContext(
   contexts: KernelContext[],
@@ -52,8 +62,11 @@ export function groupRecordsByContext(
 
   const groups: ContextGroup[] = [];
   for (const context of contexts) {
-    const ids = index.get(context.id);
-    if (!ids || ids.size === 0) continue;
+    const ids = new Set<string>();
+    for (const id of contextWithDescendants(context.id, contexts)) {
+      for (const recordId of index.get(id) ?? []) ids.add(recordId);
+    }
+    if (ids.size === 0) continue;
     const memberRecords = [...ids]
       .map((id) => recordsById.get(id))
       .filter((record): record is MoriRecord => Boolean(record))
