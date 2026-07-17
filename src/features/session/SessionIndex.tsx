@@ -179,7 +179,7 @@ export function SessionIndex({
 
       <div className="session-index-list base-scroll">
         {/* 라이브 피드 · always reachable; lists only what is live right now. */}
-        <section className="session-index-group">
+        <section className="session-index-group is-live">
           <button
             type="button"
             className={`session-index-live-head${liveActive ? " is-active" : ""}`}

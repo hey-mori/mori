@@ -130,6 +130,17 @@
   margin-top: 12px;
 }
 
+/* 라이브 피드 is a destination, not the first group of the past list, so it gets
+   a rule under it rather than sitting flush against 과거's first project label. */
+.session-index-group.is-live {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-index-group.is-live + .session-index-group {
+  margin-top: 10px;
+}
+
 .session-index-group ul {
   list-style: none;
   margin: 0;
