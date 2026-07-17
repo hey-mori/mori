@@ -2944,6 +2944,13 @@
   white-space: nowrap;
 }
 
+/* A save that failed is the one status here that must not stay quiet: the text
+   on screen is not on disk. Semantic red, not brand purple. */
+.note-pane-status.is-error {
+  color: var(--red, #d43a3a);
+  font-weight: 650;
+}
+
 .note-extract {
   flex: 0 0 264px;
   width: 264px;

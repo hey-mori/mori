@@ -70,7 +70,11 @@ export function NoteEditorPane({
   const flushRef = useRef<(text: string) => Promise<MoriRecord | null>>(async () => null);
   // The editor host, for "is the user typing here?" focus containment.
   const docRef = useRef<HTMLDivElement>(null);
-  const [saveState, setSaveState] = useState<"idle" | "dirty" | "saved">("idle");
+  // "error" is not decoration: a save can genuinely fail (browser storage quota
+  // is the real one), and without it a note that is NOT being persisted sits
+  // there reading 쓰는 중 forever, which is the most expensive lie this pane can
+  // tell. A note that is not saving must never look like one that is.
+  const [saveState, setSaveState] = useState<"idle" | "dirty" | "saved" | "error">("idle");
   // A user-set nature overrides the detector until the note switches. null =
   // trust the detector's read of the current body.
   const [natureOverride, setNatureOverride] = useState<NoteNature | null>(null);
@@ -159,9 +163,11 @@ export function NoteEditorPane({
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveTimer.current = null;
-      void flushSave(text).then((saved) => {
-        if (saved) setSaveState("saved");
-      });
+      void flushSave(text)
+        .then((saved) => {
+          if (saved) setSaveState("saved");
+        })
+        .catch(() => setSaveState("error"));
     }, SAVE_DEBOUNCE_MS);
   };
 
@@ -174,7 +180,10 @@ export function NoteEditorPane({
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
         saveTimer.current = null;
-        void flushRef.current(latestBodyRef.current);
+        // The pane is going away, so there is nobody left to show an error to;
+        // swallow explicitly rather than leaving an unhandled rejection. The
+        // bell feed still raises 저장 공간 부족 from storageHealthStore.
+        void flushRef.current(latestBodyRef.current).catch(() => {});
       }
     };
   }, []);
@@ -298,9 +307,18 @@ export function NoteEditorPane({
         <div className="note-pane-doc-inner">
           <header className="note-pane-head">
             <span className="note-pane-date">{note ? formatDate(note.occurredStart ?? note.capturedAt) : `오늘 · ${dateLine}`}</span>
-            <span className="note-pane-status" aria-live="polite">
+            <span
+              className={`note-pane-status${saveState === "error" ? " is-error" : ""}`}
+              aria-live="polite"
+            >
               {body.length > 0 ? `${body.length.toLocaleString("ko-KR")}자` : ""}
-              {saveState === "saved" ? " · 저장됨" : saveState === "dirty" ? " · 쓰는 중" : ""}
+              {saveState === "error"
+                ? " · 저장 실패"
+                : saveState === "saved"
+                  ? " · 저장됨"
+                  : saveState === "dirty"
+                    ? " · 쓰는 중"
+                    : ""}
             </span>
             {noteActions.length > 0 ? (
               <BaseOverflowMenu items={noteActions} label="기록 작업" className="note-pane-menu" />
