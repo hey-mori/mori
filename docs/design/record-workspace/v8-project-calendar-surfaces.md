@@ -230,10 +230,23 @@ set up AND torn down, commit format per `docs/commit-format.md`, no em dash.
 
 ## 9. Open questions (non-blocking) and sources
 
-Open, deliberately deferred to use: (1) whether the calendar rail should
-scroll infinitely across months (Agenda-style) instead of month-scoped ·
-propose month-scoped first, measure the urge to scroll; (2) 보관 semantics
-for contexts (does archiving a parent archive the subtree?).
+**(1) Calendar rail scope · still open**, deliberately deferred to use: month
+scoped first, measure the urge to scroll before adopting Agenda's infinite
+timeline.
+
+**(2) 보관 semantics · ANSWERED while building S4 (2026-07-17).** Archiving is
+**one write on one context**; hiding its descendants is a **view rule**
+(`inArchivedSubtree` walks the parent chain), never a cascade. A cascade would
+have to stamp `archived` onto every descendant, and then 복원 could not tell a
+child the cascade archived from a child the user had archived on purpose
+earlier: restoring the parent would silently un-archive it. Deriving the hide
+makes 보관 and 복원 exactly symmetric and loses nothing. Verified live: with
+`docs` archived on purpose under 회사, archiving 회사 wrote `archived` on 회사
+ONLY (its child `mori` stayed untouched), and restoring 회사 brought back 회사
+and mori while `docs` stayed archived. The label carries the consequence
+(`보관 (하위 포함)`) instead of a modal, and 보관됨 lists only the tops of
+archived subtrees, because a 복원 offered on a child under an archived parent
+would be a button that does nothing.
 
 Sources consulted 2026-07-17: Notion sidebar help (notion.com/help/navigate-
 with-the-sidebar), Bear nested tags + tag FAQ (bear.app/faq), Things 3

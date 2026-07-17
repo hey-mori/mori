@@ -220,6 +220,35 @@ header (`ledger-calendar-back/nav/month/count`), which S3 removed. If it is ever
 re-wired it needs its own header styles; the v8 skeleton would have required
 restyling it regardless.
 
+## Done (v8 S4 · accelerators, and the 보관 question answered, 2026-07-17)
+
+v8 is now built end to end (S1-S4). The one thing still open by choice is the
+calendar rail's scope (month vs infinite), which wants use before a decision.
+
+- **보관 · §9's open question, answered.** Archiving is ONE write; hiding the
+  subtree is a view rule. A cascade cannot promise a lossless 복원 (it forgets
+  which children the user archived on purpose), and deriving the hide can.
+  Verified live: `docs` archived on purpose under 회사, then 회사 archived, wrote
+  `archived` on 회사 only, and restoring 회사 left `docs` archived. This also
+  activated `KernelContext.archived`, a field that was declared, read in exactly
+  one place, and written by nothing.
+- **프로젝트로 만들기** turns a 연동 폴더 into a real project: nothing moves, and
+  the sessions join by the exact-leaf rule on the next read.
+- **A bug that feature exposed:** `buildProjectGroups` seeded its groups from
+  `groupRecordsByContext`, which drops contexts holding no records. So a project
+  with only SESSIONS had no key at all: its own sessions fell through to an
+  unfiled leaf group while the project itself read as empty right beside them.
+  Groups now seed from every project context. This was invisible before only
+  because no path existed to create a session-only project.
+- **Keyboard day navigation** (arrows, `t`, Esc), which follows the selection
+  across a month edge so the grid and the selection never disagree, and ignores
+  keys aimed at a field. It also fixed a real fragility: the handler cast
+  `event.target` to `HTMLElement` and called `closest` on it, which throws when
+  the target is the document or the window.
+- **Drag-to-re-parent** with a drop highlight gated by `canReparent`, plus drop
+  on the blank rail to promote to a root. Both stay accelerators: the 이동 menu
+  still reaches every move.
+
 ## Done (v7 step 6 · rename/re-parent + a verified audit, 2026-07-17)
 
 **Rename and re-parent shipped, guarded and reversible.** Building them first
