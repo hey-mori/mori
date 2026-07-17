@@ -2237,6 +2237,19 @@
   background: color-mix(in srgb, var(--purple) 8%, transparent);
 }
 
+/* The drop target lights up only when the move is legal: canReparent gates it,
+   so an illegal target never invites a drop it would refuse. */
+.ctx-tree-row.is-drop {
+  background: color-mix(in srgb, var(--purple) 14%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--purple);
+}
+
+/* Dropping on the blank rail promotes to a root, the counterpart of dragging a
+   row out of its parent. */
+.ctx-rail-body.is-dragging {
+  min-height: 100%;
+}
+
 .ctx-tree-main {
   display: flex;
   align-items: center;

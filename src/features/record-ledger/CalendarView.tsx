@@ -74,6 +74,55 @@ export function CalendarView() {
     [],
   );
 
+  // Keyboard day navigation. A retrospective calendar is READ, and reading means
+  // walking days, so arrows are the accelerator that matters here. It is an
+  // accelerator only: every one of these is reachable by clicking.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      // Never steal a key from something being typed into. The target is not
+      // always an Element (it can be the document or the window), so this asks
+      // before calling closest rather than trusting a cast and throwing.
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest("input, textarea, select, [contenteditable='true']")
+      ) {
+        return;
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      if (event.key === "Escape" && selectedDate) {
+        setSelectedDate(null);
+        return;
+      }
+      if (event.key === "t" || event.key === "ㅅ") {
+        event.preventDefault();
+        goToday();
+        return;
+      }
+      const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key];
+      if (step === undefined) return;
+      event.preventDefault();
+      // With no day picked yet, the first arrow lands on today rather than
+      // nowhere: the user asked to move, so moving must produce a selection.
+      const base = selectedDate
+        ? new Date(`${selectedDate}T00:00:00`)
+        : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (selectedDate) base.setDate(base.getDate() + step);
+      const next = `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}`;
+      setSelectedDate(next);
+      // Walking off the edge of the month follows the day, so the grid never
+      // shows one month while the selection sits in another.
+      setCursor((current) =>
+        current.year === base.getFullYear() && current.month === base.getMonth()
+          ? current
+          : { year: base.getFullYear(), month: base.getMonth() },
+      );
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const assign = (record: MoriRecord, date: string) => {
     void ledger.setActivityDate(record, date);
     setDropTarget(null);

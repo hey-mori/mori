@@ -61,6 +61,7 @@ export function ContextView() {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState<{ parentId: string | null } | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
 
   const openSessionById = (sessionId: string) => {
     void resolveSession(sessionId).then((ok) => {
@@ -242,7 +243,19 @@ export function ContextView() {
           </button>
         </div>
 
-        <div className="ctx-rail-body base-scroll">
+        <div
+          className={`ctx-rail-body base-scroll${dragging ? " is-dragging" : ""}`}
+          onDragOver={(event) => {
+            if (dragging) event.preventDefault();
+          }}
+          onDrop={(event) => {
+            // Only a drop on the blank area itself, not one that bubbled up from
+            // a row that already handled it.
+            if (event.target !== event.currentTarget || !dragging) return;
+            void reparentContext(dragging, undefined);
+            setDragging(null);
+          }}
+        >
           {creating && creating.parentId === null ? (
             <NameField placeholder="이름 또는 회사/mori" onSubmit={submitCreate} onCancel={() => setCreating(null)} />
           ) : null}
@@ -274,6 +287,9 @@ export function ContextView() {
                   setCreating({ parentId });
                 }}
                 onArchive={(contextId) => void archiveContext(contextId, true)}
+                dragging={dragging}
+                onDragStart={setDragging}
+                onDragEnd={() => setDragging(null)}
               />
               {creating?.parentId === node.context.id ? (
                 <NameField

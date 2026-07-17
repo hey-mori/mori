@@ -43,6 +43,9 @@ export function ProjectTreeRow({
   onReparent,
   onCreateChild,
   onArchive,
+  dragging,
+  onDragStart,
+  onDragEnd,
 }: {
   node: ProjectTreeNode;
   contexts: KernelContext[];
@@ -57,9 +60,14 @@ export function ProjectTreeRow({
   ) => Promise<{ parentId: string | undefined } | null>;
   onCreateChild: (parentId: string) => void;
   onArchive: (contextId: string) => void;
+  /** The context currently being dragged, or null. */
+  dragging: string | null;
+  onDragStart: (contextId: string) => void;
+  onDragEnd: () => void;
 }) {
   const { context, depth, count, hasChildren } = node;
   const [renaming, setRenaming] = useState(false);
+  const [over, setOver] = useState(false);
   const [draft, setDraft] = useState(context.name);
   const inputRef = useRef<HTMLInputElement>(null);
   const menu = useContextMenuPosition();
@@ -150,10 +158,41 @@ export function ProjectTreeRow({
     );
   }
 
+  // Drag-to-re-parent (Notion's mechanic, right down to highlighting the target).
+  // It is an accelerator on top of the 이동 menu, never the only way: a drag is
+  // hard to discover, hard to undo mid-flight and impossible on a trackpad in a
+  // hurry. `canReparent` gates the drop, so an illegal target simply never lights
+  // up rather than lighting up and then refusing.
+  const canAcceptDrop =
+    dragging !== null && dragging !== context.id && canReparent(dragging, context.id, contexts);
+
   return (
     <div
-      className={`ctx-tree-row${active ? " is-active" : ""}`}
+      className={`ctx-tree-row${active ? " is-active" : ""}${over && canAcceptDrop ? " is-drop" : ""}`}
       onContextMenu={menu.onContextMenu}
+      draggable={!renaming}
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", context.id);
+        onDragStart(context.id);
+      }}
+      onDragEnd={() => {
+        setOver(false);
+        onDragEnd();
+      }}
+      onDragOver={(event) => {
+        if (!canAcceptDrop) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setOver(false);
+        if (canAcceptDrop && dragging) void onReparent(dragging, context.id);
+        onDragEnd();
+      }}
     >
       <button
         type="button"
