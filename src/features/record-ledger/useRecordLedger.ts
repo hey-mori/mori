@@ -32,7 +32,12 @@ import {
 } from "../../lib/record-kernel/recordFactory";
 import { coalesceRevision } from "../../lib/record-kernel/revisionCoalescing";
 import { deriveNoteTitle } from "./noteWorkspace";
-import { canReparent, planProjectPath } from "./contextTree";
+import {
+  canReparent,
+  CONTEXT_PATH_SEPARATOR,
+  planProjectPath,
+  siblingNameTaken,
+} from "./contextTree";
 import { projectContextId, projectToContext } from "../../lib/record-kernel/projectContextConverter";
 import { createSchemaRegistry, type SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type {
@@ -121,7 +126,7 @@ export type RecordLedger = {
   renameEntity: (entityId: string, newName: string) => Promise<void>;
   /** Mints a project context a record can be filed under. Returns it so a
    *  picker can select it immediately. */
-  createProjectContext: (name: string) => Promise<KernelContext | null>;
+  createProjectContext: (name: string, parentId?: string) => Promise<KernelContext | null>;
   /** Renames a context in place. The path is derived from the parent chain, so
    *  this touches ONE name and no descendant is rewritten (v7 §7). Returns the
    *  previous name so the caller can offer 되돌리기; contexts carry no revision
@@ -600,19 +605,24 @@ export function useRecordLedger(): RecordLedger {
   /** Mint a project a record can be filed under. Unlike createRoutine this takes
    *  no records: a project exists before anything belongs to it. */
   const createProjectContext = useCallback(
-    async (name: string): Promise<KernelContext | null> => {
+    async (name: string, parentId?: string): Promise<KernelContext | null> => {
       // A typed "회사/mori" nests: planProjectPath turns it into real contexts
       // linked by parentId and throws the string away, so renaming 회사 later
       // touches one name and not its children. Typing a path is how Obsidian and
       // Logseq users already make a folder in a folder, which is what keeps
       // nesting reachable without a second surface.
-      const plan = planProjectPath(name, contexts, (segmentName, parentId) => ({
-        id: createKernelId("ctx"),
-        type: "project",
-        name: segmentName,
+      const plan = planProjectPath(
+        name,
+        contexts,
+        (segmentName, segmentParentId) => ({
+          id: createKernelId("ctx"),
+          type: "project",
+          name: segmentName,
+          parentId: segmentParentId,
+          createdAt: new Date().toISOString(),
+        }),
         parentId,
-        createdAt: new Date().toISOString(),
-      }));
+      );
       if (!plan.leaf) return null;
       const repo = getKernelRepository();
       for (const context of plan.created) await repo.saveContext(context);
@@ -628,6 +638,12 @@ export function useRecordLedger(): RecordLedger {
       if (trimmed.length === 0) return null;
       const context = contexts.find((candidate) => candidate.id === contextId);
       if (!context || context.name === trimmed) return null;
+      // A "/" here would fake a path the tree does not have: the create field
+      // splits on it, this does not, so the name would render as 회사/mori while
+      // sitting at the root and collide with the real nested one.
+      if (trimmed.includes(CONTEXT_PATH_SEPARATOR)) return null;
+      // Two siblings with one name derive one path, and the path is the key.
+      if (siblingNameTaken(contexts, context.parentId, trimmed, context.id)) return null;
       const previous = context.name;
       await getKernelRepository().saveContext({ ...context, name: trimmed });
       await reload();
@@ -646,6 +662,9 @@ export function useRecordLedger(): RecordLedger {
       // Guard at the write, not only on read: tolerating a cycle keeps a bad
       // store renderable, but creating one is a bug we can simply refuse.
       if (!canReparent(contextId, parentId, contexts)) return null;
+      // The destination may already hold a project of this name; landing a
+      // second one there would merge their pages.
+      if (siblingNameTaken(contexts, parentId, context.name, context.id)) return null;
       const previous = context.parentId;
       await getKernelRepository().saveContext({ ...context, parentId });
       await reload();

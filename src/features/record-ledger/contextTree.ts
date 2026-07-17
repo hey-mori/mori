@@ -113,6 +113,32 @@ export function canReparent(
 }
 
 /**
+ * Whether a sibling under `parentId` already carries this name.
+ *
+ * Siblings having unique names is not cosmetic, it is what makes the derived
+ * path a usable KEY: `projectGroups` keys each project by its path, so two
+ * siblings named mori derive one path, one group overwrites the other, and the
+ * loser's records silently render under the winner while its own page reads
+ * empty. `planProjectPath` upholds this at create time by reusing a matching
+ * sibling; rename and re-parent have to uphold it too, or they can manufacture
+ * exactly the collision create refuses to.
+ */
+export function siblingNameTaken(
+  contexts: readonly KernelContext[],
+  parentId: string | undefined,
+  name: string,
+  exceptId?: string,
+): boolean {
+  return contexts.some(
+    (candidate) =>
+      candidate.type === "project" &&
+      candidate.id !== exceptId &&
+      candidate.parentId === parentId &&
+      candidate.name === name,
+  );
+}
+
+/**
  * Whether this context is hidden by 보관: it is archived itself, or it sits
  * under one that is.
  *
@@ -156,6 +182,13 @@ export function planProjectPath(
   path: string,
   contexts: readonly KernelContext[],
   mint: (name: string, parentId: string | undefined) => KernelContext,
+  /** Start the walk under this context instead of at the root. The caller who
+   *  already KNOWS the parent must pass its id: re-deriving it through
+   *  `contextPath` and re-parsing the string here matched by NAME, so a child
+   *  created under the second of two same-named projects landed under the
+   *  first, and a parent whose own name contained a "/" minted two brand-new
+   *  contexts instead of resolving to it. */
+  rootParentId?: string,
 ): { created: KernelContext[]; leaf: KernelContext | null } {
   const segments = path
     .split(CONTEXT_PATH_SEPARATOR)
@@ -165,8 +198,9 @@ export function planProjectPath(
 
   const known = [...contexts];
   const created: KernelContext[] = [];
-  let parentId: string | undefined;
-  let leaf: KernelContext | null = null;
+  let parentId: string | undefined = rootParentId;
+  let leaf: KernelContext | null =
+    known.find((candidate) => candidate.id === rootParentId) ?? null;
   for (const name of segments) {
     const found = known.find(
       (candidate) =>

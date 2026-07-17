@@ -49,11 +49,18 @@ export function CalendarView() {
     return total;
   }, [byDate, monthPrefix]);
 
-  const shiftMonth = (delta: number) =>
+  const shiftMonth = (delta: number) => {
     setCursor((current) => {
       const next = new Date(current.year, current.month + delta, 1);
       return { year: next.getFullYear(), month: next.getMonth() };
     });
+    // Paging away drops the selection. It used to survive: with the tray open,
+    // 이 날에 stayed live and still pointed at a day two months back that nothing
+    // on screen identified, so one click filed the record onto an invisible date
+    // and it read as vanishing. The keyboard path keeps grid and selection
+    // together (it moves the cursor WITH the day); these buttons must too.
+    setSelectedDate(null);
+  };
 
   const goToday = () => {
     setCursor({ year: now.getFullYear(), month: now.getMonth() });

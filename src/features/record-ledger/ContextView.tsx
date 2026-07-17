@@ -144,21 +144,33 @@ export function ContextView() {
       : linkedFolders;
   }, [linkedFolders, query]);
 
-  // Keep a valid selection as data changes; default to the busiest project.
+  // Keep a valid selection as data changes, and default to the busiest project.
+  //
+  // A selection is valid when the context EXISTS, not when it is in the visible
+  // tree. Checking the tree looked equivalent and was a crash: the tree hides an
+  // archived subtree, so archiving the busiest (or only) project made the
+  // selection "invalid", and the repair below picked that same archived project
+  // straight back out of `groups` (which does not filter archived) as a FRESH
+  // object every run. Object.is never bailed, the effect depends on `selection`,
+  // and 프로젝트 died with "Maximum update depth exceeded". It also made 보관됨
+  // unusable, since clicking an archived project was undone on the next tick.
   useEffect(() => {
     const stillValid =
       selection?.kind === "context"
-        ? tree.some((node) => node.context.id === selection.id)
+        ? contexts.some((context) => context.id === selection.id)
         : selection?.kind === "group"
           ? groups.some((group) => group.id === selection.id)
           : false;
     if (stillValid) return;
-    const first = groups.find((group) => group.context) ?? groups[0];
-    if (first?.context) setSelection({ kind: "context", id: first.context.id });
-    else if (first) setSelection({ kind: "group", id: first.id });
+    // Only a project the user can actually see is a sane default to land on.
+    const visible = groups.find(
+      (group) => group.context && !inArchivedSubtree(group.context.id, contexts),
+    );
+    if (visible?.context) setSelection({ kind: "context", id: visible.context.id });
+    else if (groups.length > 0) setSelection({ kind: "group", id: groups[0].id });
     else if (tree.length > 0) setSelection({ kind: "context", id: tree[0].context.id });
     else setSelection(null);
-  }, [tree, groups, selection]);
+  }, [tree, groups, contexts, selection]);
 
   const activeContext = useMemo(
     () =>
@@ -214,8 +226,10 @@ export function ContextView() {
   const submitCreate = async (name: string) => {
     const parentId = creating?.parentId;
     setCreating(null);
-    const path = parentId ? `${contextPath(parentId, contexts)}/${name}` : name;
-    const created = await createProjectContext(path);
+    // The parent goes through by ID. Deriving its path and re-parsing the string
+    // resolved it by NAME, so a child under the second of two same-named
+    // projects landed under the first.
+    const created = await createProjectContext(name, parentId ?? undefined);
     if (created) setSelection({ kind: "context", id: created.id });
   };
 

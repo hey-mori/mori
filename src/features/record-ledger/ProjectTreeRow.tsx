@@ -22,7 +22,7 @@ import {
   type BaseMenuItemSpec,
 } from "../../components/ui/BaseActionMenu";
 import type { KernelContext } from "../../lib/record-kernel/kernelTypes";
-import { canReparent, contextPath } from "./contextTree";
+import { canReparent, contextPath, inArchivedSubtree } from "./contextTree";
 
 export type ProjectTreeNode = {
   context: KernelContext;
@@ -84,6 +84,11 @@ export function ProjectTreeRow({
             candidate.type === "project" &&
             candidate.id !== context.id &&
             candidate.id !== context.parentId &&
+            // An archived target would swallow the project: it would leave the
+            // tree as an archived descendant AND not appear under 보관됨, whose
+            // list is the archived TOPS. One menu click, project gone with no
+            // trace. Moving into a filed-away project is not a thing to offer.
+            !inArchivedSubtree(candidate.id, contexts) &&
             canReparent(context.id, candidate.id, contexts),
         )
         .map((candidate) => ({ id: candidate.id, path: contextPath(candidate.id, contexts) }))

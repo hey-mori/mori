@@ -154,8 +154,13 @@ function CalendarCell({
 }) {
   const sessions = records.filter((record) => record.schemaId === "agent-session");
   const others = records.filter((record) => record.schemaId !== "agent-session");
-  // The session chip is one row when present, so it competes for the same space.
-  const room = Math.max(1, sessions.length > 0 ? fit - 1 : fit);
+  // Everything that takes a row has to be budgeted for, including the +N button
+  // itself: reserving only for the session chip meant every overflowing cell
+  // rendered fit + 1 rows into a fit-row budget, squeezing exactly the busy days
+  // the measurement exists to keep readable.
+  const budget = fit - (sessions.length > 0 ? 1 : 0);
+  const fitsWithoutChip = others.length <= budget;
+  const room = Math.max(1, fitsWithoutChip ? budget : budget - 1);
   const shown = others.slice(0, room);
   const hidden = others.length - shown.length;
 
@@ -169,7 +174,13 @@ function CalendarCell({
         event.preventDefault();
         onDropTarget(date);
       }}
-      onDragLeave={() => onDropTarget(null)}
+      onDragLeave={(event) => {
+        // dragleave BUBBLES, unlike mouseleave, and a cell is full of children
+        // (the date button, every entry). Without this the highlight strobed off
+        // and on as the pointer crossed each entry, worst on the busiest cells.
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        onDropTarget(null);
+      }}
       onDrop={onDrop}
     >
       <button
