@@ -147,6 +147,49 @@ Verified end to end in the browser: discard flips status `active → discarded`
 (never a delete, so nothing is lost), the row leaves, the strip appears, the
 writer stays put, and 되돌리기 puts it all back.
 
+## Done (v7 step 6 · rename/re-parent + a verified audit, 2026-07-17)
+
+**Rename and re-parent shipped, guarded and reversible.** Building them first
+exposed that v7 §7 was wrong: it justified `parentId` by calling a re-parent "an
+audited revision the existing 되돌리기 undoes." `KernelRevision` is keyed by
+`recordId` and `saveContext` overwrites whole, so **contexts have no revision log
+at all.** The §7 conclusion still stands (a rename touches one name, never
+rewrites descendants) but NOT on an undo guarantee that does not exist. The doc
+now carries that correction, and rename/re-parent return their previous value so
+a caller can offer 되돌리기 itself. `reparentContext` refuses self and descendant
+targets.
+
+**A six-lens adversarial audit of the whole 기록 workspace** (42 agents, each
+finding faced two skeptics with different kill reasons; stale comments and
+comment-only em dashes were correctly killed). Nine findings survived; all fixed:
+
+- **The provenance chip lied.** It tested only `origin === "derived"`, so a
+  session the background watcher wrote unattended read "직접 입력" · claiming the
+  user typed it, while the same record's revision trail said 자동/Mori. One shared
+  `originLabel` now resolves all five origins; both surfaces use it.
+- **되돌리기 confirmed what it restored.** `restoreRecords` hardcoded "active", so
+  a 확인할 것 candidate thrown away and brought back came back CONFIRMED, a state
+  the user never chose. It now reads the status out of the discarding revision.
+  This was a bug I had shipped earlier today with the discard doors.
+- **무시 had no door back.** On a candidate it did the exact kernel effect of
+  버리기 (status → discarded) but never raised the 되돌리기 strip: two buttons on
+  one bar, one outcome, only one reversible.
+- **Provenance bled across records.** `useRecordProvenance` reset only when the
+  id went null, so switching from A to B showed A's 이력, 원문 and 관련 항목 under
+  B's title until B's async read landed.
+- **프로젝트 opened a note in a 340px textarea.** It was the only surface not using
+  `openRecordInLedger`; the same note opened as a real document from 캘린더 and as
+  a cramped inspector here. Now routes to the editor; the inspector rail is
+  retired from this screen (still live in ContextRail).
+- **프로젝트 rendered a flat leaf list.** 회사/mori and 개인/mori were two identical
+  "mori" rows; the `parentPath` was already computed and handed in, never shown.
+  Now a dim parent prefix appears only when the leaf is ambiguous.
+
+Each fix landed with a pinning test where the logic is pure (`statusToRestore`,
+`originLabel`), and the 프로젝트 editor route + disambiguation were verified in the
+browser on two same-named nested projects. Test data set up and torn down; the
+user's store left as found.
+
 ## Done (v6 · honest notes, 2026-07-17)
 
 Direction + evidence: `v6-honest-notes.md`. A six-dimension audit of 기록 (33
