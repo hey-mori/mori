@@ -88,6 +88,42 @@ real 3,953-char note, stub in the scratchpad, settings restored afterwards):
 exist and are still tested, but nothing renders their `pending` output. They ran
 on every keystroke to produce a list that was discarded.
 
+## Done (v7 step 4 · organization, 2026-07-17)
+
+`contextTree.ts` (21 tests). §7's claim was checked before building on it and
+held exactly: `parentId` had **one** hit across `src/` and `src-tauri/`, the
+declaration. Nesting cost zero migration, zero SQL, zero Rust.
+
+- **The path is derived, never stored.** A rename touches one name; a re-parent
+  is one patched field, so both are audited revisions 되돌리기 already undoes.
+- **`projectKey`'s leaf collapse is fixed.** 회사/mori and 개인/mori keyed to the
+  same "mori" and merged into one group, mixing two projects' records under one
+  heading. Contexts now key by derived path.
+- **Sessions resolve by exact path → unique leaf → not at all.** A session knows
+  only a filesystem leaf. When two contexts carry that leaf, it is left visibly
+  unfiled rather than silently mis-filed into the wrong project. The exact-path
+  case running first is also what keeps the fallback key collision-free.
+- **Roll-up:** a parent shows its descendants' records. It read as empty before,
+  which is a folder lying about being empty. Membership stays single-placement.
+- **Cycles and dangling parents:** guarded at the write (`canReparent` refuses
+  self and descendant targets) AND tolerated on read (every walk carries a seen
+  set; an orphan surfaces as a root). Both, not either: a bad store must still
+  render, and a context must never vanish because its parent did.
+- **Nesting is reachable:** typing `회사/mori` in 새 프로젝트 nests. The path is
+  INPUT; `planProjectPath` turns it into real contexts and throws the string
+  away. This is how Obsidian and Logseq users already make a folder in a folder,
+  so it needs no second surface.
+- The picker lists projects as an indented tree and shows the full path on the
+  button only when the leaf alone is ambiguous.
+
+**Bug found by looking:** `ContextPicker` shipped with class names and **no
+stylesheet at all**. Its menu rendered as a row of bare text across the header
+band, every option always visible, nothing looking like a control. Now styled.
+
+**Still open in §7:** rename and re-parent have no UI. `canReparent` and the
+derived path make them cheap, but the door is not built: a project can be nested
+at creation and not moved afterwards.
+
 ## Done (v6 · honest notes, 2026-07-17)
 
 Direction + evidence: `v6-honest-notes.md`. A six-dimension audit of 기록 (33
