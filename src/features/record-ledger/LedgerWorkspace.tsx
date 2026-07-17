@@ -120,19 +120,29 @@ export function LedgerWorkspace() {
   // a one-way door: every surface filters discarded records out, so the record
   // survives in the kernel while vanishing from the product. This is the door
   // back, offered where the note used to be.
-  const [discarded, setDiscarded] = useState<{ id: string; title: string } | null>(null);
+  const [discarded, setDiscarded] = useState<{ id: string; title: string; reopen: boolean } | null>(
+    null,
+  );
   const handleDiscarded = (recordId: string, title: string) => {
-    setDiscarded({ id: recordId, title });
+    setDiscarded({ id: recordId, title, reopen: true });
     remount();
     setComposing(true);
     setSelectedId(null);
   };
+
+  // A record KEPT out of a note, discarded from under the document. The note
+  // itself is untouched, so nothing unmounts and the undo must not navigate:
+  // the user is still writing, and yanking them to the restored record would
+  // punish them for correcting a mistake.
+  const handleRecordDiscarded = (recordId: string, title: string) => {
+    setDiscarded({ id: recordId, title, reopen: false });
+  };
   const undoDiscard = async () => {
     if (!discarded) return;
-    const { id } = discarded;
+    const { id, reopen } = discarded;
     setDiscarded(null);
     await ledger.restoreRecords([id]);
-    openRecord(id);
+    if (reopen) openRecord(id);
   };
 
   const handleNoteCreated = (recordId: string, paneId: number) => {
@@ -204,6 +214,7 @@ export function LedgerWorkspace() {
           ledger={ledger}
           onNoteCreated={handleNoteCreated}
           onDiscarded={handleDiscarded}
+          onRecordDiscarded={handleRecordDiscarded}
           onOpenRecord={openRecord}
           now={now}
         />

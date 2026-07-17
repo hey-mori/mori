@@ -45,6 +45,7 @@ export function NoteEditorPane({
   ledger,
   onNoteCreated,
   onDiscarded,
+  onRecordDiscarded,
   onOpenRecord,
   paneId,
   now,
@@ -61,6 +62,9 @@ export function NoteEditorPane({
   /** Fires when this note is thrown away, so the workspace can offer the undo
    *  that this pane cannot: discarding unmounts it. */
   onDiscarded: (recordId: string, title: string) => void;
+  /** Fires when a record KEPT out of this note is thrown away, so the workspace
+   *  can offer the same 되돌리기 it offers for a discarded note. */
+  onRecordDiscarded: (recordId: string, title: string) => void;
   /** Open another note by id (a clicked [[wiki-link]]); routes through the
    *  workspace so the current note flushes on the switch. */
   onOpenRecord: (recordId: string) => void;
@@ -450,19 +454,35 @@ export function NoteEditorPane({
               <div className="note-foot-group">
                 <p className="note-foot-label">이 기록에서 남긴 것</p>
                 {confirmed.map((record) => (
-                  <button
-                    key={record.id}
-                    type="button"
-                    className="note-foot-row"
-                    onClick={() => onOpenRecord(record.id)}
-                  >
-                    <span
-                      className={`note-item-dot ${kindColorClass(record.schemaId)}`}
-                      aria-hidden="true"
-                    />
-                    <span className="note-foot-kind">{schemaLabel(record, ledger.registry)}</span>
-                    <span className="note-foot-title">{record.title}</span>
-                  </button>
+                  <div key={record.id} className="note-foot-row">
+                    <button
+                      type="button"
+                      className="note-foot-open"
+                      onClick={() => onOpenRecord(record.id)}
+                    >
+                      <span
+                        className={`note-item-dot ${kindColorClass(record.schemaId)}`}
+                        aria-hidden="true"
+                      />
+                      <span className="note-foot-kind">{schemaLabel(record, ledger.registry)}</span>
+                      <span className="note-foot-title">{record.title}</span>
+                    </button>
+                    {/* Keeping was one click, so unkeeping must be too. Without a
+                        door here, a wrong keep was permanent from this screen:
+                        the offer that made it is gone the moment it is taken. */}
+                    <button
+                      type="button"
+                      className="note-foot-discard"
+                      onClick={() => {
+                        void ledger.discardRecords([record.id]);
+                        onRecordDiscarded(record.id, record.title);
+                      }}
+                      aria-label={`${record.title} 버리기`}
+                      title="버리기"
+                    >
+                      <Trash2 size={12} aria-hidden="true" />
+                    </button>
+                  </div>
                 ))}
               </div>
             ) : null}
