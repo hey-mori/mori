@@ -8,7 +8,7 @@
  * project's sessions and records, in labeled sections.
  */
 import { useEffect, useMemo, useState } from "react";
-import { FolderGit2, Radio } from "lucide-react";
+import { Check, FolderGit2, Pencil, Radio, X } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -20,11 +20,14 @@ import { useSessionResolver } from "../session/useSessionResolver";
 import { useRecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
 import { groupRecordsBySection } from "./contextGrouping";
-import { buildProjectGroups } from "./projectGroups";
+import { buildProjectGroups, type ProjectGroup } from "./projectGroups";
 import { ledgerVisibleRecords } from "./recordPresentation";
+import { canReparent, contextPath } from "./contextTree";
+import type { KernelContext } from "../../lib/record-kernel/kernelTypes";
 
 export function ContextView() {
-  const { records, registry, relations, contexts, loading } = useRecordLedger();
+  const { records, registry, relations, contexts, loading, renameContext, reparentContext } =
+    useRecordLedger();
   const navigate = useAppStore((state) => state.navigate);
   // The same door 캘린더 and the command palette already use. 프로젝트 was the only
   // surface that did not, so one note opened as a real document from the
@@ -43,6 +46,7 @@ export function ContextView() {
     });
   };
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [editingContextId, setEditingContextId] = useState<string | null>(null);
 
   const groups = useMemo(
     () =>
@@ -88,23 +92,19 @@ export function ContextView() {
         <div className="context-page">
           <aside className="context-list" aria-label="프로젝트 목록">
             {groups.map((group) => (
-              <button
+              <ProjectRow
                 key={group.id}
-                type="button"
-                className={`context-item${group.id === selectedProjectId ? " is-active" : ""}`}
-                onClick={() => setSelectedProjectId(group.id)}
-              >
-                <FolderGit2 size={13} aria-hidden="true" />
-                <span className="context-item-name">
-                  {group.parentPath && ambiguousNames.has(group.name) ? (
-                    <span className="context-item-parent">{group.parentPath}/</span>
-                  ) : null}
-                  {group.name}
-                </span>
-                <span className="context-item-count">
-                  {group.sessions.length + group.records.length}
-                </span>
-              </button>
+                group={group}
+                contexts={contexts}
+                active={group.id === selectedProjectId}
+                showParentPath={Boolean(group.parentPath) && ambiguousNames.has(group.name)}
+                editing={editingContextId === group.context?.id}
+                onSelect={() => setSelectedProjectId(group.id)}
+                onStartEdit={() => setEditingContextId(group.context?.id ?? null)}
+                onCancelEdit={() => setEditingContextId(null)}
+                onRename={renameContext}
+                onReparent={reparentContext}
+              />
             ))}
           </aside>
 
@@ -180,4 +180,139 @@ function safeSummaries() {
   } catch {
     return [];
   }
+}
+
+/**
+ * One project in the sidebar, in display or edit mode.
+ *
+ * Rename and re-parent share one editor because they are one thought ("where
+ * does this project sit?"). Neither needs an undo toast the way discard does: a
+ * renamed or moved project stays fully visible in this list and can be edited
+ * again, so the door back is always open. Only a context-backed group can be
+ * edited; a session-only group has no context to rename.
+ *
+ * The parent options exclude the project itself and its descendants, so the
+ * control cannot even offer a move that `reparentContext` would refuse.
+ */
+function ProjectRow({
+  group,
+  contexts,
+  active,
+  showParentPath,
+  editing,
+  onSelect,
+  onStartEdit,
+  onCancelEdit,
+  onRename,
+  onReparent,
+}: {
+  group: ProjectGroup;
+  contexts: KernelContext[];
+  active: boolean;
+  showParentPath: boolean;
+  editing: boolean;
+  onSelect: () => void;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onRename: (contextId: string, name: string) => Promise<string | null>;
+  onReparent: (
+    contextId: string,
+    parentId: string | undefined,
+  ) => Promise<{ parentId: string | undefined } | null>;
+}) {
+  const context = group.context;
+  const [name, setName] = useState(context?.name ?? group.name);
+  const [parentId, setParentId] = useState<string | undefined>(context?.parentId);
+
+  const parentOptions = useMemo(() => {
+    if (!context) return [];
+    return contexts
+      .filter((candidate) => candidate.type === "project" && candidate.id !== context.id)
+      .filter((candidate) => canReparent(context.id, candidate.id, contexts))
+      .map((candidate) => ({ id: candidate.id, path: contextPath(candidate.id, contexts) }))
+      .sort((a, b) => a.path.localeCompare(b.path, "ko"));
+  }, [context, contexts]);
+
+  if (!editing) {
+    return (
+      <div className={`context-item-wrap${active ? " is-active" : ""}`}>
+        <button
+          type="button"
+          className={`context-item${active ? " is-active" : ""}`}
+          onClick={onSelect}
+        >
+          <FolderGit2 size={13} aria-hidden="true" />
+          <span className="context-item-name">
+            {showParentPath ? <span className="context-item-parent">{group.parentPath}/</span> : null}
+            {group.name}
+          </span>
+          <span className="context-item-count">{group.sessions.length + group.records.length}</span>
+        </button>
+        {context ? (
+          <button
+            type="button"
+            className="context-item-editbtn"
+            onClick={onStartEdit}
+            aria-label={`${group.name} 이름 변경`}
+            title="이름 변경 · 상위 프로젝트"
+          >
+            <Pencil size={12} aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  const commit = async () => {
+    if (!context) return;
+    const trimmed = name.trim();
+    if (trimmed && trimmed !== context.name) await onRename(context.id, trimmed);
+    if (parentId !== context.parentId) await onReparent(context.id, parentId);
+    onCancelEdit();
+  };
+
+  return (
+    <form
+      className="context-item-edit"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void commit();
+      }}
+    >
+      <input
+        autoFocus
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        aria-label="프로젝트 이름"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onCancelEdit();
+        }}
+      />
+      <select
+        value={parentId ?? ""}
+        onChange={(event) => setParentId(event.target.value || undefined)}
+        aria-label="상위 프로젝트"
+      >
+        <option value="">최상위</option>
+        {parentOptions.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.path}
+          </option>
+        ))}
+      </select>
+      <div className="context-item-edit-actions">
+        <button type="submit" className="context-item-edit-save" aria-label="저장">
+          <Check size={13} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="context-item-edit-cancel"
+          onClick={onCancelEdit}
+          aria-label="취소"
+        >
+          <X size={13} aria-hidden="true" />
+        </button>
+      </div>
+    </form>
+  );
 }
