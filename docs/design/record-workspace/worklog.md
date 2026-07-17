@@ -1,5 +1,33 @@
 # Worklog · 기록 Workspace redesign
 
+## Plan (v8 · 프로젝트/캘린더 surfaces + the layer rule, 2026-07-17)
+
+`v8-project-calendar-surfaces.md`, written after the user showed that clicking
+a 남긴 것 row opens a full document screen for a one-line derived record ("한
+번 타고 들어가는 레이어") and asked for 프로젝트 and 캘린더 to be properly
+기획-ed with references.
+
+- **The layer rule, now written down**: metadata edits happen where the thing
+  is shown; navigation is reserved for substance; every screen must answer
+  왜 여기에 왔는가. The 남긴 것 row expands in place (종류/날짜/프로젝트/
+  버리기/본문에서 보기) and stops navigating.
+- **One skeleton, four surfaces**: 프로젝트 and 캘린더 leave PageShell/
+  ActionBar and adopt the 기록/세션 full-bleed rail+pane skeleton with the
+  52px band. That answers the header question: the band IS the header.
+- **프로젝트**: rail tree (disclosure carets, hover ⋯ + right-click menu,
+  inline rename, canReparent-filtered 이동 submenu · the Notion/Bear
+  convention set, replacing the hover pencil), 연동 폴더 divider with
+  프로젝트로 만들기, and a page ordered 하위 프로젝트 → 최근(merged) → 노트 →
+  세션 → 남긴 기록.
+- **캘린더**: Fantastical's arrangement · the rail carries the month's
+  day-grouped agenda synced to the grid; the band carries ◀ 월 ▶ · 오늘 ·
+  날짜 미정 chip; the tray docks as a strip under the band; cells show what
+  fits then +N (internal cell scroll dies); the fossil 기록으로 back button,
+  bottom agenda and bottom tray are removed.
+- References verified against vendor docs (Notion, Bear, Things 3,
+  Fantastical, Day One, Agenda); build staged S1-S4 for the implementing
+  session with per-stage done criteria.
+
 ## Plan (v7 · document understanding, 2026-07-17)
 
 `v7-document-understanding.md`. Grounded in competitive research across 13 AI
