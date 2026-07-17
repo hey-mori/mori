@@ -15,6 +15,7 @@ import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
 import { NoteExplorer } from "./NoteExplorer";
 import { NoteEditorPane } from "./NoteEditorPane";
+import { withProject } from "./ContextPicker";
 import { DocumentEditor } from "./DocumentEditor";
 import { isDateUndecided } from "./dateResolution";
 import type { ExplorerSort } from "./noteExplorerModel";
@@ -34,6 +35,11 @@ export function LedgerWorkspace() {
   const clearOpenRecord = useAppStore((state) => state.clearOpenRecord);
   const newRecordRequest = useAppStore((state) => state.newRecordRequest);
   const clearNewRecordRequest = useAppStore((state) => state.clearNewRecordRequest);
+  const newRecordProjectId = useAppStore((state) => state.newRecordProjectId);
+  // A note requested from a project page is born filed there. It cannot be filed
+  // at request time because an untyped note has no record yet, so the intent is
+  // held until the first save mints one.
+  const pendingProjectRef = useRef<string | null>(null);
 
   // Both global entry points route through the same actions the in-workspace
   // controls use, rather than setting state behind their backs. That is what
@@ -50,9 +56,10 @@ export function LedgerWorkspace() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- see above.
   useEffect(() => {
     if (!newRecordRequest) return;
+    pendingProjectRef.current = newRecordProjectId;
     startNew();
     clearNewRecordRequest();
-  }, [newRecordRequest, clearNewRecordRequest]);
+  }, [newRecordRequest, newRecordProjectId, clearNewRecordRequest]);
 
   // Extractions (derived-from a note) are sub-items of their note, resolved in
   // the note's 추출 panel, never as standalone 확인할 것 rows.
@@ -155,6 +162,17 @@ export function LedgerWorkspace() {
     if (paneId !== nonceRef.current) return;
     setComposing(false);
     setSelectedId(recordId);
+
+    // The note now exists, so the project intent held since the request can land.
+    const projectId = pendingProjectRef.current;
+    pendingProjectRef.current = null;
+    if (!projectId) return;
+    const created = ledger.records.find((record) => record.id === recordId);
+    if (created) {
+      void ledger.updateRecord(created, {
+        contextIds: withProject(created, ledger.contexts, projectId),
+      });
+    }
   };
 
   // A selected record that vanishes (discarded from the editor) clears the pane.

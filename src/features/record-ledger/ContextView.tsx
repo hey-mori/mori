@@ -1,16 +1,20 @@
 /**
- * 프로젝트 · a project reads as everything under it — its AI sessions AND its
- * kernel records (notes / decisions / activities). Sessions and records live in
- * two parallel stores; this view merges them by project so the page is filled
- * with the work the user actually has, not an empty kernel-only list.
+ * 프로젝트 · a project reads as everything under it: its notes, its AI sessions,
+ * and the records kept out of them. Sessions and records live in two parallel
+ * stores; this view merges them by project so the page is filled with the work
+ * the user actually has, not an empty kernel-only list.
  *
- * Left: the projects that hold work, busiest first. Right: the selected
- * project's sessions and records, in labeled sections.
+ * Layout is the house skeleton (기록 v8 §2), the same one 기록 and 세션 use: a
+ * 248px rail and a content pane, each topped by the 52px `--workspace-band`.
+ * This screen used to sit in PageShell/ActionBar instead, which is why it read
+ * as a different app.
+ *
+ * Left: the project TREE (nesting is real now: `KernelContext.parentId`), with
+ * row management behind a hover `⋯` / right-click. Right: the selected
+ * project's page (v8 §5), ordered by what a returning user asks first.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Check, FolderGit2, Pencil, Radio, X } from "lucide-react";
-import { PageShell } from "../../components/layout/PageShell";
-import { ActionBar } from "../../components/layout/ActionBar";
+import { FolderGit2, FolderPlus, PenLine, Radio, Search } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { useAppStore } from "../../app/store";
 import { loadStoredSessionSummaries } from "../../app/sessionStore";
@@ -21,32 +25,47 @@ import { useRecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
 import { groupRecordsBySection } from "./contextGrouping";
 import { buildProjectGroups, type ProjectGroup } from "./projectGroups";
-import { ledgerVisibleRecords } from "./recordPresentation";
-import { canReparent, contextPath } from "./contextTree";
-import type { KernelContext } from "../../lib/record-kernel/kernelTypes";
+import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
+import { contextPath, contextTreeOrder } from "./contextTree";
+import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
+import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
+
+/** What the rail has selected. A project the user just made holds nothing yet,
+ *  so selection keys on the CONTEXT, never on a group that may not exist. */
+type Selection = { kind: "context"; id: string } | { kind: "group"; id: string };
 
 export function ContextView() {
-  const { records, registry, relations, contexts, loading, renameContext, reparentContext } =
-    useRecordLedger();
+  const {
+    records,
+    registry,
+    relations,
+    contexts,
+    loading,
+    renameContext,
+    reparentContext,
+    createProjectContext,
+  } = useRecordLedger();
   const navigate = useAppStore((state) => state.navigate);
-  // The same door 캘린더 and the command palette already use. 프로젝트 was the only
+  // The door 캘린더 and the command palette already use. 프로젝트 was the only
   // surface that did not, so one note opened as a real document from the
   // calendar and as a 340px textarea from here.
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
+  const requestNewRecord = useAppStore((state) => state.requestNewRecord);
   const openSession = useAppStore((state) => state.openSession);
   const resolveSession = useSessionResolver();
   const [summaries] = useState(() => safeSummaries());
 
-  // Open the specific session the user clicked (materializing a discovered
-  // session's transcript), not a generic jump to the 세션 workspace.
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState<{ parentId: string | null } | null>(null);
+
   const openSessionById = (sessionId: string) => {
     void resolveSession(sessionId).then((ok) => {
       if (ok) openSession("flow");
       else navigate("sessions");
     });
   };
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [editingContextId, setEditingContextId] = useState<string | null>(null);
 
   const groups = useMemo(
     () =>
@@ -59,260 +78,452 @@ export function ContextView() {
     [summaries, contexts, records, relations],
   );
 
-  // Default to the busiest project; keep a valid selection as data changes.
-  useEffect(() => {
-    if (groups.length === 0) {
-      setSelectedProjectId(null);
-    } else if (!groups.some((group) => group.id === selectedProjectId)) {
-      setSelectedProjectId(groups[0].id);
-    }
-  }, [groups, selectedProjectId]);
-
-  const ambiguousNames = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const group of groups) counts.set(group.name, (counts.get(group.name) ?? 0) + 1);
-    return new Set([...counts].filter(([, n]) => n > 1).map(([name]) => name));
+  const groupByContextId = useMemo(() => {
+    const map = new Map<string, ProjectGroup>();
+    for (const group of groups) if (group.context) map.set(group.context.id, group);
+    return map;
   }, [groups]);
 
-  const activeGroup = groups.find((group) => group.id === selectedProjectId) ?? null;
+  /** The tree covers every project context, INCLUDING empty ones: a project you
+   *  just created is a place you can file into, so it has to be visible. Only
+   *  groups drop when empty; the tree does not. */
+  const tree = useMemo<ProjectTreeNode[]>(() => {
+    const projects = contexts.filter((context) => context.type === "project");
+    const childCount = new Map<string, number>();
+    for (const project of projects) {
+      if (project.parentId) childCount.set(project.parentId, (childCount.get(project.parentId) ?? 0) + 1);
+    }
+    return contextTreeOrder(projects).map(({ context, depth }) => {
+      const group = groupByContextId.get(context.id);
+      return {
+        context,
+        depth,
+        // Roll-up: groupRecordsByContext already folds descendants in.
+        count: group ? group.sessions.length + group.records.length : 0,
+        hasChildren: (childCount.get(context.id) ?? 0) > 0,
+      };
+    });
+  }, [contexts, groupByContextId]);
+
+  /** Sessions whose folder leaf matches no context. Real work, not yet a
+   *  project: listed apart so the tree stays the user's own structure. */
+  const linkedFolders = useMemo(() => groups.filter((group) => !group.context), [groups]);
+
+  const visibleTree = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const matches = (node: ProjectTreeNode) =>
+      !needle || contextPath(node.context.id, contexts).toLowerCase().includes(needle);
+    // A collapsed ancestor hides its subtree; searching ignores collapse, since
+    // a hit the user cannot see is the same as no hit.
+    const hidden = new Set<string>();
+    return tree.filter((node) => {
+      if (needle) return matches(node);
+      const parentId = node.context.parentId;
+      if (parentId && (hidden.has(parentId) || collapsed.has(parentId))) {
+        hidden.add(node.context.id);
+        return false;
+      }
+      return true;
+    });
+  }, [tree, collapsed, query, contexts]);
+
+  const filteredFolders = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return needle
+      ? linkedFolders.filter((group) => group.name.toLowerCase().includes(needle))
+      : linkedFolders;
+  }, [linkedFolders, query]);
+
+  // Keep a valid selection as data changes; default to the busiest project.
+  useEffect(() => {
+    const stillValid =
+      selection?.kind === "context"
+        ? tree.some((node) => node.context.id === selection.id)
+        : selection?.kind === "group"
+          ? groups.some((group) => group.id === selection.id)
+          : false;
+    if (stillValid) return;
+    const first = groups.find((group) => group.context) ?? groups[0];
+    if (first?.context) setSelection({ kind: "context", id: first.context.id });
+    else if (first) setSelection({ kind: "group", id: first.id });
+    else if (tree.length > 0) setSelection({ kind: "context", id: tree[0].context.id });
+    else setSelection(null);
+  }, [tree, groups, selection]);
+
+  const activeContext = useMemo(
+    () =>
+      selection?.kind === "context"
+        ? (contexts.find((context) => context.id === selection.id) ?? null)
+        : null,
+    [selection, contexts],
+  );
+  const activeGroup = useMemo(() => {
+    if (!selection) return null;
+    if (selection.kind === "group") return groups.find((group) => group.id === selection.id) ?? null;
+    return groupByContextId.get(selection.id) ?? null;
+  }, [selection, groups, groupByContextId]);
+
+  const children = useMemo(
+    () =>
+      activeContext
+        ? tree.filter((node) => node.context.parentId === activeContext.id)
+        : [],
+    [tree, activeContext],
+  );
+
+  const parentPath = useMemo(() => {
+    if (!activeContext?.parentId) return "";
+    return contextPath(activeContext.parentId, contexts);
+  }, [activeContext, contexts]);
+
+  // 최근 earns its place only when it INTERLEAVES two streams. A project with
+  // only sessions (or only records) would see the same list twice, once here and
+  // once in its kind section, which is duplication wearing a different heading.
+  const recent = useMemo(() => {
+    if (!activeGroup) return [];
+    if (activeGroup.records.length === 0 || activeGroup.sessions.length === 0) return [];
+    return buildRecent(activeGroup);
+  }, [activeGroup]);
   const recordSections = useMemo(
     () => (activeGroup ? groupRecordsBySection(activeGroup.records) : []),
     [activeGroup],
   );
 
+  const title = activeContext?.name ?? activeGroup?.name ?? "";
+  const count = activeGroup ? activeGroup.sessions.length + activeGroup.records.length : 0;
+  const isEmpty = !loading && tree.length === 0 && linkedFolders.length === 0;
+
+  const submitCreate = async (name: string) => {
+    const parentId = creating?.parentId;
+    setCreating(null);
+    const path = parentId ? `${contextPath(parentId, contexts)}/${name}` : name;
+    const created = await createProjectContext(path);
+    if (created) setSelection({ kind: "context", id: created.id });
+  };
+
   return (
-    <PageShell maxWidth="full" actionBar={<ActionBar label="프로젝트" />}>
-      {loading ? null : groups.length === 0 ? (
-        <EmptyState
-          icon={FolderGit2}
-          title="아직 프로젝트가 없습니다"
-          description="AI 세션을 연동하거나 기록을 프로젝트에 담으면, 프로젝트별로 여기에 모입니다."
-        />
-      ) : (
-        <div className="context-page">
-          <aside className="context-list" aria-label="프로젝트 목록">
-            {groups.map((group) => (
-              <ProjectRow
-                key={group.id}
-                group={group}
+    <div className="ctx-workspace">
+      <aside className="ctx-rail" aria-label="프로젝트 목록">
+        <div className="ctx-rail-band">
+          <div className="base-search-field ctx-rail-search">
+            <Search size={13} aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="프로젝트 검색"
+              aria-label="프로젝트 검색"
+            />
+          </div>
+          <button
+            type="button"
+            className="ctx-rail-new"
+            onClick={() => setCreating({ parentId: null })}
+            aria-label="새 프로젝트"
+            title="새 프로젝트 · 회사/mori 처럼 적으면 하위로 만듭니다"
+          >
+            <FolderPlus size={15} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="ctx-rail-body base-scroll">
+          {creating && creating.parentId === null ? (
+            <NameField placeholder="이름 또는 회사/mori" onSubmit={submitCreate} onCancel={() => setCreating(null)} />
+          ) : null}
+
+          {visibleTree.map((node) => (
+            <div key={node.context.id}>
+              <ProjectTreeRow
+                node={node}
                 contexts={contexts}
-                active={group.id === selectedProjectId}
-                showParentPath={Boolean(group.parentPath) && ambiguousNames.has(group.name)}
-                editing={editingContextId === group.context?.id}
-                onSelect={() => setSelectedProjectId(group.id)}
-                onStartEdit={() => setEditingContextId(group.context?.id ?? null)}
-                onCancelEdit={() => setEditingContextId(null)}
+                active={selection?.kind === "context" && selection.id === node.context.id}
+                expanded={!collapsed.has(node.context.id)}
+                onSelect={() => setSelection({ kind: "context", id: node.context.id })}
+                onToggleExpand={() =>
+                  setCollapsed((current) => {
+                    const next = new Set(current);
+                    if (next.has(node.context.id)) next.delete(node.context.id);
+                    else next.add(node.context.id);
+                    return next;
+                  })
+                }
                 onRename={renameContext}
                 onReparent={reparentContext}
+                onCreateChild={(parentId) => {
+                  setCollapsed((current) => {
+                    const next = new Set(current);
+                    next.delete(parentId);
+                    return next;
+                  });
+                  setCreating({ parentId });
+                }}
               />
-            ))}
-          </aside>
+              {creating?.parentId === node.context.id ? (
+                <NameField
+                  placeholder="하위 프로젝트 이름"
+                  indent={node.depth + 1}
+                  onSubmit={submitCreate}
+                  onCancel={() => setCreating(null)}
+                />
+              ) : null}
+            </div>
+          ))}
 
-          <div className="context-body">
-            {activeGroup ? (
-              <>
-                {activeGroup.sessions.length > 0 ? (
-                  <section className="context-section">
-                    <p className="context-section-label">
-                      세션
-                      <span className="context-section-count">{activeGroup.sessions.length}</span>
-                    </p>
-                    <ul className="context-session-list">
-                      {activeGroup.sessions.map((session) => (
-                        <li key={session.sessionId}>
-                          <button
-                            type="button"
-                            className="context-session-row"
-                            onClick={() => openSessionById(session.sessionId)}
-                          >
-                            <span className="context-session-icon" aria-hidden="true">
-                              <Radio size={12} />
-                            </span>
-                            <span className="context-session-title">{session.title}</span>
-                            <span className="context-session-time">
-                              {formatClaudeRelativeKo(session.startedAt || session.savedAt)}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-
-                {recordSections.map((section) => (
-                  <section key={section.id} className="context-section">
-                    <p className="context-section-label">
-                      {section.label}
-                      <span className="context-section-count">{section.records.length}</span>
-                    </p>
-                    <ul className="ledger-list">
-                      {section.records.map((record) => (
-                        <LedgerRow
-                          key={record.id}
-                          record={record}
-                          registry={registry}
-                          selected={false}
-                          onSelect={() => openRecordInLedger(record.id)}
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                ))}
-
-                {activeGroup.records.length === 0 ? (
-                  <p className="context-empty-records">
-                    아직 이 프로젝트의 기록이 없습니다. 기록을 열고 위쪽에서 프로젝트를 고르면 여기 모입니다.
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-          </div>
-
+          {filteredFolders.length > 0 ? (
+            <>
+              {/* Real work that is not yet a project: a session's folder leaf
+                  matched no context. Kept apart so the tree above stays the
+                  structure the user actually chose. */}
+              <p className="ctx-rail-divider">연동 폴더</p>
+              {filteredFolders.map((group) => (
+                <div
+                  key={group.id}
+                  className={`ctx-tree-row${
+                    selection?.kind === "group" && selection.id === group.id ? " is-active" : ""
+                  }`}
+                >
+                  <button
+                    type="button"
+                    className="ctx-tree-main"
+                    onClick={() => setSelection({ kind: "group", id: group.id })}
+                  >
+                    <span className="ctx-tree-caret is-empty" aria-hidden="true" />
+                    <FolderGit2 size={13} aria-hidden="true" className="ctx-tree-icon is-linked" />
+                    <span className="ctx-tree-name">{group.name}</span>
+                    <span className="ctx-tree-count">
+                      {group.sessions.length + group.records.length}
+                    </span>
+                  </button>
+                </div>
+              ))}
+            </>
+          ) : null}
         </div>
-      )}
-    </PageShell>
+      </aside>
+
+      <div className="ctx-pane">
+        <header className="ctx-pane-band">
+          {parentPath ? <span className="ctx-pane-crumb">{parentPath} /</span> : null}
+          <h2 className="ctx-pane-title">{title}</h2>
+          {count > 0 ? <span className="ctx-pane-count">{count}건</span> : null}
+          <span className="ctx-pane-sp" />
+          {activeContext ? (
+            <button
+              type="button"
+              className="ctx-pane-new"
+              onClick={() => requestNewRecord(activeContext.id)}
+            >
+              <PenLine size={13} aria-hidden="true" />
+              새 기록
+            </button>
+          ) : null}
+        </header>
+
+        <div className="ctx-pane-body base-scroll">
+          {isEmpty ? (
+            <EmptyState
+              icon={FolderGit2}
+              title="아직 프로젝트가 없습니다"
+              description="새 프로젝트를 만들거나, 기록을 열고 위쪽에서 프로젝트를 고르면 여기 모입니다."
+            />
+          ) : (
+            <div className="ctx-pane-inner">
+              {children.length > 0 ? (
+                <section className="ctx-section">
+                  <p className="ctx-section-label">하위 프로젝트</p>
+                  <div className="ctx-children">
+                    {children.map((child) => (
+                      <button
+                        key={child.context.id}
+                        type="button"
+                        className="ctx-child"
+                        onClick={() => setSelection({ kind: "context", id: child.context.id })}
+                      >
+                        <FolderGit2 size={12} aria-hidden="true" />
+                        <span className="ctx-child-name">{child.context.name}</span>
+                        <span className="ctx-child-count">{child.count}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {recent.length > 0 ? (
+                <section className="ctx-section">
+                  <p className="ctx-section-label">최근</p>
+                  {/* Records and sessions merged: "이 프로젝트에서 무슨 일이
+                      있었나" is ONE question, and two lists make the user do the
+                      interleaving themselves. */}
+                  <ul className="ctx-recent">
+                    {recent.map((item) => (
+                      <li key={item.key}>
+                        <button
+                          type="button"
+                          className="ctx-recent-row"
+                          onClick={() =>
+                            item.kind === "session"
+                              ? openSessionById(item.id)
+                              : openRecordInLedger(item.id)
+                          }
+                        >
+                          {item.kind === "session" ? (
+                            <span className="ctx-recent-icon" aria-hidden="true">
+                              <Radio size={11} />
+                            </span>
+                          ) : (
+                            <span
+                              className={`note-item-dot ${item.dotClass}`}
+                              aria-hidden="true"
+                            />
+                          )}
+                          <span className="ctx-recent-title">{item.title}</span>
+                          <span className="ctx-recent-time">{item.when}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {activeGroup && activeGroup.sessions.length > 0 ? (
+                <section className="ctx-section">
+                  <p className="ctx-section-label">
+                    세션
+                    <span className="ctx-section-count">{activeGroup.sessions.length}</span>
+                  </p>
+                  <ul className="context-session-list">
+                    {activeGroup.sessions.map((session) => (
+                      <li key={session.sessionId}>
+                        <button
+                          type="button"
+                          className="context-session-row"
+                          onClick={() => openSessionById(session.sessionId)}
+                        >
+                          <span className="context-session-icon" aria-hidden="true">
+                            <Radio size={12} />
+                          </span>
+                          <span className="context-session-title">{session.title}</span>
+                          <span className="context-session-time">
+                            {formatClaudeRelativeKo(session.startedAt || session.savedAt)}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {recordSections.map((section) => (
+                <section key={section.id} className="ctx-section">
+                  <p className="ctx-section-label">
+                    {section.label}
+                    <span className="ctx-section-count">{section.records.length}</span>
+                  </p>
+                  <ul className="ledger-list">
+                    {section.records.map((record) => (
+                      <LedgerRow
+                        key={record.id}
+                        record={record}
+                        registry={registry}
+                        selected={false}
+                        onSelect={() => openRecordInLedger(record.id)}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+
+              {activeContext && count === 0 && children.length === 0 ? (
+                <p className="ctx-pane-empty">
+                  아직 이 프로젝트에 기록이 없습니다. 새 기록을 쓰면 여기 모입니다.
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
-function safeSummaries() {
+/** A one-field inline create, used for both a root and a child project. */
+function NameField({
+  placeholder,
+  indent = 0,
+  onSubmit,
+  onCancel,
+}: {
+  placeholder: string;
+  indent?: number;
+  onSubmit: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState("");
+  return (
+    <form
+      className="ctx-tree-row is-renaming"
+      style={indent > 0 ? { paddingLeft: `${8 + indent * 13}px` } : undefined}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const trimmed = value.trim();
+        if (trimmed) onSubmit(trimmed);
+        else onCancel();
+      }}
+    >
+      <input
+        autoFocus
+        className="ctx-tree-rename"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => (value.trim() ? onSubmit(value.trim()) : onCancel())}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onCancel();
+        }}
+        aria-label={placeholder}
+      />
+    </form>
+  );
+}
+
+type RecentItem = {
+  key: string;
+  kind: "record" | "session";
+  id: string;
+  title: string;
+  when: string;
+  dotClass: string;
+};
+
+/** The project's last ~10 happenings, records and sessions in one stream. */
+function buildRecent(group: ProjectGroup | null): RecentItem[] {
+  if (!group) return [];
+  const fromRecords: Array<RecentItem & { at: string }> = group.records.map((record) => ({
+    key: `r-${record.id}`,
+    kind: "record" as const,
+    id: record.id,
+    title: record.title,
+    at: record.occurredStart ?? record.capturedAt,
+    when: formatClaudeRelativeKo(record.occurredStart ?? record.capturedAt),
+    dotClass: kindColorClass(record.schemaId),
+  }));
+  const fromSessions: Array<RecentItem & { at: string }> = group.sessions.map((session) => ({
+    key: `s-${session.sessionId}`,
+    kind: "session" as const,
+    id: session.sessionId,
+    title: session.title,
+    at: session.startedAt || session.savedAt || "",
+    when: formatClaudeRelativeKo(session.startedAt || session.savedAt),
+    dotClass: "",
+  }));
+  return [...fromRecords, ...fromSessions]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, 10);
+}
+
+function safeSummaries(): StoredSessionSummary[] {
   try {
     return loadStoredSessionSummaries();
   } catch {
     return [];
   }
-}
-
-/**
- * One project in the sidebar, in display or edit mode.
- *
- * Rename and re-parent share one editor because they are one thought ("where
- * does this project sit?"). Neither needs an undo toast the way discard does: a
- * renamed or moved project stays fully visible in this list and can be edited
- * again, so the door back is always open. Only a context-backed group can be
- * edited; a session-only group has no context to rename.
- *
- * The parent options exclude the project itself and its descendants, so the
- * control cannot even offer a move that `reparentContext` would refuse.
- */
-function ProjectRow({
-  group,
-  contexts,
-  active,
-  showParentPath,
-  editing,
-  onSelect,
-  onStartEdit,
-  onCancelEdit,
-  onRename,
-  onReparent,
-}: {
-  group: ProjectGroup;
-  contexts: KernelContext[];
-  active: boolean;
-  showParentPath: boolean;
-  editing: boolean;
-  onSelect: () => void;
-  onStartEdit: () => void;
-  onCancelEdit: () => void;
-  onRename: (contextId: string, name: string) => Promise<string | null>;
-  onReparent: (
-    contextId: string,
-    parentId: string | undefined,
-  ) => Promise<{ parentId: string | undefined } | null>;
-}) {
-  const context = group.context;
-  const [name, setName] = useState(context?.name ?? group.name);
-  const [parentId, setParentId] = useState<string | undefined>(context?.parentId);
-
-  const parentOptions = useMemo(() => {
-    if (!context) return [];
-    return contexts
-      .filter((candidate) => candidate.type === "project" && candidate.id !== context.id)
-      .filter((candidate) => canReparent(context.id, candidate.id, contexts))
-      .map((candidate) => ({ id: candidate.id, path: contextPath(candidate.id, contexts) }))
-      .sort((a, b) => a.path.localeCompare(b.path, "ko"));
-  }, [context, contexts]);
-
-  if (!editing) {
-    return (
-      <div className={`context-item-wrap${active ? " is-active" : ""}`}>
-        <button
-          type="button"
-          className={`context-item${active ? " is-active" : ""}`}
-          onClick={onSelect}
-        >
-          <FolderGit2 size={13} aria-hidden="true" />
-          <span className="context-item-name">
-            {showParentPath ? <span className="context-item-parent">{group.parentPath}/</span> : null}
-            {group.name}
-          </span>
-          <span className="context-item-count">{group.sessions.length + group.records.length}</span>
-        </button>
-        {context ? (
-          <button
-            type="button"
-            className="context-item-editbtn"
-            onClick={onStartEdit}
-            aria-label={`${group.name} 이름 변경`}
-            title="이름 변경 · 상위 프로젝트"
-          >
-            <Pencil size={12} aria-hidden="true" />
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
-  const commit = async () => {
-    if (!context) return;
-    const trimmed = name.trim();
-    if (trimmed && trimmed !== context.name) await onRename(context.id, trimmed);
-    if (parentId !== context.parentId) await onReparent(context.id, parentId);
-    onCancelEdit();
-  };
-
-  return (
-    <form
-      className="context-item-edit"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void commit();
-      }}
-    >
-      <input
-        autoFocus
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        aria-label="프로젝트 이름"
-        onKeyDown={(event) => {
-          if (event.key === "Escape") onCancelEdit();
-        }}
-      />
-      <select
-        value={parentId ?? ""}
-        onChange={(event) => setParentId(event.target.value || undefined)}
-        aria-label="상위 프로젝트"
-      >
-        <option value="">최상위</option>
-        {parentOptions.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.path}
-          </option>
-        ))}
-      </select>
-      <div className="context-item-edit-actions">
-        <button type="submit" className="context-item-edit-save" aria-label="저장">
-          <Check size={13} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          className="context-item-edit-cancel"
-          onClick={onCancelEdit}
-          aria-label="취소"
-        >
-          <X size={13} aria-hidden="true" />
-        </button>
-      </div>
-    </form>
-  );
 }

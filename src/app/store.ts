@@ -162,6 +162,9 @@ type AppState = {
   openRecordId: string | null;
   /** Set when a global create action asked 기록 to start a new capture. */
   newRecordRequest: boolean;
+  /** The project a requested new note should be filed under, when the request
+   *  came from a project page. Null means the note is born unfiled. */
+  newRecordProjectId: string | null;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -241,7 +244,7 @@ type AppState = {
   openRecordInLedger: (recordId: string) => void;
   clearOpenRecord: () => void;
   /** Opens 기록 and starts a new capture (the global create action). */
-  requestNewRecord: () => void;
+  requestNewRecord: (projectId?: string) => void;
   clearNewRecordRequest: () => void;
 };
 
@@ -271,6 +274,7 @@ export const useAppStore = create<AppState>((set) => ({
   startRecordsAgentId: null,
   openRecordId: null,
   newRecordRequest: false,
+  newRecordProjectId: null,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -380,6 +384,7 @@ export const useAppStore = create<AppState>((set) => ({
     set({ startRecordsRequest: false, startRecordsAgentId: null }),
   openRecordInLedger: (recordId) => set({ currentView: "ledger", openRecordId: recordId }),
   clearOpenRecord: () => set({ openRecordId: null }),
-  requestNewRecord: () => set({ currentView: "ledger", newRecordRequest: true }),
+  requestNewRecord: (projectId) =>
+    set({ currentView: "ledger", newRecordRequest: true, newRecordProjectId: projectId ?? null }),
   clearNewRecordRequest: () => set({ newRecordRequest: false }),
 }));
