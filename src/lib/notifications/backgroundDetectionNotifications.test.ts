@@ -23,15 +23,19 @@ describe("buildBackgroundDetectionNotifications", () => {
       actionTarget: { kind: "view", view: "connections" },
       createdAt: "2026-06-11T10:00:00.000Z",
     });
-    expect(n?.title).toContain("a.jsonl");
+    // The title is a plain status; the file name is surfaced as body context
+    // rather than chained into the headline.
     expect(n?.title).toContain("새 작업");
+    expect(n?.title).not.toContain("a.jsonl");
+    expect(n?.message).toContain("a.jsonl");
   });
 
   it("distinguishes a grown file as an update", () => {
     const [n] = buildBackgroundDetectionNotifications([
       notice("/inbox/b.jsonl", "b.jsonl", "updated", "2026-06-11T10:00:00.000Z"),
     ]);
-    expect(n?.title).toContain("업데이트");
+    expect(n?.title).toContain("진행");
+    expect(n?.message).toContain("b.jsonl");
   });
 
   it("sorts newest first and caps the burst", () => {

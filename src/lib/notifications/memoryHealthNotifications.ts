@@ -45,7 +45,7 @@ export function buildMemoryHealthNotifications(
       message:
         stale.length === 1
           ? stale[0]!.title
-          : "통합 검토에서 supersede / retire로 정리하세요.",
+          : "통합 검토에서 최신 내용으로 바꾸거나 보관 처리할 수 있습니다.",
       basis: "mixed",
       linkedItemIds: stale.flatMap((proposal) => proposal.targetMemoryIds ?? []),
       evidenceRefs: [],

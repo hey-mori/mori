@@ -35,7 +35,7 @@ describe("buildLiveCompletionNotification", () => {
     const clean = buildLiveCompletionNotification(base);
     const failed = buildLiveCompletionNotification({ ...base, hasError: true });
     expect(clean.severity).toBe("info");
-    expect(clean.title).toBe("작업 완료");
+    expect(clean.title).toBe("작업을 마쳤습니다");
     expect(failed.severity).toBe("review");
     expect(failed.title).toContain("오류");
   });

@@ -36,10 +36,9 @@ export function buildBackgroundDetectionNotifications(
 }
 
 function toNotification(detection: DetectedInboxNotice): CompanionNotification {
-  const title =
-    detection.kind === "new"
-      ? `새 작업 감지 · ${detection.fileName}`
-      : `작업 업데이트 감지 · ${detection.fileName}`;
+  // The title states what happened; the file name belongs in the body as
+  // context, not chained into the headline.
+  const title = detection.kind === "new" ? "새 작업을 찾았습니다" : "작업이 더 진행됐습니다";
   return {
     id: `background-detection:${detection.path}`,
     kind: "background_detection",
@@ -47,12 +46,12 @@ function toNotification(detection: DetectedInboxNotice): CompanionNotification {
     title,
     message:
       detection.kind === "new"
-        ? "백그라운드에서 새 에이전트 작업을 찾았습니다. 소스에서 검토 후 가져올 수 있습니다."
-        : "연결된 작업이 더 진행됐습니다. 소스에서 검토 후 가져올 수 있습니다.",
+        ? `연동한 에이전트에서 ${detection.fileName} 작업을 확인했습니다. 검토한 뒤 가져올 수 있습니다.`
+        : `${detection.fileName} 작업이 이어졌습니다. 검토한 뒤 가져올 수 있습니다.`,
     basis: "verified",
     linkedItemIds: [],
     evidenceRefs: [],
-    actionLabel: "소스 열기",
+    actionLabel: "연동 열기",
     actionTarget: { kind: "view", view: "connections" },
     createdAt: detection.detectedAt,
   };

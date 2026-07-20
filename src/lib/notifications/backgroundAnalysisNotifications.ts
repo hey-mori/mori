@@ -22,10 +22,9 @@ function toNotification(result: BackgroundAnalysisResult): CompanionNotification
     result.analysis.nextActions.length;
 
   const label = basename(result.path);
-  const title =
-    total > 0
-      ? `백그라운드 분석 완료 · ${label} · ${total}건 발견`
-      : `백그라운드 분석 완료 · ${label}`;
+  // The title is a status a person would say, not a log line: no internal
+  // "백그라운드" wording and no `·`-chained fragments.
+  const title = total > 0 ? `분석 완료 · ${total}건 발견` : "분석 완료";
 
   return {
     id: `background-analysis:${result.sessionId}`,
@@ -34,8 +33,8 @@ function toNotification(result: BackgroundAnalysisResult): CompanionNotification
     title,
     message:
       total > 0
-        ? `이슈 ${result.analysis.issues.length} · 결정 ${result.analysis.decisions.length} · 다음 액션 ${result.analysis.nextActions.length}. 자료 탭에서 결과를 검토하세요.`
-        : "분석이 완료됐지만 주목할 항목이 없습니다. 자료 탭에서 직접 확인하세요.",
+        ? `${label}에서 이슈 ${result.analysis.issues.length}건, 결정 ${result.analysis.decisions.length}건, 다음 할 일 ${result.analysis.nextActions.length}건을 찾았습니다.`
+        : `${label} 분석을 마쳤습니다. 주목할 항목은 없었습니다.`,
     basis: "inferred",
     linkedItemIds: [],
     evidenceRefs: [],

@@ -35,8 +35,10 @@ export type BuildLiveCompletionInput = {
 export function buildLiveCompletionNotification(
   input: BuildLiveCompletionInput,
 ): CompanionNotification {
-  const title = input.hasError ? "작업 완료 · 오류 포함" : "작업 완료";
-  const steps = input.stepCount > 0 ? ` · ${input.stepCount}단계` : "";
+  const title = input.hasError ? "오류와 함께 작업을 마쳤습니다" : "작업을 마쳤습니다";
+  // Step count is metadata about the request, so it sits in parentheses after
+  // the request itself rather than as another `·`-chained fragment.
+  const steps = input.stepCount > 0 ? ` (${input.stepCount}단계)` : "";
   return {
     id: `live-session-done-${input.requestId}`,
     kind: "live_follow_update",
