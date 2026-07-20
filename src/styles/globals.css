@@ -38,6 +38,7 @@
 @import "./features/live-session.css";
 @import "./features/onboarding.css";
 @import "./features/understand.css";
+@import "./features/language.css";
 @import "./features/memory-hub.css";
 @import "./features/record-ledger.css";
 @import "./features/sessions-workspace.css";

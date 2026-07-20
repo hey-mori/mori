@@ -120,6 +120,9 @@ export function describeCaptureSource(context: CapturedLanguageContext): string 
     context.windowTitle,
     context.url,
     context.filePath,
+    // Last: an in-app capture has no window title, but it does know the project
+    // or session it came from, and that is its honest source.
+    context.projectHint,
   ]
     .map((part) => part?.trim())
     .filter((part): part is string => !!part);
