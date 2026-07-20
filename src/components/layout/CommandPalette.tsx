@@ -59,6 +59,7 @@ export function CommandPalette({
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const requestNewRecord = useAppStore((state) => state.requestNewRecord);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
+  const openLanguageTool = useAppStore((state) => state.openLanguageTool);
   const loadBrowserSession = useSessionStore(
     (state) => state.loadBrowserSession,
   );
@@ -212,6 +213,9 @@ export function CommandPalette({
         case "toggleSidebarCollapsed":
           onToggleSidebarCollapsed?.();
           break;
+        case "openLanguageTool":
+          openLanguageTool();
+          break;
         case "setTheme":
           setTheme(target.theme);
           break;
@@ -228,6 +232,7 @@ export function CommandPalette({
       requestNewRecord,
       openSession,
       openSettingsSheet,
+      openLanguageTool,
       setTheme,
     ],
   );

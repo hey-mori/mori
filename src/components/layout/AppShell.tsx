@@ -11,6 +11,11 @@ import type { ViewKey } from "../../domain/types";
 const SettingsSheet = lazy(() =>
   import("./SettingsSheet").then((module) => ({ default: module.SettingsSheet })),
 );
+const LanguageDialog = lazy(() =>
+  import("../../features/language/LanguageDialog").then((module) => ({
+    default: module.LanguageDialog,
+  })),
+);
 const CommandPalette = lazy(() =>
   import("./CommandPalette").then((module) => ({ default: module.CommandPalette })),
 );
@@ -42,6 +47,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useAppStore((state) => state.navigate);
   const requestNewRecord = useAppStore((state) => state.requestNewRecord);
+  const languageToolOpen = useAppStore((state) => state.languageToolOpen);
   const toggleCommandPalette = useAppStore(
     (state) => state.toggleCommandPalette,
   );
@@ -125,6 +131,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onToggleSidebarCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         ) : null}
+        {languageToolOpen ? <LanguageDialog /> : null}
       </Suspense>
     </div>
   );

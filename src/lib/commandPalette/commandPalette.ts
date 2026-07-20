@@ -31,6 +31,9 @@ export type CommandTarget =
   | { kind: "openSession"; sessionId: string; tab?: "overview" | "flow" | "evidence" | "insights" | "report" }
   | { kind: "openSettings"; segment?: SettingsTab }
   | { kind: "toggleSidebarCollapsed" }
+  // Opens a surface in place rather than routing · the language tool is a
+  // dialog, so it stays a distinct kind instead of a invented view key.
+  | { kind: "openLanguageTool" }
   | { kind: "setTheme"; theme: ThemeId };
 
 export type CommandEntry = {
@@ -84,6 +87,13 @@ const ACTION_COMMANDS: ReadonlyArray<{
     hint: "n",
     target: { kind: "newRecord" },
     keywords: ["new", "capture", "기록", "메모", "작성", "note"],
+  },
+  {
+    id: "action-open-language-tool",
+    label: "언어 도구 열기",
+    hint: "이해하기 · 표현하기",
+    target: { kind: "openLanguageTool" },
+    keywords: ["언어", "번역", "이해", "표현", "영어", "language", "translate", "express"],
   },
   {
     id: "action-toggle-sidebar",

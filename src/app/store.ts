@@ -138,6 +138,8 @@ type AppState = {
    * state — without having to thread a ref through the component tree.
    */
   commandPaletteOpen: boolean;
+  /** The language tool dialog · a surface opened in place, not a route. */
+  languageToolOpen: boolean;
   /**
    * The project key (sourceLabel) currently open in the project view. Lives
    * here so the sidebar folder click + a future Cmd+K project command both
@@ -227,6 +229,8 @@ type AppState = {
   closeSettingsSheet: () => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
+  openLanguageTool: () => void;
+  closeLanguageTool: () => void;
   toggleCommandPalette: () => void;
   /**
    * Open the project workspace for a given project key (sourceLabel). The
@@ -269,6 +273,7 @@ export const useAppStore = create<AppState>((set) => ({
   memoryTab: "overview",
   settingsSheetOpen: false,
   commandPaletteOpen: false,
+  languageToolOpen: false,
   currentProjectKey: null,
   startRecordsRequest: false,
   startRecordsAgentId: null,
@@ -370,6 +375,9 @@ export const useAppStore = create<AppState>((set) => ({
   closeSettingsSheet: () => set({ settingsSheetOpen: false }),
   openCommandPalette: () => set({ commandPaletteOpen: true }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  // Opening the tool always closes the palette, so the two never stack.
+  openLanguageTool: () => set({ languageToolOpen: true, commandPaletteOpen: false }),
+  closeLanguageTool: () => set({ languageToolOpen: false }),
   toggleCommandPalette: () =>
     set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
   openProject: (projectKey) =>
