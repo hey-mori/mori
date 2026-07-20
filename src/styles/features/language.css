@@ -47,6 +47,156 @@
   font-weight: 650;
 }
 
+/* ── Direct-input composer · the second capture adapter ─────────────────────
+   Also shell-agnostic: Mori hosts it in a dialog, the global overlay will host
+   the same component as its typing fallback. */
+.language-composer {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.language-composer-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel, #fff);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.language-composer-input:focus {
+  outline: none;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-50);
+}
+
+.language-composer-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.language-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel, #fff);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.language-run:hover:not(:disabled) {
+  border-color: var(--purple);
+  color: var(--purple);
+  background: var(--purple-50);
+}
+
+.language-run:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.language-composer-count {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.language-composer-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.language-composer-pair label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.language-composer-pair select {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel, #fff);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.language-composer-warning {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #b46100;
+}
+
+.language-advanced {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.language-advanced > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.language-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.language-advanced > summary::before {
+  content: "▶";
+  font-size: 8px;
+  color: var(--muted-2);
+  margin-right: 6px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.language-advanced[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.language-advanced-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel, #fff);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.language-composer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
 /* Understand / Express switch. */
 .language-actions {
   display: flex;
