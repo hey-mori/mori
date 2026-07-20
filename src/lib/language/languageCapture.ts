@@ -103,10 +103,20 @@ export function captureText(request: LanguageCaptureRequest): string {
   return (request.content.text ?? "").trim().slice(0, MAX_CAPTURE_LENGTH);
 }
 
+/**
+ * Whether a raw string is worth offering a language action for. A double-clicked
+ * word qualifies; a stray character or whitespace does not. Adapters call this
+ * BEFORE they have a request (a selection listener deciding whether to show a
+ * chip), which is why it takes a string rather than a capture.
+ */
+export function isActionableText(text: string): boolean {
+  const trimmed = text.trim();
+  return trimmed.length >= MIN_CAPTURE_LENGTH && /\S/.test(trimmed);
+}
+
 /** Whether a capture carries enough text for a language action to run. */
 export function hasActionableText(request: LanguageCaptureRequest): boolean {
-  const text = (request.content.text ?? "").trim();
-  return text.length >= MIN_CAPTURE_LENGTH && /\S/.test(text);
+  return isActionableText(request.content.text ?? "");
 }
 
 /**

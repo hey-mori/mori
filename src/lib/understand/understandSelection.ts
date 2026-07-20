@@ -1,4 +1,21 @@
 /**
+ * SUPERSEDED · this module is no longer canonical and has ZERO production
+ * imports. `src/lib/language/` owns the language contract now: it separates
+ * capture from action, makes Understand and Express explicit user intents
+ * instead of branching on detected language, and keeps DOM and Tauri types out
+ * of the core so a global adapter can reuse it.
+ *
+ * It is kept ONLY because its tests still cover parser and detection edge cases
+ * the new suite has not absorbed yet. Do not add callers, and do not treat its
+ * prompt contract as authoritative.
+ *
+ * REMOVAL CONDITION: port the still-valuable cases from
+ * `understandSelection.test.ts` into `src/lib/language/languageAction.test.ts`
+ * (parser tolerance for markdown and malformed labels, detection ratio edges),
+ * then delete this directory. The guard it used to provide now lives as
+ * `isActionableText` in `src/lib/language/languageCapture.ts`.
+ *
+ * ── original notes ────────────────────────────────────────────────────────
  * 이해하기 (Understand): the pure core of the first contextual capability.
  *
  * Turns a user-selected span of text into an LLM prompt asking for a natural

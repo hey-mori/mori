@@ -9,7 +9,7 @@
  * observation; acting on the selection is the caller's job.
  */
 import { useEffect, useState } from "react";
-import { isUnderstandableSelection } from "../../lib/understand";
+import { isActionableText } from "../../lib/language";
 
 export type SelectionSnapshot = {
   text: string;
@@ -22,7 +22,7 @@ function readScopedSelection(): SelectionSnapshot | null {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
   const text = selection.toString();
-  if (!isUnderstandableSelection(text)) return null;
+  if (!isActionableText(text)) return null;
 
   const range = selection.getRangeAt(0);
   const container = range.commonAncestorContainer;

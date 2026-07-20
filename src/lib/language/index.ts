@@ -3,6 +3,7 @@ export {
   describeCaptureSource,
   directInputCapture,
   hasActionableText,
+  isActionableText,
   MAX_CAPTURE_LENGTH,
   MIN_CAPTURE_LENGTH,
 } from "./languageCapture";
