@@ -1,18 +1,17 @@
 /**
  * Language result surface · shell-agnostic on purpose.
  *
- * This renders the whole language experience (capture provenance, action
- * switch, results, copy, honest failure states) WITHOUT owning a window, a
- * drawer, or an inspector rail. The Context Inspector wraps it inside Mori
- * today; the Windows mini overlay will wrap the same component over another
- * app. Binding this to `BaseInspectorPanel` would have made the global panel a
+ * Renders the whole language experience (capture provenance, action switch,
+ * results, copy, honest failure states) WITHOUT owning a window, drawer, or
+ * inspector rail. The Context Inspector and the language dialog wrap it inside
+ * Mori today; the Windows mini overlay will wrap the same component over
+ * another app. Binding this to a shell would have made the global panel a
  * rewrite instead of a reuse.
  *
  * Provenance is always visible: which app the text came from, how it was
- * obtained (`acquiredBy`), which engine answers, and whether the text left the
- * machine. A global capture that silently used the clipboard, or silently went
- * to a cloud provider, would be exactly the surveillance-shaped behaviour the
- * product forbids.
+ * obtained (`acquiredBy`), which provider answered, where it was processed, and
+ * how long it took. A capture that silently used a fallback path, or silently
+ * went to a cloud vendor, is exactly what the product forbids.
  */
 import { useState } from "react";
 import { Check, Copy, Languages, PenLine, RotateCcw } from "lucide-react";
@@ -21,7 +20,11 @@ import {
   describeCaptureSource,
   type LanguageCaptureRequest,
 } from "../../lib/language/languageCapture";
-import type { EngineDescriptor, LanguageActionState } from "./useLanguageAction";
+import {
+  processingLocationLabel,
+  type LanguageProviderInfo,
+} from "../../lib/language/languageProvider";
+import type { LanguageActionState } from "./useLanguageAction";
 
 /** Plain-Korean label for how the text was obtained. Never hidden: a fallback
  *  path must be visible, not silent. */
@@ -40,22 +43,16 @@ export function acquiredByLabel(acquiredBy: string): string {
   }
 }
 
-function engineNote(engine: EngineDescriptor): string {
-  if (engine.transport === "local") return `${engine.label} · 이 기기에서 처리`;
-  if (engine.transport === "external") return `${engine.label} · 외부로 전송`;
-  return engine.label;
-}
-
 export function LanguageResultView({
   request,
   state,
-  engine,
+  provider,
   onSelectAction,
   onRetry,
 }: {
   request: LanguageCaptureRequest;
   state: LanguageActionState;
-  engine: EngineDescriptor;
+  provider: LanguageProviderInfo | null;
   onSelectAction: (action: "understand" | "express") => void;
   onRetry: () => void;
 }) {
@@ -64,6 +61,8 @@ export function LanguageResultView({
   const preview = text.length > 160 ? `${text.slice(0, 160)}…` : text;
   const source = describeCaptureSource(request.context);
   const action = request.action === "express" ? "express" : "understand";
+  const metadata = state.phase === "done" ? state.run.metadata : null;
+  const location = metadata?.processingLocation ?? provider?.processingLocation ?? "unknown";
 
   const copy = (key: string, body: string) => {
     void navigator.clipboard
@@ -75,6 +74,14 @@ export function LanguageResultView({
       .catch(() => {});
   };
 
+  const copyAll = () => {
+    if (state.phase !== "done") return;
+    copy(
+      "__all__",
+      state.run.result.sections.map((s) => `${s.label}: ${s.body}`).join("\n\n"),
+    );
+  };
+
   return (
     <div className="language-result">
       <div className="language-capture">
@@ -82,7 +89,15 @@ export function LanguageResultView({
         <p className="language-capture-meta">
           {source ? <span>{source}</span> : null}
           <span>{acquiredByLabel(request.context.acquiredBy)}</span>
-          <span className={`language-engine is-${engine.transport}`}>{engineNote(engine)}</span>
+          {/* The provider name is dropped when it would just repeat the
+              location label (the fixture is called the same thing twice). */}
+          {provider && provider.providerDisplayName !== processingLocationLabel(location) ? (
+            <span>{provider.providerDisplayName}</span>
+          ) : null}
+          <span className={`language-engine is-${location}`}>
+            {processingLocationLabel(location)}
+          </span>
+          {metadata ? <span>{metadata.latencyMs.toLocaleString()}ms</span> : null}
           {request.retentionIntent === "ephemeral" ? <span>일회성 처리</span> : null}
         </p>
       </div>
@@ -104,6 +119,16 @@ export function LanguageResultView({
           <PenLine size={13} aria-hidden="true" />
           표현
         </button>
+        {state.phase === "done" && state.run.result.sections.length > 0 ? (
+          <button type="button" className="language-copy-all" onClick={copyAll}>
+            {copiedKey === "__all__" ? (
+              <Check size={12} aria-hidden="true" />
+            ) : (
+              <Copy size={12} aria-hidden="true" />
+            )}
+            전체 복사
+          </button>
+        ) : null}
       </div>
 
       {state.phase === "no-engine" ? (
@@ -130,11 +155,11 @@ export function LanguageResultView({
             다시 시도
           </button>
         </div>
-      ) : state.phase === "done" && state.result.sections.length === 0 ? (
+      ) : state.phase === "done" && state.run.result.sections.length === 0 ? (
         <p className="language-empty">엔진이 빈 답을 돌려주었습니다.</p>
       ) : state.phase === "done" ? (
         <ul className="language-sections">
-          {state.result.sections.map((section, index) => {
+          {state.run.result.sections.map((section, index) => {
             const key = `${section.key}-${index}`;
             return (
               <li key={key} className="language-section">

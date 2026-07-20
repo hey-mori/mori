@@ -46,7 +46,7 @@ export function UnderstandPanel({
     [selection, contextLabel, action],
   );
 
-  const { state, engine, retry } = useLanguageAction(request);
+  const { state, provider, retry } = useLanguageAction(request);
 
   return (
     <BaseInspectorPanel
@@ -64,7 +64,7 @@ export function UnderstandPanel({
       <LanguageResultView
         request={request}
         state={state}
-        engine={engine}
+        provider={provider}
         onSelectAction={setAction}
         onRetry={retry}
       />

@@ -45,7 +45,7 @@ export function LanguageComposer() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [purpose, setPurpose] = useState("");
 
-  const { state, engine, retry } = useLanguageAction(request, profile);
+  const { state, provider, retry } = useLanguageAction(request, profile);
   const running = state.phase === "loading";
   const trimmed = draft.trim();
 
@@ -165,7 +165,7 @@ export function LanguageComposer() {
         <LanguageResultView
           request={request}
           state={state}
-          engine={engine}
+          provider={provider}
           onSelectAction={(action) =>
             setRequest((current) => (current ? { ...current, action } : current))
           }
