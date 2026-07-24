@@ -75,21 +75,34 @@ describe("getFeatureControlProps", () => {
     expect(props.statusLabel).toMatch(/부분/);
   });
 
-  it("marks shipped Timeline inspector correction actions as enabled", () => {
-    const shippedInspectorActions = [
+  it("marks reachable Timeline inspector correction actions as enabled", () => {
+    const reachableInspectorActions = [
       "timeline.inspector.editEvent",
-      "timeline.inspector.split",
-      "timeline.inspector.merge",
       "timeline.inspector.createIssue",
       "timeline.inspector.addNote",
       "timeline.inspector.memoSave",
     ] as const;
 
-    for (const id of shippedInspectorActions) {
+    for (const id of reachableInspectorActions) {
       const props = getFeatureControlProps(id);
       expect(props.enabled).toBe(true);
       expect(props.status).toBe("implemented");
       expect(props.title).toBeUndefined();
+    }
+  });
+
+  // Split and merge are implemented in sessionStore and have zero callers: the
+  // inspector says they moved to the row context menu, and that menu never
+  // built them. The registry has to say a user cannot reach them, or it is
+  // advertising a control that does not exist.
+  it("reports built-but-unreachable actions as unavailable, not implemented", () => {
+    for (const id of ["timeline.inspector.split", "timeline.inspector.merge"] as const) {
+      const props = getFeatureControlProps(id);
+      expect(props.enabled).toBe(false);
+      expect(props.status).toBe("unavailable");
+      // Never "예정": that would read as coming soon, which is a second lie.
+      expect(props.statusLabel).not.toMatch(/예정/);
+      expect(props.statusLabel).toMatch(/사용 불가/);
     }
   });
 });
@@ -113,5 +126,48 @@ describe("countFeaturesByStatus", () => {
     const counts = countFeaturesByStatus();
     const total = counts.implemented + counts.partial + counts.planned + counts.unavailable;
     expect(total).toBe(Object.keys(FEATURE_REGISTRY).length);
+  });
+});
+
+// The registry exists so the codebase keeps one honest answer to "does this
+// capability exist for a user today". Its failure mode is silent: a row keeps
+// saying "implemented" long after the entry point that reached it was retired,
+// and nothing breaks. These guards make that drift cost a red test.
+describe("honesty contract", () => {
+  it("gives every unreachable capability a reason the user can read", () => {
+    for (const row of listFeaturesByStatus("unavailable")) {
+      expect(
+        row.disabledReason ?? row.userFacingStatus,
+        `${row.id} is unavailable but explains nothing`,
+      ).toBeTruthy();
+    }
+  });
+
+  it("never labels an unavailable capability as upcoming", () => {
+    for (const row of listFeaturesByStatus("unavailable")) {
+      const label = row.userFacingStatus ?? FEATURE_STATUS_LABEL[row.status];
+      expect(label, `${row.id} reads as coming soon`).not.toMatch(/예정/);
+    }
+  });
+
+  it("keeps the capabilities audited as unreachable out of the implemented set", () => {
+    // Verified by grep at the time of writing: split/merge have zero callers,
+    // the add-source paths route to a consumer that does not exist, and the
+    // memory hub has no navigation producer.
+    const unreachable = [
+      "timeline.inspector.split",
+      "timeline.inspector.merge",
+      "evidence.addSource.manualNote",
+      "evidence.addSource.urlImport",
+      "evidence.addSource.aiTranscriptPaste",
+      "evidence.addSource.gitDiffPaste",
+      "evidence.addSource.tauriGitDiff",
+      "evidence.addSource.connectorJsonl",
+      "memory.globalHub",
+    ] as const;
+
+    for (const id of unreachable) {
+      expect(FEATURE_REGISTRY[id].status, `${id} claims to be reachable`).not.toBe("implemented");
+    }
   });
 });
