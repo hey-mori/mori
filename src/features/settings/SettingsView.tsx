@@ -5,6 +5,7 @@ import {
   Info,
   Link2,
   Palette,
+  ShieldCheck,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../components/ui/Button";
@@ -17,6 +18,7 @@ import { isTauriRuntime } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { BackgroundWatchCard } from "./BackgroundWatchCard";
 import { AutoImportCard } from "./AutoImportCard";
+import { RequestDisclosureCard } from "./RequestDisclosureCard";
 import { AgentConnectionsCard } from "./AgentConnectionsCard";
 import { LocalAiCard } from "./LocalAiCard";
 import { StorageCard } from "./StorageCard";
@@ -31,6 +33,11 @@ import { AboutCard } from "./AboutCard";
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "분석 엔진", icon: Bot },
   { id: "connections", label: "연동", icon: Link2 },
+  // 개인정보 holds the one control that decides how much of the user's own
+  // request text is shown, including in an exported report. The tab key already
+  // existed in SettingsTab but had no definition here, which left the only UI
+  // that can change that default unreachable.
+  { id: "privacy", label: "개인정보", icon: ShieldCheck },
   { id: "storage", label: "저장소", icon: HardDrive },
   { id: "appearance", label: "테마", icon: Palette },
   { id: "notifications", label: "알림", icon: Bell },
@@ -103,6 +110,7 @@ export function SettingsView() {
             </details>
           </>
         ) : null}
+        {activeTab === "privacy" ? <RequestDisclosureCard /> : null}
         {activeTab === "storage" ? (
           <>
             <DatabaseRecoveryCard />

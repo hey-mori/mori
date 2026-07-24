@@ -110,6 +110,7 @@ export type FeatureId =
   | "settings.repositories.crud"
   | "settings.themeSwitcher"
   | "settings.privacy.policy"
+  | "settings.privacy.requestDisclosure"
   // ─────────────────────── Surface-level rollups ─────────────────────
   // These ids exist so dashboards / docs / status strips can report
   // "is this whole surface live?" without enumerating every
@@ -285,6 +286,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "settings.repositories.crud", label: "Repository CRUD", status: "implemented", description: "Add, verify, label, and delete saved repository paths." },
   { id: "settings.themeSwitcher", label: "Theme switcher", status: "implemented", description: "Local runtime theme switching between the formal and forest token sets." },
   { id: "settings.privacy.policy", label: "Privacy policy display", status: "implemented", description: "Read-only status cards for Mori's privacy guarantees." },
+  { id: "settings.privacy.requestDisclosure", label: "Request disclosure level", status: "implemented", description: "Choose how much of the user's own request text appears in detail views and in an exported report. Storage is unaffected; only the projection changes.", userFacingStatus: "구현 완료 · 개인정보 탭에서 변경." },
   // ────────────────────────── Surface-level rollups ──────────────────
   { id: "rollup.aiTranscriptImport", label: "AI transcript import", status: "implemented", description: "Paste Claude / ChatGPT / Codex / Other AI transcripts." },
   { id: "rollup.gitDiffImport", label: "Git diff import", status: "implemented", description: "Paste a git diff or capture against a saved repo via Tauri." },
