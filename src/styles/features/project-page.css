@@ -801,7 +801,7 @@
 .project-timeline-lane.tone-green { color: var(--green); background: #edf8f1; }
 .project-timeline-lane.tone-blue { color: var(--blue); background: #eef5ff; }
 .project-timeline-lane.tone-cyan { color: var(--cyan); background: #ecfbfc; }
-.project-timeline-lane.tone-orange { color: #b46100; background: #fff2dc; }
+.project-timeline-lane.tone-orange { color: var(--color-warning-foreground); background: #fff2dc; }
 .project-timeline-lane.tone-red { color: var(--red); background: #fff0f0; }
 
 .project-timeline-band-meta {

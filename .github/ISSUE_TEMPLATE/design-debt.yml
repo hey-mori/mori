@@ -1,0 +1,29 @@
+name: 디자인 부채
+description: 화면들이 서로 다른 부품으로 조립돼 하나의 제품처럼 보이지 않는 문제
+labels: ["type:design-debt"]
+body:
+  - type: textarea
+    id: divergence
+    attributes:
+      label: 무엇이 어긋나 있나
+      description: 같은 개념이 몇 가지 방식으로 구현돼 있는지, 가능하면 숫자로.
+      placeholder: 빈 상태 컴포넌트가 3개, 개별 변형이 약 80개.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 근거
+      description: 파일:줄 목록. 셀 수 있으면 세어주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: target
+    attributes:
+      label: 무엇으로 수렴시킬 것인가
+      description: 정본으로 삼을 하나의 방식. 없다면 그것도 답입니다.
+  - type: textarea
+    id: risk
+    attributes:
+      label: 위험
+      description: 소스 순서가 중요한 CSS인지, 회귀 확인이 필요한 화면은 어디인지.

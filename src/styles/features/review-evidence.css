@@ -3858,7 +3858,7 @@ td a {
 .review-overview-attention svg {
   flex-shrink: 0;
   margin-top: 1px;
-  color: #b46100;
+  color: var(--color-warning-foreground);
 }
 
 .review-overview-attention.is-clear {
@@ -5409,7 +5409,7 @@ td a {
   white-space: nowrap;
 }
 
-.companion-signal-basis.basis-inferred { background: var(--orange-50); color: #b46100; }
+.companion-signal-basis.basis-inferred { background: var(--orange-50); color: var(--color-warning-foreground); }
 .companion-signal-basis.basis-verified { background: var(--green-50); color: var(--green); }
 
 .companion-signal-body p {

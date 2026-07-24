@@ -1,0 +1,35 @@
+name: 버그
+description: 앱이 잘못 동작하거나, 막다른 길에 부딪히거나, 깨져 보이는 경우
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 무엇이 잘못됐나
+      description: 실제로 일어난 일과, 기대한 일.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 재현 경로
+      description: 어느 화면에서 무엇을 눌렀을 때인지. 실제 데이터가 필요한 경우 그 사실도 적어주세요.
+      placeholder: |
+        1. 기록 열기
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 근거
+      description: 파일:줄, 로그, 스크린샷. 추측이라면 추측이라고 적어주세요.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: 어디에서
+      options:
+        - 데스크톱 (Tauri)
+        - 브라우저 개발 서버
+        - 둘 다
+        - 확인 못 함

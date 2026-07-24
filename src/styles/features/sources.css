@@ -608,7 +608,7 @@ details.sources-inspector-block[open] {
 
 .sources-connect-error {
   margin: 8px 0 0;
-  color: #b46100;
+  color: var(--color-warning-foreground);
   font-size: 11.5px;
   line-height: 1.5;
 }
@@ -702,7 +702,7 @@ details.sources-inspector-block[open] {
 }
 
 .sources-inbox-status.tone-error {
-  color: #b46100;
+  color: var(--color-warning-foreground);
 }
 
 .sources-inbox-empty code {
@@ -1213,7 +1213,7 @@ details.sources-inspector-block[open] {
 }
 
 .source-cc-tile-icon.tone-green { color: var(--green); background: var(--green-50); border-color: transparent; }
-.source-cc-tile-icon.tone-orange { color: #b46100; background: var(--orange-50); border-color: transparent; }
+.source-cc-tile-icon.tone-orange { color: var(--color-warning-foreground); background: var(--orange-50); border-color: transparent; }
 .source-cc-tile-icon.tone-blue { color: var(--blue); background: var(--blue-50); border-color: transparent; }
 .source-cc-tile-icon.tone-gray { color: var(--muted-2); background: var(--gray-50); border-color: transparent; }
 
@@ -1321,7 +1321,7 @@ details.sources-inspector-block[open] {
 }
 
 .source-row-status.tone-green { color: var(--green); background: var(--green-50); }
-.source-row-status.tone-orange { color: #b46100; background: var(--orange-50); }
+.source-row-status.tone-orange { color: var(--color-warning-foreground); background: var(--orange-50); }
 .source-row-status.tone-blue { color: var(--blue); background: var(--blue-50); }
 .source-row-status.tone-gray { color: var(--muted-2); background: var(--gray-50); }
 

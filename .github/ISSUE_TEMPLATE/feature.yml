@@ -1,0 +1,28 @@
+name: 기능
+description: 새로 만들거나, 이미 만들었지만 사용자가 닿을 수 없는 것을 잇는 작업
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 사용자가 무엇을 할 수 있게 되나
+      description: 구현이 아니라 사용자 관점의 결과로.
+    validations:
+      required: true
+  - type: textarea
+    id: state
+    attributes:
+      label: 지금 있는 것
+      description: 이미 존재하는 코드와 재사용할 것. 배선만 없는 경우가 많습니다.
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 기준
+      description: 실제 앱에서 무엇을 확인하면 끝인지.
+    validations:
+      required: true
+  - type: input
+    id: milestone
+    attributes:
+      label: 어느 마일스톤
+      placeholder: M0 · 안정 기반

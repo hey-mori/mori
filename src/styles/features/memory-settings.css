@@ -369,7 +369,7 @@
 .report-warnings svg {
   flex-shrink: 0;
   margin-top: 2px;
-  color: #b46100;
+  color: var(--color-warning-foreground);
 }
 
 .report-preview {
@@ -3067,7 +3067,7 @@
 }
 
 .memory-decisions-dot.tone-red { color: var(--red); border-color: #ffcfcf; background: var(--red-50); }
-.memory-decisions-dot.tone-orange { color: #b46100; border-color: #ffdfa3; background: var(--orange-50); }
+.memory-decisions-dot.tone-orange { color: var(--color-warning-foreground); border-color: #ffdfa3; background: var(--orange-50); }
 .memory-decisions-dot.tone-blue { color: var(--blue); border-color: #cad9ff; background: var(--blue-50); }
 
 /* Recurring issues + Evidence + Sessions grid */
@@ -3411,7 +3411,7 @@
 }
 
 .memory-summary-risks li svg {
-  color: #b46100;
+  color: var(--color-warning-foreground);
   margin-top: 2px;
 }
 

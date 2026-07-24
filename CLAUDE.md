@@ -25,6 +25,16 @@ Read these before changing code or committing.
 - Read [`docs/frontend-architecture.md`](docs/frontend-architecture.md) before
   any CSS or styling change.
 
+## Branches, PRs, issues
+
+Non-trivial work goes issue → branch → PR → green CI → merge, per
+[`docs/git-workflow.md`](docs/git-workflow.md). Branches are
+`<type>/<area>-<slug>` and short-lived; merges keep the commits
+(`--no-ff`, never squash) because each commit is already a well-formed
+record. That doc also states the deliberate direct-to-`main` exception
+(the autonomous loop, and tiny `docs:`/`chore:` changes), so `main` is
+protected by convention and CI rather than a hard rule.
+
 ## Commit messages — non-negotiable
 
 Every commit MUST follow [`docs/commit-format.md`](docs/commit-format.md).

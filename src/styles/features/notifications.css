@@ -713,7 +713,7 @@
 }
 
 .notification-row[data-base-tone="danger"] .notification-row-icon { color: var(--red); background: #fff4f2; }
-.notification-row[data-base-tone="warning"] .notification-row-icon { color: #b46100; background: var(--orange-50); }
+.notification-row[data-base-tone="warning"] .notification-row-icon { color: var(--color-warning-foreground); background: var(--orange-50); }
 .notification-row[data-base-tone="info"] .notification-row-icon { color: var(--blue); background: var(--blue-50); }
 
 .notification-row-body {
@@ -824,7 +824,7 @@
 }
 
 .companion-inbox-rail-counts div[data-base-tone="danger"] dd { color: var(--red); }
-.companion-inbox-rail-counts div[data-base-tone="warning"] dd { color: #b46100; }
+.companion-inbox-rail-counts div[data-base-tone="warning"] dd { color: var(--color-warning-foreground); }
 
 .companion-inbox-rail-total {
   margin: 0;
