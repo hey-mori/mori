@@ -35,10 +35,46 @@ jobs:
       # --no-exit-code via the npm script); the log is the audit surface.
       - run: npm run unused
 
+  # Does this change touch the Rust side at all? The cargo job below runs on a
+  # macOS runner, which bills at a 10x minute multiplier on a private repo, so
+  # spending it on a frontend-only commit is pure waste. This gate is a cheap
+  # ubuntu step (1x) that the expensive job depends on.
+  rust-changed:
+    name: rust · changed?
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.filter.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+            git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          # A first push (all-zero before-SHA) or an unreadable base cannot be
+          # diffed, so fall back to running the job rather than skipping it.
+          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "$base" HEAD | grep -qE '^(src-tauri/|\.github/workflows/)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   rust:
     # macOS runner on purpose: it is the first shipping target and needs no
     # extra system packages for tauri/wry, unlike ubuntu (gtk/webkit dev libs).
     name: cargo check · test
+    needs: rust-changed
+    if: needs.rust-changed.outputs.changed == 'true'
     runs-on: macos-latest
     defaults:
       run:
