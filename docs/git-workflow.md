@@ -97,7 +97,19 @@ because a hard rule would block the autonomous loop. If the loop later learns to
 branch, hard protection becomes the better setting and this section should be
 revisited.
 
-## 7. Issues
+## 7. Language
+
+Repository artifacts are written in **English**: commit messages, branch names,
+issue titles and bodies, pull requests, code comments, and these docs. The
+product's own UI copy is Korean-first (see `CLAUDE.md`), and that split is
+deliberate: the app speaks to its user in Korean, the repository speaks to
+whoever maintains it.
+
+Korean may appear inside an English issue when quoting a UI string, a screen
+name (기록, 세션), or user feedback verbatim. Quoting the product is not the same
+as writing the issue in Korean.
+
+## 8. Issues
 
 Issues carry labels along three axes so the backlog can be sliced by surface,
 kind, and urgency:
@@ -112,7 +124,7 @@ than on engineering, so the backlog never hides a question behind a task.
 Milestones map to the completion program (M0–M4), so an issue's milestone
 answers "which release does this belong to".
 
-## 8. CI
+## 9. CI
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every push to
 `main` and on every pull request: typecheck, the full Vitest suite, the
@@ -124,7 +136,7 @@ runner because macOS is the first shipping target and needs no extra system
 packages for tauri/wry, but that runner bills at a 10x minute multiplier on a
 private repo, so running it on every frontend-only commit is pure waste.
 
-## 9. Releases
+## 10. Releases
 
 Tag a release when a milestone completes: `v0.9.0` for M0, and so on, with notes
 summarizing the merged pull requests. The tag is what makes the program's
