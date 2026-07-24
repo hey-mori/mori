@@ -19,9 +19,16 @@
  *   - `planned` capabilities render disabled with the registry's
  *     `disabledReason` as their tooltip. They are never hidden — Mori
  *     keeps the surface legible.
- *   - `unavailable` capabilities are runtime-blocked (e.g. desktop-only
- *     features in the browser build). They render disabled with the
- *     runtime explanation.
+ *   - `unavailable` capabilities cannot be reached in this build. That
+ *     covers a runtime block (a desktop-only feature in the browser) and
+ *     also a capability whose entry point was retired: the code may still
+ *     exist, but a user cannot get to it, so claiming otherwise would make
+ *     this registry lie. They render disabled with the reason.
+ *
+ * The distinction that matters is reachability, not effort spent. A
+ * capability that was built and then unwired is `unavailable`, never
+ * `implemented`, and never `planned` (which reads as "coming soon" and
+ * would be a second lie).
  */
 
 export type FeatureStatus = "implemented" | "partial" | "planned" | "unavailable";
@@ -211,8 +218,11 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "timeline.inspector.flowTrace", label: "Flow trace", status: "implemented", description: "Open the selected event in Flow Focus." },
   { id: "timeline.inspector.copySummary", label: "Copy summary", status: "implemented", description: "Copy the event summary to clipboard." },
   { id: "timeline.inspector.editEvent", label: "Edit event", status: "implemented", description: "Inline edit of event title and summary in real sessions." },
-  { id: "timeline.inspector.split", label: "Split event", status: "implemented", description: "Split a ranged Timeline event at its midpoint." },
-  { id: "timeline.inspector.merge", label: "Merge event", status: "implemented", description: "Merge a Timeline event with its next chronological neighbour." },
+  // `splitSessionEvent` / `mergeSessionEvent` exist in sessionStore with zero
+  // callers: EventInspector says the controls moved to the row context menu,
+  // but that menu only builds open-issue / create-issue. Unreachable, not gone.
+  { id: "timeline.inspector.split", label: "Split event", status: "unavailable", description: "Split a ranged Timeline event at its midpoint.", disabledReason: "이벤트를 나누는 조작은 현재 화면에서 열 수 없습니다.", userFacingStatus: "사용 불가 · 실행할 수 있는 조작 위치가 없습니다." },
+  { id: "timeline.inspector.merge", label: "Merge event", status: "unavailable", description: "Merge a Timeline event with its next chronological neighbour.", disabledReason: "이벤트를 합치는 조작은 현재 화면에서 열 수 없습니다.", userFacingStatus: "사용 불가 · 실행할 수 있는 조작 위치가 없습니다." },
   { id: "timeline.inspector.createIssue", label: "Create issue", status: "implemented", description: "Promote a Timeline event into a linked Review issue." },
   { id: "timeline.inspector.addNote", label: "Add note", status: "implemented", description: "Attach or edit a user note on a Timeline event." },
   { id: "timeline.inspector.memoSave", label: "Save event memo", status: "implemented", description: "Persist event memo corrections through the session import write path." },
@@ -220,12 +230,16 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "appShell.endSession", label: "End session", status: "implemented", description: "Finalise the active session and mark it ended; report export stays an explicit step on the Reports surface." },
   { id: "appShell.sidebarCollapse", label: "Collapse sidebar", status: "implemented", description: "Hide the sidebar to widen the workspace." },
   // ─────────────────────────── Evidence ──────────────────────────
-  { id: "evidence.addSource.manualNote", label: "Manual note import", status: "implemented", description: "Paste arbitrary text as a verified source." },
-  { id: "evidence.addSource.urlImport", label: "URL import", status: "implemented", description: "Add a URL with optional excerpt." },
-  { id: "evidence.addSource.aiTranscriptPaste", label: "AI transcript paste", status: "implemented", description: "Paste a Claude / Codex / ChatGPT transcript." },
-  { id: "evidence.addSource.gitDiffPaste", label: "Git diff paste", status: "implemented", description: "Paste a unified git diff as a source." },
-  { id: "evidence.addSource.tauriGitDiff", label: "Tauri Git diff capture", status: "implemented", description: "Capture git diff against a saved repo path.", disabledReason: "데스크톱 런타임(Tauri)이 필요합니다." },
-  { id: "evidence.addSource.connectorJsonl", label: "Connector JSONL import", status: "implemented", description: "Import the JSONL produced by the Claude Code hook, Codex CLI wrapper, terminal, or git connector tools via paste in Evidence Hub." },
+  // Every add-source path below routes through `requestEvidenceImport`, whose
+  // `evidenceImportRequest` has no consumer, and the form that used to read it
+  // (features/import/ImportPanel.tsx) is orphaned. Pressing an import button
+  // lands the user on a tab with no import UI. See issue #2 / #9.
+  { id: "evidence.addSource.manualNote", label: "Manual note import", status: "unavailable", description: "Paste arbitrary text as a verified source.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다.", userFacingStatus: "사용 불가 · 입력 화면이 연결돼 있지 않습니다." },
+  { id: "evidence.addSource.urlImport", label: "URL import", status: "unavailable", description: "Add a URL with optional excerpt.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다.", userFacingStatus: "사용 불가 · 입력 화면이 연결돼 있지 않습니다." },
+  { id: "evidence.addSource.aiTranscriptPaste", label: "AI transcript paste", status: "unavailable", description: "Paste a Claude / Codex / ChatGPT transcript.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다. 대화 수집은 자동 수집이 대신합니다.", userFacingStatus: "사용 불가 · 자동 수집이 대신합니다." },
+  { id: "evidence.addSource.gitDiffPaste", label: "Git diff paste", status: "unavailable", description: "Paste a unified git diff as a source.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다.", userFacingStatus: "사용 불가 · 입력 화면이 연결돼 있지 않습니다." },
+  { id: "evidence.addSource.tauriGitDiff", label: "Tauri Git diff capture", status: "unavailable", description: "Capture git diff against a saved repo path.", disabledReason: "저장소를 등록하는 화면이 없어 실행할 수 없습니다.", userFacingStatus: "사용 불가 · 저장소를 등록할 화면이 없습니다." },
+  { id: "evidence.addSource.connectorJsonl", label: "Connector JSONL import", status: "unavailable", description: "Import the JSONL produced by the Claude Code hook, Codex CLI wrapper, terminal, or git connector tools via paste in Evidence Hub.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다.", userFacingStatus: "사용 불가 · 입력 화면이 연결돼 있지 않습니다." },
   { id: "evidence.removeImport", label: "Remove import", status: "implemented", description: "Delete an imported source from the session." },
   { id: "evidence.runQuickPass", label: "Run Analysis", status: "implemented", description: "Run analysis against imported sources." },
   // ─────────────────────────── Review ────────────────────────────
@@ -248,7 +262,10 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "memory.savedSessions", label: "Saved sessions list", status: "partial", description: "List sessions saved to browser draft or SQLite.", userFacingStatus: "부분 구현 — 목록만; 페이로드는 세션 단위." },
   { id: "memory.recurringIssues", label: "Recurring issues", status: "partial", description: "Surface issues that recur across more than one session; single-session issues are no longer promoted as recurring.", userFacingStatus: "부분 구현 · 세션 간 반복 이슈만; 제목 매칭 품질은 개선 여지." },
   { id: "memory.followUpPrompt", label: "Follow-up session prompt", status: "implemented", description: "Generate a follow-up prompt from the current memory." },
-  { id: "memory.globalHub", label: "Global memory hub", status: "implemented", description: "The 메모리 surface: search across every project scope, lifecycle + 잠정 segments, scope chips, and a provenance inspector.", userFacingStatus: "구현 완료 · 전역 메모리 검색·상태·출처." },
+  // Routed in App.tsx but absent from PRIMARY_NAV and NAVIGATE_COMMANDS, with
+  // no navigate() call targeting it. MoriCommandSpaceHome records that the
+  // retirement was deliberate; only the route was left behind. See issue #4.
+  { id: "memory.globalHub", label: "Global memory hub", status: "unavailable", description: "The memory surface: search across every project scope, lifecycle segments, scope chips, and a provenance inspector.", disabledReason: "이 화면으로 가는 경로가 없습니다. 인용된 기억은 검색으로 엽니다.", userFacingStatus: "사용 불가 · 여는 경로가 없습니다." },
   { id: "memory.autoOrganize", label: "Auto-organize (provisional memory)", status: "partial", description: "Confirmed decisions auto-organize into provisional memory under the governance policy; other kinds go to review. Real-desktop-data validation pending; mode is default-auto, not yet user-settable.", userFacingStatus: "부분 구현 · 확정 결정만 자동 정리; 실제 데이터 검증·정책 설정 예정." },
   { id: "memory.provisional", label: "Provisional memory status", status: "implemented", description: "Auto-created, marked (잠정), recallable, reversible, audited; never resume- or report-eligible, so it does not cross an external boundary until confirmed.", userFacingStatus: "구현 완료 · 잠정 기억은 회상 가능하지만 외부 출력에는 미포함." },
   { id: "understand.selection", label: "Understand selected text", status: "implemented", description: "Select text in a reading surface → 이해하기 in the Context Inspector (translation, contextual meaning, expressions). Read-only; engine via the shared provider seam, honest no-engine state.", userFacingStatus: "구현 완료 · 선택 → 이해; 저장(기억하기)은 예정." },
