@@ -18,10 +18,8 @@ A green typecheck is not evidence that a user-facing change works. Say what you
 actually drove, and where. Delete rows that do not apply.
 -->
 
-- [ ] `npm run check:full`
-- [ ] `npm run build`
-- [ ] `npm run style:check`
-- [ ] `cargo check` + `cargo test` (only if `src-tauri/` changed)
+- [ ] `scripts/check.sh` (or `--full`) · paste the outcome, since remote CI is
+      manual-only today and this is the actual gate
 - [ ] Exercised the real flow in the app · describe it below
 
 <!-- Describe the walkthrough, or attach a screenshot, for anything user-facing. -->

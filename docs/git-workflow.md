@@ -56,14 +56,29 @@ large and should be split.
 
 ## 4. Merge policy: merge commit, not squash
 
-Merge with `--no-ff` (GitHub's "Create a merge commit").
+Merge with `--no-ff` (GitHub's "Create a merge commit"), in this order of
+reasons:
 
-The reason is specific to this repo: `commit-format.md` already forces every
-commit to be a well-formed, self-contained statement of one change. Squashing
-would throw that work away and collapse a reviewed series into a single blob.
-Keeping the commits preserves the reasoning trail; the merge commit preserves
-the PR boundary. Rebase-merge is also rejected because it rewrites SHAs that may
-already be referenced in issues, notes, or another machine's checkout.
+1. **Commit SHAs are long-lived identifiers here.** Agent memory files, issue
+   bodies, and hand-off notes cite them (`a512781`, `7b66d1e`, …) to point at a
+   specific change. Rebase-merge replays branch commits as *new* SHAs, which
+   silently breaks every one of those references, including on another machine
+   picking the work up later.
+2. **Sessions hand work to each other by commit.** Preserving the exact SHA a
+   branch produced is what makes that hand-off reliable.
+3. **The PR boundary stays in the graph**, so it is visible which commits were
+   integrated as one reviewed unit, and one merge commit reverts the whole unit.
+4. **Squashing would discard the commit discipline we pay for.**
+   `commit-format.md` already forces every commit to be a well-formed statement
+   of one change; collapsing a reviewed series into one blob throws that away.
+
+What this policy does **not** claim: merge commits are not a concurrency
+control. When `main` moves under a branch, both rebase and merge have to
+integrate and both can conflict. Parallel work is isolated by short-lived
+branches and pull requests instead of direct pushes to `main` (§6), and that,
+not the merge strategy, is what makes concurrent sessions safe.
+
+The cost is a busier graph. That is accepted.
 
 Never force-push a branch that others (or another machine) may have pulled.
 Never rewrite `main`.
@@ -81,21 +96,26 @@ of areas, it is usually two PRs.
 Self-merge is normal here, and is not a substitute for review: the review step
 is the author re-reading the diff against the issue plus a green CI run.
 
-## 6. The direct-to-`main` exception (deliberate)
+## 6. The direct-to-`main` exception (narrow)
 
-Direct commits to `main` are allowed for:
+Direct commits to `main` are allowed for exactly two cases:
 
-- The autonomous loop's own session work, which is its documented operating
-  mode.
-- `docs:` and `chore:` changes under roughly 20 lines.
-- Restoring a broken `main` (a revert or a build fix), where opening a PR would
-  leave the branch broken for longer.
+- A non-executing documentation fix: a typo, a broken link, a stale path.
+- Restoring an already-broken `main`, where opening a PR would leave the branch
+  broken for longer.
 
-Everything else goes through a PR. This is a policy, not an accident: `main` is
-protected by convention and CI rather than by a hard branch-protection rule,
-because a hard rule would block the autonomous loop. If the loop later learns to
-branch, hard protection becomes the better setting and this section should be
-revisited.
+Everything else goes through a pull request, **including work by an autonomous
+agent**. An earlier version of this document exempted the autonomous loop on the
+grounds that direct commits were its documented operating mode. That exemption
+was wrong and has been removed: it contradicted the first line of this document
+("`main` is always releasable"), and an agent whose work nobody reviewed needs
+more isolation than a human contributor, not less. `docs/mori-autonomous-loop.md`
+§6 now carries the same branch-and-PR rule.
+
+`main` is still protected by convention rather than a hard branch-protection
+rule, because the repository is private on a plan where protection rules are not
+available. That is a platform limitation, not a preference: when the constraint
+lifts, turn protection on.
 
 ## 7. Language
 
@@ -124,17 +144,36 @@ than on engineering, so the backlog never hides a question behind a task.
 Milestones map to the completion program (M0–M4), so an issue's milestone
 answers "which release does this belong to".
 
-## 9. CI
+## 9. Verification
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every push to
-`main` and on every pull request: typecheck, the full Vitest suite, the
-production build, stylelint, the unused-file inventory, and the Rust
-check/test pass.
+One script defines "verified", and both a local run and CI call it:
 
-The Rust job is path-filtered to `src-tauri/**` changes. It runs on a macOS
-runner because macOS is the first shipping target and needs no extra system
-packages for tauri/wry, but that runner bills at a 10x minute multiplier on a
-private repo, so running it on every frontend-only commit is pure waste.
+```
+scripts/check.sh          typecheck · tests · stylelint
+scripts/check.sh --full   the above plus build, unused inventory, cargo
+```
+
+CI must never re-list these commands in YAML. If it did, the local rule and the
+CI rule would drift, and the PR checklist would start meaning two things.
+
+The script widens its own scope automatically: a change to a lockfile, a build
+config, `scripts/`, or a workflow forces the full pass, because those files can
+break an area the diff never mentions.
+
+**The remote CI is currently manual-only, and that is deliberate.** The
+repository is private and Actions is metered; runs were being rejected before
+they started ("recent account payments have failed or your spending limit needs
+to be increased"), putting a red X on every commit. A permanently failing check
+is worse than an honestly disabled one, because real failures hide inside the
+noise and everyone learns to ignore the signal.
+
+So today the real gate is `scripts/check.sh`, run locally and recorded in the
+pull request under "How it was verified". The automatic triggers are commented
+out in [`ci.yml`](../.github/workflows/ci.yml), not deleted, and restoring them
+is a one-line change once billing is configured or the repository is public.
+
+Stating a rule the tooling cannot enforce would make this document decorative.
+This section says what is actually true.
 
 ## 10. Releases
 

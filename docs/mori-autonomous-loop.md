@@ -119,6 +119,25 @@ cd ..
 
 ## 6. Commit Rules
 
+Ralph follows the same git rules as every other contributor, human or
+agent. See [`git-workflow.md`](git-workflow.md). Working on `main`
+directly is not one of Ralph's privileges: an agent that cannot be
+reviewed needs *more* isolation than a human, not less.
+
+Per slice:
+
+```
+branch  <type>/<area>-<slug>
+commit  one clean commit
+verify  scripts/check.sh
+PR      Closes #N
+merge   merge commit, delete branch
+```
+
+`main` must stay releasable, and that promise cannot survive an
+unreviewed writer. Branch isolation is also what keeps Ralph's work from
+colliding with a concurrent human session in the same tree.
+
 One clean commit per production slice.
 
 Do not include:

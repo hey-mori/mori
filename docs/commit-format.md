@@ -31,6 +31,14 @@ contract is a hard rule.
     than dropping into paragraph form.
   - English. Each bullet states what changed or why.
   - 3–7 bullets is typical; a trivial change may have fewer.
+  - A trivial, self-explanatory change (a typo, a broken link, a
+    version bump) may be **subject-only** with no body. Padding a
+    one-line fix out to three bullets produces filler, which is the
+    thing the bullet rule exists to prevent.
+  - The bullet-only rule is an anti-slop measure, not decoration: most
+    commits here are written by an AI agent, and prose bodies drift
+    into unfalsifiable summary ("improves the overall experience").
+    Bullets force discrete, checkable claims.
 - **Never include**
   - emoji, an AI footer, `Co-Authored-By:` lines, "Generated with"
     lines, validation logs, or "no changes" filler.

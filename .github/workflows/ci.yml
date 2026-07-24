@@ -1,80 +1,60 @@
-# Continuous integration for the app repo (production program W2).
+# Continuous integration.
 #
-# Mirrors the local validation contract (docs/mori-autonomous-loop.md §5):
-# typecheck + full Vitest suite, production build, stylelint, knip, and the
-# Rust check/test pass when src-tauri is part of the tree. Release packaging
-# (signing, notarization, updater artifacts) is a separate workflow that
-# lands with W3.
+# This workflow deliberately runs `scripts/check.sh --full` rather than listing
+# the verification commands itself. That script is also what a contributor runs
+# locally, so there is exactly one definition of "verified" and local and CI
+# cannot drift apart.
+#
+# TRIGGER STATE: manual only, on purpose.
+#
+# The repository is private, and Actions on a private repo is metered. Runs were
+# being rejected before they started ("recent account payments have failed or
+# your spending limit needs to be increased"), which put a red X on every commit
+# and taught us to ignore the signal. A permanently failing check is worse than
+# an honestly disabled one, because it hides the real failures among the noise.
+#
+# So the automatic triggers are commented out rather than deleted, and the real
+# gate is `scripts/check.sh`, recorded in each pull request under "How it was
+# verified" (docs/git-workflow.md §9).
+#
+# TO RESTORE: once billing is configured, or the repository becomes public and
+# standard runners are free, uncomment the `push` and `pull_request` triggers
+# below. Nothing else needs to change.
 name: ci
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  # pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  web:
-    name: typecheck · test · build · style
+  verify:
+    name: scripts/check.sh --full
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # check.sh diffs against the merge base with main to decide scope.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check:types
-      - run: npm test
-      - run: npm run build
-      - run: npm run style:check
-      # Unused-file inventory. Non-blocking by design (knip.json sets
-      # --no-exit-code via the npm script); the log is the audit surface.
-      - run: npm run unused
-
-  # Does this change touch the Rust side at all? The cargo job below runs on a
-  # macOS runner, which bills at a 10x minute multiplier on a private repo, so
-  # spending it on a frontend-only commit is pure waste. This gate is a cheap
-  # ubuntu step (1x) that the expensive job depends on.
-  rust-changed:
-    name: rust · changed?
-    runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.filter.outputs.changed }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: filter
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base="origin/${{ github.base_ref }}"
-            git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
-          else
-            base="${{ github.event.before }}"
-          fi
-          # A first push (all-zero before-SHA) or an unreadable base cannot be
-          # diffed, so fall back to running the job rather than skipping it.
-          if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if git diff --name-only "$base" HEAD | grep -qE '^(src-tauri/|\.github/workflows/)'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
+      - run: bash scripts/check.sh --full
 
   rust:
-    # macOS runner on purpose: it is the first shipping target and needs no
-    # extra system packages for tauri/wry, unlike ubuntu (gtk/webkit dev libs).
+    # macOS on purpose: it is the first shipping target and needs no extra
+    # system packages for tauri/wry, unlike ubuntu (gtk/webkit dev libs). It
+    # also bills at a 10x minute multiplier, so it is a separate job that only
+    # runs when the Rust side is actually involved.
     name: cargo check · test
-    needs: rust-changed
-    if: needs.rust-changed.outputs.changed == 'true'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     defaults:
       run:
