@@ -120,14 +120,26 @@ lifts, turn protection on.
 ## 7. Language
 
 Repository artifacts are written in **English**: commit messages, branch names,
-issue titles and bodies, pull requests, code comments, and these docs. The
-product's own UI copy is Korean-first (see `CLAUDE.md`), and that split is
-deliberate: the app speaks to its user in Korean, the repository speaks to
-whoever maintains it.
+issue titles and bodies, labels, milestones, pull requests, code comments, and
+these docs. The product's own UI copy is Korean-first (see `CLAUDE.md`), and
+that split is deliberate: the app speaks to its user in Korean, the repository
+speaks to whoever maintains it.
 
-Korean may appear inside an English issue when quoting a UI string, a screen
-name (기록, 세션), or user feedback verbatim. Quoting the product is not the same
-as writing the issue in Korean.
+**Refer to a screen by its code identifier, not its UI label.** The codebase
+already has an English name for every surface (`ViewKey` is `ledger`,
+`sessions`, `connections`, `dashboard`, never the Korean label), so an issue
+titled "Connections import buttons lead to a dead end" matches the code, while
+one titled "연동 import buttons…" matches neither the code nor a reader.
+
+**Do not transcribe a mixed-language source. Paraphrase it and cite it.** A
+docblock that reads "This is the 두 경험 + 교차 렌즈 rail: 기록 (notes · edit)…"
+is not readable to anyone, in any language. Quoting it verbatim does not
+preserve fidelity, it just moves the problem into the issue. Summarize the
+meaning in English and cite `file:line` so the original stays one click away.
+
+The only place a Korean string belongs in an English artifact is when the exact
+characters are the subject: a copy change, a rendered-text bug, a label being
+added or removed. Then quote it as a string, and say what it means.
 
 ## 8. Issues
 
