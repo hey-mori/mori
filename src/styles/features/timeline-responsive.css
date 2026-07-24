@@ -61,7 +61,7 @@
 .lane-axis-label.lane-tone-red    .lane-axis-icon { color: var(--red); }
 .lane-axis-label.lane-tone-blue   .lane-axis-icon { color: var(--blue); }
 .lane-axis-label.lane-tone-cyan   .lane-axis-icon { color: var(--cyan); }
-.lane-axis-label.lane-tone-orange .lane-axis-icon { color: #b46100; }
+.lane-axis-label.lane-tone-orange .lane-axis-icon { color: var(--color-warning-foreground); }
 .lane-axis-label.lane-tone-gray   .lane-axis-icon { color: var(--muted-2); }
 
 .lane-axis-label strong {
@@ -263,7 +263,7 @@
 .timeline-bundle-density.tone-red    { color: var(--red); }
 .timeline-bundle-density.tone-blue   { color: var(--blue); }
 .timeline-bundle-density.tone-cyan   { color: var(--cyan); }
-.timeline-bundle-density.tone-orange { color: #b46100; }
+.timeline-bundle-density.tone-orange { color: var(--color-warning-foreground); }
 .timeline-bundle-density.tone-gray   { color: #5b6477; }
 
 .timeline-bundle-title {

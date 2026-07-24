@@ -196,7 +196,7 @@
 
 .settings-provider-icon.is-cloud {
   background: var(--orange-50);
-  color: #b46100;
+  color: var(--color-warning-foreground);
 }
 
 .settings-provider-card header > div {
@@ -1711,7 +1711,7 @@
 .analysis-strip-fallback {
   margin: 0;
   font-size: 12.5px;
-  color: #b46100;
+  color: var(--color-warning-foreground);
 }
 
 .analysis-strip-notes {

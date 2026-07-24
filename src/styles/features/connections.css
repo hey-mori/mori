@@ -495,7 +495,7 @@
 
 .connections-tool-icon-amber {
   background: var(--orange-50);
-  color: #b46100;
+  color: var(--color-warning-foreground);
 }
 
 .connections-tool-icon-gray,
@@ -547,7 +547,7 @@
 
 .connections-tool-status-amber {
   background: var(--orange-50);
-  color: #b46100;
+  color: var(--color-warning-foreground);
 }
 
 .connections-tool-status-gray {
