@@ -165,7 +165,8 @@ The description field is prose, and follows the prose rule.
 Issues carry labels along three axes so the backlog can be sliced by surface,
 kind, and urgency:
 
-- `area:*` · which surface (`기록`, `세션`, `언어`, `디자인시스템`, `저장소`, …)
+- `area:*` · which surface, named by its code identifier, not its UI label:
+  `ledger`, `sessions`, `language`, `design-system`, `storage`, `shell`
 - `type:*` · `bug`, `feature`, `design-debt`, `dead-code`, `docs`, `decision`
 - `priority:*` · `high`, `medium`, `low`
 
