@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
+  ArrowUpRight,
   BarChart3,
   CheckCircle2,
   Clock3,
@@ -15,6 +16,7 @@ import type { LucideIcon } from "lucide-react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
+import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { useAppStore } from "../../app/store";
@@ -95,6 +97,7 @@ export function DashboardView() {
   const userProjects = useProjectStore((state) => state.projects);
   const hydrateProjects = useProjectStore((state) => state.hydrate);
   const openProject = useAppStore((state) => state.openProject);
+  const navigate = useAppStore((state) => state.navigate);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -245,6 +248,11 @@ export function DashboardView() {
           icon={BarChart3}
           title="아직 대시보드에 보여줄 작업이 없습니다"
           description="작업 기록을 가져오면 프로젝트별 상태와 사용량이 이곳에 모입니다."
+          actions={
+            <Button variant="primary" icon={ArrowUpRight} onClick={() => navigate("connections")}>
+              연동 열기
+            </Button>
+          }
         />
       ) : (
         <div className="dashboard-surface">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
-import { Network } from "lucide-react";
+import { ArrowUpRight, Network } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
+import { Button } from "../../components/ui/Button";
 import { PageShell } from "../../components/layout/PageShell";
 import { useAppStore } from "../../app/store";
 import {
@@ -35,6 +36,7 @@ const MAX_ISSUES_PER_SESSION = 2;
 export function GraphView() {
   const openProject = useAppStore((state) => state.openProject);
   const openSession = useAppStore((state) => state.openSession);
+  const navigate = useAppStore((state) => state.navigate);
   const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
@@ -96,6 +98,11 @@ export function GraphView() {
           icon={Network}
           title="그래프로 보여줄 작업이 없습니다"
           description="연동에서 작업을 가져오면 프로젝트와 세션이 이 지도에 나타납니다."
+          actions={
+            <Button variant="primary" icon={ArrowUpRight} onClick={() => navigate("connections")}>
+              연동 열기
+            </Button>
+          }
         />
       ) : (
         <GraphCanvas
