@@ -26,7 +26,7 @@
   justify-content: center;
   gap: 10px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
 }
 
 .sessions-loading-spin {
@@ -167,7 +167,7 @@
   align-items: center;
   gap: 6px;
   margin: 0 0 4px 9px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 500;
   color: var(--muted-2);
 }
@@ -281,7 +281,7 @@
 
 .session-index-empty {
   margin: 16px 9px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.6;
   color: var(--muted-2);
 }

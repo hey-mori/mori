@@ -375,7 +375,7 @@
 
 .sidebar-group-label {
   margin: 0 0 3px 9px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 500;
   letter-spacing: 0;
   color: var(--muted-2);
@@ -649,7 +649,7 @@
 .sidebar-empty,
 .sidebar-empty-search {
   padding: 18px 12px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
   text-align: center;
 }
@@ -665,7 +665,7 @@
   border-radius: 7px;
   background: var(--purple);
   color: white;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
 }
 
@@ -790,7 +790,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   color: var(--muted-2);
   letter-spacing: 0;
 }
@@ -825,7 +825,7 @@
 
 .workspace-error-boundary-card h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 700;
 }
 
@@ -860,7 +860,7 @@
   border-radius: 7px;
   background: white;
   color: #6a3a00;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.12s ease;
@@ -924,7 +924,7 @@
 }
 
 .settings-sheet-title strong {
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.2;
   color: var(--text);
 }
@@ -941,7 +941,7 @@
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 600;
 }
 

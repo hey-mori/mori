@@ -411,7 +411,7 @@
 
 .home-activity .base-metric-item dd {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--base-font-size-2xl);
   font-weight: 600;
   line-height: 1.2;
   color: var(--base-text);
@@ -449,7 +449,7 @@
 .contrib-month {
   flex: none;
   width: var(--contrib-cell);
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   line-height: 1;
   color: var(--base-text-muted);
   white-space: nowrap;
@@ -512,7 +512,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   color: var(--base-text-muted);
 }
 
@@ -621,13 +621,13 @@
 
 .mcs-context-node span {
   color: var(--base-text);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 620;
 }
 
 .mcs-context-node small {
   color: var(--base-text-muted);
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
 }
 
 .mcs-context-node.is-violet { --mcs-node-color: var(--base-accent); }
@@ -716,7 +716,7 @@
   border-radius: var(--base-radius-pill);
   background: rgba(255, 255, 255, 0.46);
   color: var(--base-text-muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
@@ -738,7 +738,7 @@
   border-radius: var(--base-radius-pill);
   background: rgba(216, 146, 63, 0.14);
   color: #a4671f;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 650;
 }
 
@@ -880,7 +880,7 @@
   padding: 0 12px;
   border-radius: var(--base-radius-pill);
   color: var(--base-text-muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 680;
 }
 
@@ -974,7 +974,7 @@
 .mcs-answer-status {
   margin: 0;
   color: var(--base-text-muted);
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
 }
 
 /* Mode guide (idle state): a one-line headline of what the mode does, sitting
@@ -983,7 +983,7 @@
 .mcs-guide-headline {
   margin: 2px 6px 8px;
   color: var(--base-text-muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 560;
   line-height: 1.4;
 }
@@ -992,14 +992,14 @@
 .mcs-result-empty {
   margin: 0;
   padding: 10px 12px 6px;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   color: var(--base-text-muted);
 }
 
 .mcs-result-head {
   margin: 0;
   padding: 10px 12px 4px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--base-text-muted-2);
@@ -1045,7 +1045,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 560;
 }
 
@@ -1057,7 +1057,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--base-text-muted-2);
   justify-self: end;
 }
@@ -1111,7 +1111,7 @@
   }
 
   .mcs-command-bar input {
-    font-size: 15px;
+    font-size: var(--base-font-size-xl);
   }
 
   .mcs-command-bar button {

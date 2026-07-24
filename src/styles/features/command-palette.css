@@ -51,7 +51,7 @@
   border: 0;
   outline: none;
   background: transparent;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   color: var(--text);
 }
 
@@ -111,7 +111,7 @@
   text-align: left;
   cursor: pointer;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 500;
   transition: background-color 0.1s ease;
 }
@@ -159,7 +159,7 @@
 
 .command-palette-caption {
   margin: 2px 12px 4px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 500;
   color: var(--muted-2);
 }

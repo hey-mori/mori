@@ -78,14 +78,14 @@
 .base-inspector-panel-meta {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
 }
 
 .base-inspector-panel-description {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.55;
 }
 
@@ -141,7 +141,7 @@
 
 .ins-section-title {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 750;
   letter-spacing: 0.01em;
   color: var(--text);
@@ -149,7 +149,7 @@
 }
 
 .ins-section-hint {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 600;
   color: var(--muted-2, var(--muted));
   font-variant-numeric: tabular-nums;
@@ -207,13 +207,13 @@
 /* A withheld-summary placeholder and the small sub-notes under a card body. */
 .ins-withheld {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-style: italic;
   color: var(--muted);
 }
 
 .ins-subnote {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 500;
   color: var(--muted-2, var(--muted));
 }
@@ -232,7 +232,7 @@
   gap: 4px;
   margin: 0;
   padding: 0 0 0 16px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.55;
   color: var(--text);
 }
@@ -257,7 +257,7 @@
 
 .ins-field dt {
   margin: 0;
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -266,7 +266,7 @@
 
 .ins-field dd {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--text);
   overflow-wrap: anywhere;
@@ -274,7 +274,7 @@
 
 .ins-field dd.is-mono {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 500;
 }
 
@@ -345,7 +345,7 @@
 }
 
 .ins-row-meta {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -368,7 +368,7 @@
   gap: 6px;
   list-style: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 650;
   color: var(--muted);
   transition: color 120ms ease;
@@ -438,6 +438,6 @@
 /* Empty — the nothing-to-show line for a section. */
 .ins-empty {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }

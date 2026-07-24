@@ -58,7 +58,7 @@
   align-items: center;
   gap: 6px;
   padding: 0 2px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
 }
 
 .connections-feed-group-head svg {
@@ -124,7 +124,7 @@
 .connections-session-card-title {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 650;
   color: var(--text);
   overflow: hidden;
@@ -137,7 +137,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
 }
 
@@ -173,7 +173,7 @@
 }
 
 .connections-session-stats strong {
-  font-size: 15px;
+  font-size: var(--base-font-size-xl);
   font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -214,7 +214,7 @@
 
 .connections-session-messages p {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.5;
   color: var(--text);
   overflow-wrap: anywhere;
@@ -222,7 +222,7 @@
 
 .connections-session-empty-copy {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -253,7 +253,7 @@
   gap: 12px;
   padding: 12px 0;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 600;
 }
 
@@ -307,7 +307,7 @@
   flex-wrap: wrap;
   padding: 12px 0;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 600;
 }
 
@@ -352,7 +352,7 @@
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--panel-soft);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.55;
   color: var(--muted);
 }
@@ -364,7 +364,7 @@
 }
 
 .connections-desktop-note code {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   padding: 1px 5px;
   border-radius: 5px;
   background: var(--panel);
@@ -405,7 +405,7 @@
   gap: 10px;
   padding: 10px 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
 }
 
@@ -531,7 +531,7 @@
 
 .connections-tool-status {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 700;
   letter-spacing: 0.03em;
   padding: 3px 8px;
@@ -606,7 +606,7 @@
 }
 
 .connections-search-meta {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
 }
 
@@ -648,7 +648,7 @@
   gap: 6px;
   padding: 24px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.6;
   border: 1px dashed var(--line);
   border-radius: 12px;
@@ -657,13 +657,13 @@
 
 .connections-empty h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--base-font-size-2xl);
   color: var(--text);
 }
 
 .connections-empty h3 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   color: var(--text);
 }
 
@@ -753,7 +753,7 @@
 
 .conversation-viewer-subtitle {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -775,14 +775,14 @@
 }
 
 .conversation-viewer-stats strong {
-  font-size: 15px;
+  font-size: var(--base-font-size-xl);
   font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
 .conversation-viewer-stats small {
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted-2);
@@ -797,7 +797,7 @@
 }
 
 .conversation-viewer-tokens-label {
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted-2);
@@ -809,7 +809,7 @@
   align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-soft, var(--muted-2));
@@ -829,7 +829,7 @@
 }
 
 .conversation-viewer-token-model {
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
@@ -865,12 +865,12 @@
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   color: var(--text);
 }
 
 .conversation-viewer-search-meta {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
 }
 
@@ -882,7 +882,7 @@
 
 .conversation-viewer-empty {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   margin: 0;
   padding: 30px 0;
   text-align: center;
@@ -944,7 +944,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted-2);
@@ -963,7 +963,7 @@
   text-transform: none;
   letter-spacing: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
 }
 
 .conversation-message-bubble {
@@ -1006,7 +1006,7 @@
 }
 
 .conversation-message-tool-prefix {
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1018,13 +1018,13 @@
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.55;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   color: var(--text);
 }
 
 .conversation-message-tool-use-text {
   font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--purple);
 }
 
@@ -1035,7 +1035,7 @@
 .conversation-message-tool-details summary {
   cursor: pointer;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   list-style: none;
 }
 
@@ -1061,7 +1061,7 @@
   white-space: pre-wrap;
   word-break: break-word;
   font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
   max-height: 280px;
   overflow-y: auto;
@@ -1090,7 +1090,7 @@
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   flex: 1;
   min-width: 0;
 }
@@ -1310,7 +1310,7 @@
 }
 
 .workspace-group-name {
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 700;
   letter-spacing: -0.005em;
   color: var(--text);
@@ -1320,7 +1320,7 @@
 }
 
 .workspace-group-path {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 500;
   color: var(--muted-2);
   white-space: nowrap;

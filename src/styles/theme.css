@@ -267,6 +267,10 @@
 }
 
 :root[data-font-scale="large"] {
+  /* 2xs was missing here, so "large" inherited the normal 10px and the step
+     ran 9.5 -> 10 -> 10 -> 11: the scale stopped being monotonic and micro
+     labels did not grow at all on this setting. */
+  --base-font-size-2xs: 10.5px;
   --base-font-size-xs: 11.5px;
   --base-font-size-sm: 12.5px;
   --base-font-size-md: 13.5px;
