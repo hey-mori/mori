@@ -1,35 +1,37 @@
-name: 제품 결정
-description: 엔지니어링이 아니라 제품 판단이 필요해서 막혀 있는 것
+name: Product decision
+description: Blocked on a product judgement rather than on engineering
 labels: ["type:decision", "priority:high"]
 body:
   - type: markdown
     attributes:
       value: |
-        결정이 필요한 일을 작업처럼 위장하지 않기 위한 유형입니다.
-        구현이 막혀 있다면 그 사실을 적어주세요.
+        This type exists so a decision is never disguised as a task.
+        If it is blocking implementation, say so.
   - type: textarea
     id: question
     attributes:
-      label: 결정해야 할 것
-      description: 한 문장으로.
+      label: What has to be decided
+      description: One sentence.
     validations:
       required: true
   - type: textarea
     id: context
     attributes:
-      label: 지금 상태
-      description: 코드가 실제로 어떤 상태인지, 근거와 함께.
+      label: Where things stand
+      description: What the code actually does today, with evidence.
     validations:
       required: true
   - type: textarea
     id: options
     attributes:
-      label: 선택지
-      description: 각각의 결과까지. 추천안이 있으면 추천안이라고 밝히고 적어주세요.
+      label: Options
+      description: >
+        Each with its consequence. If you have a recommendation, mark it as the
+        recommendation.
     validations:
       required: true
   - type: textarea
     id: blocks
     attributes:
-      label: 무엇이 막혀 있나
-      description: 이 결정이 나야 진행할 수 있는 작업.
+      label: What this blocks
+      description: The work that cannot start until this is answered.
