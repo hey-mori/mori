@@ -552,7 +552,7 @@
 
 .connections-tool-status-gray {
   background: var(--gray-50);
-  color: #647084;
+  color: var(--muted);
 }
 
 .connections-tool-status-muted {

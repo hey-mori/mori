@@ -264,7 +264,7 @@
 .timeline-bundle-density.tone-blue   { color: var(--blue); }
 .timeline-bundle-density.tone-cyan   { color: var(--cyan); }
 .timeline-bundle-density.tone-orange { color: var(--color-warning-foreground); }
-.timeline-bundle-density.tone-gray   { color: #5b6477; }
+.timeline-bundle-density.tone-gray   { color: var(--muted); }
 
 .timeline-bundle-title {
   align-self: center;
