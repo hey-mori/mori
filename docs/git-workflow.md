@@ -141,6 +141,25 @@ The only place a Korean string belongs in an English artifact is when the exact
 characters are the subject: a copy change, a rendered-text bug, a label being
 added or removed. Then quote it as a string, and say what it means.
 
+**Identifiers are ASCII; prose follows the writing style.** `CLAUDE.md` bans the
+em dash in prose and offers `·` as the replacement, and that rule governs UI
+strings, comments, docs, and commit bodies. It does not govern *identifiers*.
+
+A label name, a milestone title, and a branch name are typed into a shell,
+pasted into a URL, and matched by scripts. A non-ASCII character in one becomes
+percent-encoded noise (`M0 · Solid ground` turns into
+`milestone%3A%22M0%20%C2%B7%20Solid%20ground%22`) and has to be reproduced
+exactly to filter on it. So identifiers use plain ASCII and no decorative
+separator:
+
+```
+M0 Solid ground          not  M0 · Solid ground
+area:ledger              not  area:기록
+fix/storage-quota-loop   not  fix/저장소-quota
+```
+
+The description field is prose, and follows the prose rule.
+
 ## 8. Issues
 
 Issues carry labels along three axes so the backlog can be sliced by surface,
