@@ -19,7 +19,7 @@
   --brand-gradient-start: #7d5bff;
   --brand-gradient-end: #b18cff;
   --blue: #2369f6;
-  --blue-50: #eef5ff;
+  --blue-50: var(--blue-50);
   --green: #15955a;
   --green-50: #edf9f2;
   --red: #f04444;

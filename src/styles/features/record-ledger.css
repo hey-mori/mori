@@ -1181,7 +1181,7 @@
 }
 
 .timeline-kind.is-work {
-  background: var(--blue-50, #eef5ff);
+  background: var(--blue-50, var(--blue-50));
   color: var(--blue, #2369f6);
 }
 .timeline-kind.is-exercise {
@@ -4265,7 +4265,7 @@
   background: var(--panel-soft);
 }
 
-.doc-chip.is-kind.is-work { color: var(--blue, #2369f6); background: var(--blue-50, #eef5ff); }
+.doc-chip.is-kind.is-work { color: var(--blue, #2369f6); background: var(--blue-50, var(--blue-50)); }
 .doc-chip.is-kind.is-exercise { color: var(--green, #15955a); background: var(--green-50, #edf9f2); }
 .doc-chip.is-kind.is-study { color: var(--color-warning-base, #b87812); background: var(--orange-50, #fff7e8); }
 .doc-chip.is-kind.is-insight { color: var(--purple, #6246f5); background: var(--purple-50, #f2efff); }

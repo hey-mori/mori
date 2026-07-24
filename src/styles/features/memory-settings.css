@@ -3066,9 +3066,9 @@
   z-index: 1;
 }
 
-.memory-decisions-dot.tone-red { color: var(--red); border-color: #ffcfcf; background: var(--red-50); }
-.memory-decisions-dot.tone-orange { color: var(--color-warning-foreground); border-color: #ffdfa3; background: var(--orange-50); }
-.memory-decisions-dot.tone-blue { color: var(--blue); border-color: #cad9ff; background: var(--blue-50); }
+.memory-decisions-dot.tone-red { color: var(--red); border-color: color-mix(in srgb, var(--red) 28%, var(--line)); background: var(--red-50); }
+.memory-decisions-dot.tone-orange { color: var(--color-warning-foreground); border-color: color-mix(in srgb, var(--orange) 28%, var(--line)); background: var(--orange-50); }
+.memory-decisions-dot.tone-blue { color: var(--blue); border-color: color-mix(in srgb, var(--blue) 28%, var(--line)); background: var(--blue-50); }
 
 /* Recurring issues + Evidence + Sessions grid */
 

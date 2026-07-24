@@ -1171,7 +1171,7 @@ td a {
 }
 .evidence-composition-seg.family-terminal,
 .evidence-composition-dot.family-terminal {
-  background: #5b6477;
+  background: var(--muted);
 }
 .evidence-composition-seg.family-other,
 .evidence-composition-dot.family-other {
@@ -1695,7 +1695,7 @@ td a {
 
 .review-status.tone-info {
   background: #eef4ff;
-  border: 1px solid #cad9ff;
+  border: 1px solid color-mix(in srgb, var(--blue) 28%, var(--line));
   color: #2b3a82;
 }
 
