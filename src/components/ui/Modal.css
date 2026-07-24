@@ -30,7 +30,7 @@
 
 .base-modal-body header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--base-font-size-2xl);
   font-weight: 700;
   color: var(--text);
 }
@@ -109,14 +109,14 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 700;
   color: var(--text);
 }
 
 .project-modal-field > span em {
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 700;
   line-height: 1.4;
   padding: 1px 6px;
@@ -141,7 +141,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.5;
   color: var(--text);
   background: white;
@@ -170,7 +170,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   color: var(--text);
   background: white;
 }
@@ -185,7 +185,7 @@
    span` (0,1,1) which styles the label bold and dark. A lone class is (0,1,0)
    and loses, which rendered the hint as a second label. */
 .project-modal-field > span.project-modal-hint {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 500;
   color: var(--muted-2);
 }
@@ -201,7 +201,7 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-soft, #fafbfd);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
 }
 
 .project-modal-preview > span {
@@ -219,7 +219,7 @@
 
 .project-modal-error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--red, #d43a3a);
 }
@@ -296,7 +296,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 650;
   color: var(--text);
 }
@@ -313,7 +313,7 @@
 
 .connector-install-auto {
   flex: none;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 600;
   color: var(--muted-2);
 }

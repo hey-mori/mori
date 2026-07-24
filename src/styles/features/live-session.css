@@ -66,7 +66,7 @@
 
 .lsv-landing-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--base-font-size-2xl);
   font-weight: 600;
   color: var(--text);
 }
@@ -104,7 +104,7 @@
   border-radius: 999px;
   background: var(--panel, white);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
@@ -131,7 +131,7 @@
 
 .lsv-landing-foot {
   margin: 8px 0 0;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
 }
 
@@ -273,7 +273,7 @@
 
 .lsv-pop-title {
   padding: 2px 6px 8px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -352,7 +352,7 @@
 }
 
 .lsv-sess-sub {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
@@ -384,7 +384,7 @@
 }
 
 .lsv-diag-value {
-  font-size: 15px;
+  font-size: var(--base-font-size-xl);
   font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -399,7 +399,7 @@
 }
 
 .lsv-diag-label {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
 }
 
@@ -412,7 +412,7 @@
 
 .lsv-error {
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--red);
   background: color-mix(in srgb, var(--red) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--red) 24%, transparent);
@@ -718,7 +718,7 @@
 .lsv-focus-clear {
   margin-left: auto;
   padding: 3px 10px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--muted);
   background: transparent;
@@ -917,7 +917,7 @@
      being cut with an ellipsis. */
   max-height: 340px;
   overflow-y: auto;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.55;
   color: var(--text);
   white-space: pre-wrap;
@@ -928,7 +928,7 @@
    dimmer so it sits behind the prose steps rather than competing with them. */
 .lsv-detail-text.is-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.5;
   color: var(--muted);
 }
@@ -962,7 +962,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -976,7 +976,7 @@
 }
 
 .lsv-touch-more {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
 }
 
@@ -1041,7 +1041,7 @@
 
 .lsv-past-meta {
   flex: none;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }

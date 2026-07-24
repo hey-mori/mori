@@ -349,7 +349,7 @@
 .noti-drawer-head h2 {
   margin: 0;
   margin-right: auto;
-  font-size: 15px;
+  font-size: var(--base-font-size-xl);
   font-weight: 700;
   color: var(--text);
 }
@@ -481,7 +481,7 @@
 
 .attention-toast-kicker {
   color: var(--muted-2);
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 750;
 }
 
@@ -584,7 +584,7 @@
 
 .companion-inbox-focus-kicker {
   color: var(--muted-2);
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -635,7 +635,7 @@
 
 .companion-inbox-section-head h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 700;
   color: var(--text);
 }
@@ -650,7 +650,7 @@
   border-radius: 999px;
   background: var(--purple-50);
   color: var(--purple);
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 700;
 }
 
@@ -674,7 +674,7 @@
 }
 
 .companion-inbox-row-severity {
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 700;
   color: var(--muted);
   white-space: nowrap;
@@ -733,14 +733,14 @@
 .notification-row-title strong {
   min-width: 0;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.35;
 }
 
 .notification-row-body p {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.45;
 }
 
@@ -764,7 +764,7 @@
   border-radius: 999px;
   background: var(--panel-soft);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -791,7 +791,7 @@
 
 .companion-inbox-rail-card header h3 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
 }
 
 .companion-inbox-rail-counts {
@@ -812,13 +812,13 @@
 }
 
 .companion-inbox-rail-counts dt {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
 }
 
 .companion-inbox-rail-counts dd {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--base-font-size-xl);
   font-weight: 700;
   color: var(--text);
 }
@@ -828,7 +828,7 @@
 
 .companion-inbox-rail-total {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -913,7 +913,7 @@
 
 .companion-inbox-rail-note p {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   line-height: 1.55;
 }
 

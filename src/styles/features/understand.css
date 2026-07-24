@@ -11,7 +11,7 @@
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--purple);
   background: var(--panel, #fff);
@@ -110,7 +110,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 11px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--muted);
   background: transparent;

@@ -39,7 +39,7 @@
   gap: 9px;
   padding: 0 12px 0 16px;
   color: #1c2638;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
@@ -349,7 +349,7 @@
   border-radius: 8px;
   background: var(--panel-soft);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.5;
 }
 
@@ -508,10 +508,18 @@
   .page .page-header {
     padding-left: calc(var(--page-inset) + 50px);
   }
-  /* Step the two display tiers down a notch on small viewports. */
-  :root {
-    --base-font-size-2xl: 16px;
-    --base-font-size-3xl: 17.5px;
+  /* Step the top display tier down a notch on small viewports. Two things
+     were wrong. The value was a fixed px, so it ignored the user's
+     font-scale setting; and a bare `:root` (0,1,0) is outranked by
+     theme.css's `:root[data-font-scale="…"]` (0,2,0), so the step-down
+     only ever took effect on the default setting. Matching that
+     specificity and stating the size relative to 2xl fixes both, and at
+     the default scale it still resolves to 17.5px.
+     2xl needed no override: its pinned value equalled the default scale's
+     own 2xl, so that rule only ever suppressed the setting. */
+  :root,
+  :root[data-font-scale] {
+    --base-font-size-3xl: calc(var(--base-font-size-2xl) + 1.5px);
   }
 }
 

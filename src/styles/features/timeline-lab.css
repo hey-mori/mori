@@ -47,7 +47,7 @@
   gap: 10px;
   min-height: 220px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
 }
 
 .lab-empty svg { color: var(--muted-2); }
@@ -64,7 +64,7 @@
 }
 
 .lab-filter-count {
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
@@ -106,7 +106,7 @@
   margin: 0 0 4px 38px;
   padding: 4px 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.4;
 }
 
@@ -183,14 +183,14 @@
 
 .lab-moment-time {
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
 /* Quiet by default so a conversation-heavy session stays calm; only the
    pivots (결정 / 이슈) carry their tone, set below. */
 .lab-moment-kind {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--muted-2);
@@ -203,7 +203,7 @@
 
 .lab-moment-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 600;
   color: var(--text);
   line-height: 1.4;
@@ -216,7 +216,7 @@
 
 .lab-moment-summary {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.55;
   color: var(--muted);
   display: -webkit-box;
@@ -236,7 +236,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 500;
   padding: 3px 9px;
   border-radius: var(--radius-sm);
@@ -272,7 +272,7 @@
 }
 
 .lab-evidence {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
   background: var(--gray-50);
   border: 1px solid var(--line);
@@ -326,7 +326,7 @@
   gap: 6px;
   list-style: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
   padding: 2px 0;
 }
@@ -364,7 +364,7 @@
 
 .lab-fold-time {
   flex: none;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
@@ -394,7 +394,7 @@
 
 .lab-carry-head h4 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 600;
   color: var(--text);
 }
@@ -409,7 +409,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -429,7 +429,7 @@
 }
 
 .lab-carry-col li {
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   color: var(--text);
   padding-left: 12px;
   position: relative;
@@ -455,7 +455,7 @@
 
 .lab-carry-resume p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.6;
   color: var(--muted);
   white-space: pre-wrap;
@@ -513,7 +513,7 @@
 
 .lab-phases-head h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 600;
   color: var(--text);
 }
@@ -592,14 +592,14 @@
 
 .lab-phase-title h5 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 600;
   color: var(--text);
 }
 
 .lab-phase-count {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
@@ -611,7 +611,7 @@
 }
 
 .lab-phase-range {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
   padding-left: 15px;
@@ -627,7 +627,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   padding: 1px 7px;
@@ -658,13 +658,13 @@
 }
 
 .lab-phase-moment-time {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
 
 .lab-phase-moment-title {
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--text);
   line-height: 1.4;
   overflow: hidden;
@@ -691,7 +691,7 @@
 
 .lab-causal-head h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 600;
   color: var(--text);
 }
@@ -710,7 +710,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -722,7 +722,7 @@
 
 .lab-causal-note {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -818,7 +818,7 @@
   border: 1px solid var(--line-strong);
   border-radius: var(--base-radius-pill, 999px);
   background: var(--panel);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
   cursor: pointer;
   transition:
@@ -856,7 +856,7 @@
 }
 
 .lab-node-sub {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
 }
 
@@ -870,7 +870,7 @@
   border: 1px solid var(--line-strong);
   border-radius: var(--base-radius-pill, 999px);
   background: var(--panel);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
   cursor: pointer;
   transition:
@@ -944,7 +944,7 @@
 
 .lab-pulse-head h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 600;
   color: var(--text);
 }
@@ -1041,7 +1041,7 @@ button.lab-pulse-stat {
 }
 
 .lab-pulse-stat-label {
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--lab-tone, var(--muted));
 }
@@ -1113,7 +1113,7 @@ button.lab-pulse-stat {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -1156,7 +1156,7 @@ button.lab-pulse-stat {
 }
 
 .lab-pulse-resolve-caption {
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted-2);
 }
 
@@ -1235,7 +1235,7 @@ button.lab-pulse-stat {
 .lab-pulse-spark-axis {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
@@ -1258,7 +1258,7 @@ button.lab-pulse-stat {
 
 .lab-lineage-headbar h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 600;
   color: var(--text);
 }
@@ -1325,7 +1325,7 @@ button.lab-pulse-stat {
 
 .lab-lineage-tension {
   flex: none;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 600;
   color: var(--red);
   background: var(--red-50);
@@ -1336,7 +1336,7 @@ button.lab-pulse-stat {
 
 .lab-lineage-importance {
   flex: none;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted);
   background: var(--gray-50);
   border-radius: 999px;
@@ -1344,7 +1344,7 @@ button.lab-pulse-stat {
 }
 
 .lab-lineage-key {
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 600;
   color: var(--muted-2);
   margin-right: 6px;
@@ -1382,7 +1382,7 @@ button.lab-pulse-stat {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
   background: var(--panel-soft);
   border: 1px solid var(--line);
@@ -1391,7 +1391,7 @@ button.lab-pulse-stat {
 }
 
 .lab-lineage-reject-tag {
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   font-weight: 600;
   color: var(--muted-2);
 }

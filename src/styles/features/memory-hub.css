@@ -31,7 +31,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--muted);
   background: transparent;
@@ -86,14 +86,14 @@
 }
 
 .memhub-scope-count {
-  font-size: 10px;
+  font-size: var(--base-font-size-2xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
 
 .memhub-no-results {
   margin: 24px 2px;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   color: var(--muted-2);
 }
 
@@ -170,7 +170,7 @@
   align-items: center;
   gap: 12px;
   margin-top: 8px;
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   color: var(--muted-2);
 }
 
@@ -185,7 +185,7 @@
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--muted);
   background: transparent;

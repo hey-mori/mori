@@ -127,12 +127,12 @@ button.start-entry-card:focus-visible {
   border-radius: 999px;
   background: var(--purple-50);
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
 }
 
 .setup-block h2 {
   margin: 0 0 2px;
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   font-weight: 650;
 }
 
@@ -155,7 +155,7 @@ label {
   display: grid;
   gap: 8px;
   color: #485366;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 700;
 }
 
@@ -236,7 +236,7 @@ input,
   align-items: center;
   gap: 6px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   min-width: 0;
 }
 
@@ -279,7 +279,7 @@ input,
   gap: 8px;
   margin: 0;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 750;
 }
 
@@ -293,7 +293,7 @@ input,
   border-radius: 999px;
   background: var(--panel-soft);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 700;
 }
 
@@ -310,7 +310,7 @@ input,
   color: var(--purple);
   border-radius: 8px;
   background: var(--purple-50);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
 }
 
 .privacy-note > summary {
@@ -443,7 +443,7 @@ input,
 }
 
 .summary-row b {
-  font-size: 14px;
+  font-size: var(--base-font-size-lg);
   min-width: 0;
   text-align: right;
   overflow: hidden;
@@ -454,7 +454,7 @@ input,
 .summary-section-title {
   margin: 2px 0 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--base-font-size-xs);
   font-weight: 750;
   letter-spacing: 0;
 }
@@ -506,7 +506,7 @@ hr {
 
 .draft-status-panel span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   overflow-wrap: anywhere;
 }
 
@@ -546,7 +546,7 @@ hr {
   justify-content: center;
   gap: 6px;
   color: var(--purple);
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.5;
   text-align: center;
 }
@@ -579,7 +579,7 @@ hr {
 
 .setup-block-sub {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -675,7 +675,7 @@ hr {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
   word-break: keep-all;
 }
@@ -732,7 +732,7 @@ hr {
   border-radius: 8px;
   background: var(--panel);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.5;
   resize: vertical;
 }
@@ -753,7 +753,7 @@ hr {
 
 .form-field-label {
   color: #485366;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 700;
 }
 
@@ -774,7 +774,7 @@ hr {
   background: var(--panel);
   color: #161e2d;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   text-align: left;
   cursor: pointer;
   transition: border-color 120ms ease;
@@ -839,7 +839,7 @@ hr {
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   text-align: left;
   cursor: pointer;
 }
@@ -876,7 +876,7 @@ hr {
 .start-import-note {
   flex-basis: 100%;
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   line-height: 1.5;
   color: var(--muted);
 }
@@ -942,7 +942,7 @@ hr {
 
 .detected-modal-head h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--base-font-size-xl);
   font-weight: 700;
   color: var(--text);
 }
@@ -1025,7 +1025,7 @@ hr {
 
 .detected-preview-empty p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
 }
 
 .detected-preview-head h3 {
@@ -1034,7 +1034,7 @@ hr {
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
-  font-size: 15px;
+  font-size: var(--base-font-size-xl);
   font-weight: 700;
   color: var(--text);
   /* Titles can be stack traces / code, so break long unspaced runs too. */
@@ -1046,7 +1046,7 @@ hr {
   align-items: center;
   gap: 5px;
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -1064,7 +1064,7 @@ hr {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
 }
 
@@ -1087,7 +1087,7 @@ hr {
 
 .detected-preview-ask p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   line-height: 1.55;
   color: var(--text);
   overflow-wrap: anywhere;
@@ -1162,7 +1162,7 @@ hr {
   background: var(--panel-soft, #fafafa);
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -1217,7 +1217,7 @@ hr {
 }
 
 .records-chosen-main span {
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1265,7 +1265,7 @@ hr {
   background: none;
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
 }
 
 .start-detected-search input:focus-visible {
@@ -1405,7 +1405,7 @@ hr {
 }
 
 .start-detected-main strong {
-  font-size: 13px;
+  font-size: var(--base-font-size-md);
   font-weight: 600;
   color: var(--text);
   overflow: hidden;
@@ -1434,7 +1434,7 @@ hr {
   background: none;
   color: var(--purple);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--base-font-size-sm);
   font-weight: 600;
   cursor: pointer;
 }
