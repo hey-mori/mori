@@ -10,7 +10,7 @@
  * proposes defaults and warns when the configured pair looks wrong, so a Korean
  * sentence the user wants EXPLAINED stays reachable.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Languages, PenLine, Sparkles } from "lucide-react";
 import {
   directInputCapture,
@@ -18,10 +18,13 @@ import {
   type LanguageCaptureRequest,
 } from "../../lib/language/languageCapture";
 import {
-  DEFAULT_LANGUAGE_PROFILE,
   detectDominantLanguage,
   type LanguageProfile,
 } from "../../lib/language/languageAction";
+import {
+  loadLanguagePreferences,
+  saveLanguagePreferences,
+} from "../../lib/language/languagePreferences";
 import { LanguageResultView } from "./LanguageResultView";
 import { useLanguageAction } from "./useLanguageAction";
 
@@ -38,12 +41,22 @@ function languageLabel(code: string): string {
   return LANGUAGE_OPTIONS.find((option) => option.code === code)?.label ?? code;
 }
 
-export function LanguageComposer() {
+export function LanguageComposer({ autoFocus = false }: { autoFocus?: boolean } = {}) {
   const [draft, setDraft] = useState("");
-  const [profile, setProfile] = useState<LanguageProfile>(DEFAULT_LANGUAGE_PROFILE);
+  // The pair is a preference, not content: re-asking every time the overlay
+  // opens is friction with no privacy benefit.
+  const [preferences] = useState(loadLanguagePreferences);
+  const [profile, setProfile] = useState<LanguageProfile>(preferences.profile);
   const [request, setRequest] = useState<LanguageCaptureRequest | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [purpose, setPurpose] = useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // The overlay opens straight onto this when nothing could be read, so the
+  // user can start typing without first clicking into the box.
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus]);
 
   const { state, provider, retry, allowProvider } = useLanguageAction(request, profile);
   const running = state.phase === "loading";
@@ -56,8 +69,18 @@ export function LanguageComposer() {
       ? `입력이 이미 ${languageLabel(detected)}로 보입니다. 표현하기는 목표 언어로 바꿔 줍니다.`
       : null;
 
+  /** Persist immediately, so a pair the user set but never ran is still kept. */
+  const updateProfile = (patch: Partial<LanguageProfile>) => {
+    setProfile((current) => {
+      const next = { ...current, ...patch };
+      saveLanguagePreferences({ profile: next, lastAction: preferences.lastAction });
+      return next;
+    });
+  };
+
   const run = (action: "understand" | "express") => {
     if (!trimmed || running) return;
+    saveLanguagePreferences({ profile, lastAction: action });
     setRequest(
       directInputCapture(trimmed, action, {
         // Only what is actually known: the user typed this, and optionally said
@@ -70,13 +93,16 @@ export function LanguageComposer() {
   return (
     <div className="language-composer">
       <textarea
+        ref={inputRef}
         className="language-composer-input"
         value={draft}
         onChange={(event) => setDraft(event.target.value.slice(0, MAX_CAPTURE_LENGTH))}
         onKeyDown={(event) => {
           if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
             event.preventDefault();
-            run("understand");
+            // Shift picks the other action, so both are reachable without
+            // leaving the keyboard for a mouse.
+            run(event.shiftKey ? "express" : "understand");
           }
         }}
         placeholder="이해하고 싶은 문장을 붙여넣거나, 영어로 표현하고 싶은 말을 적으세요"
@@ -109,14 +135,19 @@ export function LanguageComposer() {
         </span>
       </div>
 
+      <p className="language-composer-keys">
+        <kbd>Ctrl</kbd>
+        <kbd>↵</kbd> 이해 · <kbd>Ctrl</kbd>
+        <kbd>Shift</kbd>
+        <kbd>↵</kbd> 표현
+      </p>
+
       <div className="language-composer-pair">
         <label>
           설명 언어
           <select
             value={profile.explanationLanguage}
-            onChange={(event) =>
-              setProfile((current) => ({ ...current, explanationLanguage: event.target.value }))
-            }
+            onChange={(event) => updateProfile({ explanationLanguage: event.target.value })}
           >
             {LANGUAGE_OPTIONS.map((option) => (
               <option key={option.code} value={option.code}>
@@ -129,9 +160,7 @@ export function LanguageComposer() {
           목표 언어
           <select
             value={profile.targetLanguage}
-            onChange={(event) =>
-              setProfile((current) => ({ ...current, targetLanguage: event.target.value }))
-            }
+            onChange={(event) => updateProfile({ targetLanguage: event.target.value })}
           >
             {LANGUAGE_OPTIONS.map((option) => (
               <option key={option.code} value={option.code}>

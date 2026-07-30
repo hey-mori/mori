@@ -84,13 +84,27 @@ crate: without the keypress, Mori never looks at a selection.
 8. The 2 000-character cap is applied natively, so an accidental select-all never
    crosses the IPC boundary.
 
-### Known provider gap
+### Provider behaviour, measured
 
-Verified on this machine: a **WPF** text control returns its selection correctly
-(control type `Edit`, full text read). A **Win32 `EDIT`** control (WinForms, and
-by extension classic Notepad-class apps) reports **no Text pattern at all**.
-This is a property of the Windows provider, not of Mori, and it is the concrete
-reason the clipboard fallback exists rather than being a defensive nicety.
+Verified on this machine, with the probe in `capture_windows.rs`:
+
+| Provider | Cold read | Notes |
+|----------|-----------|-------|
+| WPF text control | full text read | control type `Edit`, exact character count |
+| Chromium / Electron | **nothing, until woken** | Chrome, VS Code, Slack, Claude Code |
+| Win32 `EDIT` (WinForms, Notepad-class) | **no Text pattern at all** | falls to the clipboard path |
+
+**The Chromium case is the important one**, because browsers are the primary
+place someone meets English. Chromium builds no accessibility tree until it
+believes an assistive client is present, so a cold `GetFocusedElement` returns a
+stub with no Text pattern. This is not a failed read; the tree does not exist
+yet. The documented trigger is a `WM_GETOBJECT` for `OBJID_CLIENT`, which Mori
+now sends **only after an empty read**, then retries once. Measured on a live
+Chrome window: `NoTextPattern` before, `PatternWithoutSelection` on a `Document`
+control after, meaning `GetSelection` now runs against the real document.
+
+The Win32 gap is why the clipboard fallback exists rather than being a defensive
+nicety.
 
 ## 5. The overlay
 
@@ -106,6 +120,26 @@ an overlay larger than its screen.
 Nothing survives a close: each capture bumps a session id that keys the body, so
 reopening remounts rather than reusing, and a late clipboard retry is dropped if
 its session is no longer current.
+
+**Window ergonomics.** The header is a drag region (repeated on the title and
+its icon, because the attribute applies only to the element carrying it, and
+`core:window:allow-start-dragging` is required for any of it to work). The
+window is resizable with a floor, and its size carries across invocations
+because `present` never overrides the size the user left.
+
+Position is a real conflict: opening next to the selection is right when reading
+around a page, staying put is right when working through one document. Rather
+than guess, the header offers a **pin**. Unpinned re-anchors each time; pinned
+keeps the window exactly where it was dragged. The toggle's state is mirrored
+from the native side so it cannot drift from the window's behaviour.
+
+**다시 읽기** re-reads the selection without closing. It hides the window first,
+because the overlay takes focus when it appears and reading the focused element
+would otherwise read the overlay.
+
+Preferences that outlive one capture (`languagePreferences.ts`): the language
+pair and the last action. Deliberately not retention. There is no field a
+selection could be stored in, and everything is validated on read.
 
 **Not a seventh overlay stack.** Issue #17 records six divergent DOM overlay
 implementations. The global overlay is a native window (genuinely a different

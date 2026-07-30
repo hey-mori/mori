@@ -23,10 +23,37 @@ pub const OVERLAY_LABEL: &str = "language-overlay";
 /// Event carrying one capture into the overlay webview.
 pub const CAPTURE_EVENT: &str = "language://capture";
 
-/// Logical size of the overlay. Small on purpose: this floats over someone
-/// else's document and must read as an annotation, not an application.
-const OVERLAY_WIDTH: f64 = 400.0;
-const OVERLAY_HEIGHT: f64 = 520.0;
+/// Logical size the overlay opens at the first time. Small on purpose: this
+/// floats over someone else's document and must read as an annotation, not an
+/// application. After that the user's own size wins, because a window they
+/// resized and then found reset is worse than one that opened slightly wrong.
+const OVERLAY_WIDTH: f64 = 420.0;
+const OVERLAY_HEIGHT: f64 = 560.0;
+
+/// Below this the result sections stop being readable at all.
+const OVERLAY_MIN_WIDTH: f64 = 320.0;
+const OVERLAY_MIN_HEIGHT: f64 = 220.0;
+
+/// Whether the user has pinned the overlay in place.
+///
+/// Pinning exists because the two useful behaviours genuinely conflict: opening
+/// next to the selection is right when you are reading around a page, and
+/// staying exactly where you put it is right when you are working through a
+/// document. Rather than guess, the header offers the choice and remembers it.
+#[derive(Default)]
+pub struct OverlayPlacement {
+    pinned: std::sync::atomic::AtomicBool,
+}
+
+impl OverlayPlacement {
+    pub fn is_pinned(&self) -> bool {
+        self.pinned.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    pub fn set_pinned(&self, value: bool) {
+        self.pinned.store(value, std::sync::atomic::Ordering::Relaxed);
+    }
+}
 
 /// Gap between the pointer and the overlay corner, so the window never opens
 /// underneath the cursor and swallows the click that follows.
@@ -92,6 +119,9 @@ pub struct OverlayPayload {
     /// Whether an explicit clipboard retry is possible on this platform and for
     /// this outcome. The overlay never shows the button when this is false.
     pub clipboard_fallback_available: bool,
+    /// Whether the window is pinned in place, so the header's toggle shows the
+    /// real state instead of a local guess that can drift from the window.
+    pub pinned: bool,
 }
 
 /// Create the overlay window if it does not exist yet.
@@ -111,11 +141,14 @@ fn ensure_window(app: &AppHandle) -> tauri::Result<tauri::WebviewWindow> {
     )
     .title("Mori 언어")
     .inner_size(OVERLAY_WIDTH, OVERLAY_HEIGHT)
+    .min_inner_size(OVERLAY_MIN_WIDTH, OVERLAY_MIN_HEIGHT)
     .decorations(false)
     .transparent(false)
     .always_on_top(true)
     .skip_taskbar(true)
-    .resizable(false)
+    // Resizable: a long paragraph and a single word want very different heights,
+    // and a fixed 560px window forces one of them to scroll for no reason.
+    .resizable(true)
     .minimizable(false)
     .maximizable(false)
     .visible(false)
@@ -131,11 +164,21 @@ pub fn present(
 ) -> tauri::Result<()> {
     let window = ensure_window(app)?;
 
+    // The window's CURRENT size, not the default: whatever the user resized it
+    // to is carried across invocations for free by simply not overriding it.
     let scale = window.scale_factor().unwrap_or(1.0);
-    let physical = LogicalSize::new(OVERLAY_WIDTH, OVERLAY_HEIGHT).to_physical::<i32>(scale);
-    let _ = window.set_size(PhysicalSize::new(physical.width, physical.height));
+    let physical: PhysicalSize<i32> = window.inner_size().map(|size| PhysicalSize::new(size.width as i32, size.height as i32)).unwrap_or_else(|_| {
+        let fallback = LogicalSize::new(OVERLAY_WIDTH, OVERLAY_HEIGHT).to_physical::<i32>(scale);
+        PhysicalSize::new(fallback.width, fallback.height)
+    });
 
-    if let Some(anchor) = anchor {
+    // A pinned overlay stays exactly where the user put it.
+    let pinned = app
+        .try_state::<OverlayPlacement>()
+        .map(|state| state.is_pinned())
+        .unwrap_or(false);
+
+    if let Some(anchor) = anchor.filter(|_| !pinned) {
         // The monitor under the pointer, not the primary one: on a multi-monitor
         // desk the selection is usually not on the primary display.
         let monitor = window
@@ -159,8 +202,8 @@ pub fn present(
             );
             let _ = window.set_position(PhysicalPosition::new(x, y));
         }
-    } else {
-        // No observed position. Centre rather than guess a corner.
+    } else if !pinned && anchor.is_none() {
+        // No observed position and not pinned. Centre rather than guess a corner.
         let _ = window.center();
     }
 
@@ -171,6 +214,7 @@ pub fn present(
         OverlayPayload {
             clipboard_fallback_available: cfg!(windows)
                 && super::capture::allows_clipboard_fallback(&outcome),
+            pinned,
             outcome,
         },
     )?;

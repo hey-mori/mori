@@ -18,10 +18,22 @@
  *    current one.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ClipboardCopy, Keyboard, Languages, Lock, ShieldAlert, X } from "lucide-react";
+import {
+  ClipboardCopy,
+  Keyboard,
+  Languages,
+  Lock,
+  Pin,
+  PinOff,
+  RefreshCw,
+  ShieldAlert,
+  X,
+} from "lucide-react";
 import {
   captureViaClipboard,
   closeOverlay,
+  recaptureSelection,
+  setOverlayPinned,
   CAPTURE_EVENT,
   isNativeHost,
   outcomeContext,
@@ -47,6 +59,7 @@ export function LanguageOverlayApp() {
   const [payload, setPayload] = useState<OverlayPayload | null>(null);
   const [action, setAction] = useState<"understand" | "express">("understand");
   const [retrying, setRetrying] = useState(false);
+  const [pinned, setPinned] = useState(false);
   // Bumped on every capture. Keys the body so a close-and-reopen is a remount,
   // and guards the async clipboard retry against landing in a newer session.
   const [sessionId, setSessionId] = useState(0);
@@ -72,6 +85,9 @@ export function LanguageOverlayApp() {
         setPayload(event.payload);
         setAction("understand");
         setRetrying(false);
+        // Mirrored from the native side rather than kept locally, so the toggle
+        // can never disagree with what the window actually does.
+        setPinned(event.payload.pinned);
         sessionRef.current += 1;
         setSessionId(sessionRef.current);
       }).then((stop) => {
@@ -116,12 +132,14 @@ export function LanguageOverlayApp() {
       // capture that no longer exists.
       if (startedIn !== sessionRef.current) return;
       setPayload((current) =>
-        current ? { ...current, outcome: next } : { outcome: next, clipboardFallbackAvailable: false },
+        current
+          ? { ...current, outcome: next }
+          : { outcome: next, clipboardFallbackAvailable: false, pinned },
       );
     } finally {
       if (startedIn === sessionRef.current) setRetrying(false);
     }
-  }, []);
+  }, [pinned]);
 
   const onBlockApp = useCallback(
     (applicationId: string) => {
@@ -131,19 +149,68 @@ export function LanguageOverlayApp() {
     [dismiss],
   );
 
+  const togglePin = useCallback(() => {
+    setPinned((current) => {
+      void setOverlayPinned(!current);
+      return !current;
+    });
+  }, []);
+
+  /** Re-read the selection without closing. The native side hides the window
+   *  first, so focus returns to the app underneath before it reads. */
+  const onRecapture = useCallback(async () => {
+    const startedIn = sessionRef.current;
+    setRetrying(true);
+    try {
+      const next = await recaptureSelection();
+      if (startedIn !== sessionRef.current) return;
+      setPayload((current) => (current ? { ...current, outcome: next } : current));
+    } finally {
+      if (startedIn === sessionRef.current) setRetrying(false);
+    }
+  }, []);
+
   const source = outcome ? sourceLine(outcome) : null;
 
   return (
     <div className="language-overlay" role="dialog" aria-modal="true" aria-label="Mori 언어">
+      {/* The drag attribute only applies to the element carrying it, so the
+          title and its icon repeat it: without that, dragging works on the
+          header's bare padding and mysteriously dies over the text. */}
       <header className="language-overlay-head" data-tauri-drag-region>
-        <span className="language-overlay-title">
-          <Languages size={14} aria-hidden="true" />
+        <span className="language-overlay-title" data-tauri-drag-region>
+          <Languages size={14} aria-hidden="true" data-tauri-drag-region />
           {source ?? "Mori 언어"}
         </span>
+        {isNativeHost() ? (
+          <>
+            <button
+              type="button"
+              className="language-overlay-icon"
+              aria-label="선택 다시 읽기"
+              title="선택 다시 읽기"
+              onClick={() => void onRecapture()}
+              disabled={retrying}
+            >
+              <RefreshCw size={13} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={`language-overlay-icon${pinned ? " is-on" : ""}`}
+              aria-label={pinned ? "위치 고정 해제" : "위치 고정"}
+              aria-pressed={pinned}
+              title={pinned ? "위치 고정됨 · 이 자리에 계속 열립니다" : "선택한 글 옆에 열립니다"}
+              onClick={togglePin}
+            >
+              {pinned ? <Pin size={13} aria-hidden="true" /> : <PinOff size={13} aria-hidden="true" />}
+            </button>
+          </>
+        ) : null}
         <button
           type="button"
-          className="language-overlay-close"
+          className="language-overlay-icon"
           aria-label="닫기 (Esc)"
+          title="닫기 (Esc)"
           onClick={dismiss}
         >
           <X size={14} aria-hidden="true" />
@@ -208,7 +275,7 @@ export function LanguageOverlayApp() {
                 {retrying ? "복사해서 읽는 중" : "클립보드로 다시 시도"}
               </button>
             ) : null}
-            <LanguageComposer />
+            <LanguageComposer autoFocus />
           </>
         )}
       </div>

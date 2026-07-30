@@ -39,6 +39,9 @@ export type CaptureOutcome =
 export type OverlayPayload = {
   outcome: CaptureOutcome;
   clipboardFallbackAvailable: boolean;
+  /** Whether the window is pinned in place. Comes from the native side so the
+   *  header toggle cannot drift from the window's real behaviour. */
+  pinned: boolean;
 };
 
 /** The event the native side emits into the overlay window. */
@@ -71,6 +74,23 @@ export async function captureViaClipboard(): Promise<CaptureOutcome> {
 export async function closeOverlay(): Promise<void> {
   if (!isNativeHost()) return;
   await invokeNative<void>("close_language_overlay");
+}
+
+/** Pin or unpin the overlay's position. */
+export async function setOverlayPinned(pinned: boolean): Promise<void> {
+  if (!isNativeHost()) return;
+  await invokeNative<void>("set_language_overlay_pinned", { pinned });
+}
+
+/**
+ * Re-read the selection without closing the overlay.
+ *
+ * The native side hides the window first so focus returns to the app
+ * underneath; reading while the overlay has focus would read the overlay.
+ */
+export async function recaptureSelection(): Promise<CaptureOutcome> {
+  if (!isNativeHost()) return { kind: "unsupported", platform: "web" };
+  return invokeNative<CaptureOutcome>("recapture_language_selection");
 }
 
 /** Drop a null or blank field rather than passing it on as an observed fact. */

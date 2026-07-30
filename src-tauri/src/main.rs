@@ -115,6 +115,7 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .manage(sqlite::SqliteState::default())
         .manage(llm_endpoints::LlmEndpointState::default())
+        .manage(language::overlay::OverlayPlacement::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
             commands::host_platform,
@@ -196,6 +197,8 @@ fn main() {
             language::commands::language_capture_supported,
             language::commands::open_language_overlay,
             language::commands::close_language_overlay,
+            language::commands::set_language_overlay_pinned,
+            language::commands::recapture_language_selection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

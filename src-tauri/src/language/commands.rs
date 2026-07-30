@@ -67,6 +67,39 @@ pub fn open_language_overlay(app: AppHandle) -> Result<(), String> {
     overlay::present(&app, outcome, anchor).map_err(|error| error.to_string())
 }
 
+/// Pin or unpin the overlay's position.
+///
+/// Pinned, it stays where the user dragged it; unpinned, each capture re-anchors
+/// it next to the selection. Both are right in different workflows, so this is a
+/// choice rather than a guess.
+#[tauri::command]
+pub fn set_language_overlay_pinned(app: AppHandle, pinned: bool) {
+    if let Some(state) = app.try_state::<overlay::OverlayPlacement>() {
+        state.set_pinned(pinned);
+    }
+}
+
+/// Re-read the selection while the overlay is already open.
+///
+/// The overlay takes focus when it appears, so this deliberately does NOT read
+/// the focused element: it would read the overlay itself. The caller hides the
+/// window first, which returns focus to the app underneath, and only then reads.
+#[tauri::command]
+pub fn recapture_language_selection(app: AppHandle) -> Result<CaptureOutcome, String> {
+    let window = app
+        .get_webview_window(overlay::OVERLAY_LABEL)
+        .ok_or_else(|| "overlay window is not open".to_string())?;
+
+    window.hide().map_err(|error| error.to_string())?;
+    // Give the OS a moment to move focus back before asking what is focused.
+    std::thread::sleep(std::time::Duration::from_millis(120));
+
+    let outcome = capture_foreground_selection();
+    let anchor = anchor_of(&outcome);
+    overlay::present(&app, outcome.clone(), anchor).map_err(|error| error.to_string())?;
+    Ok(outcome)
+}
+
 /// The anchor an outcome observed, if any.
 pub fn anchor_of(outcome: &CaptureOutcome) -> Option<super::capture::AnchorPoint> {
     match outcome {
