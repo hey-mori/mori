@@ -169,7 +169,21 @@ The parser is generated from the section catalogue, tolerates markdown and bold
 labels, accepts aliases, and still falls back to one raw section when a reply
 ignores the contract entirely.
 
-## 7. Consent
+## 7. Testing the desktop build
+
+`custom-protocol` embeds `dist/` into the binary at compile time, so **`npm run
+build` alone changes nothing about a running desktop app**. Frontend changes
+need `cargo build` afterwards, and `mori.exe` must be newer than
+`dist/index.html` before a manual test means anything. Skipping that cost one
+round of "the fix does not work" against a binary that predated the fix.
+
+The overlay's engine wiring is testable without the desktop: run the dev server,
+seed `mori.quickPassSettings` in `localStorage`, and open
+`?surface=language-overlay`. That exercises `loadAnalysisSettings` → provider
+resolution → consent gate → a real call, which is how the missing-hydration bug
+was confirmed fixed.
+
+## 8. Consent
 
 `languageConsent.ts` was policy with no caller. It now gates every provider
 execution, before any prompt is built or sent.
@@ -187,14 +201,14 @@ execution, before any prompt is built or sent.
   durability.
 - A grant never contains captured text.
 
-## 8. Remember (L2) is not in this stage
+## 9. Remember (L2) is not in this stage
 
 Running an action creates nothing. `기억하기` needs durable storage, which is
 issue #12. No partial save button ships before it; the follow-up issue carries
 the model, provenance, trust rule, delete/undo/audit behaviour, and the rule
 that saved expressions surface as a Memory **filter** rather than a Learn screen.
 
-## 9. Out of scope for v1
+## 10. Out of scope for v1
 
 OCR, a browser extension, a macOS adapter, per-app consent UI beyond the
 overlay's "이 앱에서는 사용 안 함", and the `ask` action (it exists in the
