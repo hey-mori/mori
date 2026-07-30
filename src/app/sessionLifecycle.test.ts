@@ -70,6 +70,7 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     stopFollow: () => undefined,
     setFollowError: () => undefined,
     updateAnalysisSettings: () => DEFAULT_QUICK_PASS_SETTINGS,
+    loadAnalysisSettings: () => DEFAULT_QUICK_PASS_SETTINGS,
     loadDesktopSession: async () => false,
     openDiscoveredSession: async () => false,
     loadBrowserSession: () => false,

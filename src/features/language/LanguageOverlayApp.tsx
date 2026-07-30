@@ -42,6 +42,7 @@ import {
   type OverlayPayload,
 } from "../../lib/language/nativeCapture";
 import { blockApp } from "../../lib/language/consentStore";
+import { useSessionStore } from "../../app/sessionStore";
 import { LanguageComposer } from "./LanguageComposer";
 import { LanguageResultView } from "./LanguageResultView";
 import { useLanguageAction } from "./useLanguageAction";
@@ -64,6 +65,15 @@ export function LanguageOverlayApp() {
   // and guards the async clipboard retry against landing in a newer session.
   const [sessionId, setSessionId] = useState(0);
   const sessionRef = useRef(0);
+
+  // This window renders no app shell, so nothing here ever calls the store's
+  // full `hydrate`. Without this the overlay ran on default settings and
+  // reported "연결된 분석 엔진이 없습니다" while the main window had a working
+  // engine configured, and it also missed the native bridge's endpoint
+  // allowlist, which would have rejected the request even once found.
+  useEffect(() => {
+    useSessionStore.getState().loadAnalysisSettings();
+  }, []);
 
   const dismiss = useCallback(() => {
     // Cleared before hiding so the next open cannot paint the old capture for
