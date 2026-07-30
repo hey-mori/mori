@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Baseline for the main window and the language overlay. Mori's own commands are registered through generate_handler and are not ACL-gated; what is listed here is the small set of core plugin calls the frontend actually makes.",
+  "windows": ["main", "language-overlay"],
+  "permissions": [
+    "core:default",
+    "core:app:allow-version",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten"
+  ]
+}
