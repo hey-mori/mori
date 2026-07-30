@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  BarChart3,
   CalendarDays,
   FilePlus2,
   FolderGit2,
+  FolderKanban,
   House,
   NotebookPen,
+  Network,
   Plus,
   Radio,
   Search,
@@ -24,15 +27,19 @@ import type { ViewKey } from "../../domain/types";
  * Mori has no top chrome bar: the rail owns everything. From top to bottom:
  *
  *   1. Quick actions · 만들기 (기록 / 세션) and 알림.
- *   2. Product nav (`PRIMARY_NAV`): the six destinations by job, each an
- *      icon over a micro-label, plus 검색 (opens the command palette).
+ *   2. Product nav (`PRIMARY_NAV`): the destinations by job, each an icon over
+ *      a micro-label, plus 검색 (opens the command palette).
  *   3. The user button (opens the settings sheet).
  *
- * This is the "두 경험 + 교차 렌즈" rail: 기록 (notes · edit) and 세션 (AI work ·
- * review) are the two experiences; 프로젝트 · 캘린더 · 검색 are cross-lenses that
- * route each record to its proper home. The former 대시보드 · 워크벤치 · 작업 그래프
- * destinations retire to the command palette, and browsing sessions moved into
- * the 세션 workspace, so the rail no longer carries a session tree.
+ * The rail carries three bands. 기록 (notes · edit) and 세션 (AI work · review)
+ * are the two primary experiences. 프로젝트 · 캘린더 are cross-lenses that route
+ * each record to its proper home. 대시보드 · 워크벤치 · 작업 그래프 are the analysis
+ * surfaces that look across all of the work: usage and status, a free-form
+ * panel workspace, and the relationship map. They were briefly palette-only
+ * during the 11 -> 6 nav narrowing, but hiding that much standing capability
+ * behind search read as abandonment, so they are back in the rail (they also
+ * stay reachable from the palette). Browsing sessions lives in the 세션
+ * workspace, so the rail carries no session tree.
  */
 
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
@@ -41,6 +48,9 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "sessions", label: "세션", icon: Radio },
   { key: "contexts", label: "프로젝트", icon: viewIcon.workspace ?? FolderGit2 },
   { key: "calendar", label: "캘린더", icon: CalendarDays },
+  { key: "dashboard", label: "대시보드", icon: BarChart3 },
+  { key: "workbench", label: "워크벤치", icon: FolderKanban },
+  { key: "graph", label: "작업 그래프", icon: Network },
 ];
 
 export function Sidebar({
