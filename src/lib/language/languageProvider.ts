@@ -16,6 +16,7 @@
  *    and never the prompt or the user's text.
  */
 import type { LanguageActionResult } from "./languageAction";
+import type { SelectionKind } from "./selectionKind";
 
 /** Where a provider computes its answer. Never inferred. */
 export type ProcessingLocation = "local" | "cloud" | "fixture" | "unknown";
@@ -46,6 +47,9 @@ export type LanguageRunMetadata = {
   explanationLanguage: string;
   captureOrigin: string;
   acquiredBy: string;
+  /** Which answer shape was requested. Recorded so a surprising answer can be
+   *  traced to the classification that produced it. */
+  selectionKind: SelectionKind;
 };
 
 /** Why a run failed, so the surface can respond differently per cause. */
