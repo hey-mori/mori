@@ -15,7 +15,9 @@
 //! anywhere: Mori reads a selection when the user asks and at no other time.
 
 use windows::core::{Interface, BSTR, PWSTR};
-use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND, MAX_PATH, POINT};
+use windows::Win32::Foundation::{
+    CloseHandle, HANDLE, HWND, LPARAM, MAX_PATH, POINT, WPARAM,
+};
 use windows::Win32::System::Com::{
     CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
     COINIT_APARTMENTTHREADED,
@@ -29,6 +31,7 @@ use windows::Win32::UI::Accessibility::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     GetCursorPos, GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId,
+    SendMessageTimeoutW, OBJID_CLIENT, SMTO_ABORTIFHUNG, WM_GETOBJECT,
 };
 
 use super::capture::{acquired_by, AnchorPoint, CaptureOutcome, ObservedContext, RawCapture};
@@ -209,6 +212,44 @@ fn selected_text(element: &IUIAutomationElement) -> Option<String> {
     read_selection(element).1
 }
 
+/// Ask a Chromium-family window to turn its accessibility tree on.
+///
+/// Chromium, and therefore Electron, every Chromium browser, VS Code, Slack and
+/// Claude Code, builds no accessibility tree until it believes an assistive
+/// client is present. A cold `GetFocusedElement` on such a window returns a
+/// stub with no Text pattern, which is exactly the "선택한 텍스트를 읽지
+/// 못했습니다" case: not a bug in the read, but a tree that does not exist yet.
+///
+/// The documented trigger is a `WM_GETOBJECT` for `OBJID_CLIENT`. Sending it
+/// makes Chromium enable accessibility, after which a second read succeeds.
+///
+/// Sent with a timeout and `SMTO_ABORTIFHUNG` because this is a synchronous
+/// message into a foreign, possibly wedged, UI thread; Mori's shortcut must not
+/// hang because the app under the cursor is busy.
+fn wake_accessibility(hwnd: HWND) {
+    if hwnd.is_invalid() {
+        return;
+    }
+    // SAFETY: a documented message send to a valid window, bounded by a timeout.
+    unsafe {
+        let _ = SendMessageTimeoutW(
+            hwnd,
+            WM_GETOBJECT,
+            WPARAM(0),
+            LPARAM(OBJID_CLIENT.0 as isize),
+            SMTO_ABORTIFHUNG,
+            ACCESSIBILITY_WAKE_TIMEOUT_MS,
+            None,
+        );
+    }
+}
+
+/// How long to wait for a foreign window to answer the wake message.
+const ACCESSIBILITY_WAKE_TIMEOUT_MS: u32 = 200;
+/// How long to give Chromium to build its tree after being woken. Short enough
+/// to stay imperceptible, long enough for the renderer to answer in practice.
+const ACCESSIBILITY_WAKE_SETTLE_MS: u64 = 140;
+
 /// Read the current selection from whichever app has focus.
 ///
 /// Called only from the global-shortcut handler.
@@ -256,8 +297,36 @@ pub fn capture_selection() -> CaptureOutcome {
         });
     }
 
+    let mut text = selected_text(&focused);
+
+    // A cold Chromium window has no accessibility tree, so the first read comes
+    // back empty even though there IS a selection. Wake it and read once more.
+    // Only on failure, so the common case pays nothing for this.
+    if text.is_none() {
+        // SAFETY: read-only query for the window to wake.
+        wake_accessibility(unsafe { GetForegroundWindow() });
+        std::thread::sleep(std::time::Duration::from_millis(
+            ACCESSIBILITY_WAKE_SETTLE_MS,
+        ));
+        // Re-fetch the element: the provider that answers after activation is a
+        // different object from the stub that answered before it.
+        // SAFETY: same documented call as above.
+        if let Ok(rewoken) = unsafe { automation.GetFocusedElement() } {
+            // The secure check is repeated because this is a new element, and a
+            // password field must never be read even on the second attempt.
+            if is_secure_element(&rewoken) {
+                return super::capture::classify(RawCapture {
+                    context,
+                    is_secure_input: true,
+                    ..Default::default()
+                });
+            }
+            text = selected_text(&rewoken);
+        }
+    }
+
     super::capture::classify(RawCapture {
-        text: selected_text(&focused),
+        text,
         context,
         anchor,
         acquired_by: acquired_by::UI_AUTOMATION,
@@ -312,10 +381,15 @@ pub fn observe_context_and_anchor() -> (ObservedContext, Option<AnchorPoint>) {
 pub struct CaptureProbe {
     pub automation_created: bool,
     pub focused_element_found: bool,
-    /// Which step the selection read reached. Distinguishes "this provider has
-    /// no Text pattern" from "the read worked and nothing was selected", which
-    /// is the difference between an untested path and a tested one.
+    /// Which step the selection read reached on the FIRST, cold attempt.
+    /// Distinguishes "this provider has no Text pattern" from "the read worked
+    /// and nothing was selected", which is the difference between an untested
+    /// path and a tested one.
     pub selection_step: SelectionReadStep,
+    /// The same, after the accessibility wake. On a Chromium window this is
+    /// expected to improve on `selection_step`, which is the whole point of the
+    /// wake; on a native window the two are identical.
+    pub selection_step_after_wake: SelectionReadStep,
     pub is_secure_input: bool,
     /// Length only. Never the text.
     pub selected_char_count: usize,
@@ -345,6 +419,7 @@ pub fn probe() -> CaptureProbe {
             automation_created: false,
             focused_element_found: false,
             selection_step: SelectionReadStep::NoTextPattern,
+            selection_step_after_wake: SelectionReadStep::NoTextPattern,
             is_secure_input: false,
             selected_char_count: 0,
             focused_control_type: 0,
@@ -362,6 +437,20 @@ pub fn probe() -> CaptureProbe {
         None => (SelectionReadStep::NoTextPattern, None),
     };
 
+    // Measure the wake's effect: a cold Chromium window should go from
+    // NoTextPattern to at least PatternWithoutSelection once its tree exists.
+    // SAFETY: read-only query for the window to wake.
+    wake_accessibility(unsafe { GetForegroundWindow() });
+    std::thread::sleep(std::time::Duration::from_millis(
+        ACCESSIBILITY_WAKE_SETTLE_MS,
+    ));
+    let (selection_step_after_wake, selected_after_wake) = match unsafe {
+        automation.GetFocusedElement()
+    } {
+        Ok(element) if !is_secure_element(&element) => read_selection(&element),
+        _ => (selection_step, None),
+    };
+
     // SAFETY: reading a documented property off a live automation element.
     let focused_control_type = focused
         .as_ref()
@@ -373,8 +462,12 @@ pub fn probe() -> CaptureProbe {
         automation_created: true,
         focused_element_found: focused.is_some(),
         selection_step,
+        selection_step_after_wake,
         is_secure_input,
-        selected_char_count: selected.map(|text| text.chars().count()).unwrap_or(0),
+        selected_char_count: selected
+            .or(selected_after_wake)
+            .map(|text| text.chars().count())
+            .unwrap_or(0),
         focused_control_type,
         context,
         anchor,
