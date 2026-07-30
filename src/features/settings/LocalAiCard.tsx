@@ -7,7 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BaseSelect } from "../../components/ui/BaseSelect";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
@@ -23,6 +23,11 @@ import type {
   QuickPassCapabilityReport,
   QuickPassProviderKind,
 } from "../../lib/analysis";
+import {
+  describeModelHeal,
+  pickUsableModel,
+  suggestSmallerModel,
+} from "../../lib/analysis/modelSelfHeal";
 import { formatRelativeKo } from "../../lib/home/homeOverview";
 import { getDefaultLlmFetch } from "../../lib/desktop/llmHttp";
 import { SettingsSection } from "./SettingsPrimitives";
@@ -94,12 +99,15 @@ export function LocalAiCard({
 }) {
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
   const [capability, setCapability] = useState<CapabilityState>({ status: "idle" });
+  /** Set when the model was repaired, so the switch is visible rather than silent. */
+  const [healNote, setHealNote] = useState<string | null>(null);
   const activeChoice = useMemo(() => inferEngineChoice(settings), [settings]);
   const providerKind = activeChoice;
 
   function selectEngine(choice: EngineChoice) {
     setProbe({ status: "idle" });
     setCapability({ status: "idle" });
+    setHealNote(null);
     onProviderChange(choice);
   }
 
@@ -155,6 +163,62 @@ export function LocalAiCard({
     setCapability({ status: "done", kind: providerKind, report });
   }
 
+  // Detect on open rather than waiting to be asked. Without this the card shows
+  // whatever was stored last time, so a server that is running looks unchecked
+  // and a model that has since been removed looks like a working setup.
+  useEffect(() => {
+    if (providerKind === "deterministic") return;
+    void handleProbe(providerKind);
+    // Deliberately keyed on the engine only: re-probing on every endpoint
+    // keystroke would fire a request per character.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [providerKind]);
+
+  /**
+   * A smaller installed model to offer after a failure, or null.
+   *
+   * Offered, never applied: the configured model IS installed, so switching it
+   * automatically would silently downgrade a deliberate choice to win a
+   * timeout. The app already advised "더 작은 모델을 쓰거나"; this makes that
+   * advice one click instead of a manual hunt through the dropdown.
+   */
+  const smallerModel = useMemo(() => {
+    if (probe.status !== "ok" || probe.kind !== providerKind) return null;
+    const failed =
+      capability.status === "done" &&
+      capability.kind === providerKind &&
+      capability.report.verdict !== "ready";
+    if (!failed) return null;
+    return suggestSmallerModel(
+      providerKind === "ollama" ? settings.ollamaModel : settings.openAiModel,
+      probe.modelInfo ?? probe.models,
+    );
+  }, [probe, capability, providerKind, settings.ollamaModel, settings.openAiModel]);
+
+  const handleUseSmallerModel = useCallback(() => {
+    if (!smallerModel) return;
+    setCapability({ status: "idle" });
+    onUpdateSettings(
+      providerKind === "ollama" ? { ollamaModel: smallerModel } : { openAiModel: smallerModel },
+    );
+  }, [smallerModel, providerKind, onUpdateSettings]);
+
+  // Repair a model name that is no longer installed. The reported case was
+  // Ollama running with three models detected, the configured model absent, and
+  // a red error that the screen offered no way to resolve.
+  const configuredModel = providerKind === "ollama" ? settings.ollamaModel : settings.openAiModel;
+  useEffect(() => {
+    if (probe.status !== "ok" || probe.kind !== providerKind) return;
+    // Pass the detail when the probe reported it, so "smallest" is decided on
+    // real parameter counts rather than on what the tag happens to say.
+    const heal = pickUsableModel(configuredModel, probe.modelInfo ?? probe.models);
+    if (!heal.changed) return;
+    setHealNote(describeModelHeal(heal, configuredModel));
+    onUpdateSettings(
+      providerKind === "ollama" ? { ollamaModel: heal.model } : { openAiModel: heal.model },
+    );
+  }, [probe, providerKind, configuredModel, onUpdateSettings]);
+
   return (
     <SettingsSection
       title="분석 엔진"
@@ -203,6 +267,9 @@ export function LocalAiCard({
             settings={settings}
             probe={probe}
             capability={capability}
+            healNote={healNote}
+            smallerModel={smallerModel}
+            onUseSmallerModel={handleUseSmallerModel}
             onProbe={() => handleProbe(providerKind)}
             onCapabilityTest={handleCapabilityTest}
             onUpdateSettings={onUpdateSettings}
@@ -220,6 +287,9 @@ function EngineConfigPanel({
   settings,
   probe,
   capability,
+  healNote,
+  smallerModel,
+  onUseSmallerModel,
   onProbe,
   onCapabilityTest,
   onUpdateSettings,
@@ -228,6 +298,10 @@ function EngineConfigPanel({
   settings: QuickPassAnalysisSettings;
   probe: ProbeState;
   capability: CapabilityState;
+  healNote: string | null;
+  /** Set only when a run failed and a meaningfully smaller model is installed. */
+  smallerModel: string | null;
+  onUseSmallerModel: () => void;
   onProbe: () => void;
   onCapabilityTest: () => void;
   onUpdateSettings: (patch: Partial<QuickPassAnalysisSettings>) => void;
@@ -308,6 +382,20 @@ function EngineConfigPanel({
           </Button>
         </div>
         <EngineStatus provider={providerKind} probe={probe} capability={capability} />
+        {/* A repair the user did not ask for has to be visible, or answers
+            would start coming from a different model for no apparent reason. */}
+        {healNote ? (
+          <p className="settings-ai-heal-note" role="status">
+            {healNote}
+          </p>
+        ) : null}
+        {/* The failure message already says to try a smaller model. This makes
+            that one click rather than a hunt through the dropdown. */}
+        {smallerModel ? (
+          <Button icon={Sparkles} variant="secondary" size="sm" onClick={onUseSmallerModel}>
+            {smallerModel}로 바꾸기
+          </Button>
+        ) : null}
       </div>
 
       <details className="settings-ai-advanced">

@@ -20,10 +20,30 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
+# The global shortcut is the ONLY trigger for language capture: Mori never reads
+# a selection in the background, so an explicit user chord is the entry point.
+tauri-plugin-global-shortcut = "2"
 # Native HTTP for local-LLM calls, so Ollama / OpenAI-compatible requests bypass
 # the webview CORS preflight that otherwise surfaces as "Failed to fetch".
 # rustls avoids a system OpenSSL dependency on Windows.
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+# Windows-only: UI Automation is how a selection is read out of another app.
+# Kept behind a target gate so the shared crate still builds on macOS and Linux,
+# where `capture::unsupported_adapter` is used until an AX adapter lands.
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+features = [
+  "Win32_Foundation",
+  "Win32_System_Com",
+  "Win32_System_DataExchange",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_Threading",
+  "Win32_UI_Accessibility",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_WindowsAndMessaging",
+]
 
 [dev-dependencies]
 tempfile = "3"

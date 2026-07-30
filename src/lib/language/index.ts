@@ -21,6 +21,7 @@ export {
   DEFAULT_LANGUAGE_PROFILE,
   detectDominantLanguage,
   parseLanguageResponse,
+  sectionPlan,
 } from "./languageAction";
 export type {
   LanguageActionResult,
@@ -29,4 +30,20 @@ export type {
   LanguageProfile,
   LanguageSection,
   LanguageSectionKey,
+  SelectionKind,
 } from "./languageAction";
+export { classifySelection, selectionKindLabel } from "./selectionKind";
+export { isSyntheticSection, SECTION_SPECS } from "./languageSections";
+export type { LanguageSectionSpec } from "./languageSections";
+export {
+  evaluateConsent,
+  createConsentGrant,
+  revokeProvider,
+  CONSENT_GRANT_VERSION,
+} from "./languageConsent";
+export type {
+  ConsentContext,
+  ConsentDecision,
+  ConsentScope,
+  ProviderConsentGrant,
+} from "./languageConsent";

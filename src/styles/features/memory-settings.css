@@ -4331,6 +4331,15 @@ button.settings-option {
   flex-wrap: wrap;
 }
 
+/* An automatic model repair. Informational, not a warning: nothing went wrong
+   for the user, and the note exists only so the switch is not silent. */
+.settings-ai-heal-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 /* One calm status line: a tone dot + text (+ optional muted hint), no heavy
    tinted box. */
 .settings-ai-status {

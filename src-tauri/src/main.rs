@@ -10,6 +10,7 @@ mod connectors;
 mod db;
 mod files;
 mod git;
+mod language;
 mod llm_endpoints;
 mod llm_http;
 mod opencode;
@@ -50,13 +51,71 @@ fn install_panic_log_hook() {
     }));
 }
 
+/// The chord that opens the language overlay over whatever app has focus.
+///
+/// Ctrl+Shift+E is unclaimed by Windows itself and by the editors and browsers
+/// this is meant to be used over. Registration failure is non-fatal on purpose:
+/// another app may already own the chord, and Mori must still start.
+#[cfg(desktop)]
+const LANGUAGE_SHORTCUT: &str = "CmdOrCtrl+Shift+E";
+
+/// Register the one global shortcut the Language Loop uses.
+///
+/// This chord is the ENTIRE trigger surface for reading another app's text.
+/// There is no watcher and no polling: without this keypress, Mori never looks
+/// at a selection.
+#[cfg(desktop)]
+fn install_language_shortcut(app: &tauri::App) {
+    use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
+
+    let shortcut = Shortcut::new(
+        Some(Modifiers::CONTROL | Modifiers::SHIFT),
+        Code::KeyE,
+    );
+    let handle = app.handle().clone();
+
+    let plugin = tauri_plugin_global_shortcut::Builder::new()
+        .with_handler(move |_app, triggered, event| {
+            // Key-down only. Without this the chord fires twice, capturing once
+            // on press and again on release.
+            if event.state() != ShortcutState::Pressed || triggered != &shortcut {
+                return;
+            }
+            let outcome = language::commands::capture_foreground_selection();
+            let anchor = language::commands::anchor_of(&outcome);
+            if let Err(error) = language::overlay::present(&handle, outcome, anchor) {
+                eprintln!("language overlay failed to open: {error}");
+            }
+        })
+        .build();
+
+    if let Err(error) = app.handle().plugin(plugin) {
+        eprintln!("global shortcut plugin unavailable: {error}");
+        return;
+    }
+    // A chord another app already owns is a normal condition, not a crash. The
+    // settings surface reads this back so the user is told rather than left
+    // pressing a key that does nothing.
+    if let Err(error) = tauri_plugin_global_shortcut::GlobalShortcutExt::global_shortcut(app)
+        .register(shortcut)
+    {
+        eprintln!("could not register {LANGUAGE_SHORTCUT}: {error}");
+    }
+}
+
 fn main() {
     install_panic_log_hook();
     tauri::Builder::default()
+        .setup(|app| {
+            #[cfg(desktop)]
+            install_language_shortcut(app);
+            Ok(())
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .manage(sqlite::SqliteState::default())
         .manage(llm_endpoints::LlmEndpointState::default())
+        .manage(language::overlay::OverlayPlacement::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
             commands::host_platform,
@@ -133,6 +192,13 @@ fn main() {
             cline::sessions::get_cline_session,
             cursor::sessions::discover_cursor_sessions,
             cursor::sessions::get_cursor_session,
+            language::commands::capture_foreground_selection,
+            language::commands::capture_selection_via_clipboard,
+            language::commands::language_capture_supported,
+            language::commands::open_language_overlay,
+            language::commands::close_language_overlay,
+            language::commands::set_language_overlay_pinned,
+            language::commands::recapture_language_selection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

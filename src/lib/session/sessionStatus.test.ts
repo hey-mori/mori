@@ -68,6 +68,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   stopFollow: () => {},
   setFollowError: () => {},
   updateAnalysisSettings: () => ({ ...DEFAULT_QUICK_PASS_SETTINGS }),
+  loadAnalysisSettings: () => ({ ...DEFAULT_QUICK_PASS_SETTINGS }),
   loadDesktopSession: async () => false,
   openDiscoveredSession: async () => false,
   loadBrowserSession: () => false,

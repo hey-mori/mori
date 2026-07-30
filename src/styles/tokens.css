@@ -45,6 +45,14 @@
   --base-space-9: 36px;
   --base-space-10: 40px;
 
+  /* Overlay scale · one scrim and one z-index step for anything that floats
+     above the page. Issue #17 records that overlays are currently implemented
+     six different ways, each with its own scrim colour and z-index; these are
+     the values that convergence lands on, and new overlays must use them rather
+     than inventing a seventh set. */
+  --scrim: rgba(16, 18, 27, 0.32);
+  --z-overlay: 70;
+
   /* Workspace top band · every screen's top strip is exactly this tall: the
      rail's search row, the main pane's header, and any right panel's header.
      One value so the rule under them runs unbroken across the window instead of

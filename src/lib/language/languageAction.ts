@@ -12,6 +12,13 @@
  * Korean sentence the user wants EXPLAINED was unreachable. They are now two
  * actions the caller names.
  *
+ * The answer SHAPE is adaptive, the user's ACTION is not. A word gets a part of
+ * speech, a pronunciation and collocations; a paragraph gets its argument and
+ * the few expressions worth keeping. Both are still `understand`, and nothing
+ * here can promote a selection into `express` on the engine's behalf: only the
+ * caller names the action, and `classifySelection` only picks which sections are
+ * requested.
+ *
  * The language pair is a runtime profile, not a domain fact. `ko`→`en` is the
  * first default, never an enum: `LanguageCode` is a string so adding a language
  * adds a profile, not a branch.
@@ -21,6 +28,18 @@ import {
   describeCaptureSource,
   type LanguageCaptureRequest,
 } from "./languageCapture";
+import {
+  allSectionLabels,
+  isSyntheticSection,
+  specForKey,
+  specForLabel,
+  type LanguageSectionKey,
+  type LanguageSectionSpec,
+} from "./languageSections";
+import { classifySelection, selectionKindLabel, type SelectionKind } from "./selectionKind";
+
+export type { LanguageSectionKey } from "./languageSections";
+export type { SelectionKind } from "./selectionKind";
 
 /** A language tag. Coarse today ("ko" · "en" · "unknown"), open by design. */
 export type LanguageCode = string;
@@ -41,20 +60,15 @@ export const DEFAULT_LANGUAGE_PROFILE: LanguageProfile = {
   targetLanguage: "en",
 };
 
-export type LanguageSectionKey =
-  | "translation"
-  | "meaning"
-  | "expressions"
-  | "alternatives"
-  | "difference"
-  | "nuance"
-  | "raw";
-
 export type LanguageSection = {
   key: LanguageSectionKey;
   /** Display label as the engine emitted it, e.g. "번역". */
   label: string;
   body: string;
+  /** True when the engine invented this content (an example, a suggested
+   *  alternative) rather than describing the captured text. The panel marks
+   *  these so a made-up example is never read as something from the source. */
+  synthetic: boolean;
 };
 
 export type LanguageActionResult = {
@@ -62,6 +76,8 @@ export type LanguageActionResult = {
   sections: LanguageSection[];
   /** Dominant language detected in the captured text. */
   detectedLanguage: LanguageCode;
+  /** Shape the answer was requested for. */
+  selectionKind: SelectionKind;
 };
 
 export type LanguagePrompt = {
@@ -69,25 +85,62 @@ export type LanguagePrompt = {
   userPrompt: string;
   action: "understand" | "express";
   detectedLanguage: LanguageCode;
+  selectionKind: SelectionKind;
 };
 
-/** Labels each action asks the engine to emit, in display order. */
-const UNDERSTAND_LABELS: ReadonlyArray<{ key: LanguageSectionKey; label: string }> = [
-  { key: "translation", label: "번역" },
-  { key: "meaning", label: "의미" },
-  { key: "expressions", label: "표현" },
-  { key: "nuance", label: "뉘앙스" },
+/**
+ * Which sections each selection shape asks for, in display order.
+ *
+ * These lists are the actual product decision in this file. The shape of the
+ * answer is the difference between a reference tool and a tool that teaches:
+ * a word needs its form and its company, a sentence needs its intent and its
+ * skeleton, a paragraph needs its argument and nothing else.
+ */
+const UNDERSTAND_PLAN: Readonly<Record<SelectionKind, readonly LanguageSectionKey[]>> = {
+  word: [
+    "meaning",
+    "partOfSpeech",
+    "pronunciation",
+    "context",
+    "collocations",
+    "examples",
+    "confusables",
+    "nuance",
+  ],
+  phrase: ["translation", "meaning", "literal", "pattern", "expressions", "examples", "nuance"],
+  sentence: [
+    "translation",
+    "intent",
+    "structure",
+    "grammar",
+    "expressions",
+    "pattern",
+    "nuance",
+  ],
+  // Deliberately the shortest plan. A paragraph answered section-by-section
+  // becomes a textbook page nobody reads; the useful answer is the argument
+  // plus the few expressions worth keeping.
+  paragraph: ["translation", "meaning", "expressions", "grammar"],
+};
+
+/** Expressing is producing, so the plan does not vary with what was selected:
+ *  the user's input is an intent, not a text to be dissected. */
+const EXPRESS_PLAN: readonly LanguageSectionKey[] = [
+  "expressions",
+  "alternatives",
+  "difference",
+  "nuance",
 ];
 
-const EXPRESS_LABELS: ReadonlyArray<{ key: LanguageSectionKey; label: string }> = [
-  { key: "expressions", label: "표현" },
-  { key: "alternatives", label: "대안" },
-  { key: "difference", label: "차이" },
-  { key: "nuance", label: "뉘앙스" },
-];
-
-function labelsFor(action: "understand" | "express") {
-  return action === "express" ? EXPRESS_LABELS : UNDERSTAND_LABELS;
+/** The ordered specs for one action and shape. */
+export function sectionPlan(
+  action: "understand" | "express",
+  kind: SelectionKind,
+): LanguageSectionSpec[] {
+  const keys = action === "express" ? EXPRESS_PLAN : UNDERSTAND_PLAN[kind];
+  return keys
+    .map((key) => specForKey(key))
+    .filter((spec): spec is LanguageSectionSpec => spec !== undefined);
 }
 
 /**
@@ -115,8 +168,8 @@ export function detectDominantLanguage(text: string): LanguageCode {
 
 /**
  * Build the prompt pair for the prose LLM port. The reply contract is a small
- * fixed set of labels so parsing stays a tolerant line scan rather than fragile
- * JSON, and a reply that ignores the contract still renders as one raw section.
+ * set of labels so parsing stays a tolerant line scan rather than fragile JSON,
+ * and a reply that ignores the contract still renders as one raw section.
  */
 export function buildLanguagePrompt(
   request: LanguageCaptureRequest,
@@ -125,36 +178,45 @@ export function buildLanguagePrompt(
   const text = captureText(request);
   const detectedLanguage = detectDominantLanguage(text);
   const action = request.action === "express" ? "express" : "understand";
+  // Express is always about producing one utterance, so its plan does not vary;
+  // classification still runs so the metadata reports what was actually read.
+  const selectionKind = classifySelection(text);
 
-  const rules =
+  const plan = sectionPlan(action, selectionKind);
+  const sectionRules = plan.map(
+    (spec) =>
+      `- ${spec.label}: ${spec.guidance}${spec.optional ? " (없으면 이 섹션 자체를 생략)" : ""}`,
+  );
+
+  const intro =
     action === "express"
       ? [
+          "당신은 Mori의 표현하기 도우미입니다. 사용자가 하려는 말을 상황에 맞는 표현으로 바꿔 줍니다.",
           `사용자의 생각을 ${profile.targetLanguage} 표현으로 바꾸는 것이 목표입니다.`,
-          `표현: 원어민이 실제로 쓸 법한 가장 자연스러운 ${profile.targetLanguage} 문장 하나.`,
-          "대안: 상황이 달라질 때 쓸 표현을 `- 표현: 어떤 상황에 맞는지` 형식으로 2~3개. 부드러운 요청, 명확한 업무 지시, 강한 제약처럼 서로 다른 강도를 담습니다.",
-          `차이: 각 표현이 어떻게 다르게 읽히는지 ${profile.explanationLanguage}로 짧게.`,
+          `설명은 ${profile.explanationLanguage}로 씁니다.`,
         ]
       : [
+          "당신은 Mori의 이해하기 도우미입니다. 사용자가 만난 텍스트를 문맥에 맞게 이해하도록 돕습니다.",
           `선택된 텍스트를 ${profile.explanationLanguage}로 이해시키는 것이 목표입니다.`,
-          `번역: 자연스러운 ${profile.explanationLanguage} 번역.`,
-          "의미: 이 맥락에서 실제로 뜻하는 바. 기술 용어라면 이 분야에서의 의미를 짧게.",
-          "표현: 재사용할 가치가 있는 핵심 표현을 `- 표현: 설명` 형식으로 2~4개.",
+          `사용자가 선택한 것은 ${selectionKindLabel(selectionKind)} 단위입니다. 그에 맞는 깊이로만 설명합니다.`,
         ];
 
-  const labels = labelsFor(action)
-    .map((entry) => `\`${entry.label}:\``)
-    .join(" ");
+  const labels = plan.map((spec) => `\`${spec.label}:\``).join(" ");
 
   const systemPrompt = [
-    action === "express"
-      ? "당신은 Mori의 표현하기 도우미입니다. 사용자가 하려는 말을 상황에 맞는 표현으로 바꿔 줍니다."
-      : "당신은 Mori의 이해하기 도우미입니다. 사용자가 만난 텍스트를 문맥에 맞게 이해하도록 돕습니다.",
+    ...intro,
+    "",
+    "다음 섹션만, 이 순서로 씁니다:",
+    ...sectionRules,
+    "",
     "규칙:",
-    ...rules.map((rule) => `- ${rule}`),
-    "- 뉘앙스: 어조가 실제로 중요할 때만 추가하고, 아니면 생략합니다.",
-    `- 답변은 반드시 ${labels} 라벨로 시작하는 섹션들로만 구성합니다.`,
+    `- 답변은 ${labels} 라벨로 시작하는 섹션들로만 구성합니다.`,
+    "- 해당 없는 섹션은 억지로 채우지 말고 통째로 생략합니다. 빈 섹션이나 '없음'이라고 쓰지 않습니다.",
     "- 간결하게 씁니다. 인사말, 서론, 마무리 문장을 쓰지 않습니다.",
     "- 모르는 것을 지어내지 않습니다. 문맥이 부족하면 그렇게 말합니다.",
+    // The engine is told the provenance rule too, not just the UI: an example
+    // presented as a quotation from the source is the failure mode that matters.
+    "- 예문과 대안은 새로 만든 예시입니다. 원문에 있던 문장인 것처럼 쓰지 않습니다.",
   ].join("\n");
 
   // Only context that was actually acquired reaches the prompt, so the engine is
@@ -164,30 +226,37 @@ export function buildLanguagePrompt(
   const bodyLabel = action === "express" ? "사용자가 하려는 말" : "선택된 텍스트";
   const userPrompt = `${contextLine}${bodyLabel}:\n"""\n${text}\n"""`;
 
-  return { systemPrompt, userPrompt, action, detectedLanguage };
+  return { systemPrompt, userPrompt, action, detectedLanguage, selectionKind };
 }
 
-const SECTION_LINE =
-  /^\s*(?:#{1,4}\s*)?(?:\*\*)?(번역|의미|표현|대안|차이|뉘앙스)(?:\*\*)?\s*[:：]\s*(.*)$/;
+/** Escape a label for use inside the section-line pattern. */
+function escapeForRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-const KEY_BY_LABEL: ReadonlyMap<string, LanguageSectionKey> = new Map([
-  ["번역", "translation"],
-  ["의미", "meaning"],
-  ["표현", "expressions"],
-  ["대안", "alternatives"],
-  ["차이", "difference"],
-  ["뉘앙스", "nuance"],
-]);
+/**
+ * A line that opens a section. Built from the catalogue rather than hardcoded so
+ * a section added to the table is parseable without touching this file, which is
+ * how the fixed four-label version used to lose new sections silently.
+ */
+function sectionLinePattern(): RegExp {
+  const labels = allSectionLabels().map(escapeForRegex).join("|");
+  return new RegExp(`^\\s*(?:#{1,4}\\s*)?(?:\\*\\*)?(${labels})(?:\\*\\*)?\\s*[:：]\\s*(.*)$`);
+}
+
+const SECTION_LINE = sectionLinePattern();
 
 /**
  * Parse a prose reply into labeled sections. Tolerant by design: labels may use
- * markdown headings or bold, and a reply that ignores the contract entirely
- * still renders as one raw section rather than disappearing.
+ * markdown headings or bold, an aliased label still resolves, and a reply that
+ * ignores the contract entirely still renders as one raw section rather than
+ * disappearing.
  */
 export function parseLanguageResponse(
   text: string,
   action: "understand" | "express",
   detectedLanguage: LanguageCode = "unknown",
+  selectionKind: SelectionKind = "sentence",
 ): LanguageActionResult {
   const sections: LanguageSection[] = [];
   let current: LanguageSection | null = null;
@@ -196,29 +265,42 @@ export function parseLanguageResponse(
     const match = SECTION_LINE.exec(line);
     if (match) {
       const label = match[1];
-      current = { key: KEY_BY_LABEL.get(label) ?? "raw", label, body: match[2].trim() };
+      const spec = specForLabel(label);
+      current = {
+        key: spec?.key ?? "raw",
+        // The canonical label wins when the engine used an alias, so the panel
+        // is consistent no matter which wording came back.
+        label: spec?.label ?? label,
+        body: match[2].trim(),
+        synthetic: spec ? isSyntheticSection(spec.key) : false,
+      };
       sections.push(current);
       continue;
     }
     if (current) {
       current.body = current.body ? `${current.body}\n${line.trimEnd()}` : line.trim();
     } else if (line.trim()) {
-      current = { key: "raw", label: "설명", body: line.trim() };
+      current = { key: "raw", label: "설명", body: line.trim(), synthetic: false };
       sections.push(current);
     }
   }
 
   const cleaned = sections
     .map((section) => ({ ...section, body: section.body.trim() }))
+    // An engine that emitted a heading with nothing under it said nothing, and
+    // an empty section reads as a missing answer rather than an omitted one.
     .filter((section) => section.body.length > 0);
 
   if (cleaned.length === 0) {
     const fallback = text.trim();
     return {
       action,
-      sections: fallback ? [{ key: "raw", label: "설명", body: fallback }] : [],
+      sections: fallback
+        ? [{ key: "raw", label: "설명", body: fallback, synthetic: false }]
+        : [],
       detectedLanguage,
+      selectionKind,
     };
   }
-  return { action, sections: cleaned, detectedLanguage };
+  return { action, sections: cleaned, detectedLanguage, selectionKind };
 }

@@ -94,6 +94,12 @@ export type FeatureId =
   | "memory.provisional"
   // Understand (contextual capability)
   | "understand.selection"
+  | "language.directInput"
+  | "language.adaptiveSections"
+  | "language.consentGate"
+  | "language.globalCapture"
+  | "language.overlay"
+  | "language.remember"
   // Start Session
   | "startSession.savePersistedDraft"
   | "startSession.sourceTileSelection"
@@ -269,7 +275,19 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "memory.globalHub", label: "Global memory hub", status: "unavailable", description: "The memory surface: search across every project scope, lifecycle segments, scope chips, and a provenance inspector.", disabledReason: "이 화면으로 가는 경로가 없습니다. 인용된 기억은 검색으로 엽니다.", userFacingStatus: "사용 불가 · 여는 경로가 없습니다." },
   { id: "memory.autoOrganize", label: "Auto-organize (provisional memory)", status: "partial", description: "Confirmed decisions auto-organize into provisional memory under the governance policy; other kinds go to review. Real-desktop-data validation pending; mode is default-auto, not yet user-settable.", userFacingStatus: "부분 구현 · 확정 결정만 자동 정리; 실제 데이터 검증·정책 설정 예정." },
   { id: "memory.provisional", label: "Provisional memory status", status: "implemented", description: "Auto-created, marked (잠정), recallable, reversible, audited; never resume- or report-eligible, so it does not cross an external boundary until confirmed.", userFacingStatus: "구현 완료 · 잠정 기억은 회상 가능하지만 외부 출력에는 미포함." },
-  { id: "understand.selection", label: "Understand selected text", status: "implemented", description: "Select text in a reading surface → 이해하기 in the Context Inspector (translation, contextual meaning, expressions). Read-only; engine via the shared provider seam, honest no-engine state.", userFacingStatus: "구현 완료 · 선택 → 이해; 저장(기억하기)은 예정." },
+  // ─────────────────────────── Language Loop ─────────────────────
+  // Scope and platform boundary: docs/design/language-loop.md.
+  { id: "understand.selection", label: "Understand selected text (in Mori)", status: "implemented", description: "Adapter 1. Select text in a reading surface → 이해하기 in the Context Inspector. Read-only; engine via the shared provider seam, honest no-engine state.", userFacingStatus: "구현 완료 · 선택 → 이해; 저장(기억하기)은 예정." },
+  { id: "language.directInput", label: "Language tool (direct input)", status: "implemented", description: "Adapter 2 and the universal fallback. ⌘K → 언어 도구 열기; understand and express, no permission and no native dependency.", userFacingStatus: "구현 완료 · ⌘K에서 이해하기·표현하기." },
+  { id: "language.adaptiveSections", label: "Answer shape by selection size", status: "implemented", description: "Word / phrase / sentence / paragraph each request a different section plan (pronunciation and collocations for a word, intent and structure for a sentence). Engine-invented sections are flagged synthetic and labelled.", userFacingStatus: "구현 완료 · 단어·구문·문장·문단에 따라 설명 구성이 달라집니다." },
+  { id: "language.consentGate", label: "External-provider consent gate", status: "implemented", description: "Evaluated before any prompt is sent. Local and fixture pass; cloud and unknown require an explicit grant; secure input and blocked apps outrank every grant. A grant that could not be persisted is reported as run-scoped, never as permanent.", userFacingStatus: "구현 완료 · 외부 전송 전에 반드시 확인합니다." },
+  // Verified against a live desktop: UI Automation reads a WPF text control's
+  // selection; a Win32 EDIT control exposes no Text pattern and falls to the
+  // clipboard path. Partial because the overlay's on-screen behaviour has not
+  // been driven end to end by an automated check.
+  { id: "language.globalCapture", label: "Global selection capture (Windows)", status: "partial", description: "Adapter 3. CmdOrCtrl+Shift+E reads the focused app's selection via UI Automation, with an explicit clipboard fallback that saves and restores the clipboard. Secure input blocks every path. Windows only; macOS is a follow-up adapter behind the same seam.", disabledReason: "Windows 데스크톱 앱에서만 동작합니다.", userFacingStatus: "부분 구현 · Windows에서 단축키로 다른 앱의 선택을 읽습니다; 일부 구형 앱은 클립보드 방식으로 넘어갑니다." },
+  { id: "language.overlay", label: "Global mini overlay", status: "partial", description: "A borderless always-on-top window hosting the same result surface as the in-app dialog, placed near the selection and clamped to the monitor under the pointer. Placement is unit-tested; live on-screen behaviour is manually verified only.", disabledReason: "데스크톱 런타임(Tauri)이 필요합니다.", userFacingStatus: "부분 구현 · 데스크톱에서만; 화면 배치는 수동 확인 단계입니다." },
+  { id: "language.remember", label: "Remember an expression (L2)", status: PLANNED, description: "Save a useful expression or correction as personal-scope memory with provenance back to the capture. Blocked on the SQLite source-of-truth promotion (issue #12); no partial save control ships before it.", disabledReason: "저장 기반(SQLite 승격)이 선행되어야 합니다." },
   // ─────────────────────────── Start Session ─────────────────────
   { id: "startSession.savePersistedDraft", label: "Save persisted draft", status: "implemented", description: "Persist the new session draft locally." },
   { id: "startSession.sourceTileSelection", label: "Source tile selection", status: "implemented", description: "Choose which sources to scope the session to. Selection is persisted in the session draft and restored on return." },

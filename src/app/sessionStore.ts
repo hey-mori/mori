@@ -471,6 +471,12 @@ export type SessionState = {
    */
   pruneAutoImportedSessions: (keepIds: ReadonlySet<string>) => string[];
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
+  /**
+   * Load only the engine settings, for a window that renders no app shell and
+   * therefore never runs the full `hydrate`. Also registers the endpoint with
+   * the native bridge allowlist.
+   */
+  loadAnalysisSettings: () => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
   /**
    * Open an auto-registered (discovered) session by loading its real transcript
@@ -1415,6 +1421,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     void syncLlmAllowedEndpoints(next);
     set({ analysisSettings: next });
     return next;
+  },
+  loadAnalysisSettings: () => {
+    // Just the engine slice of `hydrate`. The language overlay is a second
+    // window that renders no app shell and therefore never calls `hydrate`; it
+    // was consequently running on DEFAULT_QUICK_PASS_SETTINGS and reporting
+    // "no engine" while the main window had Ollama configured and working.
+    const settings = getRepository().loadQuickPassSettings();
+    // Registering the origin matters as much as reading the settings: the
+    // native bridge rejects any endpoint that is not on the allowlist, and the
+    // allowlist is only populated by whichever window hydrated.
+    void syncLlmAllowedEndpoints(settings);
+    set({ analysisSettings: settings });
+    return settings;
   },
   markPersistedToDesktop: () => {
     if (!get().draft) return;

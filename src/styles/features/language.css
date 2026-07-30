@@ -86,7 +86,8 @@
 .language-dialog-layer {
   position: fixed;
   inset: 0;
-  z-index: 70;
+  /* Shared overlay scale, not a bespoke value · see issue #17 and tokens.css. */
+  z-index: var(--z-overlay);
   display: grid;
   place-items: start center;
   padding: 12vh 16px 16px;
@@ -96,7 +97,7 @@
 .language-dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(16, 18, 27, 0.32);
+  background: var(--scrim);
   pointer-events: auto;
 }
 
@@ -224,6 +225,28 @@
   font-size: 10.5px;
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard hints · quiet by default, because they are a reminder for the second
+   use rather than an instruction for the first. */
+.language-composer-keys {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: -2px 0 0;
+  font-size: 10px;
+  color: var(--muted-2);
+}
+
+.language-composer-keys kbd {
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-soft);
+  font: inherit;
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--muted);
 }
 
 .language-composer-pair {
@@ -482,4 +505,227 @@
 .language-retry:hover {
   border-color: var(--purple);
   color: var(--purple);
+}
+
+/* Engine-authored content · an invented example must never read as a quotation
+   from the source the user selected. Calm, not alarming: this is a provenance
+   note, not a warning. */
+.language-section-synthetic {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--gray-50);
+  color: var(--muted-2);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* ── Consent gate · shown INSTEAD of a result, never beside one ─────────────
+   Nothing has been sent when this is on screen, which is what the copy says. */
+.language-consent,
+.language-blocked {
+  display: grid;
+  gap: 7px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-soft);
+}
+
+.language-consent-head,
+.language-blocked-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.language-consent-head {
+  color: var(--color-warning-foreground);
+}
+
+.language-consent-body,
+.language-blocked-body {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.language-consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.language-consent-allow {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel, #fff);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.language-consent-allow:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+/* The broadest choice is not the loudest one: a lasting allow should not be the
+   most attractive button on the panel. */
+.language-consent-allow.is-broad {
+  color: var(--muted);
+}
+
+.language-consent-block {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted-2);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.language-consent-block:hover {
+  color: var(--red);
+}
+
+/* ── Global mini overlay · a borderless native window over another app ──────
+   Sized by the window, not by a viewport unit: this is its own 400px window and
+   `vh` here would measure that window, not the screen. */
+.language-overlay {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  background: var(--panel, #fff);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 22px 60px rgba(16, 18, 27, 0.28);
+}
+
+.language-overlay-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px 9px 12px;
+  border-bottom: 1px solid var(--line);
+  /* The whole strip drags the window; the close button opts back out below. */
+  cursor: grab;
+}
+
+.language-overlay-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.language-overlay-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-2);
+  /* Overrides the header's grab cursor: these are buttons, not drag handles. */
+  cursor: pointer;
+}
+
+.language-overlay-icon:hover:not(:disabled) {
+  background: var(--panel-soft);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.language-overlay-icon:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.language-overlay-icon.is-on {
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.language-overlay-icon:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 1px;
+}
+
+.language-overlay-body {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.language-overlay-empty,
+.language-overlay-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.language-overlay-clipboard {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel, #fff);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.language-overlay-clipboard:hover:not(:disabled) {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.language-overlay-clipboard:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The overlay window has no app shell, so the root must not reserve its layout. */
+:root[data-surface="language-overlay"],
+:root[data-surface="language-overlay"] body,
+:root[data-surface="language-overlay"] #root {
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
 }
