@@ -45,7 +45,7 @@ export function LanguageComposer() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [purpose, setPurpose] = useState("");
 
-  const { state, provider, retry } = useLanguageAction(request, profile);
+  const { state, provider, retry, allowProvider } = useLanguageAction(request, profile);
   const running = state.phase === "loading";
   const trimmed = draft.trim();
 
@@ -170,6 +170,7 @@ export function LanguageComposer() {
             setRequest((current) => (current ? { ...current, action } : current))
           }
           onRetry={retry}
+          onAllowProvider={allowProvider}
         />
       ) : (
         <p className="language-composer-hint">

@@ -1,21 +1,29 @@
 /**
  * Language action runner · drives one capture through a provider, with honest
- * states, real cancellation, and full run metadata. Owns no UI shell.
+ * states, real cancellation, a consent gate, and full run metadata. Owns no UI.
  *
  * Surface-independent by design: it takes a `LanguageCaptureRequest` (which
- * already hides whether the text came from a DOM selection, direct input, or a
- * future OS selection) and returns state. The Context Inspector and the
- * language dialog render it today; the global overlay will render the same
- * states without this hook changing.
+ * already hides whether the text came from a DOM selection, direct input, or an
+ * OS selection) and returns state. The Context Inspector, the language dialog,
+ * and the global overlay all render the same states.
  *
- * Cancellation is real, not a flag: each run gets an `AbortController`, so a
- * superseded request (the user switched action, edited the input, or closed the
- * surface) is aborted and can never land on top of a newer one.
+ * Two properties this hook is responsible for, and the reasons they are here
+ * rather than in a surface:
+ *
+ *  - **Cancellation is real, not a flag.** Each run gets an `AbortController`, so
+ *    a superseded request (the user switched action, edited the input, closed
+ *    the surface) is aborted and can never land on top of a newer one. A run is
+ *    additionally stamped with a monotonic id, because an abort signal does not
+ *    stop a promise that already resolved a microtask earlier.
+ *  - **Consent gates execution, not display.** The check happens BEFORE
+ *    `execute`, so a cloud provider cannot receive text while the UI is still
+ *    deciding what to render. Secure input and blocked apps are refused ahead of
+ *    any grant.
  *
  * Running an action never persists anything. Retention stays whatever the
  * capture asked for, and `ephemeral` is the default everywhere.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSessionStore } from "../../app/sessionStore";
 import { createAskMoriLlmFromSettings } from "../../lib/ask-mori";
 import {
@@ -28,6 +36,12 @@ import {
   hasActionableText,
   type LanguageCaptureRequest,
 } from "../../lib/language/languageCapture";
+import { evaluateConsent, type ConsentScope } from "../../lib/language/languageConsent";
+import {
+  grantConsent,
+  isAppBlocked,
+  listGrants,
+} from "../../lib/language/consentStore";
 import {
   classifyProviderError,
   processingLocationLabel,
@@ -44,6 +58,10 @@ export type LanguageActionState =
   | { phase: "idle" }
   | { phase: "no-text" }
   | { phase: "no-engine" }
+  /** A cloud or unknown-location provider needs an explicit allow first. */
+  | { phase: "consent-required"; provider: LanguageProviderInfo; applicationId?: string }
+  /** A hard block. No grant can lift it and no retry is offered. */
+  | { phase: "blocked"; reason: "secure-input" | "blocked-app"; applicationId?: string }
   | { phase: "loading" }
   | { phase: "done"; run: LanguageRun }
   | { phase: "error"; message: string; kind: string };
@@ -75,6 +93,13 @@ function resolveProvider(
   return isFixtureProviderAvailable() ? createFixtureProvider() : null;
 }
 
+/** The app a capture came from, used as the consent and blocklist key. The
+ *  process name is preferred over a display name because it does not change
+ *  with the document being read. */
+function applicationIdOf(request: LanguageCaptureRequest): string | undefined {
+  return request.context.processName ?? request.context.appName;
+}
+
 export function useLanguageAction(
   request: LanguageCaptureRequest | null,
   profile: LanguageProfile = DEFAULT_LANGUAGE_PROFILE,
@@ -82,12 +107,33 @@ export function useLanguageAction(
   state: LanguageActionState;
   provider: LanguageProviderInfo | null;
   retry: () => void;
+  /** Record an allow and immediately re-run. Only reachable from the
+   *  consent-required state, and never for a blocked capture. */
+  allowProvider: (scope: ConsentScope) => void;
 } {
   const settings = useSessionStore((state) => state.analysisSettings);
   const [state, setState] = useState<LanguageActionState>({ phase: "idle" });
   const [attempt, setAttempt] = useState(0);
   const retry = useCallback(() => setAttempt((count) => count + 1), []);
   const provider = resolveProvider(settings);
+
+  // Monotonic run id. `AbortController` stops a fetch, but a provider that
+  // already resolved cannot be un-resolved; comparing ids on the way in is what
+  // actually prevents a late reply from overwriting a newer one.
+  const runIdRef = useRef(0);
+
+  const allowProvider = useCallback(
+    (scope: ConsentScope) => {
+      if (state.phase !== "consent-required") return;
+      grantConsent({
+        providerId: state.provider.providerId,
+        scope,
+        applicationId: state.applicationId,
+      });
+      setAttempt((count) => count + 1);
+    },
+    [state],
+  );
 
   useEffect(() => {
     if (!request) {
@@ -104,7 +150,31 @@ export function useLanguageAction(
       return;
     }
 
+    const applicationId = applicationIdOf(request);
+    // Evaluated before anything is built or sent. The two hard blocks are
+    // checked inside `evaluateConsent` ahead of any grant.
+    const decision = evaluateConsent(
+      {
+        providerId: active.info.providerId,
+        processingLocation: active.info.processingLocation,
+        applicationId,
+        isSecureInput: request.context.isSecureInput,
+        isBlockedApp: isAppBlocked(applicationId),
+      },
+      listGrants(),
+    );
+
+    if (decision.outcome === "blocked") {
+      setState({ phase: "blocked", reason: decision.reason, applicationId });
+      return;
+    }
+    if (decision.outcome === "ask") {
+      setState({ phase: "consent-required", provider: active.info, applicationId });
+      return;
+    }
+
     const controller = new AbortController();
+    const runId = ++runIdRef.current;
     setState({ phase: "loading" });
     const prompt = buildLanguagePrompt(request, profile);
     const startedAt = new Date();
@@ -116,12 +186,17 @@ export function useLanguageAction(
         signal: controller.signal,
       })
       .then((reply) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || runId !== runIdRef.current) return;
         const completedAt = new Date();
         setState({
           phase: "done",
           run: {
-            result: parseLanguageResponse(reply, prompt.action, prompt.detectedLanguage),
+            result: parseLanguageResponse(
+              reply,
+              prompt.action,
+              prompt.detectedLanguage,
+              prompt.selectionKind,
+            ),
             metadata: {
               providerId: active.info.providerId,
               providerDisplayName: active.info.providerDisplayName,
@@ -136,12 +211,13 @@ export function useLanguageAction(
               explanationLanguage: profile.explanationLanguage,
               captureOrigin: request.origin,
               acquiredBy: request.context.acquiredBy,
+              selectionKind: prompt.selectionKind,
             },
           },
         });
       })
       .catch((error) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || runId !== runIdRef.current) return;
         const classified = classifyProviderError(error);
         setState({ phase: "error", message: classified.message, kind: classified.kind });
       });
@@ -151,7 +227,7 @@ export function useLanguageAction(
     return () => controller.abort();
   }, [request, profile, settings, attempt]);
 
-  return { state, provider: provider?.info ?? null, retry };
+  return { state, provider: provider?.info ?? null, retry, allowProvider };
 }
 
 export { processingLocationLabel };

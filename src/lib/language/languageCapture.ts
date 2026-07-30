@@ -72,6 +72,10 @@ export type CapturedLanguageContext = {
   acquiredBy: string;
   /** Adapter's confidence that the capture is what the user meant (0..1). */
   confidence?: number;
+  /** The adapter observed a password or otherwise secure field. Carried so the
+   *  consent gate can refuse even if a capture somehow reached it, rather than
+   *  relying on the native side having been the only guard. */
+  isSecureInput?: boolean;
 };
 
 /** What the user wants done with the captured language. */

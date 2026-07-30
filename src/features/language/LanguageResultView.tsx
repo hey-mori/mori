@@ -14,7 +14,7 @@
  * went to a cloud vendor, is exactly what the product forbids.
  */
 import { useState } from "react";
-import { Check, Copy, Languages, PenLine, RotateCcw } from "lucide-react";
+import { Check, Copy, Languages, Lock, PenLine, RotateCcw, ShieldAlert } from "lucide-react";
 import {
   captureText,
   describeCaptureSource,
@@ -24,6 +24,8 @@ import {
   processingLocationLabel,
   type LanguageProviderInfo,
 } from "../../lib/language/languageProvider";
+import { selectionKindLabel } from "../../lib/language/selectionKind";
+import type { ConsentScope } from "../../lib/language/languageConsent";
 import type { LanguageActionState } from "./useLanguageAction";
 
 /** Plain-Korean label for how the text was obtained. Never hidden: a fallback
@@ -49,12 +51,18 @@ export function LanguageResultView({
   provider,
   onSelectAction,
   onRetry,
+  onAllowProvider,
+  onBlockApp,
 }: {
   request: LanguageCaptureRequest;
   state: LanguageActionState;
   provider: LanguageProviderInfo | null;
   onSelectAction: (action: "understand" | "express") => void;
   onRetry: () => void;
+  /** Absent in surfaces that cannot grant consent; the prompt then explains
+   *  where to allow it instead of offering a button that does nothing. */
+  onAllowProvider?: (scope: ConsentScope) => void;
+  onBlockApp?: (applicationId: string) => void;
 }) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const text = captureText(request);
@@ -63,6 +71,7 @@ export function LanguageResultView({
   const action = request.action === "express" ? "express" : "understand";
   const metadata = state.phase === "done" ? state.run.metadata : null;
   const location = metadata?.processingLocation ?? provider?.processingLocation ?? "unknown";
+  const applicationId = request.context.processName ?? request.context.appName;
 
   const copy = (key: string, body: string) => {
     void navigator.clipboard
@@ -97,6 +106,7 @@ export function LanguageResultView({
           <span className={`language-engine is-${location}`}>
             {processingLocationLabel(location)}
           </span>
+          {metadata ? <span>{selectionKindLabel(metadata.selectionKind)}</span> : null}
           {metadata ? <span>{metadata.latencyMs.toLocaleString()}ms</span> : null}
           {request.retentionIntent === "ephemeral" ? <span>일회성 처리</span> : null}
         </p>
@@ -131,7 +141,69 @@ export function LanguageResultView({
         ) : null}
       </div>
 
-      {state.phase === "no-engine" ? (
+      {state.phase === "blocked" ? (
+        <div className="language-blocked" role="alert">
+          <p className="language-blocked-head">
+            <Lock size={13} aria-hidden="true" />
+            {state.reason === "secure-input"
+              ? "비밀번호 입력란입니다. 읽지 않았습니다."
+              : `${state.applicationId ?? "이 앱"}에서는 사용하지 않도록 설정했습니다.`}
+          </p>
+          <p className="language-blocked-body">
+            {state.reason === "secure-input"
+              ? "보안 입력란의 내용은 어떤 경우에도 엔진으로 보내지 않습니다."
+              : "설정에서 이 앱의 차단을 해제하면 다시 사용할 수 있습니다."}
+          </p>
+        </div>
+      ) : state.phase === "consent-required" ? (
+        <div className="language-consent" role="alert">
+          <p className="language-consent-head">
+            <ShieldAlert size={13} aria-hidden="true" />
+            {state.provider.providerDisplayName}은(는) 외부로 전송됩니다.
+          </p>
+          <p className="language-consent-body">
+            선택한 텍스트가 이 기기를 떠납니다. 허용하기 전에는 아무것도 보내지 않았습니다.
+          </p>
+          {onAllowProvider ? (
+            <div className="language-consent-actions">
+              <button
+                type="button"
+                className="language-consent-allow"
+                onClick={() => onAllowProvider("once")}
+              >
+                이번만 허용
+              </button>
+              <button
+                type="button"
+                className="language-consent-allow"
+                onClick={() => onAllowProvider("session")}
+              >
+                이번 실행 동안 허용
+              </button>
+              <button
+                type="button"
+                className="language-consent-allow is-broad"
+                onClick={() => onAllowProvider("provider")}
+              >
+                이 엔진 계속 허용
+              </button>
+            </div>
+          ) : (
+            <p className="language-consent-body">
+              설정에서 이 엔진의 외부 전송을 허용할 수 있습니다.
+            </p>
+          )}
+          {onBlockApp && applicationId ? (
+            <button
+              type="button"
+              className="language-consent-block"
+              onClick={() => onBlockApp(applicationId)}
+            >
+              {applicationId}에서는 사용 안 함
+            </button>
+          ) : null}
+        </div>
+      ) : state.phase === "no-engine" ? (
         <p className="language-empty">
           연결된 분석 엔진이 없습니다. 설정에서 Ollama 또는 OpenAI 호환 엔진을 연결하면
           이해와 표현을 사용할 수 있습니다.
@@ -165,6 +237,11 @@ export function LanguageResultView({
               <li key={key} className="language-section">
                 <p className="language-section-label">
                   {section.label}
+                  {/* An invented example must never read as a quotation from the
+                      source the user selected. */}
+                  {section.synthetic ? (
+                    <span className="language-section-synthetic">엔진이 만든 예시</span>
+                  ) : null}
                   <button
                     type="button"
                     className="language-copy"
