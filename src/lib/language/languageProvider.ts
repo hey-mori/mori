@@ -47,6 +47,11 @@ export type LanguageRunMetadata = {
   explanationLanguage: string;
   captureOrigin: string;
   acquiredBy: string;
+  /** Where the latency went, when the provider reported it. */
+  timing?: LanguageRunTiming;
+  /** Wall-clock from request start to the first visible text. The number that
+   *  actually describes how fast this felt, as distinct from `latencyMs`. */
+  firstChunkMs?: number;
   /** Which answer shape was requested. Recorded so a surprising answer can be
    *  traced to the classification that produced it. */
   selectionKind: SelectionKind;
@@ -103,7 +108,27 @@ export type LanguageProvider = {
     systemPrompt: string;
     userPrompt: string;
     signal?: AbortSignal;
+    /** Present when the surface wants partial text. A provider that cannot
+     *  stream simply never calls it and returns the whole answer at the end. */
+    onChunk?: (delta: string) => void;
+    maxOutputTokens?: number;
+    onTiming?: (timing: LanguageRunTiming) => void;
   }) => Promise<string>;
+};
+
+/** What a run cost, when the provider reports it. Milliseconds.
+ *
+ *  Kept separate from `LanguageRunMetadata` because it is optional and
+ *  provider-specific: only Ollama currently distinguishes model load from
+ *  prompt evaluation from generation, and that split is the whole reason to
+ *  record it (a slow load and a slow generation need different fixes). */
+export type LanguageRunTiming = {
+  loadMs?: number;
+  promptEvalMs?: number;
+  generationMs?: number;
+  totalMs?: number;
+  promptTokens?: number;
+  outputTokens?: number;
 };
 
 /** Plain-Korean label for where processing happened. */

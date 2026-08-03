@@ -58,12 +58,55 @@ export type AskMoriPrompt = {
   userPrompt: string;
 };
 
+/** Timing a call reported, when the provider exposes it. Milliseconds. */
+export type AskMoriLlmTiming = {
+  /** Model load. Non-zero on Ollama even when the model is resident. */
+  loadMs?: number;
+  promptEvalMs?: number;
+  generationMs?: number;
+  totalMs?: number;
+  promptTokens?: number;
+  outputTokens?: number;
+};
+
+/**
+ * Per-call options.
+ *
+ * This exists because the port previously had nowhere to put either of these.
+ * `useLanguageAction` built a real `AbortController` and the signal had no
+ * parameter to travel in, so `askMoriLlm` made its own timeout controller and
+ * the UI's cancellation never reached `fetch`: switching selections left the
+ * previous generation running to completion.
+ */
+export type AskMoriLlmOptions = {
+  /** The caller's cancellation. Combined with the provider's timeout, not
+   *  replaced by it, so whichever fires first wins. */
+  signal?: AbortSignal;
+  /**
+   * Called with each new piece of text as it arrives. Providing this asks the
+   * provider to stream; omitting it keeps the single-shot behaviour Ask Mori
+   * relies on, so this stays backwards compatible.
+   */
+  onChunk?: (delta: string) => void;
+  /** Cap on generated tokens. A translation does not need a long budget, and
+   *  output length is the dominant cost once the model is warm. */
+  maxOutputTokens?: number;
+  /** Reported once the call completes, when the provider knows them. */
+  onTiming?: (timing: AskMoriLlmTiming) => void;
+};
+
 /**
  * Injected LLM port. Takes the grounded prompt, returns raw model text.
  * Absent → the orchestrator uses the deterministic fallback. A thrown
  * error also degrades to the fallback (honestly labeled).
+ *
+ * `options` is optional so every existing single-argument caller still
+ * type-checks and behaves exactly as before.
  */
-export type AskMoriLlm = (prompt: AskMoriPrompt) => Promise<string>;
+export type AskMoriLlm = (
+  prompt: AskMoriPrompt,
+  options?: AskMoriLlmOptions,
+) => Promise<string>;
 
 export type AskMoriAnswer = {
   question: string;

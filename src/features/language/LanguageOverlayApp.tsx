@@ -42,6 +42,7 @@ import {
   type OverlayPayload,
 } from "../../lib/language/nativeCapture";
 import { blockApp } from "../../lib/language/consentStore";
+import { prewarmLanguageModel } from "../../lib/language/prewarm";
 import { useSessionStore } from "../../app/sessionStore";
 import { LanguageComposer } from "./LanguageComposer";
 import { LanguageResultView } from "./LanguageResultView";
@@ -72,7 +73,10 @@ export function LanguageOverlayApp() {
   // engine configured, and it also missed the native bridge's endpoint
   // allowlist, which would have rejected the request even once found.
   useEffect(() => {
-    useSessionStore.getState().loadAnalysisSettings();
+    const settings = useSessionStore.getState().loadAnalysisSettings();
+    // Pay the model load before the user asks. Measured cold: 9.9s of a 10.7s
+    // first call was the load alone. Not awaited: the overlay must paint now.
+    void prewarmLanguageModel(settings);
   }, []);
 
   const dismiss = useCallback(() => {
