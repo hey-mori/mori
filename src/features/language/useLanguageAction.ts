@@ -30,7 +30,9 @@ import {
   buildLanguagePrompt,
   parseLanguageResponse,
   DEFAULT_LANGUAGE_PROFILE,
+  type LanguageActionResult,
   type LanguageProfile,
+  type SelectionKind,
 } from "../../lib/language/languageAction";
 import {
   hasActionableText,
@@ -48,6 +50,7 @@ import {
   type LanguageProvider,
   type LanguageProviderInfo,
   type LanguageRun,
+  type LanguageRunTiming,
 } from "../../lib/language/languageProvider";
 import {
   createFixtureProvider,
@@ -63,6 +66,9 @@ export type LanguageActionState =
   /** A hard block. No grant can lift it and no retry is offered. */
   | { phase: "blocked"; reason: "secure-input" | "blocked-app"; applicationId?: string }
   | { phase: "loading" }
+  /** Text is arriving. `partial` is parsed on every chunk so completed sections
+   *  render while the rest is still generating, rather than after. */
+  | { phase: "streaming"; partial: LanguageActionResult }
   | { phase: "done"; run: LanguageRun }
   | { phase: "error"; message: string; kind: string };
 
@@ -87,10 +93,35 @@ function resolveProvider(
         // secret can not reach result metadata or a diagnostics view.
         model: (isLocal ? settings?.ollamaModel : settings?.openAiModel) || undefined,
       },
-      execute: ({ systemPrompt, userPrompt }) => llm({ systemPrompt, userPrompt }),
+      // Every option is forwarded, including the signal. The old version
+      // destructured only the prompts, so the caller's cancellation had
+      // nowhere to go and a superseded generation ran to completion.
+      execute: ({ systemPrompt, userPrompt, signal, onChunk, maxOutputTokens, onTiming }) =>
+        llm({ systemPrompt, userPrompt }, { signal, onChunk, maxOutputTokens, onTiming }),
     };
   }
   return isFixtureProviderAvailable() ? createFixtureProvider() : null;
+}
+
+/**
+ * Output budget by how much was selected.
+ *
+ * Output length is the dominant cost once a model is warm: on this hardware
+ * generation ran ~400ms for a 23-token translation and 13s for a full
+ * multi-section explanation. Capping by selection size keeps a word lookup from
+ * being billed like an essay.
+ */
+function outputBudgetFor(kind: SelectionKind): number {
+  switch (kind) {
+    case "word":
+      return 320;
+    case "phrase":
+      return 400;
+    case "sentence":
+      return 560;
+    default:
+      return 700;
+  }
 }
 
 /** The app a capture came from, used as the consent and blocklist key. The
@@ -179,11 +210,35 @@ export function useLanguageAction(
     const prompt = buildLanguagePrompt(request, profile);
     const startedAt = new Date();
 
+    let streamed = "";
+    let firstChunkMs: number | undefined;
+    let timing: LanguageRunTiming | undefined;
+
     active
       .execute({
         systemPrompt: prompt.systemPrompt,
         userPrompt: prompt.userPrompt,
         signal: controller.signal,
+        maxOutputTokens: outputBudgetFor(prompt.selectionKind),
+        onTiming: (reported) => {
+          timing = reported;
+        },
+        onChunk: (delta) => {
+          // Guarded like the final result: a chunk from a superseded run must
+          // not paint over the newer one.
+          if (controller.signal.aborted || runId !== runIdRef.current) return;
+          if (firstChunkMs === undefined) firstChunkMs = Date.now() - startedAt.getTime();
+          streamed += delta;
+          setState({
+            phase: "streaming",
+            partial: parseLanguageResponse(
+              streamed,
+              prompt.action,
+              prompt.detectedLanguage,
+              prompt.selectionKind,
+            ),
+          });
+        },
       })
       .then((reply) => {
         if (controller.signal.aborted || runId !== runIdRef.current) return;
@@ -212,6 +267,8 @@ export function useLanguageAction(
               captureOrigin: request.origin,
               acquiredBy: request.context.acquiredBy,
               selectionKind: prompt.selectionKind,
+              timing,
+              firstChunkMs,
             },
           },
         });

@@ -72,6 +72,15 @@ export function LanguageResultView({
   const metadata = state.phase === "done" ? state.run.metadata : null;
   const location = metadata?.processingLocation ?? provider?.processingLocation ?? "unknown";
   const applicationId = request.context.processName ?? request.context.appName;
+  const streaming = state.phase === "streaming";
+  // One section list for both phases: a partial answer and a finished one are
+  // the same shape, so rendering them twice would let them drift apart.
+  const sections =
+    state.phase === "done"
+      ? state.run.result.sections
+      : state.phase === "streaming" && state.partial.sections.length > 0
+        ? state.partial.sections
+        : null;
 
   const copy = (key: string, body: string) => {
     void navigator.clipboard
@@ -229,37 +238,63 @@ export function LanguageResultView({
         </div>
       ) : state.phase === "done" && state.run.result.sections.length === 0 ? (
         <p className="language-empty">엔진이 빈 답을 돌려주었습니다.</p>
-      ) : state.phase === "done" ? (
-        <ul className="language-sections">
-          {state.run.result.sections.map((section, index) => {
-            const key = `${section.key}-${index}`;
-            return (
-              <li key={key} className="language-section">
-                <p className="language-section-label">
-                  {section.label}
-                  {/* An invented example must never read as a quotation from the
-                      source the user selected. */}
-                  {section.synthetic ? (
-                    <span className="language-section-synthetic">엔진이 만든 예시</span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="language-copy"
-                    aria-label={`${section.label} 복사`}
-                    onClick={() => copy(key, section.body)}
-                  >
-                    {copiedKey === key ? (
-                      <Check size={12} aria-hidden="true" />
-                    ) : (
-                      <Copy size={12} aria-hidden="true" />
+      ) : sections ? (
+        <>
+          <ul className="language-sections">
+            {sections.map((section, index) => {
+              const key = `${section.key}-${index}`;
+              // While streaming, the last section is still being written. Its
+              // copy button is withheld: copying half a sentence looks like a
+              // bug rather than a partial result.
+              const incomplete = streaming && index === sections.length - 1;
+              return (
+                <li key={key} className="language-section">
+                  <p className="language-section-label">
+                    {section.label}
+                    {/* An invented example must never read as a quotation from
+                        the source the user selected. */}
+                    {section.synthetic ? (
+                      <span className="language-section-synthetic">엔진이 만든 예시</span>
+                    ) : null}
+                    {incomplete ? null : (
+                      <button
+                        type="button"
+                        className="language-copy"
+                        aria-label={`${section.label} 복사`}
+                        onClick={() => copy(key, section.body)}
+                      >
+                        {copiedKey === key ? (
+                          <Check size={12} aria-hidden="true" />
+                        ) : (
+                          <Copy size={12} aria-hidden="true" />
+                        )}
+                      </button>
                     )}
-                  </button>
-                </p>
-                <p className="language-section-body">{section.body}</p>
-              </li>
-            );
-          })}
-        </ul>
+                  </p>
+                  <p className="language-section-body">
+                    {section.body}
+                    {incomplete ? <span className="language-cursor" aria-hidden="true" /> : null}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+          {streaming ? (
+            <p className="language-streaming-note" role="status">
+              생성 중
+            </p>
+          ) : null}
+        </>
+      ) : streaming ? (
+        // Streaming has started but no labelled section has completed yet.
+        <p className="language-loading" role="status">
+          답변을 쓰는 중
+          <span className="language-loading-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </p>
       ) : null}
     </div>
   );

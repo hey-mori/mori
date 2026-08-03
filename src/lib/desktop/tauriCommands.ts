@@ -124,6 +124,8 @@ export type TauriCommandName =
   | "resolve_file_locations"
   | "reveal_path_in_os"
   | "llm_http_request"
+  | "llm_http_stream"
+  | "cancel_llm_stream"
   | "set_llm_allowed_endpoints"
   | "discover_local_ai_tools"
   | "discover_codex_sessions"
@@ -347,6 +349,14 @@ export type TauriCommandMap = {
   };
   reveal_path_in_os: { input: { path: string }; output: null };
   llm_http_request: { input: { request: LlmHttpRequest }; output: LlmHttpResponse };
+  // The channel is passed through untyped here: its element type lives with the
+  // streaming bridge, which is the only caller, and duplicating the event union
+  // in this table would give two places to keep in step with the Rust enum.
+  llm_http_stream: {
+    input: { request: LlmHttpRequest & { requestId: string }; onEvent: unknown };
+    output: null;
+  };
+  cancel_llm_stream: { input: { requestId: string }; output: null };
   set_llm_allowed_endpoints: {
     input: { entries: Array<{ url: string; allowsAuthorization: boolean }> };
     output: number;
