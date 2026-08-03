@@ -113,17 +113,38 @@ pub async fn llm_http_stream(
         request,
     } = request;
 
+    // Debug builds trace the boundary, because a rejection here is invisible
+    // otherwise: the renderer's pre-warm swallows failures on purpose, and that
+    // silence hid a non-working warm through three attempts. Host only, never
+    // the full URL, headers or body: a base URL can carry a secret in its query.
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "[llm_stream] request {request_id} -> {}",
+        request
+            .url
+            .split('/')
+            .nth(2)
+            .unwrap_or("<unparseable host>")
+    );
+
     // Exactly the same gate as the one-shot command.
     let url = {
         let allowlist = endpoints
             .0
             .lock()
             .map_err(|_| "endpoint allowlist lock poisoned".to_string())?;
-        validate_request(
+        match validate_request(
             &request.url,
             carries_authorization(&request.headers),
             &allowlist,
-        )?
+        ) {
+            Ok(url) => url,
+            Err(error) => {
+                #[cfg(debug_assertions)]
+                eprintln!("[llm_stream] {request_id} refused: {error}");
+                return Err(error);
+            }
+        }
     };
 
     let method = match request.method.to_uppercase().as_str() {
@@ -163,6 +184,8 @@ pub async fn llm_http_stream(
         Err(error) => {
             unregister(&streams, &request_id);
             let message = crate::llm_http::describe_send_error(&error);
+            #[cfg(debug_assertions)]
+            eprintln!("[llm_stream] {request_id} send failed: {message}");
             let _ = on_event.send(LlmStreamEvent::Error {
                 message: message.clone(),
             });
@@ -212,6 +235,8 @@ pub async fn llm_http_stream(
     }
 
     unregister(&streams, &request_id);
+    #[cfg(debug_assertions)]
+    eprintln!("[llm_stream] {request_id} done: HTTP {}", status.as_u16());
     let _ = on_event.send(LlmStreamEvent::Done {
         status: status.as_u16(),
         ok,

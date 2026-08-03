@@ -76,10 +76,11 @@ export function LanguageOverlayApp() {
   // engine configured, and it also missed the native bridge's endpoint
   // allowlist, which would have rejected the request even once found.
   useEffect(() => {
-    const settings = useSessionStore.getState().loadAnalysisSettings();
-    // Pay the model load before the user asks. Measured cold: 9.9s of a 10.7s
-    // first call was the load alone. Not awaited: the overlay must paint now.
-    void prewarmLanguageModel(settings);
+    // `loadAnalysisSettings` also warms the model. That warm cannot help the
+    // request about to run, because opening this window IS the request (#41);
+    // the app warms at startup for that. This one only covers the case where
+    // the marker has gone stale, so the next chord press is warm.
+    useSessionStore.getState().loadAnalysisSettings();
   }, []);
 
   const dismiss = useCallback(() => {
