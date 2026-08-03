@@ -477,6 +477,61 @@
   }
 }
 
+/* ── Follow-ups · the sections that are no longer generated up front ────────
+   Quiet by default: these are an offer, not a checklist the user owes. */
+.language-details {
+  display: grid;
+  gap: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.language-detail-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.language-detail-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel, #fff);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.language-detail-button:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.language-detail-button.is-active {
+  background: var(--purple-50);
+  border-color: transparent;
+  color: var(--purple);
+}
+
+.language-detail-button:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+/* Marks a detail already generated, so pressing it again reads as instant
+   rather than as another wait. */
+.language-detail-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+
 /* Streaming · a caret on the section still being written, so a half-finished
    sentence reads as "still coming" rather than as the whole answer. */
 .language-cursor {

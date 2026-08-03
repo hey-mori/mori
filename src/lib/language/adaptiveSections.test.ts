@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildLanguagePrompt, parseLanguageResponse, sectionPlan } from "./languageAction";
+import {
+  availableDetails,
+  buildLanguagePrompt,
+  languageDetailLabel,
+  parseLanguageResponse,
+  sectionPlan,
+} from "./languageAction";
 import { isSyntheticSection, SECTION_SPECS, specForLabel } from "./languageSections";
 import type { LanguageCaptureRequest } from "./languageCapture";
 
@@ -16,43 +22,47 @@ function capture(
   };
 }
 
-describe("the answer shape adapts to what was selected", () => {
-  it("asks a word for its form, sound and company", () => {
-    const prompt = buildLanguagePrompt(capture("throttle"));
-    expect(prompt.selectionKind).toBe("word");
-    expect(prompt.systemPrompt).toContain("품사");
-    expect(prompt.systemPrompt).toContain("발음");
-    expect(prompt.systemPrompt).toContain("연어");
-    // A single word does not need a clause-by-clause breakdown.
-    expect(prompt.systemPrompt).not.toContain("구조:");
+describe("the first answer is short, whatever was selected", () => {
+  // The plan used to request up to eight sections at once, which measured 13.4s
+  // for one sentence while the translation inside it took ~400ms to generate.
+  it("asks for exactly two sections by default", () => {
+    for (const text of [
+      "throttle",
+      "work your way through",
+      "Could you check the existing structure before changing it?",
+      "First this. Then that. And then the other thing.",
+    ]) {
+      const prompt = buildLanguagePrompt(capture(text));
+      expect(sectionPlan("understand", prompt.selectionKind), text).toHaveLength(2);
+    }
   });
 
-  it("asks a sentence for its intent and skeleton, not its pronunciation", () => {
+  it("leads a word with its meaning and form", () => {
+    const prompt = buildLanguagePrompt(capture("throttle"));
+    expect(prompt.selectionKind).toBe("word");
+    expect(prompt.systemPrompt).toContain("뜻");
+    expect(prompt.systemPrompt).toContain("품사");
+    // The expensive extras are now behind buttons.
+    expect(prompt.systemPrompt).not.toContain("연어:");
+    expect(prompt.systemPrompt).not.toContain("예문:");
+  });
+
+  it("leads a sentence with its translation and intent", () => {
     const prompt = buildLanguagePrompt(
       capture("Could you check the existing structure before changing it?"),
     );
     expect(prompt.selectionKind).toBe("sentence");
+    expect(prompt.systemPrompt).toContain("번역");
     expect(prompt.systemPrompt).toContain("의도");
-    expect(prompt.systemPrompt).toContain("구조");
-    expect(prompt.systemPrompt).not.toContain("발음");
-  });
-
-  it("asks a phrase for the reusable skeleton behind it", () => {
-    const prompt = buildLanguagePrompt(capture("work your way through"));
-    expect(prompt.selectionKind).toBe("phrase");
-    expect(prompt.systemPrompt).toContain("문형");
-    expect(prompt.systemPrompt).toContain("직역과 차이");
-  });
-
-  it("keeps a paragraph answer short rather than turning it into a textbook", () => {
-    const paragraph =
-      "The handler validates the token. Then it resolves the workspace. Only after that does it touch storage.";
-    const prompt = buildLanguagePrompt(capture(paragraph));
-    expect(prompt.selectionKind).toBe("paragraph");
-    expect(sectionPlan("understand", "paragraph").length).toBeLessThan(
-      sectionPlan("understand", "word").length,
-    );
+    // Structure and grammar are opt-in, not paid for on every lookup.
     expect(prompt.systemPrompt).not.toContain("구조:");
+    expect(prompt.systemPrompt).not.toContain("문법:");
+  });
+
+  it("never asks for pronunciation up front", () => {
+    // It is only useful for a word, and only when the user asks.
+    const prompt = buildLanguagePrompt(capture("throttle"));
+    expect(prompt.systemPrompt).not.toContain("발음");
   });
 
   it("does not let the shape change the user's action", () => {
@@ -78,6 +88,76 @@ describe("the answer shape adapts to what was selected", () => {
     const prompt = buildLanguagePrompt(capture("throttle"));
     expect(prompt.systemPrompt).toContain("생략");
     expect(prompt.systemPrompt).toContain("억지로 채우지");
+  });
+});
+
+describe("follow-ups are focused and reuse what is already known", () => {
+  const sentence = capture("Could you check the existing structure before changing it?");
+
+  it("asks only for the detail that was pressed", () => {
+    const prompt = buildLanguagePrompt(sentence, undefined, { detail: "structure" });
+    expect(prompt.systemPrompt).toContain("구조");
+    expect(prompt.systemPrompt).not.toContain("번역:");
+    expect(prompt.systemPrompt).not.toContain("의도:");
+  });
+
+  it("tells the engine not to repeat what the user can already see", () => {
+    const prompt = buildLanguagePrompt(sentence, undefined, { detail: "grammar" });
+    expect(prompt.systemPrompt).toContain("다시 쓰지 않습니다");
+  });
+
+  it("grounds on the translation already on screen instead of re-deriving it", () => {
+    // Re-sending the whole analysis prompt would pay for the first answer twice.
+    const prompt = buildLanguagePrompt(sentence, undefined, {
+      detail: "structure",
+      knownTranslation: "기존 구조를 먼저 확인해 주시겠어요?",
+    });
+    expect(prompt.userPrompt).toContain("이미 사용자에게 보여준 번역");
+    expect(prompt.userPrompt).toContain("기존 구조를 먼저 확인해 주시겠어요?");
+  });
+
+  it("omits the known-translation block when there is none", () => {
+    const prompt = buildLanguagePrompt(sentence, undefined, { detail: "structure" });
+    expect(prompt.userPrompt).not.toContain("이미 사용자에게 보여준 번역");
+  });
+
+  it("pairs grammar with the reusable pattern, and expressions with alternatives", () => {
+    expect(sectionPlan("understand", "sentence", "grammar").map((s) => s.key)).toEqual([
+      "grammar",
+      "pattern",
+    ]);
+    expect(sectionPlan("understand", "sentence", "expressions").map((s) => s.key)).toEqual([
+      "expressions",
+      "alternatives",
+    ]);
+  });
+
+  it("offers no clause structure for a single word", () => {
+    // A button that can only answer "해당 없음" wastes a call and teaches the
+    // user to distrust the buttons.
+    expect(availableDetails("word")).not.toContain("structure");
+    expect(availableDetails("sentence")).toContain("structure");
+  });
+
+  it("offers no pronunciation for a paragraph", () => {
+    expect(availableDetails("paragraph")).not.toContain("pronunciation");
+    expect(availableDetails("word")).toContain("pronunciation");
+  });
+
+  it("labels every offered detail in Korean", () => {
+    for (const kind of ["word", "phrase", "sentence", "paragraph"] as const) {
+      for (const detail of availableDetails(kind)) {
+        expect(languageDetailLabel(detail)).toMatch(/^[가-힣]+$/);
+      }
+    }
+  });
+
+  it("keeps a follow-up smaller than the old all-at-once plan", () => {
+    const followUp = sectionPlan("understand", "sentence", "grammar").length;
+    const base = sectionPlan("understand", "sentence").length;
+    // Two calls of two sections still beat one call of eight, and only when the
+    // user asked for the second.
+    expect(base + followUp).toBeLessThan(8);
   });
 });
 

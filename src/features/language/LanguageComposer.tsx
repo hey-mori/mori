@@ -18,9 +18,12 @@ import {
   type LanguageCaptureRequest,
 } from "../../lib/language/languageCapture";
 import {
+  availableDetails,
   detectDominantLanguage,
   type LanguageProfile,
 } from "../../lib/language/languageAction";
+import { classifySelection } from "../../lib/language/selectionKind";
+import { useLanguageDetail } from "./useLanguageDetail";
 import {
   loadLanguagePreferences,
   saveLanguagePreferences,
@@ -59,6 +62,12 @@ export function LanguageComposer({ autoFocus = false }: { autoFocus?: boolean } 
   }, [autoFocus]);
 
   const { state, provider, retry, allowProvider } = useLanguageAction(request, profile);
+
+  const knownTranslation =
+    state.phase === "done"
+      ? state.run.result.sections.find((s) => s.key === "translation" || s.key === "meaning")?.body
+      : undefined;
+  const detail = useLanguageDetail(request, knownTranslation, profile);
   const running = state.phase === "loading";
   const trimmed = draft.trim();
 
@@ -200,6 +209,18 @@ export function LanguageComposer({ autoFocus = false }: { autoFocus?: boolean } 
           }
           onRetry={retry}
           onAllowProvider={allowProvider}
+          details={{
+            // Express produces an utterance rather than explaining one, so
+            // follow-ups that dissect a source text do not apply.
+            available:
+              request.action === "express"
+                ? []
+                : availableDetails(classifySelection(request.content.text ?? "")),
+            active: detail.active,
+            loaded: detail.loaded,
+            state: detail.state,
+            onToggle: detail.toggle,
+          }}
         />
       ) : (
         <p className="language-composer-hint">

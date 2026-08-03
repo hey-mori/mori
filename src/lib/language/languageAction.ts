@@ -89,39 +89,86 @@ export type LanguagePrompt = {
 };
 
 /**
- * Which sections each selection shape asks for, in display order.
+ * A follow-up request for one detail the user pressed a button for.
  *
- * These lists are the actual product decision in this file. The shape of the
- * answer is the difference between a reference tool and a tool that teaches:
- * a word needs its form and its company, a sentence needs its intent and its
- * skeleton, a paragraph needs its argument and nothing else.
+ * `knownTranslation` is what makes this cheap: the answer already on screen is
+ * given to the engine as ground rather than re-derived, so pressing 구조 costs
+ * one focused generation instead of a second full analysis.
  */
-const UNDERSTAND_PLAN: Readonly<Record<SelectionKind, readonly LanguageSectionKey[]>> = {
-  word: [
-    "meaning",
-    "partOfSpeech",
-    "pronunciation",
-    "context",
-    "collocations",
-    "examples",
-    "confusables",
-    "nuance",
-  ],
-  phrase: ["translation", "meaning", "literal", "pattern", "expressions", "examples", "nuance"],
-  sentence: [
-    "translation",
-    "intent",
-    "structure",
-    "grammar",
-    "expressions",
-    "pattern",
-    "nuance",
-  ],
-  // Deliberately the shortest plan. A paragraph answered section-by-section
-  // becomes a textbook page nobody reads; the useful answer is the argument
-  // plus the few expressions worth keeping.
-  paragraph: ["translation", "meaning", "expressions", "grammar"],
+export type LanguageFollowUp = {
+  detail: LanguageDetail;
+  knownTranslation?: string;
 };
+
+/**
+ * What the FIRST answer contains, per selection shape.
+ *
+ * Two sections, deliberately. The previous plan asked for up to eight at once
+ * and measured 13.4s to generate for one sentence, while the translation inside
+ * it needed about 400ms. Output length is the dominant cost once a model is
+ * warm, and nobody reads eight sections for every word they look up.
+ *
+ * Everything else moved to {@link DETAIL_PLANS}, requested by a button. This is
+ * the difference between a tool that answers and a tool that lectures.
+ */
+const DEFAULT_PLAN: Readonly<Record<SelectionKind, readonly LanguageSectionKey[]>> = {
+  // A word has no translation worth separating from its meaning.
+  word: ["meaning", "partOfSpeech"],
+  phrase: ["translation", "meaning"],
+  sentence: ["translation", "intent"],
+  paragraph: ["translation", "meaning"],
+};
+
+/** A follow-up the user asked for explicitly. */
+export type LanguageDetail = "structure" | "grammar" | "expressions" | "pronunciation";
+
+/**
+ * Sections each follow-up asks for.
+ *
+ * Richer than the old inline versions precisely because they are now opt-in: a
+ * user who pressed 구조 wants the clause breakdown, and paying for it is the
+ * point of having pressed the button.
+ */
+const DETAIL_PLANS: Readonly<Record<LanguageDetail, readonly LanguageSectionKey[]>> = {
+  structure: ["structure"],
+  grammar: ["grammar", "pattern"],
+  expressions: ["expressions", "alternatives"],
+  pronunciation: ["pronunciation"],
+};
+
+/** Korean label for a follow-up button. */
+export function languageDetailLabel(detail: LanguageDetail): string {
+  switch (detail) {
+    case "structure":
+      return "구조";
+    case "grammar":
+      return "문법";
+    case "expressions":
+      return "표현";
+    default:
+      return "발음";
+  }
+}
+
+/**
+ * Which follow-ups are worth offering for a shape.
+ *
+ * Pronunciation is meaningless for a paragraph, and a single word has no clause
+ * structure. Offering a button that can only answer "해당 없음" wastes a call
+ * and teaches the user to distrust the buttons.
+ */
+export function availableDetails(kind: SelectionKind): LanguageDetail[] {
+  switch (kind) {
+    case "word":
+      return ["pronunciation", "expressions", "grammar"];
+    case "phrase":
+      return ["expressions", "grammar", "pronunciation"];
+    case "sentence":
+      return ["structure", "grammar", "expressions"];
+    default:
+      return ["structure", "grammar", "expressions"];
+  }
+}
 
 /** Expressing is producing, so the plan does not vary with what was selected:
  *  the user's input is an intent, not a text to be dissected. */
@@ -132,12 +179,17 @@ const EXPRESS_PLAN: readonly LanguageSectionKey[] = [
   "nuance",
 ];
 
-/** The ordered specs for one action and shape. */
+/** The ordered specs for one action and shape, or for one follow-up. */
 export function sectionPlan(
   action: "understand" | "express",
   kind: SelectionKind,
+  detail?: LanguageDetail,
 ): LanguageSectionSpec[] {
-  const keys = action === "express" ? EXPRESS_PLAN : UNDERSTAND_PLAN[kind];
+  const keys = detail
+    ? DETAIL_PLANS[detail]
+    : action === "express"
+      ? EXPRESS_PLAN
+      : DEFAULT_PLAN[kind];
   return keys
     .map((key) => specForKey(key))
     .filter((spec): spec is LanguageSectionSpec => spec !== undefined);
@@ -174,6 +226,7 @@ export function detectDominantLanguage(text: string): LanguageCode {
 export function buildLanguagePrompt(
   request: LanguageCaptureRequest,
   profile: LanguageProfile = DEFAULT_LANGUAGE_PROFILE,
+  followUp?: LanguageFollowUp,
 ): LanguagePrompt {
   const text = captureText(request);
   const detectedLanguage = detectDominantLanguage(text);
@@ -182,14 +235,19 @@ export function buildLanguagePrompt(
   // classification still runs so the metadata reports what was actually read.
   const selectionKind = classifySelection(text);
 
-  const plan = sectionPlan(action, selectionKind);
+  const plan = sectionPlan(action, selectionKind, followUp?.detail);
   const sectionRules = plan.map(
     (spec) =>
       `- ${spec.label}: ${spec.guidance}${spec.optional ? " (없으면 이 섹션 자체를 생략)" : ""}`,
   );
 
-  const intro =
-    action === "express"
+  const intro = followUp
+    ? [
+        `당신은 Mori의 이해하기 도우미입니다. 사용자가 "${languageDetailLabel(followUp.detail)}"만 따로 요청했습니다.`,
+        `${profile.explanationLanguage}로 설명합니다.`,
+        "요청한 항목만 답합니다. 번역이나 이미 아는 내용을 다시 쓰지 않습니다.",
+      ]
+    : action === "express"
       ? [
           "당신은 Mori의 표현하기 도우미입니다. 사용자가 하려는 말을 상황에 맞는 표현으로 바꿔 줍니다.",
           `사용자의 생각을 ${profile.targetLanguage} 표현으로 바꾸는 것이 목표입니다.`,
@@ -224,7 +282,13 @@ export function buildLanguagePrompt(
   const source = describeCaptureSource(request.context);
   const contextLine = source ? `출처: ${source}\n\n` : "";
   const bodyLabel = action === "express" ? "사용자가 하려는 말" : "선택된 텍스트";
-  const userPrompt = `${contextLine}${bodyLabel}:\n"""\n${text}\n"""`;
+  // A follow-up carries the translation the user is already looking at, so the
+  // engine grounds on it instead of re-deriving it. Re-sending the whole
+  // analysis prompt would pay for the first answer twice.
+  const knownLine = followUp?.knownTranslation?.trim()
+    ? `\n\n이미 사용자에게 보여준 번역:\n"""\n${followUp.knownTranslation.trim()}\n"""`
+    : "";
+  const userPrompt = `${contextLine}${bodyLabel}:\n"""\n${text}\n"""${knownLine}`;
 
   return { systemPrompt, userPrompt, action, detectedLanguage, selectionKind };
 }
