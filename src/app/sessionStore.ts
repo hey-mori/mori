@@ -128,6 +128,7 @@ import type {
 } from "../lib/connectors";
 import { isTauriRuntime } from "../lib/desktop";
 import { syncLlmAllowedEndpoints } from "../lib/desktop/llmEndpointRegistry";
+import { prewarmLanguageModel, resetPrewarmState } from "../lib/language/prewarm";
 import { getSessionImportRepository } from "../lib/storage/sessionImportRepository";
 import { persistMemoryBodyFromAnalysis } from "./sessionMemoryPersistence";
 
@@ -641,7 +642,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const analysisSettings = repository.loadQuickPassSettings();
     // Register the configured engine origins with the native LLM bridge's
     // allowlist; llm_http_request rejects every other origin.
-    void syncLlmAllowedEndpoints(analysisSettings);
+    // Load the local model now, while the user is still reading the app, rather
+    // than when they press the language chord. Warming at overlay-open could
+    // never help: one chord press both opens the overlay and asks the question,
+    // so the warm raced the request it existed to remove (issue #41). A cold
+    // load measured ~8-10s of the ~19s the user actually waited.
+    //
+    // Chained, not fired alongside: the native bridge rejects any origin that
+    // is not yet on the allowlist, so a warm sent before the sync resolves is
+    // refused and then swallowed by the deliberately silent catch.
+    // `await` rather than `.then`: the sync is typed as returning a promise but
+    // is stubbed as a plain function in tests, and calling `.then` on the
+    // result threw before either call could happen.
+    void (async () => {
+      await syncLlmAllowedEndpoints(analysisSettings);
+      await prewarmLanguageModel(analysisSettings);
+    })();
     const localDraft = repository.loadCurrentSessionDraft();
     const localImports = localDraft ? repository.listSessionImports(localDraft.session.id) : [];
     const localAnalysisRecord = localDraft ? repository.loadSessionAnalysis(localDraft.session.id) : null;
@@ -1416,10 +1432,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ follow: followReducer(get().follow, { type: "error", message, at }) }),
   updateAnalysisSettings: (patch) => {
     const repository = getRepository();
-    const next = sanitizeQuickPassSettings({ ...get().analysisSettings, ...patch });
+    const previous = get().analysisSettings;
+    const next = sanitizeQuickPassSettings({ ...previous, ...patch });
     repository.saveQuickPassSettings(next);
-    void syncLlmAllowedEndpoints(next);
     set({ analysisSettings: next });
+    // Changing the model invalidates the warm one and warms the new one, so the
+    // first request after a model switch is not the one that pays for it.
+    const modelChanged =
+      next.ollamaModel !== previous.ollamaModel || next.provider !== previous.provider;
+    if (modelChanged) resetPrewarmState();
+    void (async () => {
+      await syncLlmAllowedEndpoints(next);
+      if (modelChanged) await prewarmLanguageModel(next);
+    })();
     return next;
   },
   loadAnalysisSettings: () => {
@@ -1431,7 +1456,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // Registering the origin matters as much as reading the settings: the
     // native bridge rejects any endpoint that is not on the allowlist, and the
     // allowlist is only populated by whichever window hydrated.
-    void syncLlmAllowedEndpoints(settings);
+    // A last-resort warm for the overlay window, which has its own JS context
+    // and therefore its own warm marker. Too late to help the request that is
+    // about to run (#41), but it means the one after it is warm. Chained for
+    // the same allowlist reason as `hydrate`.
+    void (async () => {
+      await syncLlmAllowedEndpoints(settings);
+      await prewarmLanguageModel(settings);
+    })();
     set({ analysisSettings: settings });
     return settings;
   },

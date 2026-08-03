@@ -23,10 +23,36 @@
 import type { QuickPassAnalysisSettings } from "../analysis/analysisSettings";
 import { streamText } from "../desktop/llmStreamBridge";
 
-/** Suppresses a second pre-warm while one is already in flight, and after one
- *  has succeeded for the same model: the point is to pay the load once. */
-let warmedModel: string | null = null;
+/**
+ * How long a warm is assumed to hold.
+ *
+ * Slightly under the `keep_alive` sent with every request, so the marker
+ * expires before the model actually does rather than after. Without a TTL the
+ * marker outlives the residency and a later request silently pays a cold load
+ * while we believe the model is warm.
+ */
+const WARM_TTL_MS = 8 * 60 * 1000;
+
+type WarmState = { model: string; at: number } | null;
+
+/** Suppresses a second pre-warm while one is already in flight, and for as long
+ *  as the last one can be believed. */
+let warmed: WarmState = null;
 let inFlight: Promise<void> | null = null;
+
+/**
+ * Whether a warm is worth sending. Pure, so the policy is testable without a
+ * network or a clock.
+ *
+ * Returns false when the model is already believed warm, and true once that
+ * belief has expired: a warm that has gone stale is exactly when the next
+ * request would otherwise pay a full cold load.
+ */
+export function shouldPrewarm(model: string, state: WarmState, now: number): boolean {
+  if (!state) return true;
+  if (state.model !== model) return true;
+  return now - state.at >= WARM_TTL_MS;
+}
 
 function stripTrailingSlash(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value;
@@ -47,7 +73,7 @@ export function prewarmLanguageModel(
   const endpoint = settings.ollamaEndpoint?.trim();
   if (!model || !endpoint) return Promise.resolve();
 
-  if (warmedModel === model) return Promise.resolve();
+  if (!shouldPrewarm(model, warmed, Date.now())) return Promise.resolve();
   if (inFlight) return inFlight;
 
   const run = streamText(
@@ -73,7 +99,7 @@ export function prewarmLanguageModel(
     },
   )
     .then(() => {
-      warmedModel = model;
+      warmed = { model, at: Date.now() };
     })
     .catch(() => {
       // Deliberately silent. The user did not ask for this, so a failure must
@@ -89,6 +115,6 @@ export function prewarmLanguageModel(
 
 /** Forget the warm state, so changing the model warms the new one. */
 export function resetPrewarmState(): void {
-  warmedModel = null;
+  warmed = null;
   inFlight = null;
 }
