@@ -89,10 +89,17 @@ export function prewarmLanguageModel(
         // Load the model and generate nothing.
         options: { num_predict: 0 },
       }),
-      // Shorter than a real request: a pre-warm that is still going when the
-      // user asks a question has already lost its race and should get out of
-      // the way rather than hold a connection.
-      timeoutMs: 20_000,
+      // Generous on purpose, and this was originally wrong. The first version
+      // capped at 20s reasoning that a warm still running when the user asks
+      // has "lost its race" and should get out of the way. That is backwards:
+      // Ollama serialises requests per model, so a load already in progress is
+      // exactly what the user's request then benefits from, and killing it
+      // throws the work away and guarantees they pay for it again.
+      //
+      // 20s was also simply too short. A cold 2GB load competing with Mori's
+      // own startup I/O timed out every time, and the deliberately silent catch
+      // meant it looked like the warm had never been attempted at all.
+      timeoutMs: 180_000,
     },
     () => {
       // The body is not interesting; only the load it forced.
