@@ -149,15 +149,35 @@ restoration on close.
 
 ## 6. Answer shape
 
-The old contract was four fixed sections for everything. It is now chosen by
-what was selected, while the user's **action** stays whatever they named:
+**Two sections first, the rest on request.** The shape still follows what was
+selected, and the user's **action** stays whatever they named.
 
-| Selection | Sections |
-|-----------|----------|
-| Word | 뜻 · 품사 · 발음(IPA) · 문맥 · 연어 · 예문 · 구별 · 뉘앙스 |
-| Phrase | 번역 · 뜻 · 직역과 차이 · 문형 · 표현 · 예문 · 뉘앙스 |
-| Sentence | 번역 · 의도 · 구조 · 문법 · 표현 · 문형 · 뉘앙스 |
-| Paragraph | 번역 · 뜻 · 표현 · 문법 |
+| Selection | First answer | Offered as follow-ups |
+|-----------|--------------|-----------------------|
+| Word | 뜻 · 품사 | 발음 · 표현 · 문법 |
+| Phrase | 번역 · 뜻 | 표현 · 문법 · 발음 |
+| Sentence | 번역 · 의도 | 구조 · 문법 · 표현 |
+| Paragraph | 번역 · 뜻 | 구조 · 문법 · 표현 |
+
+The earlier version asked for up to eight sections in one call. Measured with
+the shipped prompts on `qwen2.5:3b`:
+
+| | total | first token | output tokens |
+|---|---:|---:|---:|
+| default answer | 1,370ms | **946ms** | 40 |
+| follow-up 구조 | 917ms | | 15 |
+| follow-up 문법 | 1,142ms | | 29 |
+| follow-up 표현 | 943ms | | 20 |
+| everything, if asked | 4,372ms | | |
+
+Nobody reads eight sections for every word, so the common case pays 1,370ms
+instead of generating all of it. A follow-up is grounded on the translation
+already on screen rather than re-deriving it, so pressing 구조 costs one focused
+generation and not a second full analysis.
+
+A follow-up is only offered where it can answer: no clause structure for a
+single word, no pronunciation for a paragraph. A button that can only say
+"해당 없음" wastes a call and teaches the user to distrust the buttons.
 
 Rules: detection proposes, it never changes the action. Optional sections are
 omitted rather than padded. Sections the engine **invented** (예문, 대안, 연어,

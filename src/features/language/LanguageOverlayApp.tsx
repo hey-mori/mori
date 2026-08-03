@@ -43,6 +43,9 @@ import {
 } from "../../lib/language/nativeCapture";
 import { blockApp } from "../../lib/language/consentStore";
 import { prewarmLanguageModel } from "../../lib/language/prewarm";
+import { availableDetails } from "../../lib/language/languageAction";
+import { classifySelection } from "../../lib/language/selectionKind";
+import { useLanguageDetail } from "./useLanguageDetail";
 import { useSessionStore } from "../../app/sessionStore";
 import { LanguageComposer } from "./LanguageComposer";
 import { LanguageResultView } from "./LanguageResultView";
@@ -136,6 +139,23 @@ export function LanguageOverlayApp() {
     [outcome, action],
   );
   const { state, provider, retry, allowProvider } = useLanguageAction(request);
+
+  // The translation the user is already looking at, handed to a follow-up so it
+  // grounds on the answer on screen rather than re-deriving it.
+  const knownTranslation =
+    state.phase === "done"
+      ? state.run.result.sections.find((s) => s.key === "translation" || s.key === "meaning")?.body
+      : undefined;
+  const detail = useLanguageDetail(request, knownTranslation);
+  const detailProps = request
+    ? {
+        available: availableDetails(classifySelection(request.content.text ?? "")),
+        active: detail.active,
+        loaded: detail.loaded,
+        state: detail.state,
+        onToggle: detail.toggle,
+      }
+    : undefined;
 
   const onClipboardRetry = useCallback(async () => {
     const startedIn = sessionRef.current;
@@ -269,6 +289,7 @@ export function LanguageOverlayApp() {
             onRetry={retry}
             onAllowProvider={allowProvider}
             onBlockApp={onBlockApp}
+            details={detailProps}
           />
         ) : (
           <>

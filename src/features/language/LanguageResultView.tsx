@@ -25,8 +25,91 @@ import {
   type LanguageProviderInfo,
 } from "../../lib/language/languageProvider";
 import { selectionKindLabel } from "../../lib/language/selectionKind";
+import { languageDetailLabel, type LanguageDetail } from "../../lib/language/languageAction";
 import type { ConsentScope } from "../../lib/language/languageConsent";
 import type { LanguageActionState } from "./useLanguageAction";
+import type { DetailState } from "./useLanguageDetail";
+
+/**
+ * The follow-up row and whichever detail is open.
+ *
+ * Its own component because it has a state machine of its own (idle, loading,
+ * streaming, done, error) that is independent of the base answer's, and folding
+ * both into one render tree made neither readable.
+ */
+function LanguageDetailStrip({
+  details,
+  active,
+  loaded,
+  state,
+  onToggle,
+}: {
+  details: LanguageDetail[];
+  active: LanguageDetail | null;
+  loaded: ReadonlySet<LanguageDetail>;
+  state: DetailState;
+  onToggle: (detail: LanguageDetail) => void;
+}) {
+  if (details.length === 0) return null;
+  const sections =
+    state.phase === "done"
+      ? state.result.sections
+      : state.phase === "streaming"
+        ? state.partial.sections
+        : null;
+
+  return (
+    <div className="language-details">
+      <div className="language-detail-buttons" role="group" aria-label="더 알아보기">
+        {details.map((detail) => (
+          <button
+            key={detail}
+            type="button"
+            className={`language-detail-button${active === detail ? " is-active" : ""}`}
+            aria-pressed={active === detail}
+            onClick={() => onToggle(detail)}
+          >
+            {languageDetailLabel(detail)}
+            {/* A dot marks what has already been generated, so pressing it
+                again reads as free rather than as another wait. */}
+            {loaded.has(detail) && active !== detail ? (
+              <span className="language-detail-dot" aria-hidden="true" />
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      {active === null ? null : state.phase === "loading" ? (
+        <p className="language-loading" role="status">
+          {languageDetailLabel(active)} 생성 중
+          <span className="language-loading-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </p>
+      ) : state.phase === "error" ? (
+        <p className="language-empty" role="alert">
+          {state.message}
+        </p>
+      ) : sections && sections.length > 0 ? (
+        <ul className="language-sections">
+          {sections.map((section, index) => (
+            <li key={`${section.key}-${index}`} className="language-section">
+              <p className="language-section-label">
+                {section.label}
+                {section.synthetic ? (
+                  <span className="language-section-synthetic">엔진이 만든 예시</span>
+                ) : null}
+              </p>
+              <p className="language-section-body">{section.body}</p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 /** Plain-Korean label for how the text was obtained. Never hidden: a fallback
  *  path must be visible, not silent. */
@@ -53,6 +136,7 @@ export function LanguageResultView({
   onRetry,
   onAllowProvider,
   onBlockApp,
+  details,
 }: {
   request: LanguageCaptureRequest;
   state: LanguageActionState;
@@ -63,6 +147,14 @@ export function LanguageResultView({
    *  where to allow it instead of offering a button that does nothing. */
   onAllowProvider?: (scope: ConsentScope) => void;
   onBlockApp?: (applicationId: string) => void;
+  /** Absent in surfaces that do not offer follow-ups. */
+  details?: {
+    available: LanguageDetail[];
+    active: LanguageDetail | null;
+    loaded: ReadonlySet<LanguageDetail>;
+    state: DetailState;
+    onToggle: (detail: LanguageDetail) => void;
+  };
 }) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const text = captureText(request);
@@ -283,6 +375,18 @@ export function LanguageResultView({
             <p className="language-streaming-note" role="status">
               생성 중
             </p>
+          ) : null}
+          {/* Follow-ups appear only once the base answer is complete: offering
+              them mid-generation invites a second request that competes with
+              the one still running. */}
+          {state.phase === "done" && details ? (
+            <LanguageDetailStrip
+              details={details.available}
+              active={details.active}
+              loaded={details.loaded}
+              state={details.state}
+              onToggle={details.onToggle}
+            />
           ) : null}
         </>
       ) : streaming ? (
