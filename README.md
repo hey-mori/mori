@@ -12,8 +12,10 @@ continue across sessions, tools, and teammates.
 
 Mori is not a surveillance app, task manager, wiki, or autonomous work
 agent. It never captures in the background without explicit opt-in,
-never makes memory durable without user review, and never sends data
-anywhere: everything stays on the user's machine.
+never makes memory durable without user review, and sends nothing off
+the machine unless the user explicitly chooses and allows it: analysis
+and language features default to local engines, and a cloud provider is
+refused until it is granted per provider.
 
 ## App Structure
 
