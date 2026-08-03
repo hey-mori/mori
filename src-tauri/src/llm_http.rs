@@ -128,7 +128,7 @@ pub async fn llm_http_request(
 /// to see only "Failed to fetch"; a native error names the real cause
 /// (connection refused = server not running, timeout, DNS), which the analysis
 /// fallback notice surfaces to the user.
-fn describe_send_error(error: &reqwest::Error) -> String {
+pub(crate) fn describe_send_error(error: &reqwest::Error) -> String {
     if error.is_connect() {
         return format!(
             "연결할 수 없습니다 ({error}). 로컬 LLM 서버(예: Ollama)가 실행 중인지, 엔드포인트 주소가 맞는지 확인하세요."

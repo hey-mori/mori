@@ -13,6 +13,7 @@ mod git;
 mod language;
 mod llm_endpoints;
 mod llm_http;
+mod llm_stream;
 mod opencode;
 mod package;
 mod repositories;
@@ -116,6 +117,7 @@ fn main() {
         .manage(sqlite::SqliteState::default())
         .manage(llm_endpoints::LlmEndpointState::default())
         .manage(language::overlay::OverlayPlacement::default())
+        .manage(llm_stream::LlmStreamState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
             commands::host_platform,
@@ -178,6 +180,8 @@ fn main() {
             files::resolve_file_locations,
             files::reveal_path_in_os,
             llm_http::llm_http_request,
+            llm_stream::llm_http_stream,
+            llm_stream::cancel_llm_stream,
             llm_endpoints::set_llm_allowed_endpoints,
             claude::installations::discover_local_ai_tools,
             codex::sessions::discover_codex_sessions,
