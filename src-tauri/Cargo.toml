@@ -51,6 +51,9 @@ features = [
 
 [dev-dependencies]
 tempfile = "3"
+# Only for the ignored live-Ollama streaming harness, which needs an async
+# runtime to drive `bytes_stream` outside a Tauri command.
+tokio = { version = "1", features = ["rt"] }
 
 [features]
 default = ["custom-protocol"]
