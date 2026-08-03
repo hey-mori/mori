@@ -364,6 +364,77 @@ mod tests {
         assert!(!cancel(&state, "run-1"));
     }
 
+    /// Live harness: the real read loop against a real Ollama socket.
+    ///
+    /// Ignored because it needs a running server with a specific model. It
+    /// exists because the other tests exercise the decoder and the registry
+    /// with synthetic input, and only a real socket proves that
+    /// `bytes_stream` + the incremental decoder survive the chunking Ollama
+    /// actually produces.
+    ///
+    /// Run: `cargo test --bin mori -- --ignored streams_from_a_live_ollama --nocapture`
+    #[test]
+    #[ignore = "requires a running Ollama; run manually"]
+    fn streams_from_a_live_ollama() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("tokio runtime");
+
+        runtime.block_on(async {
+            let client = reqwest::Client::builder()
+                .timeout(Duration::from_secs(60))
+                .build()
+                .expect("client");
+
+            let started = std::time::Instant::now();
+            let response = client
+                .post("http://localhost:11434/api/generate")
+                .header("Content-Type", "application/json")
+                .body(
+                    r#"{"model":"qwen2.5:3b","system":"Translate into natural Korean. Output only the translation.","prompt":"We should throttle the request flow before touching the handler.","stream":true,"keep_alive":"10m","options":{"num_predict":80}}"#,
+                )
+                .send()
+                .await
+                .expect("Ollama unreachable; is it running?");
+            assert!(response.status().is_success(), "HTTP {}", response.status());
+
+            let mut stream = response.bytes_stream();
+            let mut decoder = Utf8Decoder::default();
+            let mut body = String::new();
+            let mut chunks = 0usize;
+            let mut first_chunk_at = None;
+
+            while let Some(next) = stream.next().await {
+                let bytes = next.expect("chunk");
+                let text = decoder.push(&bytes);
+                if !text.is_empty() {
+                    first_chunk_at.get_or_insert_with(|| started.elapsed());
+                    chunks += 1;
+                    body.push_str(&text);
+                }
+            }
+
+            println!("  chunks      : {chunks}");
+            println!("  first chunk : {:?}", first_chunk_at.expect("no chunks"));
+            println!("  total       : {:?}", started.elapsed());
+            println!("  body bytes  : {}", body.len());
+
+            // Streaming means many chunks, not one buffered blob.
+            assert!(chunks > 1, "expected an incremental stream, got {chunks} chunk(s)");
+            // The decoder held nothing back: a leftover tail means a character
+            // was split and never completed.
+            assert!(decoder.pending.is_empty(), "decoder left an incomplete tail");
+            // Every line Ollama sent must be valid JSON we can read back.
+            let done = body
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("valid JSON line"))
+                .any(|value| value.get("done").and_then(|v| v.as_bool()) == Some(true));
+            assert!(done, "stream never reported done");
+        });
+    }
+
     #[test]
     fn events_serialize_with_a_discriminating_tag() {
         let json = serde_json::to_string(&LlmStreamEvent::Chunk {

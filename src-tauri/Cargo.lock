@@ -2152,6 +2152,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-notification",
  "tempfile",
+ "tokio",
  "windows 0.62.2",
 ]
 
