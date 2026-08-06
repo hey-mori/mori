@@ -34,6 +34,7 @@ import {
   type LiveFeedRequest,
 } from "./liveFeed";
 import { useLiveSessions } from "./useLiveSessions";
+import { useIntakeWriter } from "./useIntakeWriter";
 
 /** A finished request folds into the past-work disclosure once it has been quiet
  *  this long, so the live feed stays about the present. */
@@ -122,6 +123,11 @@ export function LiveSessionView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [snapshot.sessions, snapshot.lastPolledAt],
   );
+
+  // Persist what was observed. Writes the UNFILTERED feed on purpose: a focus
+  // filter is a reading preference, and letting it decide what becomes durable
+  // would make the record depend on where the user happened to be looking.
+  useIntakeWriter(snapshot.sessions, fullFeed, { enabled: watching && available });
 
   // Drop a focus that no longer maps to a live session (it ended or aged out), so
   // the filter never strands the feed empty with no way back but the clear button.
