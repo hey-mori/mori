@@ -3,16 +3,16 @@
 A practical walkthrough you can run locally to verify the Mori product
 loop is wired up. Everything here is local-only. Mori does **not**
 sync to a cloud, watch folders in the background, or read external
-accounts — see "Step 9 / What is still not implemented" at the bottom.
+accounts · see "Step 9 / What is still not implemented" at the bottom.
 
 Use the sample fixture at
 [`docs/fixtures/connector-sample-mori-session.jsonl`](fixtures/connector-sample-mori-session.jsonl)
-as the canonical demo input. It is synthetic — no real paths, no real
+as the canonical demo input. It is synthetic · no real paths, no real
 accounts, no secrets.
 
 ---
 
-## Step 0 — Run Mori locally
+## Step 0 · Run Mori locally
 
 Browser-only (no Tauri shell needed):
 
@@ -34,7 +34,7 @@ For the smoke flow below, the browser dev server is enough.
 
 ---
 
-## Step 1 — Open Evidence Hub → Connector JSONL
+## Step 1 · Open Evidence Hub → Connector JSONL
 
 Open the active session's workspace and go to its evidence surface
 (자료 / Add Source; Evidence is no longer a standing left-nav tab).
@@ -44,11 +44,11 @@ diff).
 
 ---
 
-## Step 2 — Paste the sample JSONL
+## Step 2 · Paste the sample JSONL
 
 1. Open `docs/fixtures/connector-sample-mori-session.jsonl` in your
    editor.
-2. Copy the entire file contents (comments included — Mori's parser
+2. Copy the entire file contents (comments included · Mori's parser
    skips `#` comment lines automatically).
 3. Paste into the **Connector JSONL** textarea.
 
@@ -60,7 +60,7 @@ already recognises.
 
 ---
 
-## Step 3 — Parse / Preview
+## Step 3 · Parse / Preview
 
 Click **Parse / Preview** (or whatever the panel's primary action is).
 
@@ -69,16 +69,16 @@ Expected result:
 - **Valid event count** ≥ 12 (the fixture has 13 events).
 - **Source-level import summary** appears with status **new** (or
   **historyUnavailable** if browser session history isn't available
-  yet — that's an honesty downgrade, not an error).
+  yet · that's an honesty downgrade, not an error).
 - Privacy / honesty notes appear; no cloud / OAuth language.
 - **Duplicate counts are zero** on the first import.
 
 If the preview shows validation errors instead, your paste is missing
-required fields — make sure you copied the whole file.
+required fields · make sure you copied the whole file.
 
 ---
 
-## Step 4 — Import to Review
+## Step 4 · Import to Review
 
 Click **Import to Review**.
 
@@ -96,7 +96,7 @@ leave everything as Accept.
 
 ---
 
-## Step 5 — Apply to session
+## Step 5 · Apply to session
 
 Click **Apply to Timeline**.
 
@@ -112,7 +112,7 @@ Expected result:
   - **Quick Pass 실행 (Reports)** → routes to Reports (only shown
     when there is no analysis yet).
 - The footer note clarifies that decisions / issues / next-actions
-  are populated after Quick Pass — they don't appear in Project Memory
+  are populated after Quick Pass · they don't appear in Project Memory
   yet.
 
 Click **Timeline 열기**. The imported events should be visible on the
@@ -124,7 +124,7 @@ the connector ids, capture method, and re-import status.
 
 ---
 
-## Step 6 — Run Quick Pass (optional, but recommended)
+## Step 6 · Run Quick Pass (optional, but recommended)
 
 Go to **Reports**. Run Quick Pass.
 
@@ -139,12 +139,12 @@ Expected result:
   reload.
 
 Without Quick Pass, the Memory page will still show imports and key
-evidence — but decisions / issues / next-actions stay empty for this
+evidence · but decisions / issues / next-actions stay empty for this
 session and a warning explains why.
 
 ---
 
-## Step 7 — Open Project Memory
+## Step 7 · Open Project Memory
 
 Open the project's page (프로젝트 nav); durable project memory lives
 there, or reach the memory overview via the command palette (메모리 is
@@ -173,7 +173,7 @@ Expected result:
 
 ---
 
-## Step 8 — Re-import the same JSONL
+## Step 8 · Re-import the same JSONL
 
 Go back to **Evidence Hub → Connector JSONL** and paste the same
 fixture again.
@@ -186,7 +186,7 @@ Expected result:
     classified as duplicates (`currentSessionDuplicateCount`).
   - 1 event (`session_started`) does not produce a TimelineEvent, so
     it has no counterpart and shows up as "new". This is honest
-    accounting — the source includes one row Mori hasn't stored as a
+    accounting · the source includes one row Mori hasn't stored as a
     TimelineEvent.
 - Duplicates are **skipped by default**. Toggling **Include
   duplicates** in the preview before opening Import Review re-includes
@@ -199,7 +199,7 @@ detection are wired correctly.
 
 ---
 
-## Step 9 — What is still not implemented
+## Step 9 · What is still not implemented
 
 This walkthrough makes the **existing** product loop visible. The
 following are deliberately deferred or out of scope:
@@ -217,7 +217,7 @@ following are deliberately deferred or out of scope:
 - **Session Canvas / Workroom.** A future visual surface is documented
   in [`docs/roadmap.md`](roadmap.md) but no UI is shipped for it.
 - **SQLite-side `importSummary` mirror.** Desktop SQLite sessions do
-  not contribute to the connector re-import rollup yet — the Memory
+  not contribute to the connector re-import rollup yet · the Memory
   page surfaces this as a warning.
 
 ---
@@ -242,7 +242,7 @@ docs-and-product mismatch:
 3. If the test passes but the UI doesn't match, the breakage is in
    the UI wiring. Search for the relevant screen
    (`ImportPanel.tsx` / `ImportReviewView.tsx` / `MemoryView.tsx`)
-   and fix the wiring — do not silently update this doc.
+   and fix the wiring · do not silently update this doc.
 
 The doc and the fixture are intentionally exact so a regression in
 either one shows up immediately.

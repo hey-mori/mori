@@ -10,7 +10,7 @@ for the MCP / connector capture path (evidence, not an anchor) see
 ## Supported agents
 
 Eight anchor agents ship today, all read by **direct, read-only, explicit**
-discovery (no watcher, no daemon — listing happens only on a user action):
+discovery (no watcher, no daemon · listing happens only on a user action):
 
 | Agent | Store type | Location | Reader |
 |---|---|---|---|
@@ -66,24 +66,24 @@ registered `sourceRegistry` transcript kind, so a half-wired agent fails fast.
 
 ## Adding an agent
 
-1. **Rust reader** — `src-tauri/src/<agent>/sessions.rs` with
+1. **Rust reader** · `src-tauri/src/<agent>/sessions.rs` with
    `discover_<agent>_sessions` / `get_<agent>_session`, plus a root resolver in
    `agent_paths.rs` (env-overridable). Register both in `main.rs`. Validate the
    parser against a real local store where possible (the OpenCode / Continue /
    Cline pattern: a temporary `#[ignore]` smoke pointing at the real store, then
    remove it); otherwise cover it with in-memory fixtures (the Cursor pattern).
-2. **TS bridge + types** — `src/lib/<agent>/types.ts` + `<agent>Tauri.ts`, and
+2. **TS bridge + types** · `src/lib/<agent>/types.ts` + `<agent>Tauri.ts`, and
    the command entries in `src/lib/desktop/tauriCommands.ts`.
-3. **Registry entry** — one entry in `AGENT_REGISTRY` (id, name, detail,
+3. **Registry entry** · one entry in `AGENT_REGISTRY` (id, name, detail,
    iconKey, platform, detect).
-4. **workSessions wiring** — add the `<agent>-session` importKind, a discovery
+4. **workSessions wiring** · add the `<agent>-session` importKind, a discovery
    branch in `listAgentWorkSessions`, a `get` branch, and a `map<Agent>Meta`.
    The transcript build path is already registry-driven (no edit).
-5. **Platform + provenance** — add the platform to `AiTranscriptPlatform`, a
+5. **Platform + provenance** · add the platform to `AiTranscriptPlatform`, a
    `<platform>Transcript` entry in `sourceRegistry.ts` (hub-hidden in
    `integrationGroups.ts`), a `DISCOVERY_AGENT_SPECS` entry in
    `sourceWorkspace.ts`, and a provider spec/method in `sourceProviderGroups.ts`.
-6. **Icons** — map the `iconKey` glyph in `StartSessionView` `AGENT_ICON` and
+6. **Icons** · map the `iconKey` glyph in `StartSessionView` `AGENT_ICON` and
    the agent id in `SourcesView` `PROVIDER_ICON`.
 
 The `getIntegrationId` convention and the build-dispatch dedup removed what used
@@ -93,7 +93,7 @@ unwired.
 ## What this layer never does
 
 Reading another tool's local session store is **not** background capture: it is
-read-only, explicit (a user action lists / reads), bounded, and summary-only —
+read-only, explicit (a user action lists / reads), bounded, and summary-only ·
 Mori keeps a summary + metadata, never the full raw transcript. It never writes
 to the agent's store, never watches it, and never reads account / API / network
 state. See the product principles in

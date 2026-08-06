@@ -38,12 +38,12 @@ What is real:
 - Quick Pass analysis results are persisted per session through `BrowserDraftRepository.saveSessionAnalysis` and hydrated by the session store on boot. The composed session view merges analysis output (issues, decisions, relationships, next actions, summary) when present.
 - Quick Pass provider settings (`provider`, `ollamaEndpoint`, `ollamaModel`, `ollamaTimeoutMs`, `fallbackToDeterministic`) are persisted globally through `saveQuickPassSettings`. Settings are sanitized on save and on load, so corrupt or partial values fall back to the defaults instead of breaking the analyzer.
 - Rust-native SQLite persistence is now real for project, session, sources, events, issues, decisions, relationships, artifacts, next actions, and summaries. See [SQLite Persistence](sqlite-persistence.md) for the migration strategy, command surface, and what still lives in localStorage.
-- Saved-repository settings (Git diff capture targets) are persisted globally through `saveRepositorySettings` / `loadRepositorySettings` on `BrowserDraftRepository`. Mori only stores paths the user adds via Settings → Repositories or the Git Diff tab's Browse/native picker — see [Imports](imports.md) for the full consent model.
-- Per-repository verification metadata (`status`, `gitRoot`, `currentBranch`, `headCommit`, `shortHeadCommit`, `isDirty`, `verifiedAt`, `error`) is captured by the explicit `verify_repository_path` Tauri command and persisted alongside the repository entry via `setRepositoryVerification`. Verification only runs when the user clicks Verify or explicitly runs Git diff capture against a saved repo — never on app start, hydrate, focus, or navigation. `setRepositoryVerification(settings, id, null)` is the supported "forget what we learned" path.
-- Verification freshness is a pure derivation in [src/lib/repositories/verificationFreshness.ts](../src/lib/repositories/verificationFreshness.ts) (24-hour stale threshold, age labels, tones). It only describes stored metadata in Settings and the Git Diff dropdown — it never triggers work. See [Imports](imports.md) for the capture-triggered refresh flow.
+- Saved-repository settings (Git diff capture targets) are persisted globally through `saveRepositorySettings` / `loadRepositorySettings` on `BrowserDraftRepository`. Mori only stores paths the user adds via Settings → Repositories or the Git Diff tab's Browse/native picker · see [Imports](imports.md) for the full consent model.
+- Per-repository verification metadata (`status`, `gitRoot`, `currentBranch`, `headCommit`, `shortHeadCommit`, `isDirty`, `verifiedAt`, `error`) is captured by the explicit `verify_repository_path` Tauri command and persisted alongside the repository entry via `setRepositoryVerification`. Verification only runs when the user clicks Verify or explicitly runs Git diff capture against a saved repo · never on app start, hydrate, focus, or navigation. `setRepositoryVerification(settings, id, null)` is the supported "forget what we learned" path.
+- Verification freshness is a pure derivation in [src/lib/repositories/verificationFreshness.ts](../src/lib/repositories/verificationFreshness.ts) (24-hour stale threshold, age labels, tones). It only describes stored metadata in Settings and the Git Diff dropdown · it never triggers work. See [Imports](imports.md) for the capture-triggered refresh flow.
 - `SessionPersistenceService` (`src/lib/storage/sessionPersistenceService.ts`) is the single place where runtime decisions live. In browser mode all session, import, and analysis reads/writes go through `BrowserDraftRepository`. In Tauri mode the service prefers the SQLite snapshot when hydrating the active session, exposes Load actions through `useMoriSessionStore.loadDesktopSession(sessionId)`, and lets the Settings panel route initialize/save/list/load through the Tauri SQLite command bridge.
-- **Connector event identities persist across the local persistence boundary.** TimelineEvents imported through the connector JSONL pipeline carry a `connectorEventId` (`<connectorId>::<externalSessionId|unscoped>::<eventId>`). Browser localStorage preserves the field as part of `mori.sessionImports.*`. Desktop SQLite added `events.connector_event_id` in migration V002 so the identity survives save / load. Old sessions imported before this milestone never carry the field — Mori treats them as "identity-unavailable" rather than as duplicates, so they keep loading cleanly. The cross-session duplicate index is `BrowserDraftRepository.listConnectorEventIdentitySnapshots` plus the `loadConnectorImportHistorySavedSessions` selector on the session store; it returns a lightweight `{ sessionId, title, savedAt, connectorEventIds }` shape rather than full payloads, so reading the history is cheap even with many saved sessions.
-- **Optional source-level import summary on each session import.** `StoredSessionImport.importSummary?: ConnectorSourceImportSummary` is written when the Import Review apply path passes through a connector JSONL preview. The payload is small (counts + matched-session references, no raw JSONL, no extra event data). Old records without the field load normally — every consumer treats it as `undefined`. This is the data the Evidence Hub `ImportedSourceRow` and `SourceDetailPanel` use to render a re-import status badge after Apply.
+- **Connector event identities persist across the local persistence boundary.** TimelineEvents imported through the connector JSONL pipeline carry a `connectorEventId` (`<connectorId>::<externalSessionId|unscoped>::<eventId>`). Browser localStorage preserves the field as part of `mori.sessionImports.*`. Desktop SQLite added `events.connector_event_id` in migration V002 so the identity survives save / load. Old sessions imported before this milestone never carry the field · Mori treats them as "identity-unavailable" rather than as duplicates, so they keep loading cleanly. The cross-session duplicate index is `BrowserDraftRepository.listConnectorEventIdentitySnapshots` plus the `loadConnectorImportHistorySavedSessions` selector on the session store; it returns a lightweight `{ sessionId, title, savedAt, connectorEventIds }` shape rather than full payloads, so reading the history is cheap even with many saved sessions.
+- **Optional source-level import summary on each session import.** `StoredSessionImport.importSummary?: ConnectorSourceImportSummary` is written when the Import Review apply path passes through a connector JSONL preview. The payload is small (counts + matched-session references, no raw JSONL, no extra event data). Old records without the field load normally · every consumer treats it as `undefined`. This is the data the Evidence Hub `ImportedSourceRow` and `SourceDetailPanel` use to render a re-import status badge after Apply.
 - Mori can map a session into normalized SQLite row snapshots.
 - SQLite snapshots are validated for required rows, foreign-key shape, and JSON-array columns before desktop persistence.
 - A desktop SQLite repository boundary can call Tauri commands for initialization, snapshot persistence, session loading, and session listing.
@@ -77,7 +77,7 @@ Cross-session connector duplicate detection scope:
   badge so the split is honest.
 - Detection never makes a network call, never watches a folder, never
   scans the filesystem outside the explicit inbox path, and never opens
-  saved sessions on its own — only the identity index is loaded, not
+  saved sessions on its own · only the identity index is loaded, not
   the full saved-session payload.
 - Detection is forward-only. Sessions imported before this milestone
   cannot be deduplicated retroactively; their events are classified as
@@ -122,7 +122,7 @@ Project Memory scope (read-only, single-session aggregation):
       next-actions snapshot, schema-versioned) + `loadSessionAnalysis`
       (legacy fallback for sessions saved before memory bodies landed).
   The loader caps total saved-session reads at
-  `DEFAULT_SAVED_SESSION_CAP = 20` and never throws past the caller —
+  `DEFAULT_SAVED_SESSION_CAP = 20` and never throws past the caller ·
   failed sessions surface as `loadStatus: "failed"` with a reason.
 - `StoredSessionMemoryBody` is the durable browser record for issues /
   decisions / next-actions / optional summary snapshot. It is keyed at
@@ -131,7 +131,7 @@ Project Memory scope (read-only, single-session aggregation):
   `clearCurrentSessionDraft` runs. Records with an unknown schema
   version load as `null` rather than corrupting the aggregator.
 
-### Accepted Memory Persistence — Browser (landed)
+### Accepted Memory Persistence · Browser (landed)
 
 Accepted Project Memory consolidation proposals land in browser
 localStorage when the user clicks Apply on the Consolidation
@@ -158,10 +158,10 @@ the storage plan below is what the current adapter implements.
   adds the `consolidated_memories` and `consolidated_memory_audit`
   tables. Object / array fields are flattened to JSON `*_json`
   columns; the Rust layer (`src-tauri/src/db/accepted_memory.rs`)
-  treats those columns as opaque text. Four Tauri commands —
+  treats those columns as opaque text. Four Tauri commands ·
   `save_accepted_project_memories`, `list_accepted_project_memories`,
   `append_memory_review_action_rows`, `list_memory_review_action_rows`
-  — back the store; the TypeScript bridge
+  · back the store; the TypeScript bridge
   (`src/lib/sqlite/acceptedMemoryRows.ts`) converts between
   `StoredAcceptedProjectMemory` / `StoredMemoryReviewAction` and the
   flat row shapes. Records loaded from SQLite carry
@@ -172,17 +172,17 @@ the storage plan below is what the current adapter implements.
   `BrowserDraftRepository` (localStorage); in Tauri desktop mode it
   prefers the SQLite commands. Every operation reports the storage
   `source` it actually used. If a SQLite call fails it falls back to
-  localStorage and reports `fellBack: true` with a reason — it never
+  localStorage and reports `fellBack: true` with a reason · it never
   silently claims SQLite succeeded. The Consolidation Review apply
   path, the Project Memory page (Accepted Memories card + Memory
   Audit Trail), and the Reports accepted-memory section all read and
   write through this repository.
 - **`.mori v0` export**: the `MoriPackageV0` package now carries an
   optional, additive `consolidatedMemories[]` slice (no
-  `formatVersion` bump — each record keeps its own `schemaVersion`).
+  `formatVersion` bump · each record keeps its own `schemaVersion`).
   The `auditTrail[]` slice is not carried yet. Importing a package
   with accepted memory re-enters those records as `proposed`
-  (re-reviewed before they merge) — that review-on-import surface is
+  (re-reviewed before they merge) · that review-on-import surface is
   still planned.
 - **What never lands in `StoredAcceptedProjectMemory`**: raw
   connector JSONL, full transcripts beyond what the underlying
@@ -195,7 +195,7 @@ the storage plan below is what the current adapter implements.
   work.
 - **Memory Audit Trail UI**: the Project Memory page renders the
   `StoredMemoryReviewAction` log through the pure
-  `buildMemoryAuditTrailViewModel` helper — sorted, date-grouped,
+  `buildMemoryAuditTrailViewModel` helper · sorted, date-grouped,
   action-type filtered. It reads the existing localStorage records
   only; no new storage backend. The surface never renders the
   `before` / `after` snapshots, so no raw evidence content leaves
@@ -203,7 +203,7 @@ the storage plan below is what the current adapter implements.
   (V003 `consolidated_memory_audit`), and the `.mori v0` `auditTrail`
   export slice have all since shipped (goal doc §4).
 
-No code change in this milestone — the keys, table names, and
+No code change in this milestone · the keys, table names, and
 field sets are documented here so the implementation can be done
 against a stable contract.
 

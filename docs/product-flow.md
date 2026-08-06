@@ -25,12 +25,12 @@ disabled / planned control lives in `src/app/featureStatus.ts`.
 | Stage | What happens | Required capabilities (registry ids) | Optional upgrades |
 |---|---|---|---|
 | **Capture** | A user pastes a note / URL / AI transcript / git diff, or a Tauri Git diff command runs. Future: connector JSONL inbox. | `evidence.addSource.manualNote`, `urlImport`, `aiTranscriptPaste`, `gitDiffPaste` | `tauriGitDiff`, `connectorJsonl` |
-| **Normalize** | `src/lib/import/normalize*` turns the paste into a `NormalizedImportCandidate` with `source` + `events[]`. | `evidence.addSource.manualNote`, `aiTranscriptPaste` | — |
+| **Normalize** | `src/lib/import/normalize*` turns the paste into a `NormalizedImportCandidate` with `source` + `events[]`. | `evidence.addSource.manualNote`, `aiTranscriptPaste` | · |
 | **Store** | Browser localStorage draft or desktop SQLite. `.mori v0 JSON` export available. | `settings.storage.browserDraft` | `settings.storage.desktopSqlite`, `moriPackageJson` |
-| **Review** | Import Review surfaces the candidate's events / issues / decisions. User accept / discard / edit. | `evidence.addSource.aiTranscriptPaste` (gates review flow) | — |
+| **Review** | Import Review surfaces the candidate's events / issues / decisions. User accept / discard / edit. | `evidence.addSource.aiTranscriptPaste` (gates review flow) | · |
 | **Timeline** | Lane-based reading surface. Inspector, mini-map, focus interactions. | `timeline.density`, `filter`, `search`, `range.session` | `timeline.inspector.flowTrace` |
 | **Extract** | Quick Pass (deterministic local or Ollama) runs over imports and produces issues + decisions + next actions + summary. | `evidence.runQuickPass`, `settings.localAi.deterministic` | `settings.localAi.ollama` |
-| **Summarize** | Resume prompt + session summary are generated. | `reports.copyResumePrompt` | — |
+| **Summarize** | Resume prompt + session summary are generated. | `reports.copyResumePrompt` | · |
 | **Report / Resume** | Markdown report + `.mori v0` package. PDF / HTML are honestly Planned. | `reports.export.markdown` | `reports.export.moriPackage`, `pdf`, `html` |
 | **Project Memory** | Current-session project memory snapshot. Cross-session aggregation is honestly Planned. | `memory.followUpPrompt` | `memory.crossSessionAggregation` |
 | **Next Session** | Follow-up prompt + Start Session for the next scope. End-session writeback is honestly Planned. | `startSession.savePersistedDraft`, `memory.followUpPrompt` | `appShell.endSession` |
@@ -58,28 +58,28 @@ ids and that the rollup math is consistent.
 
 ## Helpers
 
-- `getSurfaceStatus(surfaceId)` — roll up a surface's per-feature statuses
+- `getSurfaceStatus(surfaceId)` · roll up a surface's per-feature statuses
   into one `{ status, statusLabel, tone, counts, total }` row.
-- `getProductLoopProgress()` — walk the loop in order and report each
+- `getProductLoopProgress()` · walk the loop in order and report each
   stage's status + blocking + upgrade features.
-- `getRuntimeDataScope({ lifecycle, runtime })` — map the session lifecycle
+- `getRuntimeDataScope({ lifecycle, runtime })` · map the session lifecycle
   + runtime into the canonical `DataScope` tag (`demo`, `browserDraft`,
   `desktopSQLite`, `moriPackage`, `crossSessionPlanned`).
-- `getRecommendedNextStep({ lifecycle, importCount, hasAnalysis })` —
+- `getRecommendedNextStep({ lifecycle, importCount, hasAnalysis })` ·
   recommend the single most useful next action.
-- `getFeatureRegistryOverview()` — `{ total, counts }` summary.
+- `getFeatureRegistryOverview()` · `{ total, counts }` summary.
 
 ## Data scope
 
 `DataScope` is the single vocabulary for "what's the user actually looking
 at right now?":
 
-- `demo` — reference mock data only.
-- `currentSession` — events from the active session.
-- `browserDraft` — saved to browser localStorage.
-- `desktopSQLite` — saved to local SQLite.
-- `moriPackage` — backed by a loaded `.mori v0` JSON package.
-- `crossSessionPlanned` — Planned. The Memory page surfaces this label when
+- `demo` · reference mock data only.
+- `currentSession` · events from the active session.
+- `browserDraft` · saved to browser localStorage.
+- `desktopSQLite` · saved to local SQLite.
+- `moriPackage` · backed by a loaded `.mori v0` JSON package.
+- `crossSessionPlanned` · Planned. The Memory page surfaces this label when
   the user inspects something that *would* aggregate across sessions once
   cross-session memory ships.
 

@@ -102,11 +102,11 @@ banned "A"-adjacent watcher above.
   isolated at import (never stored as plain durable memory).
 - **Projection layer** decides what a surface renders, by a per-element
   **disclosure level**:
-  1. `raw` — the original text.
-  2. `summary` — an LLM/heuristic summary.
-  3. `abstract` — an intent line ("the user requested X"); the literal
+  1. `raw` · the original text.
+  2. `summary` · an LLM/heuristic summary.
+  3. `abstract` · an intent line ("the user requested X"); the literal
      request is withheld.
-  4. `hidden` — not rendered (still stored, still audited).
+  4. `hidden` · not rendered (still stored, still audited).
 - The default disclosure level is configurable in Settings and
   overridable per element. Changing a level is a non-destructive view
   change, recorded like any other reviewable action.

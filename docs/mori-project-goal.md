@@ -23,33 +23,33 @@ Companion docs (read these before changing code):
   (§5), IA (§8), Reuse/Adapt/Deprecate/Remove (§9), storage ADR (§10),
   `.mori` v1 (§11), migration (§12), decision authority (§16), legacy
   audit (§17).
-- [memory-architecture.md](memory-architecture.md) — layer-by-layer
+- [memory-architecture.md](memory-architecture.md) · layer-by-layer
   map of the **implemented legacy pipeline** (capture → evidence →
   review → timeline → project memory → query / output → storage); the
   engine it describes becomes the Distill stage.
-- [project-memory.md](project-memory.md) — Project Memory live
+- [project-memory.md](project-memory.md) · Project Memory live
   aggregation contract and data-basis honesty flag.
-- [project-memory-consolidation.md](project-memory-consolidation.md) —
+- [project-memory-consolidation.md](project-memory-consolidation.md) ·
   Consolidation lifecycle, ADR-style decision memory, Review Surface
   spec, Accepted Memory + Audit Trail data model.
-- [imports.md](imports.md) — every import surface and its review gate.
-- [source-integrations.md](source-integrations.md) — source registry,
+- [imports.md](imports.md) · every import surface and its review gate.
+- [source-integrations.md](source-integrations.md) · source registry,
   trust levels, raw-data policy.
 - [connectors/connection-surface.md](connectors/connection-surface.md) covers
   the 연동 surface contract (provider grid + inspector, setup guides, live
   connection status) and the remaining connector roadmap.
 - [connectors/connection-long-term-plan.md](connectors/connection-long-term-plan.md)
   is the phased connector execution plan from hardening to CLI / IDE emitters.
-- [persistence.md](persistence.md) — storage adapters, schema
+- [persistence.md](persistence.md) · storage adapters, schema
   versions, fallback behaviour.
-- [roadmap.md](roadmap.md) — capability buckets and historical phase
+- [roadmap.md](roadmap.md) · capability buckets and historical phase
   notes.
-- [e2e-smoke-flow.md](e2e-smoke-flow.md) — scripted walkthrough of the
+- [e2e-smoke-flow.md](e2e-smoke-flow.md) · scripted walkthrough of the
   full loop using the canonical fixture.
 - [references/memory-orchestrator-reference.md](references/memory-orchestrator-reference.md)
   and
   [references/manus-research-synthesis.md](references/manus-research-synthesis.md)
-  — external references reconciled against Mori.
+  · external references reconciled against Mori.
 
 ---
 
@@ -191,7 +191,7 @@ that is called out.
   `src/lib/agents/agentRegistry.ts` (currently seven anchor agents: Claude /
   Codex / OpenCode / Antigravity / Continue / Cline / Cursor), where the
   conversation enters by one of three methods: 기록에서 불러오기 (a desktop-only
-  auto-detected work-record browse modal with a content preview) — each agent has
+  auto-detected work-record browse modal with a content preview) · each agent has
   a read-only Rust discovery reader over that tool's own local store (Claude Code
   JSONL + Claude Desktop SQLite, Codex `~/.codex`, OpenCode
   `~/.local/share/opencode/storage`, Antigravity generated-transcript logs,
@@ -240,10 +240,10 @@ that is called out.
 - Work Bundle import (`buildWorkBundlePreview` + `addImportBatch` +
   `WorkBundlePanel`). Assembles several normalized candidates from one work
   session (transcript / Codex / OpenCode / git diff / terminal log / note)
-  into a single composite preview — detected source families, work-context
+  into a single composite preview · detected source families, work-context
   hint, proposed title, event / source / file counts, cross-source dedup,
   trust + capture-fidelity summary, redaction / secret flags, span, and a
-  "what will be created" summary — then applies each source as its own
+  "what will be created" summary · then applies each source as its own
   session import so per-source provenance survives into the Evidence Hub and
   Timeline. The preview is the review-before-apply gate; no durable-memory
   gate is bypassed. See [work-bundle-import.md](work-bundle-import.md). As of
@@ -285,8 +285,8 @@ that is called out.
 - Event Inspector with trust / confidence / evidence / related items.
 - Quick Pass analysis: three providers behind one settings → config
   mapping (`buildProviderConfigFromSettings` / `resolveQuickPassProvider`)
-  — a deterministic rule-based provider (always available), an optional
-  Ollama provider, and an OpenAI-compatible provider — each with optional
+  · a deterministic rule-based provider (always available), an optional
+  Ollama provider, and an OpenAI-compatible provider · each with optional
   deterministic fallback honestly labeled in the result. Settings persist
   the full provider configuration (`provider`, `ollamaEndpoint`,
   `ollamaModel`, `ollamaTimeoutMs`, `openAiBaseUrl`, `openAiModel`,
@@ -335,7 +335,7 @@ that is called out.
   (`buildProjectMemoryViewModel`) across active + saved sessions with
   a typed `dataBasis` flag and a warnings strip.
 - Saved-session body loading from browser localStorage and (in Tauri)
-  desktop SQLite via `loadProjectMemorySessions` —
+  desktop SQLite via `loadProjectMemorySessions` ·
   parallelised, non-mutating, capped at 20 sessions.
 - Browser session memory body persistence
   (`StoredSessionMemoryBody`) with schema versioning and a one-time
@@ -354,7 +354,7 @@ that is called out.
 - Consolidation State layer
   (`buildProjectMemoryConsolidationState`) consumed by the Memory
   page (counts, top kinds, data-basis badge, empty/partial reasons).
-- Consolidation Review Surface (`ConsolidationReviewView`) — full
+- Consolidation Review Surface (`ConsolidationReviewView`) · full
   review UI, grouped proposal cards, evidence inspector, per-proposal
   accept / edit / discard / keep-watching / defer / reset actions, and
   an Apply footer.
@@ -388,12 +388,12 @@ that is called out.
   export populates it from the project's `StoredMemoryReviewAction`
   log; it round-trips through serialize / deserialize and validation.
   Packages exported before the field existed load it as empty
-  (`getPackageAuditTrail`). These rows are review history — importing
+  (`getPackageAuditTrail`). These rows are review history · importing
   a package never replays them.
 - Memory Audit Trail UI: the Project Memory page renders the
   append-only `StoredMemoryReviewAction` log via the pure
   `buildMemoryAuditTrailViewModel` helper and `MemoryAuditTrailCard`
-  — sorted newest-first, grouped by UTC date, filterable by action
+  · sorted newest-first, grouped by UTC date, filterable by action
   type. The surface never renders the `before` / `after` snapshots,
   so no raw evidence content is exposed.
 - Reviewed revert flow: a revertible audit row carries a
@@ -401,7 +401,7 @@ that is called out.
   eligibility, `buildMemoryRevertProposal` produces a reviewable
   `MemoryRevertProposal`, and `applyMemoryRevertProposal` restores
   the memory's status and writes a `revert` `StoredMemoryReviewAction`
-  — a revert is itself a reviewed action recorded in the same trail.
+  · a revert is itself a reviewed action recorded in the same trail.
 
 **Storage**
 
@@ -428,7 +428,7 @@ that is called out.
 - Runtime-aware accepted memory routing: `AcceptedMemoryRepository`
   (`src/lib/project-memory/acceptedMemoryRepository.ts`) routes the
   Consolidation Review apply path, the Project Memory page, and the
-  Reports accepted-memory section — SQLite in Tauri desktop mode,
+  Reports accepted-memory section · SQLite in Tauri desktop mode,
   localStorage in browser mode, with an honest, visible localStorage
   fallback when a SQLite call fails.
 - SQLite session-import mirror: the `V004 session_imports` table, the
@@ -440,21 +440,21 @@ that is called out.
   sessions do.
 - Stale Memory Review: `buildStaleMemoryProposals`
   (`src/lib/project-memory/staleMemoryReview.ts`) scans accepted
-  memories and emits `staleMemory` proposals — supersession /
+  memories and emits `staleMemory` proposals · supersession /
   retirement (high confidence), an explicit stale / revisit reviewer
   note (medium), or a next-session recommendation older than 30 days
-  (low). Proposals only — no durable write. Merged into the
+  (low). Proposals only · no durable write. Merged into the
   consolidation preview via `buildProjectMemoryConsolidationState`.
 - Contradiction Review: `buildContradictionProposals`
   (`src/lib/project-memory/contradictionReview.ts`) emits
   `contradiction` proposals when two or more current-guidance
   `promotedDecision` memories share a normalised title but record
-  different summaries. Conservative deterministic heuristic — no LLM,
-  no semantic matching — medium-low confidence, proposals only.
+  different summaries. Conservative deterministic heuristic · no LLM,
+  no semantic matching · medium-low confidence, proposals only.
 - Accepted memory lifecycle status: `StoredAcceptedProjectMemory`
   carries explicit `stale` and `contradicted` lifecycle statuses.
   Accepting a `staleMemory` / `contradiction` proposal transitions
-  the referenced memory (or memories) — via `targetMemoryIds` — to
+  the referenced memory (or memories), via `targetMemoryIds`, to
   that status instead of creating a detached record. Memories are
   never deleted; the transition is an append-only audit row with a
   before/after snapshot. Resume Prompt and Reports exclude stale /
@@ -467,7 +467,7 @@ that is called out.
   proposals, deduplicated against the project's existing accepted
   memories by `originProposalIds` overlap or shared normalised title.
   The Consolidation Review Surface carries an "Import accepted memory
-  from a .mori package" panel — paste the package JSON or pick a
+  from a .mori package" panel · paste the package JSON or pick a
   `.mori` file (a native Open dialog on desktop via
   `pick_mori_package_file`, the browser `File` API otherwise). Picked
   bytes are routed by the `PK` zip magic: a real `.mori` zip is
@@ -477,7 +477,7 @@ that is called out.
   through the normal accept / apply path.
 - Queryable Memory: `searchAcceptedMemories`
   (`src/lib/project-memory/queryableMemory.ts`) runs deterministic
-  local structured search over accepted memories — text matching on
+  local structured search over accepted memories · text matching on
   title / summary / evidence refs / source session ids, plus
   kind / status / sensitivity / eligibility filters. Title-ranked,
   evidence-ref cited, no embeddings or LLM. Non-current memory
@@ -498,14 +498,14 @@ that is called out.
 
 - `.mori v0` JSON serialization / deserialization plus Tauri
   save / open commands.
-- Real `.mori` zip package — `fflate`-backed `zipMoriPackage` /
+- Real `.mori` zip package · `fflate`-backed `zipMoriPackage` /
   `unzipMoriPackage` archive the canonical one-file-per-slice layout
   into a real `.mori` zip. The Reports export writes it (desktop
   `save_mori_package_zip_as` Save As dialog or a browser zip blob);
   the Consolidation Review import panel reads it back, routing picked
   bytes by the `PK` zip magic, with validation and review-on-import.
 - Reports page with Markdown report builder and `.mori` package
-  export — a normal export and a client-safe export
+  export · a normal export and a client-safe export
   (`buildClientSafeMoriPackage`, only `clientSafe` / non-sensitive
   memory) for handing a package to a non-teammate.
 - End-to-end smoke flow documented and guarded by a fixture test
@@ -513,7 +513,7 @@ that is called out.
 
 **Companion Layer**
 
-- Companion Signals (`src/lib/companion/companionSignals.ts`) — a
+- Companion Signals (`src/lib/companion/companionSignals.ts`) · a
   local, evidence-based assistance layer. `buildCompanionSignals`
   is a pure helper that derives a prioritised, capped set of
   signals from the active session (demo-mode notice, real-session
@@ -603,14 +603,14 @@ These capabilities are designed but not yet implemented. Verified
 against the repository.
 
 - **Hook / wrapper auto-emit connectors.** The explicit local-capture
-  bridge (`mori-local-capture.py` — transcript / stdin / note /
+  bridge (`mori-local-capture.py` · transcript / stdin / note /
   git-repo / git-commit) is shipped and tested; running it explicitly
   is the intended model. A Claude Code hook or Codex CLI wrapper that
   emits connector JSONL as a side effect of normal use (still
   explicit, no watcher) is template-only, not a turnkey integration.
 - **IDE / terminal / browser extension integrations.** The
   explicit-capture design is documented in `source-integrations.md`
-  and the first artifacts ship — `connectors/vscode-task/` (a VS Code
+  and the first artifacts ship · `connectors/vscode-task/` (a VS Code
   Run Task template) and `connectors/terminal-helper/` (a
   `mori-capture` shell function), both wrapping `mori-local-capture.py`.
   A real editor / browser extension does not exist yet.
@@ -625,7 +625,7 @@ against the repository.
 - **Team / shared memory.** The design is specified in
   `docs/team-shared-memory.md` (roles, privacy boundaries,
   client-safe export rules, conflict / duplicate review model). No
-  code beyond the explicit `.mori` package round trip yet — the
+  code beyond the explicit `.mori` package round trip yet · the
   client-safe filter and handoff workflow are later slices.
 
 ## 6. Product Principles
@@ -716,7 +716,7 @@ falls back to foreground-only:
 
 Status: B is **designed and shipped.** Live-follow remains foreground-only
 (session-scoped); the opt-in background inbox watcher (Section 5, "Optional
-watched inbox") is now implemented — detection only while the app is open,
+watched inbox") is now implemented · detection only while the app is open,
 review-gated, off by default.
 
 ## 7. Capture Strategy
@@ -756,7 +756,7 @@ evidence without surveillance:
 - Terminal integration (shell history connector with redaction).
 - Browser extension that explicitly adds the active tab / selected
   text to a session.
-- ~~Optional watched inbox~~ — shipped (opt-in detection + headless
+- ~~Optional watched inbox~~ · shipped (opt-in detection + headless
   analysis while the app is open; review gate unchanged).
 
 **Avoid (non-goals).** Account scraping, hidden app database reading
@@ -903,7 +903,7 @@ Mori is a calm productivity app. The product feel target:
 
 - **Visual tone.** White / soft-gray base, purple accent, generous
   whitespace, subtle dividers. Comparable to Linear, Notion, Figma,
-  or Apple's productivity surfaces — never game-like or
+  or Apple's productivity surfaces · never game-like or
   notification-heavy.
 - **Layout primitives.** Cards, inspectors, badges, timeline lanes,
   three-pane review surfaces (grouping rail / list / inspector).
@@ -911,7 +911,7 @@ Mori is a calm productivity app. The product feel target:
   badges, and warnings strips communicate state at a glance.
 - **Honesty surfaces.** Implemented / Partial / Planned / Unavailable
   status is visible wherever a feature is mentioned. Planned
-  connector cards never open an import flow — they exist only so the
+  connector cards never open an import flow · they exist only so the
   user can inspect what each connector will and will not access.
 - **No fake connected states.** A connector that needs the desktop
   app shows "requires the Tauri app" and the action stays disabled
@@ -948,7 +948,7 @@ guardrails, not preferences.
   affected, and call out the validation plan. Get alignment with the
   user before writing code.
 - **Prefer small milestones.** Each commit should leave Mori in a
-  working state — capability buckets, not phase-numbered sweeps.
+  working state · capability buckets, not phase-numbered sweeps.
 - **Avoid broad rewrites.** Don't refactor surrounding code unless
   the task requires it. A bug fix doesn't need cleanup.
 - **Keep pure helpers tested.** Pure derivations (`buildXyz`,
@@ -1005,7 +1005,7 @@ guardrails, not preferences.
 - **Before commit.** Run `git diff --check` and `git status --short`
   to catch whitespace damage and accidental tracked-file changes.
 - **Documentation-only milestones.** Run `npm run check:full` and
-  `npm run build` anyway — both are cheap and catch markdown / link
+  `npm run build` anyway · both are cheap and catch markdown / link
   damage indirectly when the build pipeline depends on a doc.
 
 ## 13. Near-Term Roadmap
@@ -1170,4 +1170,4 @@ When a new AI coding session opens against Mori:
    docs, and wait for the next instruction.
 
 This document is durable. Update it when the implementation status
-actually changes — never to record speculative plans.
+actually changes · never to record speculative plans.

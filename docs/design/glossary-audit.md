@@ -1,4 +1,4 @@
-# Glossary — implementation audit
+# Glossary · implementation audit
 
 Status: **Slice 1 (extraction) + Slice 2 (LLM definitions) + Slice 3 (UI)
 implemented.** The glossary ships as a card on the Project Memory page.
@@ -30,13 +30,13 @@ never durable memory.
 
 ## 3. Slices
 
-### Slice 1 — deterministic extraction (implemented)
+### Slice 1 · deterministic extraction (implemented)
 
 `src/lib/glossary/`:
 
-- `glossaryTypes.ts` — `GlossaryTerm` (term, kind, occurrences,
+- `glossaryTypes.ts` · `GlossaryTerm` (term, kind, occurrences,
   evidenceRefs, salience), `GlossaryEvidenceRef`, `GlossaryResult`.
-- `extractGlossaryTerms.ts` — pure scan of timeline events + evidence
+- `extractGlossaryTerms.ts` · pure scan of timeline events + evidence
   sources for three term shapes: **code** (camelCase / snake_case / dotted
   / path), **acronym** (all-caps initialisms, with a small stoplist), and
   **phrase** (capitalized multi-word domain terms, with leading-stopword
@@ -44,7 +44,7 @@ never durable memory.
   salience (occurrences biased by kind), caps the result.
 - `index.ts` + colocated tests (7 green).
 
-### Slice 2 — grounded LLM definitions (implemented)
+### Slice 2 · grounded LLM definitions (implemented)
 
 `glossaryDefinition.ts`: a pure `buildGlossaryDefinitionPrompt(term)` plus a
 `defineGlossaryTerm(term, deps)` orchestrator that reuses the `AskMoriLlm`
@@ -53,7 +53,7 @@ knowledge for the term's standard meaning, then ties it to the work via the
 occurrence titles. With no LLM (or on error) it degrades honestly to listing
 where the term appears (`deterministicFallback`). Covered by colocated tests.
 
-### Slice 3 — UI (implemented)
+### Slice 3 · UI (implemented)
 
 `src/features/memory/GlossaryCard.tsx`: a card in the Project Memory
 "메모리 분석 · 도구" disclosure, sibling to the Ask Mori and Memory Search

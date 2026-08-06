@@ -12,7 +12,7 @@
 This roadmap is a practical development sequence. Each phase should produce something usable without pretending later capabilities already exist.
 
 The intended product surface, screen by screen, is catalogued in the
-[Product Screen Reference](product-screen-reference.md) — every reference image
+[Product Screen Reference](product-screen-reference.md) · every reference image
 is tagged Implemented / Partial / Planned / Reference only so the roadmap below
 can map cleanly to a specific screen without overclaiming. Original design
 prompts are preserved in [Product Screen Prompts](product-screen-prompts.md).
@@ -282,7 +282,7 @@ notes kept for traceability, not new architecture labels.
 | Project Memory Consolidation | Turn reviewed sessions into durable project memory through review-before-apply. | ✅ landed · full review surface, accepted-memory persistence (browser + SQLite V003), audit trail + revert, stale / contradiction review |
 | Resume and Report Outputs | Generate continuation prompts and shareable reports from accepted memory only. | ✅ landed · accepted-memory integration in Resume Prompt and Reports, real `.mori` zip export / import |
 | Optional Local Automation | Reduce friction while preserving explicit consent. | ✅ landed · opt-in background inbox watcher (off by default, review gate unchanged); see Phase 3 below |
-| Queryable Memory | Local cited search over accepted memory + evidence. | ✅ landed — accepted-memory + timeline / evidence / review-action search (helper + Memory Search card) |
+| Queryable Memory | Local cited search over accepted memory + evidence. | ✅ landed · accepted-memory + timeline / evidence / review-action search (helper + Memory Search card) |
 | Team / Shared Memory | Explicit `.mori v0` export/import only; no default cloud sync. | partially landed · `.mori` zip export / import, client-safe filter + export UI, handoff workflow spec; live collaboration is a non-goal |
 
 Sub-capabilities within Project Memory Consolidation (mirroring
@@ -296,14 +296,14 @@ runtime-aware repository routing), Memory Audit Trail ✅
 (append-only review actions + audit log UI on the Memory page;
 Undo / revert still planned), Resume and Report Memory Integration
 ✅ (Resume Prompt + Reports + `.mori v0` slice + review-on-import
-paste panel), Stale Memory Review ✅ (`buildStaleMemoryProposals` —
+paste panel), Stale Memory Review ✅ (`buildStaleMemoryProposals` ·
 supersession / retirement, reviewer-note, and next-session time
-signals), Contradiction Review ✅ (`buildContradictionProposals` —
+signals), Contradiction Review ✅ (`buildContradictionProposals` ·
 same-title conflicting accepted decisions), Accepted Memory
 Lifecycle Status ✅ (`stale` / `contradicted` statuses; accepting a
 lifecycle proposal transitions the referenced memory).
 
-### Phase 0 — Explicit import memory loop (Implemented)
+### Phase 0 · Explicit import memory loop (Implemented)
 
 The canonical paste → review → apply → timeline → evidence loop is
 in place for AI Transcript, Connector JSONL (paste + desktop inbox),
@@ -311,7 +311,7 @@ Git Diff, Manual Note, and URL sources. A scripted walkthrough lives
 at [`docs/e2e-smoke-flow.md`](e2e-smoke-flow.md) and is guarded by a
 fixture test (`src/lib/connectors/connectorSampleFixture.test.ts`).
 
-### Phase 1 — Project Memory consolidation (Implemented)
+### Phase 1 · Project Memory consolidation (Implemented)
 
 Cross-session aggregation produces key decisions, recurring issues,
 key evidence, unresolved risks, recommended next session, and the
@@ -320,7 +320,7 @@ connector re-import rollup. The Memory page exposes a typed
 aggregation. The Resume Prompt is built from this same view-model,
 audience- and privacy-aware, no LLM call.
 
-### Phase 2 — Controlled consolidation pass (Design + Phase 2.0 prototype landed)
+### Phase 2 · Controlled consolidation pass (Design + Phase 2.0 prototype landed)
 
 A **user-triggered** consolidation pass over Project Memory. Goals:
 
@@ -359,7 +359,7 @@ Sub-phase status:
 | Accepted Memory Lifecycle Status | Explicit `stale` / `contradicted` statuses; accepting a lifecycle proposal transitions the referenced memory via `targetMemoryIds` | ✅ landed |
 | Queryable Memory | Local structured search over accepted memories + timeline / evidence / review-action references (`searchAcceptedMemories` / `searchProjectMemoryReferences` + Memory Search card); deterministic, evidence-ref cited, no embeddings | ✅ landed |
 
-### Phase 3 — Optional local daemon / watched inbox (✅ Shipped, opt-in)
+### Phase 3 · Optional local daemon / watched inbox (✅ Shipped, opt-in)
 
 Shipped as the opt-in background inbox watcher (`src/lib/background-watch/`,
 설정 → 분석 엔진 → "백그라운드 감지"): while the app is open it watches
@@ -375,7 +375,7 @@ Hard constraints:
   consented to.
 - Review-before-apply preserved.
 
-### Phase 4 — Local natural-language memory query (Research)
+### Phase 4 · Local natural-language memory query (Research)
 
 A small local query helper that answers "what did we decide about
 X?" by reading `ProjectMemoryViewModel` + saved-session bodies and
@@ -409,7 +409,7 @@ Connector JSONL preview derives a typed
 `duplicateOnly` / `historyUnavailable` / `invalidOnly`) that the
 preview card, the Import Review meta strip, and the imported-source
 row + detail panel all consume. Matched saved sessions are surfaced
-by name. The status precedence is honest — a fresh-looking preview
+by name. The status precedence is honest · a fresh-looking preview
 that ran without saved-session history is downgraded to
 `historyUnavailable` rather than claiming "new across all sessions".
 The summary can optionally ride along on `StoredSessionImport` so the
@@ -424,7 +424,7 @@ loop using the canonical synthetic fixture at
 [`docs/fixtures/connector-sample-mori-session.jsonl`](fixtures/connector-sample-mori-session.jsonl).
 A vitest suite at
 `src/lib/connectors/connectorSampleFixture.test.ts` guards the fixture
-so the docs and product stay aligned — parse, preview, normalize, and
+so the docs and product stay aligned · parse, preview, normalize, and
 duplicate-detection paths all run against the same file.
 
 Import Review now shows a richer post-Apply banner: applied count,
@@ -435,11 +435,11 @@ an explicit honesty note about local-only generation.
 
 Out of scope this milestone (still planned):
 
-- No new capture mechanisms — paste / desktop inbox stays the entry
+- No new capture mechanisms · paste / desktop inbox stays the entry
   surface.
 - No live Claude / Codex sync.
 - No Playwright / screenshot tests.
-- No "Load sample" UI button — the doc-driven paste path was preferred
+- No "Load sample" UI button · the doc-driven paste path was preferred
   to avoid the risk of looking like a real connector.
 
 ## Cross-session resume prompt (Implemented)
@@ -457,9 +457,9 @@ remains exported for backward compatibility.
 
 Out of scope this milestone:
 
-- Reports page is unchanged — it keeps its own `reportBuilder.ts`
+- Reports page is unchanged · it keeps its own `reportBuilder.ts`
   surface.
-- No LLM-generated continuation prompt — output is purely derived
+- No LLM-generated continuation prompt · output is purely derived
   from local data.
 
 ## Browser session memory body persistence (Implemented)
@@ -471,7 +471,7 @@ optional summary snapshot) at
 succeeds and via a one-shot forward migration during hydrate (any
 saved analysis without a body gets one). Project Memory's browser
 loader reads the body first and falls back to the analysis result for
-legacy records — so browser-saved sessions now contribute decisions /
+legacy records · so browser-saved sessions now contribute decisions /
 issues / next-actions / risks / recommendations to cross-session
 aggregation, on par with desktop SQLite sessions.
 
@@ -525,7 +525,7 @@ data-basis badge (active-only / active + saved / metadata-only /
 unavailable) so users can see what's actually accumulated.
 
 A dedicated "이번 프로젝트 재import" card rolls connector
-`ConnectorSourceImportSummary` records up across saved sessions —
+`ConnectorSourceImportSummary` records up across saved sessions ·
 counting `new` / `partialReimport` / `duplicateOnly` /
 `historyUnavailable` / `invalidOnly` separately and surfacing matched
 saved sessions.
@@ -536,7 +536,7 @@ Out of scope this milestone (documented as planned):
   next-actions across sessions.
 - Persisting `importSummary` into SQLite so desktop-saved sessions can
   also contribute to the re-import rollup.
-- Visual Session Canvas / Workroom (still deferred — see below).
+- Visual Session Canvas / Workroom (still deferred · see below).
 
 ## Session Canvas (deferred, future visualisation)
 

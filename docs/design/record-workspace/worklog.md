@@ -457,7 +457,7 @@ note during this session (caught and reverted).
   walks the lezer tree and collapses emphasis/strong/strikethrough/heading/
   inline-code/link punctuation on every line the caret is not on, revealing the
   raw markers again when the caret enters the line (fenced fences + bare URLs
-  kept). `**굵게**` now reads as 굵게 — the Obsidian source-mode feel.
+  kept). `**굵게**` now reads as 굵게 · the Obsidian source-mode feel.
 - **List/search**: `recordSnippet` strips inline markdown (rows read as prose,
   list markers kept) and, while searching, surfaces the body line holding the
   query so the match is visible; `matchSegments` wraps each case-insensitive
@@ -472,7 +472,7 @@ note during this session (caught and reverted).
   editor decision, extraction extensibility architecture (nature-first,
   schema-as-data, LLM engine seam), Obsidian vault bridge direction
   (storage ADR K4), list/search roadmap.
-- Editor: CodeMirror 6 markdown surface (`NoteMarkdownEditor.tsx`) — live
+- Editor: CodeMirror 6 markdown surface (`NoteMarkdownEditor.tsx`) · live
   md styling, 24px first-line title, app-var theme (both modes), autosave
   status (N자 · 저장됨). Markdown stripped from titles/extractions
   (`stripInlineMarkdown`).

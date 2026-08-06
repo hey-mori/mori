@@ -6,7 +6,7 @@ The source integration registry (`src/lib/sources/sourceRegistry.ts`)
 catalogues every integration with its `IntegrationStatus`, `CaptureMode`,
 `RawDataPolicy`, default trust level, and privacy note. Newer connector
 work (`src/lib/connectors/captureSurfaces.ts`) catalogues capture **surfaces**
-— the paste / hook / CLI / desktop / web / IDE paths a user actually clicks.
+· the paste / hook / CLI / desktop / web / IDE paths a user actually clicks.
 The two registries cover overlapping concerns and are bridged by the
 [Modular Architecture](modular-architecture.md) doc. A future cleanup will
 fold them into one registry; today they remain separate so the live UI
@@ -16,10 +16,10 @@ matrix.
 The Evidence Hub surfaces a curated subset of this registry to users; the
 hub grouping logic is in
 [`src/lib/sources/integrationGroups.ts`](../src/lib/sources/integrationGroups.ts).
-"Available now" cards must be `implemented` or `partial` (and user-facing —
+"Available now" cards must be `implemented` or `partial` (and user-facing ·
 `tauriGitDiff`, `quickPass`, and `repository` are intentionally hidden so the
 Hub never advertises internals as standalone import paths). "Planned
-connectors" cards must be `planned` — Mori does not invent connectors that
+connectors" cards must be `planned` · Mori does not invent connectors that
 have no registry entry.
 
 The top-level **소스** workspace is backed by
@@ -157,12 +157,12 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 ### 8b. Connector JSONL (`connectorJsonl`)
 
 - **Status**: Implemented (paste + desktop inbox)
-- **Capture Mode**: Explicit import — paste or desktop inbox file pick
+- **Capture Mode**: Explicit import · paste or desktop inbox file pick
 - **Trust Level**: Inherited from the underlying connector event (verified / observed / inferred per row)
 - **Raw Data Policy**: Summary only by default; individual connector events declare their own policy
 - **Privacy Note**: Mori reads JSONL **only** when the user pastes content or clicks **Refresh inbox** in the Connector JSONL tab. On Tauri desktop the Rust side restricts file access to `~/.mori/connectors/<family>/` (canonicalised, 8 MB cap, allowed extensions only). No background watching, no automatic polling, no symlink-escape, no live Claude/Codex/terminal sync.
 
-**Usage**: User runs the Claude Code hook / Codex CLI wrapper / a terminal connector / a Git connector script, which appends to `~/.mori/connectors/<family>/*.jsonl`. In Evidence Hub the user opens **Connector JSONL** and either pastes the contents (browser fallback) or clicks **Refresh inbox** and picks a file (desktop). Parse / Preview runs automatically; the user reviews the preview card; clicking **Import to Review** sends the normalized events through Import Review before they reach the session. Every connector TimelineEvent carries a stable `connectorEventId` so subsequent imports detect duplicates and skip them by default — repeated inbox refreshes, successor files from the same connector session, **and even re-imports across saved sessions** (current + saved + in-file) all flow through the same identity index and do not duplicate Timeline cards. Identities round-trip through browser localStorage and through desktop SQLite (`events.connector_event_id`, added by migration V002), so cross-session detection survives an app restart. The Connector JSONL preview, the Import Review meta strip, and the Evidence Hub `ImportedSourceRow` / `SourceDetailPanel` all surface a **source-level re-import summary** (`ConnectorSourceImportSummary`) that classifies the import as `new` / `partialReimport` / `duplicateOnly` / `historyUnavailable` / `invalidOnly` and names matched saved sessions, so the user can see "Partial re-import · 3 new / 8 already imported" before pressing Import to Review.
+**Usage**: User runs the Claude Code hook / Codex CLI wrapper / a terminal connector / a Git connector script, which appends to `~/.mori/connectors/<family>/*.jsonl`. In Evidence Hub the user opens **Connector JSONL** and either pastes the contents (browser fallback) or clicks **Refresh inbox** and picks a file (desktop). Parse / Preview runs automatically; the user reviews the preview card; clicking **Import to Review** sends the normalized events through Import Review before they reach the session. Every connector TimelineEvent carries a stable `connectorEventId` so subsequent imports detect duplicates and skip them by default · repeated inbox refreshes, successor files from the same connector session, **and even re-imports across saved sessions** (current + saved + in-file) all flow through the same identity index and do not duplicate Timeline cards. Identities round-trip through browser localStorage and through desktop SQLite (`events.connector_event_id`, added by migration V002), so cross-session detection survives an app restart. The Connector JSONL preview, the Import Review meta strip, and the Evidence Hub `ImportedSourceRow` / `SourceDetailPanel` all surface a **source-level re-import summary** (`ConnectorSourceImportSummary`) that classifies the import as `new` / `partialReimport` / `duplicateOnly` / `historyUnavailable` / `invalidOnly` and names matched saved sessions, so the user can see "Partial re-import · 3 new / 8 already imported" before pressing Import to Review.
 
 ### 9. Quick Pass Analysis (`quickPass`)
 
@@ -189,11 +189,11 @@ helper, or desktop session discovery); each section states its actual status.
 - **Raw Data Policy**: Summary only (metadata-only captures)
 - **Privacy Note**: Capture happens only when the user explicitly runs
   `mori-capture …`. The earlier "parse `~/.bash_history`" framing is
-  **superseded** by the explicit-capture model — Mori never reads
+  **superseded** by the explicit-capture model · Mori never reads
   shell history, scrollback, or any command the user did not pass to
   `mori-capture` itself.
 
-**Available now**: `connectors/terminal-helper/` — a `mori-capture`
+**Available now**: `connectors/terminal-helper/` · a `mori-capture`
 shell function the user sources from their rc file. It wraps
 `mori-local-capture.py` (`git` / `commit` / `note` / `transcript`) and
 writes to `~/.mori/connectors/`, reviewed through Import Review. In the
@@ -230,10 +230,10 @@ desktop app, the local-capture setup guide can stage this helper under
 - **Privacy Note**: The first artifact is a VS Code **task template**
   (`connectors/vscode-task/`) the user adds to their own
   `.vscode/tasks.json`. It captures only when the user explicitly runs
-  a task — no extension, no watcher. A full extension still requires
+  a task · no extension, no watcher. A full extension still requires
   explicit install + opt-in.
 
-**Available now**: `connectors/vscode-task/` — `Mori:` tasks that run
+**Available now**: `connectors/vscode-task/` · `Mori:` tasks that run
 `mori-local-capture.py` (`--git-repo`, `--git-commit`, `--note`) and
 write to `~/.mori/connectors/`, reviewed through Import Review like any
 connector JSONL. In the desktop app, the local-capture setup guide can
@@ -241,7 +241,7 @@ stage a path-rewritten `mori-tasks.json` under `~/.mori/vscode-task/`;
 the user still merges it into a project `.vscode/tasks.json` explicitly.
 
 **Future Usage**: a VS Code extension would offer an explicit "send to
-Mori" action emitting the same connector JSONL — built only once the
+Mori" action emitting the same connector JSONL · built only once the
 task-template explicit-capture contract is proven in real use.
 
 ### 14. Cursor Integration (`cursor`)
@@ -332,7 +332,7 @@ poll buffers or watch the editor.
 To clarify privacy boundaries, here's what Mori explicitly **will not** do:
 
 1. **Scan filesystem** without explicit user-added watch directories
-2. **Index repository contents** — repositories are reference paths only
+2. **Index repository contents** · repositories are reference paths only
 3. **Access browser history** without explicit extension install + opt-in
 4. **Record terminal commands** without explicit shell integration opt-in
 5. **Capture screenshots** without explicit user action
@@ -340,7 +340,7 @@ To clarify privacy boundaries, here's what Mori explicitly **will not** do:
 7. **Access editor buffers** without explicit extension install + opt-in
 8. **Send data to remote servers** unless user configures Ollama/LM Studio endpoint
 9. **Store passwords, API keys, or secrets** in raw form (redaction rules apply to planned integrations)
-10. **Auto-start sessions** — all sessions require explicit user Start action
+10. **Auto-start sessions** · all sessions require explicit user Start action
 
 ## Evidence Traceability
 
@@ -369,12 +369,12 @@ type SourceRef = {
 4. **Decision** → references events via `sourceEventIds` AND sources via `relatedSourceIds` (both indirect and direct)
 
 **Evidence Helpers** (`src/lib/sources/traceability.ts`):
-- `getSourceDisplayStatus()` — Get integration label, status, capture method, trust label, raw data policy
-- `getEventEvidenceSources()` — Get sources for an event
-- `getIssueEvidenceSources()` — Trace issue → events → sources
-- `getDecisionEvidenceSources()` — Trace decision → events + direct sources
-- `getBundleEvidenceSummary()` — Get integration/trust mix for bundles
-- `getReportEvidenceSummary()` — Get full session evidence breakdown
+- `getSourceDisplayStatus()` · Get integration label, status, capture method, trust label, raw data policy
+- `getEventEvidenceSources()` · Get sources for an event
+- `getIssueEvidenceSources()` · Trace issue → events → sources
+- `getDecisionEvidenceSources()` · Trace decision → events + direct sources
+- `getBundleEvidenceSummary()` · Get integration/trust mix for bundles
+- `getReportEvidenceSummary()` · Get full session evidence breakdown
 
 ## Implementation Checklist
 
@@ -431,7 +431,7 @@ What the connector path explicitly does not do:
 ### Capture surface matrix
 
 Beyond the `SourceIntegration` registry, Mori tracks a **capture surface
-matrix** — every user-visible path that moves evidence into the app,
+matrix** · every user-visible path that moves evidence into the app,
 with explicit status per surface (Implemented · Partial · Manual-only ·
 Docs-template-only · Planned · Unavailable). The matrix covers paste
 flows, local commands, hook templates, desktop / web imports, IDE
@@ -471,7 +471,7 @@ There is **no file-system watcher, no editor-buffer poller, no shell-history
 scraper, no daemon**. Mori never observes the editor, the terminal, or the
 process list in the background. If a planned entry above (#11 File System
 Watcher, #12 Editor Activity) is ever built, it is built as an
-explicit-emit action — the user triggers each capture — and the older
+explicit-emit action, the user triggers each capture, and the older
 "watcher" framing in those entries is superseded by this section.
 
 ### Reuse the connector JSONL pipeline
@@ -479,7 +479,7 @@ explicit-emit action — the user triggers each capture — and the older
 An IDE / terminal integration is a **thin emitter**, not a new pipeline.
 It writes connector JSONL into the existing `~/.mori/connectors/<family>/`
 inbox in the shape documented by
-[`connector-event-format.md`](./connectors/connector-event-format.md) —
+[`connector-event-format.md`](./connectors/connector-event-format.md) ·
 exactly what `mori-local-capture.py` already produces. The user then
 reviews it through the existing path: Evidence Hub → **Connector JSONL**
 → Preview → **Import to Review** → Import Review. No integration ever
@@ -516,11 +516,11 @@ An IDE / terminal integration must never:
 The first build artifacts are shipped, both reusing the local-capture
 bridge with no extension and no watcher:
 
-- `connectors/vscode-task/` — a VS Code task template the user adds to
+- `connectors/vscode-task/` · a VS Code task template the user adds to
   their own `.vscode/tasks.json`, capturing on an explicit **Run
   Task** action. The desktop setup guide can stage a path-rewritten copy
   under `~/.mori/vscode-task/`.
-- `connectors/terminal-helper/` — a `mori-capture` shell function the
+- `connectors/terminal-helper/` · a `mori-capture` shell function the
   user sources from their rc file, capturing on an explicit
   `mori-capture …` command. The desktop setup guide can stage a
   path-rewritten copy under `~/.mori/terminal-helper/`.
@@ -530,10 +530,10 @@ explicit-emit contract is proven in real use.
 
 ## See Also
 
-- [Anchor agents](./anchor-agents.md) — the multi-agent session-discovery layer
+- [Anchor agents](./anchor-agents.md) · the multi-agent session-discovery layer
   (registry, per-agent readers, store types, how to add an agent)
-- [Imports Documentation](./imports.md) — Import panel UI and normalizer architecture
-- [Architecture Documentation](./architecture.md) — Source registry and traceability helpers
-- [Connector event format](./connectors/connector-event-format.md) — Local JSONL connector spec
-- [Product Spec](./product-spec.md) — Privacy principles and user control philosophy
-- [Domain Model](./domain-model.md) — SourceRef and TimelineEvent type definitions
+- [Imports Documentation](./imports.md) · Import panel UI and normalizer architecture
+- [Architecture Documentation](./architecture.md) · Source registry and traceability helpers
+- [Connector event format](./connectors/connector-event-format.md) · Local JSONL connector spec
+- [Product Spec](./product-spec.md) · Privacy principles and user control philosophy
+- [Domain Model](./domain-model.md) · SourceRef and TimelineEvent type definitions

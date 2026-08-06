@@ -99,7 +99,7 @@ Configuration lives in `QuickPassAnalysisSettings`, shaped and sanitized in
 - openAiTimeoutMs: `60000` (clamped 1000–300000 on save)
 - fallbackToDeterministic: `true`
 
-Tests do not require Ollama, LM Studio, or a cloud API to be running — the
+Tests do not require Ollama, LM Studio, or a cloud API to be running · the
 deterministic provider remains the default. Networked paths are exercised
 through injected provider/fetch doubles rather than real network calls.
 
@@ -157,7 +157,7 @@ Git diff imports flow through the same path as every other source: the
 deterministic Quick Pass provider scans the event title and summary, so the
 file list and any `TODO` / `fix` / `error` text in the summary surface as
 issue candidates with the event id as `sourceEventIds`. The provider does
-not attempt to reason about per-line code — for that, run Quick Pass with
+not attempt to reason about per-line code · for that, run Quick Pass with
 the Ollama provider. See [Imports](imports.md) for the Git diff input
 format and the limits of the parser.
 

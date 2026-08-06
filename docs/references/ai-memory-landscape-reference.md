@@ -1,4 +1,4 @@
-# AI memory & capture landscape — reconciled against Mori
+# AI memory & capture landscape · reconciled against Mori
 
 External tools in the "capture AI / developer work and make it useful later"
 space, reconciled against Mori's principles. Purpose: stop the recurring
@@ -19,7 +19,7 @@ ingest, "memory") hides opposite stances on capture, review, and trust.
 
 The single strongest validation from the landscape: **OpenTelemetry's GenAI
 conventions default to metadata-only and make content capture opt-in for
-privacy reasons** — the same posture as Mori's `summary_only` default. We are
+privacy reasons** · the same posture as Mori's `summary_only` default. We are
 aligned with where the standard is going, not fighting it.
 
 ## The landscape
@@ -35,23 +35,23 @@ aligned with where the standard is going, not fighting it.
 
 ## Where Mori is genuinely different
 
-- **vs Langfuse** — observability for *an LLM app you operate* (cloud, team,
+- **vs Langfuse** · observability for *an LLM app you operate* (cloud, team,
   cost/eval), not memory for *your own work*. See the screenshot pitch:
   "debug and improve your LLM application." Opposite architecture and audience.
-- **vs Pieces** — same *demand* (developers want durable work memory) but the
+- **vs Pieces** · same *demand* (developers want durable work memory) but the
   **opposite capture stance**: Pieces captures at the OS level via OCR across
   every app/website. That is precisely Mori's hard non-goal (no screen
   capture, no always-on watcher). Pieces also has no review-before-apply gate
-  and no evidence/decision lifecycle — capture is ambient and trusted, not
+  and no evidence/decision lifecycle · capture is ambient and trusted, not
   reviewed and evidence-linked.
-- **vs mem0 / Letta** — these are memory for *the AI agent* (so a chatbot
+- **vs mem0 / Letta** · these are memory for *the AI agent* (so a chatbot
   remembers across turns), not for *the human* reconstructing their work.
   mem0 is vector-store + auto fact-extraction; Mori explicitly rejects
   embeddings-as-source-of-truth and auto-extraction-without-review.
 
 ## What is worth borrowing (concepts, not code)
 
-Ranked by value and fit. None of these are licensed-code imports — the stacks
+Ranked by value and fit. None of these are licensed-code imports · the stacks
 are server/cloud or OS-level and conflict with local-first; these are ideas to
 re-implement on Mori's terms.
 
@@ -75,13 +75,13 @@ re-implement on Mori's terms.
 
 ## What to explicitly reject (off-mission / non-goal)
 
-- OS-level / OCR / screen capture (Pieces) — hard non-goal.
-- Embeddings / vector store as the source of truth (mem0) — Mori uses
+- OS-level / OCR / screen capture (Pieces) · hard non-goal.
+- Embeddings / vector store as the source of truth (mem0) · Mori uses
   structured evidence-linked memory; vector retrieval can only ever be an
   optional research layer over accepted memory.
-- Auto-extraction without review (mem0, Pieces) — violates
+- Auto-extraction without review (mem0, Pieces) · violates
   review-before-apply.
-- Cloud / team server, cost/eval dashboards, prompt playground (Langfuse) —
+- Cloud / team server, cost/eval dashboards, prompt playground (Langfuse) ·
   off-mission and several are explicit non-goals.
 
 ## Net

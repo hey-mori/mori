@@ -26,7 +26,7 @@ decision-lineage lens (Phase 4; chain rail and peek pending). Items marked
 | [`visual-system-direction.md`](visual-system-direction.md) | Cross-cutting visuals | Calm by subtraction; encode with weight before color; one vocabulary. |
 
 North-star context for this set:
-[`agent-work-visibility-vision.md`](agent-work-visibility-vision.md) — the
+[`agent-work-visibility-vision.md`](agent-work-visibility-vision.md) · the
 user-set direction (connect agents, record the work flow reliably, make it
 legible and durable) with the file-provenance foundation the visual work builds
 on.

@@ -11,7 +11,7 @@ The same data is exported as typed rows from
 so the UI can derive labels and badges from a single source of truth.
 
 > **What "surface" means here:** the user-visible path that moves
-> evidence from a tool into Mori. e.g. "Claude" is not a surface — "AI
+> evidence from a tool into Mori. e.g. "Claude" is not a surface · "AI
 > transcript paste", "Claude Code hook", "Claude Desktop export", and
 > "Claude Web export" are four different surfaces with four different
 > realities.
@@ -29,15 +29,15 @@ so the UI can derive labels and badges from a single source of truth.
 
 ## Tool families
 
-- **manual** — direct user input (note / URL / paste)
-- **claude** — anything Anthropic-shaped
-- **codex** — anything OpenAI-Codex-shaped
-- **git** — git tooling
-- **ide** — VS Code / Cursor / JetBrains
-- **terminal** — shell hooks
-- **browser** — web extension paths
-- **document** — Markdown / PDF / text imports
-- **analysis** — Mori's own analysis passes
+- **manual** · direct user input (note / URL / paste)
+- **claude** · anything Anthropic-shaped
+- **codex** · anything OpenAI-Codex-shaped
+- **git** · git tooling
+- **ide** · VS Code / Cursor / JetBrains
+- **terminal** · shell hooks
+- **browser** · web extension paths
+- **document** · Markdown / PDF / text imports
+- **analysis** · Mori's own analysis passes
 
 ## Matrix
 
@@ -118,28 +118,28 @@ the UI never accidentally promises one of these is wired.
 
 Specifically:
 
-- **Claude Desktop / Web** — no automatic window reading, no browser
+- **Claude Desktop / Web** · no automatic window reading, no browser
   scraping, no OAuth. Future path is an Anthropic-provided export
   format or an explicit user paste.
-- **Codex Desktop / Web / GitHub** — same posture. No GitHub OAuth, no
+- **Codex Desktop / Web / GitHub** · same posture. No GitHub OAuth, no
   cloud session capture. User must paste or import a file the user
   obtained themselves.
-- **Local capture CLI bridge** — `connectors/local-capture/mori-local-capture.py`,
+- **Local capture CLI bridge** · `connectors/local-capture/mori-local-capture.py`,
   run explicitly by the user (transcript / note / git / commit). The
   shipped explicit-capture path; the VS Code task template and the
   `mori-capture` shell helper are launchers for it. The desktop setup guide can
   stage path-rewritten copies under `~/.mori/terminal-helper/` and
   `~/.mori/vscode-task/`.
-- **VS Code / Cursor / browser / terminal** — explicit extensions /
+- **VS Code / Cursor / browser / terminal** · explicit extensions /
   shell hooks remain Planned; the explicit-capture path today is the
   local capture bridge (via the `vscode-task` / `terminal-helper`
   templates). Cursor composer session discovery is the one implemented
   desktop session-discovery exception and remains user-invoked / read-only.
-- **GitHub PR / commit import** — see
+- **GitHub PR / commit import** · see
   [`github-pr-import.md`](./github-pr-import.md).
-- **File / document import** — explicit Tauri file picker. No
+- **File / document import** · explicit Tauri file picker. No
   directory scanning, no recent-files tracking.
-- **MCP server** — a local MCP server template
+- **MCP server** · a local MCP server template
   (`connectors/mcp/mori-mcp-server.py`) exposes `capture_note` /
   `capture_session` tools that a Claude Desktop / etc. host calls
   explicitly. Each call appends a connector event (`connectorId:
@@ -153,13 +153,13 @@ Specifically:
 
 `src/lib/connectors/captureSurfaces.ts` exports:
 
-- `getAllCaptureSurfaces()` — every row
+- `getAllCaptureSurfaces()` · every row
 - `getCaptureSurfacesByFamily(family)` / `getCaptureSurfacesByStatus(status)`
 - `getImplementedCaptureSurfaces()` / `getPlannedCaptureSurfaces()`
-- `getCaptureSurfaceForIntegration(integrationId)` — map a `SourceIntegration.id`
+- `getCaptureSurfaceForIntegration(integrationId)` · map a `SourceIntegration.id`
   from the registry to its capture-surface row
-- `describeCaptureSurfaceStatus(row)` — UI-ready `{label, tone, short}`
-- `getNextConnectorMilestone()` — the single highest-value next step
+- `describeCaptureSurfaceStatus(row)` · UI-ready `{label, tone, short}`
+- `getNextConnectorMilestone()` · the single highest-value next step
 
 All exports are pure and unit-tested in
 [`captureSurfaces.test.ts`](../../src/lib/connectors/captureSurfaces.test.ts).

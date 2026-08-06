@@ -14,7 +14,7 @@ The user-facing path is **Evidence Hub → 소스 추가 → Connector JSONL
 tab**. On the Tauri desktop build the tab also exposes a **Connector
 inbox** section that lists `.jsonl` files under
 `~/.mori/connectors/<family>/` (Windows: `%USERPROFILE%\.mori\connectors\
-<family>\`). Listing runs only when the user clicks **Refresh inbox** —
+<family>\`). Listing runs only when the user clicks **Refresh inbox** ·
 Mori does not watch the folder, does not poll it, and does not auto-read
 files on startup. Selecting a file reads it (path canonicalised under
 the inbox root, 8 MB cap) and loads the contents into the same paste
@@ -55,13 +55,13 @@ the import-history index lives in
 [`src/lib/connectors/connectorImportHistory.ts`](../../src/lib/connectors/connectorImportHistory.ts).
 
 Old sessions imported before this milestone do not carry
-`connectorEventId`. They cannot be deduplicated retroactively — the
+`connectorEventId`. They cannot be deduplicated retroactively · the
 import-history helper reports them as `legacySavedSessionCount` and
 classifies their events as `identity-unavailable`, never as duplicates.
 
-A source-level summary —
+A source-level summary ·
 [`ConnectorSourceImportSummary`](../../src/lib/connectors/connectorImportSummary.ts)
-— is derived from the preview and surfaced in the Connector JSONL
+· is derived from the preview and surfaced in the Connector JSONL
 preview card, the Import Review meta strip, and the Evidence Hub
 imported-source row / detail panel. The status precedence is honest:
 a fresh-looking preview is **downgraded to `historyUnavailable`**
@@ -162,17 +162,17 @@ exists.
 
 | Kind | Required clusters | Mapped to |
 |---|---|---|
-| `session_started` | — | becomes the `SourceRef` summary, no TimelineEvent |
-| `prompt_submitted` | — | TimelineEvent (`aiConversation`) |
-| `assistant_message` | — | TimelineEvent (`aiConversation`, trust = `inferred`) |
+| `session_started` | · | becomes the `SourceRef` summary, no TimelineEvent |
+| `prompt_submitted` | · | TimelineEvent (`aiConversation`) |
+| `assistant_message` | · | TimelineEvent (`aiConversation`, trust = `inferred`) |
 | `tool_started` | `tool.name` | TimelineEvent (`aiConversation`) |
 | `tool_finished` | `tool.name` | TimelineEvent (`aiConversation`) |
 | `file_changed` | `filePath` or `git.files[]` | TimelineEvent (`fileCode`) |
 | `command_started` | `command` | TimelineEvent (`fileCode`) |
 | `command_finished` | `command` | TimelineEvent (`fileCode`) |
-| `git_diff_captured` | — | TimelineEvent (`fileCode`) |
-| `commit_created` | — | TimelineEvent (`fileCode`) |
-| `session_finished` | — | TimelineEvent (`documentNote`) |
+| `git_diff_captured` | · | TimelineEvent (`fileCode`) |
+| `commit_created` | · | TimelineEvent (`fileCode`) |
+| `session_finished` | · | TimelineEvent (`documentNote`) |
 
 Multiple events that share the same `(connectorId, sessionId)` tuple are
 grouped into a single `SourceRef` so Project Memory shows them as one
@@ -186,7 +186,7 @@ session.
   template) and by Mori on the way in.
 - **redacted** can be set to `true` by the writer; Mori re-runs a
   best-effort redaction pass on import and may flip it to `true` on its
-  own. `false` simply means "no redaction has happened yet" — Mori may
+  own. `false` simply means "no redaction has happened yet" · Mori may
   still redact during import.
 - **note** is shown to the user verbatim in Import Review.
 
@@ -227,11 +227,11 @@ session.
 The pure parser / validator / normalizer lives in
 [`src/lib/connectors/`](../../src/lib/connectors/). Notable entries:
 
-- `parseConnectorJsonl(text)` — parse + validate a JSONL string
-- `validateConnectorEventBatch(events)` — validate an in-memory array
-- `normalizeConnectorEventBatch(input)` — convert validated events into
+- `parseConnectorJsonl(text)` · parse + validate a JSONL string
+- `validateConnectorEventBatch(events)` · validate an in-memory array
+- `normalizeConnectorEventBatch(input)` · convert validated events into
   Mori `NormalizedImportCandidate`s
-- `ingestConnectorJsonl({text, projectId, sessionId})` — full pipeline,
+- `ingestConnectorJsonl({text, projectId, sessionId})` · full pipeline,
   ready to feed Import Review
 
 ## Sample files
@@ -242,13 +242,13 @@ The pure parser / validator / normalizer lives in
 
 ## Related docs
 
-- [Local connector capture bridge](./local-capture.md) — the explicit
+- [Local connector capture bridge](./local-capture.md) · the explicit
   `--transcript` / `--note` / `--git-repo` capture script.
-- [Capture surface matrix](./capture-surface-matrix.md) — every capture
+- [Capture surface matrix](./capture-surface-matrix.md) · every capture
   path with honest status.
-- [Desktop / web capture boundaries](./desktop-web-capture.md) — what
+- [Desktop / web capture boundaries](./desktop-web-capture.md) · what
   Mori never does for Claude / ChatGPT / Codex Desktop and Web.
-- [GitHub PR import (planning)](./github-pr-import.md) — manual-paste
+- [GitHub PR import (planning)](./github-pr-import.md) · manual-paste
   path today + Planned `githubPrImport` design.
 
 ## Extended connector ids (this milestone)

@@ -9,7 +9,7 @@ Reference-only tags) lives in
 [Product Screen Reference](product-screen-reference.md); the original design
 prompts are preserved in
 [Product Screen Prompts](product-screen-prompts.md). Treat those reference
-images as planning material — they describe Mori's intended direction, not
+images as planning material · they describe Mori's intended direction, not
 proof that any single screen is already implemented end to end.
 
 The canonical product loop (Capture → Normalize → Store → Review → Timeline
@@ -2347,7 +2347,7 @@ Mori는 다음을 기본 기능으로 제공하면 안 된다.
 
 Mori가 말해야 하는 것:
 
-> Mori captures selected work sessions from trusted sources like AI conversations, code changes, browser notes, and manual context — then reconstructs them into a timeline.
+> Mori captures selected work sessions from trusted sources like AI conversations, code changes, browser notes, and manual context · then reconstructs them into a timeline.
 
 한국어:
 

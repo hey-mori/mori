@@ -183,7 +183,7 @@ Wire the existing tested `VirtualList` into the session lists (Home,
 sidebar, memory, workspace); define a stress fixture (500+ sessions)
 the way the timeline already has one.
 *Answers:* audit §3, landscape §3. *Status:* **pilot shipped
-2026-07-12** — the project session rail (`ProjectView`, the primary
+2026-07-12** · the project session rail (`ProjectView`, the primary
 large session list) renders through `VirtualList`; browser-verified
 identical rendering, internal scroll, and row navigation. Follow-ups:
 the Workspace browser (`WorkspaceView`, highest total volume; needs a

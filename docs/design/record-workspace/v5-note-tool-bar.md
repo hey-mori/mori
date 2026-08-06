@@ -2,29 +2,29 @@
 
 Status: **direction approved 2026-07-17; editor + layout slices shipped.**
 Builds on v4 (note-first + 추출 panel). The user's bar: 기록 must stand on
-its own as a note tool — against Obsidian, Bear, and friends — while the
+its own as a note tool (against Obsidian, Bear, and friends) while the
 extraction layer stays honest and endlessly extensible (a note may be an
 essay, a meeting, a news clipping, not just 운동/할일).
 
 ## 1. References and what each one sets the bar for
 
-- **Obsidian** — local-first markdown vault, files the user owns, editor
+- **Obsidian** · local-first markdown vault, files the user owns, editor
   = CodeMirror 6. The vault instinct is already Mori doctrine: the
   storage ADR (architecture doc §10) plans an always-current,
   Obsidian-openable Markdown workspace folder, with user prose becoming
   file-canonical in K4.
-- **Bear / Apple Notes** — one writing surface, first line is the title,
+- **Bear / Apple Notes** · one writing surface, first line is the title,
   markdown hybrid styling, note list with snippet scent.
-- **iA Writer** — the writing area itself is the product: measure,
+- **iA Writer** · the writing area itself is the product: measure,
   rhythm, zero chrome.
-- **Notion / Craft** — structure available but never demanded.
-- **Granola / Reflect / Mem** — AI understanding beside the user's own
+- **Notion / Craft** · structure available but never demanded.
+- **Granola / Reflect / Mem** · AI understanding beside the user's own
   words, never replacing them: extraction is a *layer*, the note stays
   the artifact. This is exactly Mori's 추출 panel contract.
 
 ## 2. Editor (shipped 2026-07-17)
 
-CodeMirror 6 (`NoteMarkdownEditor.tsx`) — the engine Obsidian itself
+CodeMirror 6 (`NoteMarkdownEditor.tsx`) · the engine Obsidian itself
 uses; local, MIT, strong Korean IME. Live markdown styling via lezer
 tags mapped to app CSS variables (one theme, both modes), first line
 decorated as the 24px title (the data model already derives titles from
@@ -44,7 +44,7 @@ Principles, grounded in what exists:
 
 1. **Schemas are data** (kernel §3): 회의 · 회고 · 지식 · 인사이트 ·
    투자 기록 already exist and user schemas join with zero UI code. The
-   추출 panel is already schema-agnostic — anything the proposer emits
+   추출 panel is already schema-agnostic · anything the proposer emits
    renders and confirms. Extensibility is bounded by the *proposer*, not
    the panel.
 2. **The proposer is a seam, not an identity** (`ProposerOptions.propose`).
@@ -59,7 +59,7 @@ Principles, grounded in what exists:
    and letting nature gate what item extraction runs. Slice N1: a
    deterministic nature guess (URL-dominant → 스크랩, attendee/agenda
    markers → 회의록, long single-topic prose → 에세이/회고) shown as a
-   quiet chip in the 추출 panel with one-tap correction — corrections
+   quiet chip in the 추출 panel with one-tap correction · corrections
    feed personalization rules (kernel Rule) so Mori learns the user's
    vocabulary. Slice N2: the LLM engine takes over nature + items with
    confidence, same disclosure levels as Quick Pass.
@@ -73,7 +73,7 @@ The storage ADR already commits to a Markdown workspace folder; the
 note-first model makes the mapping trivial: one `note` record ↔ one
 `.md` file (title = first line = filename base, body = file body,
 frontmatter carries record id + times). Stage 1: export-only mirror
-(deterministic, always-current, Obsidian-openable — zero conflict
+(deterministic, always-current, Obsidian-openable · zero conflict
 surface). Stage 2 (K4): user-designated vault path + external-edit
 detection + 3-way merge → prose becomes file-canonical. Desktop-only
 (Tauri fs). Not started; do not fake it in UI before stage 1 ships.

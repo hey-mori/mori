@@ -13,7 +13,7 @@
 
 Mori is a **local-first AI work memory app for evidence-based
 session reconstruction and continuation**. The durable unit of
-value is not a memory snippet — it is a reviewed, source-linked
+value is not a memory snippet · it is a reviewed, source-linked
 understanding of *what happened*, *why it mattered*, *what evidence
 supports it*, *what was decided*, *what remains unresolved*, and
 *what should be carried into the next session*.
@@ -110,14 +110,14 @@ limitation, integrity and confidentiality) and from the
                 (localStorage / SQLite / .mori v0)
 ```
 
-The "orchestrator" is not a process — it's the sequence of explicit
+The "orchestrator" is not a process · it's the sequence of explicit
 user actions the UI walks the user through. The orchestration code
 lives in `src/app/sessionStore.ts`, `src/features/memory/MemoryView.tsx`,
 and the import / review feature trees.
 
 ---
 
-## Layer 1 — Capture / Import
+## Layer 1 · Capture / Import
 
 Where the user explicitly hands work artefacts to Mori.
 
@@ -128,7 +128,7 @@ Where the user explicitly hands work artefacts to Mori.
 | AI Transcript (paste) | ✅ Implemented | [`src/features/import/`](../src/features/import/) |
 | Git Diff | ✅ Implemented | [`src/features/import/`](../src/features/import/), [`src/lib/import/`](../src/lib/import/) |
 | Manual Note | ✅ Implemented | [`src/features/import/`](../src/features/import/) |
-| URL / web research | 🟡 Partial — captures the URL + manual note, no fetch | [`src/features/import/`](../src/features/import/) |
+| URL / web research | 🟡 Partial · captures the URL + manual note, no fetch | [`src/features/import/`](../src/features/import/) |
 | Repository metadata | ✅ Implemented (for git diff) | [`src/lib/repositories/`](../src/lib/repositories/) |
 
 **Inputs:** raw text the user explicitly pasted, or files the user
@@ -154,7 +154,7 @@ Secret-pattern detection runs at import time.
   off by default, review gate unchanged).
 - Real URL fetcher with redaction (deferred).
 
-## Layer 2 — Evidence / Provenance
+## Layer 2 · Evidence / Provenance
 
 Where each captured artefact gets a stable identity, trust label, and
 retention policy.
@@ -163,13 +163,13 @@ retention policy.
 
 Key concepts:
 
-- `SourceRef` (`src/domain/types.ts`) — `id`, `kind`, `title`,
+- `SourceRef` (`src/domain/types.ts`) · `id`, `kind`, `title`,
   `detail`, `trustLevel`, `redactionStatus`, `rawRetention`,
   `capturedAt`, `relatedEventIds`.
-- `TimelineEvent.connectorEventId` — stable triplet
+- `TimelineEvent.connectorEventId` · stable triplet
   `<connectorId>::<externalSessionId|unscoped>::<eventId>` used for
   duplicate detection across sessions.
-- `StoredSessionImport.importSummary` — `ConnectorSourceImportSummary`
+- `StoredSessionImport.importSummary` · `ConnectorSourceImportSummary`
   carrying the per-import re-import status, matched saved sessions,
   duplicate counts, and history-availability flag.
 - Identity-based dedupe runs in pure code in
@@ -179,7 +179,7 @@ Key concepts:
 **Privacy boundary:** redaction state is recorded per source. Raw
 data retention follows `rawDataPolicy` (`summary_only` /
 `retained` / `redacted` / `reference_only`). Cross-session duplicate
-detection never compares text — only identities.
+detection never compares text · only identities.
 
 **Failure modes:**
 - Old imports without `connectorEventId` cannot retroactively be
@@ -190,7 +190,7 @@ detection never compares text — only identities.
 - SQLite-side `importSummary` mirror so desktop-saved sessions can
   contribute to the connector re-import rollup.
 
-## Layer 3 — Review / Interpretation
+## Layer 3 · Review / Interpretation
 
 Where the user reviews each captured artefact before it joins the
 session timeline.
@@ -200,7 +200,7 @@ session timeline.
 | Import Review (accept / discard / edit per event) | ✅ Implemented | [`src/features/review-import/ImportReviewView.tsx`](../src/features/review-import/ImportReviewView.tsx) |
 | Source-level re-import summary on Apply | ✅ Implemented (post-`4c404b5`) | [`src/lib/connectors/connectorImportSummary.ts`](../src/lib/connectors/connectorImportSummary.ts) |
 | Quick Pass analysis (issue / decision / next-action extraction) | ✅ Implemented (deterministic provider + optional Ollama) | [`src/lib/analysis/`](../src/lib/analysis/) |
-| User correction of AI-extracted items | 🟡 Partial — Review allows accept/discard/edit on events; no edit UI on Quick-Pass-derived issues/decisions yet | [`src/features/review-import/`](../src/features/review-import/) |
+| User correction of AI-extracted items | 🟡 Partial · Review allows accept/discard/edit on events; no edit UI on Quick-Pass-derived issues/decisions yet | [`src/features/review-import/`](../src/features/review-import/) |
 
 **Inputs:** captured events from Layer 1 + (optionally) the active
 session's already-applied imports.
@@ -225,7 +225,7 @@ configures; the deterministic provider runs entirely in JS.
 - Review edit UI for Quick-Pass-derived issues / decisions /
   next-actions (deferred to a future polish milestone).
 
-## Layer 4 — Timeline
+## Layer 4 · Timeline
 
 Where applied events become a navigable session view.
 
@@ -272,7 +272,7 @@ Persistence (browser + SQLite V003), Resume and Reports Memory
 Integration, and Stale / Contradiction Review have all shipped; see
 the goal doc §4 for the verified inventory.
 
-## Layer 5 — Project Memory / Consolidation
+## Layer 5 · Project Memory / Consolidation
 
 Where memory accumulates across the active session and saved
 sessions, and where the Memory page reads from.
@@ -324,7 +324,7 @@ contribute nothing fabricated. Old imports without
 - SQLite-side `importSummary` mirror so desktop-saved sessions
   contribute to the rollup.
 
-## Layer 6 — Query / Output
+## Layer 6 · Query / Output
 
 Where the accumulated memory becomes something the user can hand to
 another tool or person.
@@ -340,7 +340,7 @@ data for Reports.
 
 **Outputs:**
 - Resume Prompt: copyable text body, structured sections, dataBasis
-  label, warnings — see audience (`self / claude / codex / chatgpt
+  label, warnings · see audience (`self / claude / codex / chatgpt
   / handoff`) and privacy modes (`normal / summaryOnly / clientSafe`).
 - Reports: Markdown report, `.mori v0` package.
 
@@ -355,11 +355,11 @@ prompt; partial load → limitations section enumerates warnings.
 **Next tasks:**
 - Persist audience / privacy selection in `RepositorySettings`
   (small follow-up).
-- Project Memory ↔ Reports prompt convergence (medium UX call —
+- Project Memory ↔ Reports prompt convergence (medium UX call ·
   see roadmap).
-- Local natural-language memory query (Phase 4 — future research).
+- Local natural-language memory query (Phase 4 · future research).
 
-## Layer 7 — Storage
+## Layer 7 · Storage
 
 Where memory durably lives.
 
@@ -407,21 +407,21 @@ Mori translation:
 | Query Agent | Resume Prompt builder | No LLM call. Pure derivation from `ProjectMemoryViewModel`. |
 | Memory store | localStorage + SQLite + `.mori v0` | Schema-versioned. No vectors. |
 
-The shapes match — the contracts don't. Mori's review-before-apply
+The shapes match · the contracts don't. Mori's review-before-apply
 gate and per-row provenance are the load-bearing differences.
 
 ---
 
 ## See also
 
-- [`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md) —
+- [`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md) ·
   reference architecture analysis (Google ADK + Gemini).
-- [`docs/project-memory.md`](project-memory.md) — Project Memory
+- [`docs/project-memory.md`](project-memory.md) · Project Memory
   data model and aggregation contract.
-- [`docs/persistence.md`](persistence.md) — storage adapters,
+- [`docs/persistence.md`](persistence.md) · storage adapters,
   schema versions, fallback behaviour.
-- [`docs/imports.md`](imports.md) — capture surfaces.
-- [`docs/e2e-smoke-flow.md`](e2e-smoke-flow.md) — runnable
+- [`docs/imports.md`](imports.md) · capture surfaces.
+- [`docs/e2e-smoke-flow.md`](e2e-smoke-flow.md) · runnable
   walkthrough of every layer.
-- [`docs/roadmap.md`](roadmap.md) — phased plan including the
+- [`docs/roadmap.md`](roadmap.md) · phased plan including the
   Memory Orchestrator phases below.

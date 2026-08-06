@@ -55,28 +55,28 @@ The problem is classification and the LLM path, not the architecture.
 
 ## Plan (prioritised)
 
-1. **P3 — tool-aware lane classification.** Route tool events by `toolName`
+1. **P3 · tool-aware lane classification.** Route tool events by `toolName`
    (Edit/Write → files, WebFetch/WebSearch → research, test Bash → build,
    else command) and run structural (actor/tool) classification *before*
    the fuzzy text heuristics. Pure, fully testable. *Biggest visible win on
    data the user already has.*
-2. **P2 — extraction noise filter.** Skip tool events for issue/decision
+2. **P2 · extraction noise filter.** Skip tool events for issue/decision
    extraction and drop tool-output / error-envelope sentences. Cleaner
    memory, fewer junk next actions. Pure, testable.
-3. **P1 — make the LLM path trustworthy.** More tolerant JSON parsing, and
+3. **P1 · make the LLM path trustworthy.** More tolerant JSON parsing, and
    surface "fell back from a failed LLM" prominently (distinct from "you
    chose the rule-based engine") so the user knows to fix the engine. Verify
    the Ollama model/JSON path. (Engine config is the user's machine; code
    makes failure legible and parsing robust.)
-4. **P5 — connect digest.** Run Quick Pass at connect time and show a
+4. **P5 · connect digest.** Run Quick Pass at connect time and show a
    compact "this conversation = N decisions · M issues · what enters memory"
    digest; fold the raw event list.
-5. **P4 — auto-absorb imports, gate only durable memory.** *Decision: yes.*
+5. **P4 · auto-absorb imports, gate only durable memory.** *Decision: yes.*
    Import (timeline) events auto-accept on a user-connected source (low
    stakes, reversible); review-before-apply stays on durable consolidation
    only. This resolves the automation-vs-review tension: connect = auto,
    memory = reviewed.
-6. **P6 — keep calming the memory page** (hero density, consolidation as a
+6. **P6 · keep calming the memory page** (hero density, consolidation as a
    quiet task, warnings tone-down).
 
 ## Principles preserved

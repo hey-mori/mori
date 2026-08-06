@@ -6,14 +6,14 @@ four-point star.
 
 ## Production Assets
 
-- [favicon.svg](../../public/favicon.svg) — web favicon source.
-- [mori-mark.svg](../../public/mori-mark.svg) — full-color app-icon tile.
-- [mori-mark-mono.svg](../../public/mori-mark-mono.svg) — single-color mark
+- [favicon.svg](../../public/favicon.svg) · web favicon source.
+- [mori-mark.svg](../../public/mori-mark.svg) · full-color app-icon tile.
+- [mori-mark-mono.svg](../../public/mori-mark-mono.svg) · single-color mark
   for monochrome contexts.
-- [mori-logo-lockup.svg](../../public/mori-logo-lockup.svg) — icon + wordmark.
-- `src/components/brand/MoriLogo.tsx` — React implementation used in product
+- [mori-logo-lockup.svg](../../public/mori-logo-lockup.svg) · icon + wordmark.
+- `src/components/brand/MoriLogo.tsx` · React implementation used in product
   chrome.
-- `src-tauri/icons/` — raster desktop icon outputs generated from
+- `src-tauri/icons/` · raster desktop icon outputs generated from
   `scripts/generate-icons.cjs`.
 
 ## Usage Notes

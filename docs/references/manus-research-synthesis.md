@@ -1,4 +1,4 @@
-# Reference Synthesis — Manus Research
+# Reference Synthesis · Manus Research
 
 | Field | Value |
 | ----- | ----- |
@@ -9,7 +9,7 @@
 
 This file reconciles the two Manus reports against Mori's actual
 implementation and documentation state. It does **not** copy the
-reports — they remain external research artifacts. Instead it
+reports · they remain external research artifacts. Instead it
 extracts what Mori should adopt, what it should keep as background,
 and what it should explicitly reject for now.
 
@@ -19,7 +19,7 @@ and what it should explicitly reject for now.
 
 **Mori is best understood as a local-first AI work memory app for
 evidence-based session reconstruction.** Both reports converge on
-this framing. The durable unit of value is not a memory snippet —
+this framing. The durable unit of value is not a memory snippet ·
 it is a reviewed, source-linked understanding of what happened, why
 it mattered, what evidence supports it, what was decided, what
 remains unresolved, and what should be carried into the next
@@ -83,7 +83,7 @@ get treated as a to-do list of unfinished work:
 | Compact "Planned" preview card on Memory page | ✅ Implemented (`ConsolidationPreviewCard.tsx`) |
 
 The reports' framing of these as "recommended" reflects their
-public-source-only scope — Manus could not see the repo state. They
+public-source-only scope · Manus could not see the repo state. They
 remain accurate research, but should not be re-implemented.
 
 ## What Mori should adopt now (durable docs only)
@@ -156,7 +156,7 @@ These are useful background but not actionable for Mori now:
   but not a model to copy.
 - Session-replay / activity-stream UX patterns. Conceptually
   relevant to Narrative Timeline and Trace View, but Mori already
-  has those primitives — the references are confirmation, not
+  has those primitives · the references are confirmation, not
   direction.
 - Temporal Knowledge Graph for Agent Memory paper. The "validity
   period / supersession" idea has landed in Mori's lifecycle. The
@@ -186,12 +186,12 @@ The two reference packages cover different ground.
 | -------- | ---------------------------------------------------- | -------------- |
 | Source | Google Cloud Platform's Always-On Memory Agent (ADK + Gemini) | Two Manus research reports synthesised across multiple public references |
 | Posture | Autonomous, scheduled, LLM-driven memory writes | Review-before-apply, user-triggered, evidence-linked |
-| Mori's stance | Adopt naming (Ingest / Consolidate / Query), reject defaults (watcher, scheduler, autonomous writes) | Adopt almost the entire posture (lifecycle, ADR, audit trail, privacy) — already aligned |
+| Mori's stance | Adopt naming (Ingest / Consolidate / Query), reject defaults (watcher, scheduler, autonomous writes) | Adopt almost the entire posture (lifecycle, ADR, audit trail, privacy) · already aligned |
 | What's new in this milestone | n/a (covered there) | Lifecycle states, ADR field set, Consolidation Review surface spec, AcceptedProjectMemory + audit trail data model |
 
 The two references **agree** on what Mori should avoid (autonomous
 durable writes, raw secrets in memory, opaque retrieval). They
-**disagree** on how memory should normally land — and Mori sides
+**disagree** on how memory should normally land · and Mori sides
 firmly with this synthesis: durable memory only ever lands through
 an explicit user review action.
 
@@ -200,22 +200,22 @@ an explicit user review action.
 When the corresponding capability surface is built or documented,
 these references should be cited for posterity:
 
-- **GitHub pull request review** — analogue for Import Review and
+- **GitHub pull request review** · analogue for Import Review and
   Consolidation Review Surface.
-- **Google Docs suggested edits** — analogue for "proposed vs.
+- **Google Docs suggested edits** · analogue for "proposed vs.
   accepted" visual separation in the Consolidation Review Surface.
-- **ADR (Architecture Decision Records)** — analogue for promoted
+- **ADR (Architecture Decision Records)** · analogue for promoted
   decision memory fields and supersession.
-- **Local-first software (Ink & Switch)** — foundational posture
+- **Local-first software (Ink & Switch)** · foundational posture
   for local ownership, offline, long-term access.
-- **GDPR Article 5** — design vocabulary for transparency, purpose
+- **GDPR Article 5** · design vocabulary for transparency, purpose
   limitation, minimization, accuracy, storage limitation, even in a
   local-only product.
-- **OWASP Secrets Management** — concrete control list for never
+- **OWASP Secrets Management** · concrete control list for never
   letting secrets reach durable memory or reports.
 
 These belong inline in the docs that govern the corresponding
-capability — not as a separate "links" page.
+capability · not as a separate "links" page.
 
 ## How the two reports differ from each other
 
@@ -238,7 +238,7 @@ first, then the consolidation specifics.
 
 | Doc | Change |
 | --- | ------ |
-| [`docs/references/manus-research-synthesis.md`](manus-research-synthesis.md) | **New** — this file. |
+| [`docs/references/manus-research-synthesis.md`](manus-research-synthesis.md) | **New** · this file. |
 | [`docs/memory-architecture.md`](../memory-architecture.md) | Sharpened product framing (one durable sentence). Added the GDPR Article 5 / OWASP secrets vocabulary to the privacy section. Cross-link to this synthesis. |
 | [`docs/project-memory-consolidation.md`](../project-memory-consolidation.md) | Added the ten-state Memory Lifecycle table with eligibility rules. Added the ADR-style decision field set. Added the Consolidation Review Surface UI spec (three-pane, evidence inspector, action set, batch guardrails). Added the Accepted Memory + Audit Trail data model. Added the Resume Prompt / Reports inclusion policy. |
 | [`docs/project-memory.md`](../project-memory.md) | Pointer to the lifecycle table; note that accepted memory is a separate capability. |
@@ -276,22 +276,22 @@ revisiting when the corresponding capability is implemented:
    secret-risk | redacted`) the same way? Design says yes; not yet
    modelled in code.
 6. **Stale detection signals.** Mori has timestamps and
-   connector-event identities — enough to detect "newer source
+   connector-event identities · enough to detect "newer source
    supersedes older evidence." More sophisticated signals (status
    transitions, scope splits) require richer Quick Pass output.
 
 ## Sources
 
-- [Mori Reference Research Report — Manus AI (provided by the user)](https://manus.im) — broad reference landscape.
-- [Mori Controlled Project Memory Consolidation Research — Manus AI (provided by the user)](https://manus.im) — Consolidation deep dive.
-- [GitHub Docs — About pull request reviews](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/about-pull-request-reviews)
-- [Google Docs Help — Use suggested edits](https://support.google.com/docs/answer/6033474)
-- [Martin Fowler — Architecture Decision Record](https://martinfowler.com/bliki/ArchitectureDecisionRecord.html)
+- [Mori Reference Research Report · Manus AI (provided by the user)](https://manus.im) · broad reference landscape.
+- [Mori Controlled Project Memory Consolidation Research · Manus AI (provided by the user)](https://manus.im) · Consolidation deep dive.
+- [GitHub Docs · About pull request reviews](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/about-pull-request-reviews)
+- [Google Docs Help · Use suggested edits](https://support.google.com/docs/answer/6033474)
+- [Martin Fowler · Architecture Decision Record](https://martinfowler.com/bliki/ArchitectureDecisionRecord.html)
 - [ADR community resource](https://adr.github.io/)
-- [Ink & Switch — Local-first software](https://www.inkandswitch.com/essay/local-first/)
-- [GDPR Article 5 — Principles relating to processing of personal data](https://gdpr-info.eu/art-5-gdpr/)
+- [Ink & Switch · Local-first software](https://www.inkandswitch.com/essay/local-first/)
+- [GDPR Article 5 · Principles relating to processing of personal data](https://gdpr-info.eu/art-5-gdpr/)
 - [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
-- [Park et al. — Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/abs/2304.03442)
-- [Vectorize — Best AI Agent Memory Systems](https://vectorize.io/articles/best-ai-agent-memory-systems) (secondary)
+- [Park et al. · Generative Agents: Interactive Simulacra of Human Behavior](https://arxiv.org/abs/2304.03442)
+- [Vectorize · Best AI Agent Memory Systems](https://vectorize.io/articles/best-ai-agent-memory-systems) (secondary)
 - [Temporal Knowledge Graphs for AI Agent Memory](https://arxiv.org/abs/2501.13956) (secondary)
-- [Pieces Documentation — Meet Pieces](https://docs.pieces.app/products/meet-pieces) (contrast)
+- [Pieces Documentation · Meet Pieces](https://docs.pieces.app/products/meet-pieces) (contrast)

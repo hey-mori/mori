@@ -231,7 +231,7 @@ External tool (Claude Code hook | Codex CLI wrapper | git command | terminal | m
         events.connector_event_id column added in migration V002.)
   -> src/lib/connectors/connectorImportSummary.buildConnectorSourceImportSummary
        (derives the user-facing ConnectorSourceImportSummary
-        — status: new | partialReimport | duplicateOnly |
+        · status: new | partialReimport | duplicateOnly |
         historyUnavailable | invalidOnly | unknown, default action,
         matched saved sessions, counts. Surfaced on the preview card,
         Import Review meta strip, and the Evidence Hub
@@ -310,7 +310,7 @@ useMoriRepositoryStore (settings / verifyingId)
   -> src/features/settings/
        SettingsView (5-tab nav + status strip + layout)
        LocalAiCard (provider cards + Ollama/OpenAI-compatible probes + endpoint/model/API-key/timeout/fallback)
-       PrivacyDefaultsCard (Enforced / Default on / Planned status cards — no fake toggles)
+       PrivacyDefaultsCard (Enforced / Default on / Planned status cards · no fake toggles)
        StorageCard (browser draft + SQLite + .mori v0 + Markdown + zip-planned)
        RepositoriesCard (summary badges + verify / select / rename / remove)
        PlannedConnectorsCard (every getIntegrationsByStatus("planned") row)
@@ -399,7 +399,7 @@ useMoriSessionStore (selectSessionView + analysis state)
             -> live Markdown preview
             -> Markdown 복사 (clipboard) + .md 다운로드 (Blob)
        -> Format buttons: Markdown active, PDF + HTML disabled with
-          "Planned" sublabel — these are honestly not implemented.
+          "Planned" sublabel · these are honestly not implemented.
        -> Privacy toggles: clientSafe / excludeRawTranscripts /
           excludeSourceDetails. Full PII redaction is still a future
           milestone (the caveat is rendered below the toggles).
@@ -443,7 +443,7 @@ useMoriSessionStore (selectSessionView)
 Quick Pass is never run from the Review screen automatically. The
 analysis strip surfaces the current provider + generatedAt + counts and
 exposes a "Run Quick Pass" button that calls
-`useMoriSessionStore.runQuickPass()` — the same entry point Evidence Hub
+`useMoriSessionStore.runQuickPass()` · the same entry point Evidence Hub
 uses, so there is exactly one analysis path.
 
 Suggestions are gated behind `mode === "demo" || hasAnalysis`. Demo
@@ -483,12 +483,12 @@ Pure logic for the review lives in `src/lib/review/reviewDraft.ts`
 is a thin composition over those helpers + `useMoriReviewStore`.
 
 **Traceability Helpers** (`src/lib/sources/traceability.ts`):
-- `getSourceDisplayStatus()` — Integration label, status, capture method, trust label, raw data policy
-- `getEventEvidenceSources()` — Sources for an event
-- `getIssueEvidenceSources()` — Trace issue → events → sources
-- `getDecisionEvidenceSources()` — Trace decision → events + direct sources
-- `getBundleEvidenceSummary()` — Integration/trust mix for bundles
-- `getReportEvidenceSummary()` — Full session evidence breakdown
+- `getSourceDisplayStatus()` · Integration label, status, capture method, trust label, raw data policy
+- `getEventEvidenceSources()` · Sources for an event
+- `getIssueEvidenceSources()` · Trace issue → events → sources
+- `getDecisionEvidenceSources()` · Trace decision → events + direct sources
+- `getBundleEvidenceSummary()` · Integration/trust mix for bundles
+- `getReportEvidenceSummary()` · Full session evidence breakdown
 
 **Evidence Flow**: Imports → SourceRef records → TimelineEvent sourceRefs → Issue/Decision sourceEventIds/relatedSourceIds → Report evidence summary
 
@@ -585,13 +585,13 @@ Pure derivation. No LLM call, no IO. The same view-model that powers
 the Memory page cards drives the prompt. Sanitization reuses the
 `containsLikelySecret` helper from the connectors module so secret
 detection is consistent across surfaces. Reports has its own separate
-report builder (`src/lib/report/reportBuilder.ts`) — the resume prompt
+report builder (`src/lib/report/reportBuilder.ts`) · the resume prompt
 does not replace it.
 
 ## See also
 
-For a layer-by-layer map of Mori's memory model — capture, evidence,
-review, timeline, project memory, query/output, storage — see
+For a layer-by-layer map of Mori's memory model · capture, evidence,
+review, timeline, project memory, query/output, storage · see
 [`docs/memory-architecture.md`](memory-architecture.md). For the
 analysis of external always-on-memory designs (Google ADK + Gemini)
 and what Mori adopts, defers, or rejects, see

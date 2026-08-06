@@ -2,7 +2,7 @@
 
 The **Local Connector Capture Bridge** is Mori's first real bridge from
 actual Claude / Codex / Git work into the app. It is a small, explicit
-command-line tool — `connectors/local-capture/mori-local-capture.py` —
+command-line tool (`connectors/local-capture/mori-local-capture.py`)
 that turns local inputs into Mori Connector JSONL.
 
 It is the practical answer to "how do I stop developing Mori only with
@@ -48,7 +48,7 @@ one run share one `local-<timestamp>` session id (override with
 
 ### `--transcript <path>`
 
-Reads a transcript text file the user explicitly provides — for example a
+Reads a transcript text file the user explicitly provides · for example a
 Claude or Codex conversation the user saved or exported themselves.
 
 - Mori records a one-line `summary` (file name, line count, first line)
@@ -66,7 +66,7 @@ live Claude / Codex CLI session can be captured by piping it explicitly:
 claude -p "review this module" | mori-local-capture.py --transcript -
 ```
 
-This is the explicit, local CLI capture path — the user runs the pipe;
+This is the explicit, local CLI capture path · the user runs the pipe;
 nothing watches a terminal or process in the background. A stdin capture
 uses `Transcript: stdin` as the source title and the capture time as
 `occurredAt` (stdin has no modification time); empty stdin is rejected.
@@ -91,14 +91,14 @@ Captures **safe Git snapshot metadata only** for a repo the user
 explicitly points at. The bridge runs read-only `git` commands with
 explicit arguments (no shell interpolation):
 
-- `git -C <repo> rev-parse --is-inside-work-tree` — refuse non-Git paths.
-- `git -C <repo> rev-parse --show-toplevel` — resolve the repo root (only
+- `git -C <repo> rev-parse --is-inside-work-tree` · refuse non-Git paths.
+- `git -C <repo> rev-parse --show-toplevel` · resolve the repo root (only
   the directory **name** is kept, never the absolute path).
-- `git -C <repo> rev-parse HEAD` — current commit SHA.
-- `git -C <repo> branch --show-current` — branch name (empty on detached
+- `git -C <repo> rev-parse HEAD` · current commit SHA.
+- `git -C <repo> branch --show-current` · branch name (empty on detached
   HEAD).
-- `git -C <repo> status --porcelain` — changed file paths + dirty state.
-- `git -C <repo> diff HEAD --shortstat` / `--numstat` — additions /
+- `git -C <repo> status --porcelain` · changed file paths + dirty state.
+- `git -C <repo> diff HEAD --shortstat` / `--numstat` · additions /
   deletions counts.
 
 What the Git event contains: `branch`, `headCommit`, `shortHeadCommit`,
@@ -106,7 +106,7 @@ What the Git event contains: `branch`, `headCommit`, `shortHeadCommit`,
 **relative** paths with change types and per-file add/delete counts.
 
 A **clean repository** (no uncommitted changes) still produces a
-`git_diff_captured` event — `isDirty: false`, an empty `files[]`, and
+`git_diff_captured` event · `isDirty: false`, an empty `files[]`, and
 zero `additions` / `deletions`. It parses and normalizes through the
 connector pipeline exactly like a dirty-repo snapshot.
 
@@ -114,7 +114,7 @@ What it deliberately does **not** contain:
 
 - No full diff (`git diff` content is never captured).
 - No file contents.
-- No absolute repository path — `git.repoPath` is omitted; the repo
+- No absolute repository path · `git.repoPath` is omitted; the repo
   directory name appears only in the human-readable `sourceTitle`.
 
 Emitted as `connectorId: gitCommand`, `kind: git_diff_captured` → a
@@ -122,25 +122,25 @@ Emitted as `connectorId: gitCommand`, `kind: git_diff_captured` → a
 
 ### `--git-commit <ref>`
 
-Captures **safe metadata for one named commit** — the natural "I just
+Captures **safe metadata for one named commit** · the natural "I just
 committed, record what changed" capture. It uses `--git-repo` as the
 repo, or the current directory. The bridge runs read-only `git`
 commands with explicit arguments:
 
-- `git -C <repo> rev-parse --verify <ref>^{commit}` — resolve and
+- `git -C <repo> rev-parse --verify <ref>^{commit}` · resolve and
   verify the commit; refuse an unknown ref.
-- `git -C <repo> show -s --format=%s%n%aI <commit>` — the commit
+- `git -C <repo> show -s --format=%s%n%aI <commit>` · the commit
   **subject line** and author date only (no body, no author name).
-- `git -C <repo> show --name-status --format= <commit>` — changed
+- `git -C <repo> show --name-status --format= <commit>` · changed
   file paths + change types.
-- `git -C <repo> show --numstat --format= <commit>` — per-file
+- `git -C <repo> show --numstat --format= <commit>` · per-file
   additions / deletions.
 
 The Git event reuses the `git_diff_captured` shape: `headCommit` /
 `shortHeadCommit` hold the captured commit, `isDirty` is always
 `false` (a commit is a fixed snapshot), and `files[]` carries the
 commit's relative paths with change types and add/delete counts. No
-patch text, no file contents, no absolute path — the same boundaries
+patch text, no file contents, no absolute path · the same boundaries
 as `--git-repo`. The commit subject appears only in the
 human-readable `summary` / `sourceTitle`.
 
@@ -158,7 +158,7 @@ Emitted as `connectorId: gitCommand`, `kind: git_diff_captured` → a
 
 Every event carries `privacy.captureMethod: local_cli_wrapper` and
 `privacy.rawDataPolicy: summary_only`. On import, Mori re-runs its
-best-effort secret redaction over the summaries — the same pass every
+best-effort secret redaction over the summaries · the same pass every
 connector import gets.
 
 ## Output location
@@ -192,7 +192,7 @@ The script prints the output path and event count, then:
 1. Open Mori → **Evidence Hub → Connector JSONL**.
 2. Load `~/.mori/connectors/local-capture/2026-05-15.jsonl` (paste or
    inbox pick).
-3. Click **Parse / Preview** — the preview shows three valid events and a
+3. Click **Parse / Preview** · the preview shows three valid events and a
    source-level import summary.
 4. Click **Import to Review** and walk the events through Import Review.
 5. Apply. The transcript, note, and Git snapshot now appear on the
@@ -210,7 +210,7 @@ this bridge intentionally does **not**:
   history / tabs, or the clipboard;
 - capture full diffs, file contents, or full transcript text;
 - send anything over the network;
-- import anything automatically — Import Review is always explicit;
+- import anything automatically · Import Review is always explicit;
 - spawn, wrap, or silently observe the `claude` / `codex` CLIs. The
   `--transcript -` stdin path captures only what the user explicitly
   pipes in; it never starts a subprocess or reads terminal scrollback.
@@ -226,7 +226,7 @@ this bridge intentionally does **not**:
 
 ## Related docs
 
-- [Real capture walkthrough](../real-capture-walkthrough.md) — capture
+- [Real capture walkthrough](../real-capture-walkthrough.md) · capture
   real Claude / Codex / Git work through the full Mori loop
 - [Connector event format](./connector-event-format.md)
 - [Capture surface matrix](./capture-surface-matrix.md)

@@ -83,7 +83,7 @@ Rules:
 
 ## Layout contract
 
-The Timeline — the **흐름** tab inside the Session Detail workspace — has
+The Timeline, the **흐름** tab inside the Session Detail workspace, has
 stable zones. Each is documented in the React component that owns it.
 
 | Zone | Owner | Sticky? |
@@ -109,7 +109,7 @@ Behavior:
 - Faint vertical gridlines drop from each ruler tick through the lane area
   (`TimelineGridLines`), so an event card can be read against a real time
   position instead of floating free. They are derived from the same ticks
-  as the ruler — no extra data — and sit behind the cards and relationship
+  as the ruler (no extra data) and sit behind the cards and relationship
   lines so they ground the canvas without competing with it.
 - Lane labels pin to the left edge of the scrolling canvas. Long horizontal
   sessions keep their category structure visible.
@@ -187,13 +187,13 @@ rules:
 
 - **No left accent bar.** Tone is conveyed by the card body gradient
   (`card-purple`, `card-green`, …) and the time-row icon color. No `::before`
-  side stripe is used on event cards or bundle cards — it looks AI-template-y
+  side stripe is used on event cards or bundle cards · it looks AI-template-y
   and breaks the calm.
 - **No hover lift.** Hover changes only the border tone and the soft shadow.
   `transform: translateY(...)` is **not** in either card's transition list.
 - **Fixed slot heights.** The internal grid is `14px 1fr 13px` (header /
   title / footer) so the header always pins to the top, the title always
-  occupies the middle, and the footer slot always sits at the bottom —
+  occupies the middle, and the footer slot always sits at the bottom ·
   whether or not the footer contains content. Cards never visually jitter
   when a neighbour has different optional metadata.
 - **Constant card height per density.** Event cards and bundle cards share
@@ -211,7 +211,7 @@ rules:
   adds a ring and opens the inspector. Detail-on-demand lives in the inspector
   and the tooltip, never in a widening card.
 - **Constant trust-badge width.** The trust badge in the card header is a
-  single icon pill — the confidence percent lives only in the tooltip and
+  single icon pill · the confidence percent lives only in the tooltip and
   the inspector. This keeps the header alignment identical across cards.
 
 ## Split Lane Header And Plot
@@ -234,8 +234,8 @@ Dense periods are handled in two tiers:
 
 A display item is therefore one of:
 
-- `event` — a raw timeline event that remains individually inspectable.
-- `bundle` — a dense work moment summarized into one intentional card.
+- `event` · a raw timeline event that remains individually inspectable.
+- `bundle` · a dense work moment summarized into one intentional card.
 
 The layout engine operates on display items, not directly on raw events.
 
@@ -311,7 +311,7 @@ The Timeline has exactly three focus tiers:
 - **Clear focus** on Flow Focus moves the selection back to the first event
   so the user can start fresh without leaving the page.
 
-Unrelated context never drops below ~55% opacity — Flow Focus must remain
+Unrelated context never drops below ~55% opacity · Flow Focus must remain
 legible, not washed out.
 
 ## Relationship line policy
@@ -321,13 +321,13 @@ without rendering React.
 
 `chooseRelationshipVisibility({ mode, focusedSet, focusActive })` returns:
 
-- `always-hidden` — Timeline mode with no active focus (default). No
+- `always-hidden` · Timeline mode with no active focus (default). No
   connectors render. The canvas stays a calm reading surface.
-- `focused-only` — Timeline mode with an active focus. Only relationships
+- `focused-only` · Timeline mode with an active focus. Only relationships
   where **both** endpoints land in the focused set render. Lines are
   subtle, drawn behind cards, anchored to the right/left edges of the
   upstream/downstream items.
-- `graph` — Flow Focus mode. Wider 2-hop subgraph; stronger, brighter
+- `graph` · Flow Focus mode. Wider 2-hop subgraph; stronger, brighter
   lines; aggregation still applies so duplicate `(from, to)` pairs collapse
   to a single weighted connector.
 
@@ -349,22 +349,22 @@ Lines never cover card text. Cards sit at `z-index: 2`; lines at
 
 Sections, in order:
 
-1. **Type / trust / confidence badges** — `Verified`, `Observed`, or
+1. **Type / trust / confidence badges** · `Verified`, `Observed`, or
    `Inferred`. Inferred events get a confidence percentage. `User-modified`
    shows when applicable.
-2. **Summary** — the event summary text.
-3. **Evidence / trust** — short prose plus the sources list with capture
+2. **Summary** · the event summary text.
+3. **Evidence / trust** · short prose plus the sources list with capture
    method and raw-retention policy.
-4. **Linked items** — counts and top titles for issues, decisions,
+4. **Linked items** · counts and top titles for issues, decisions,
    files/artifacts, next actions. The section header carries a
    `+N hidden` hint when relationships are outside the focused set.
-5. **Impact** — only shown when the event has decisions attached.
-6. **Actions** — two real buttons: `Flow trace` (navigates to Flow mode)
+5. **Impact** · only shown when the event has decisions attached.
+6. **Actions** · two real buttons: `Flow trace` (navigates to Flow mode)
    and `Copy summary` (clipboard).
-7. **Planned actions** — explicit row of disabled buttons:
+7. **Planned actions** · explicit row of disabled buttons:
    `Edit event`, `Split`, `Merge`, `Create issue`, `Add note`. Each carries
    a tooltip from `timelineControls.ts` explaining what is planned.
-8. **Memo / correction** — disabled textarea labeled as Planned.
+8. **Memo / correction** · disabled textarea labeled as Planned.
 
 Mori never shows fake working buttons.
 
@@ -381,9 +381,9 @@ decisions, and issues, an `Open Flow Focus` action, and a disabled
 `TimelineEmptyState` has three variants that map cleanly to runtime
 conditions:
 
-- **demo-empty** — demo mock had no events (rare).
-- **draft-no-imports** — real session, zero imports. CTA opens Evidence.
-- **draft-needs-quick-pass** — real session, has imports, no analysis yet.
+- **demo-empty** · demo mock had no events (rare).
+- **draft-no-imports** · real session, zero imports. CTA opens Evidence.
+- **draft-needs-quick-pass** · real session, has imports, no analysis yet.
   CTA runs Quick Pass.
 
 Once Quick Pass runs against a real session, the full Timeline + Flow
@@ -447,7 +447,7 @@ literal `"planned"` lives inside JSX.
 | Event search (toolbar input) | Sidebar collapse |
 | Flow trace (inspector) | Edit event, Split, Merge, Create issue, Add note |
 | Copy summary (inspector) | Save event memo |
-| Export report | — |
+| Export report | · |
 
 The toolbar carries a single dashed line confirming that `Day / Week /
 Zoom` are Planned. The inspector carries an explicit `Planned actions`
