@@ -248,22 +248,61 @@ must route through `signalPolicy` rather than composing a feed notification
 directly. That gives `signalPolicy` the producer it was built for and makes the
 remaining five reasons reachable.
 
-### D7 · Deferred, needs a product decision
+### D7 · `ContextView` owns the project Summary role, and gains a current-state section
 
-Two questions this plan deliberately does not settle, because they are the
-user's call and not derivable from the code:
+Two project surfaces compete today, and that is why live-intelligence work has
+had nowhere obvious to land. They are not duplicates: they answer different
+questions, and only one of them is asked first.
 
-- **Which surface owns the project Summary role.** `ProjectView` (session-centric,
-  carries `ProjectStateStrip` and the synthesis section, reached from Dashboard,
-  Graph, Home, Session detail) and `ContextView` (record-centric project tree,
-  the sidebar's `contexts` destination) both claim it. Two project surfaces
-  competing is the reason the live-intelligence work has nowhere obvious to
-  land. See [`record-workspace/v8-project-calendar-surfaces.md`](record-workspace/v8-project-calendar-surfaces.md)
-  for the record-side position.
-- **Whether a background tier ships in this program at all.** The rails permit
-  it (`../mori-project-goal.md` §6, rail B) and the opt-in inbox watcher already
-  exists, but everything in §6 below is valuable foreground-only. Background is
-  a separate, later opt-in.
+| | `ContextView` (`ViewKey: contexts`, the sidebar destination) | `ProjectView` (`ViewKey: project`) |
+| --- | --- | --- |
+| Question answered | what is *filed* under this project | what *state* is this project in |
+| Sections | 하위 프로젝트 · 최근 · 노트 · 세션 · 남긴 기록 (`record-workspace/v8-project-calendar-surfaces.md` §5) | current-state strip · activity heatmap · synthesis counts · sessions · memory · connection candidates |
+| Tense | retrospective inventory, ordered by recency | present state |
+| Reached by | the sidebar | Dashboard, Graph, Home, Session detail |
+
+**Decision: `ContextView` owns Summary.** It is the sidebar destination, it is
+the newer approved design, and its layer rule is the governing doctrine for
+project surfaces. `ProjectView` is session-centric, the shape the 2026-07-14
+identity rewrite superseded.
+
+**But the winning surface is missing the section that matters most.** The v8
+spec orders its sections "by what a returning user asks", and yet begins at
+하위 프로젝트. The question a returning user actually asks first is the Summary
+question this whole program exists to answer: what is happening now, and what
+changed since I last looked. So the T2 projection (D2) lands as **section 0 of
+the v8 project page**, above 최근. That completes the v8 ordering on its own
+stated principle rather than contradicting it.
+
+What migrates from `ProjectView`:
+
+- `ProjectStateStrip` · yes, upgraded from `basis: "savedSessions"` to the live
+  projection.
+- `ProjectSynthesisSection` · yes, folded into the same section as counts.
+- `ProjectPulse` · **no.** A contribution heatmap plus current / longest streak
+  answers "how often did I work", not "what is happening". It is cadence
+  gamification occupying the surface's best slot, and the brand rule already
+  warns against game-like treatment of core work surfaces
+  (`../mori-project-goal.md` §10).
+
+`ProjectView` is **retired, not deleted**, per the CLAUDE.md do-not list: it
+stays routed and reachable from Dashboard, Graph, Home, and Session detail, and
+stops being where project work is expected to happen.
+
+One related orphan to place deliberately rather than by accident:
+`src/features/project/ProjectTimelineSection.tsx` has no importer. It lays every
+saved session of one project on a shared axis with quiet gaps between them,
+which is a genuine capability and squarely a **Trace**-level surface, not
+Summary. It should be re-homed under Trace when S5 lands, or explicitly retired.
+It must not be pulled into section 0.
+
+### D8 · Deferred, needs a product decision
+
+**Whether a background tier ships in this program at all.** The rails permit it
+(`../mori-project-goal.md` §6, rail B) and the opt-in inbox watcher already
+exists, but everything in §6 below is valuable foreground-only. Background is a
+separate, later opt-in, and §3.4 shows it would first need to read the agent
+stores rather than only the connector inbox.
 
 ## 6. Staged plan
 
@@ -275,7 +314,7 @@ and 2 are the ones that change what the product *is*; the rest build on them.
 | **S1** | Live Intake Buffer (T1). Persist request records with source locators as `liveFeed` produces them. Rotation recovery in the Rust tail. | Closing the 세션 view and reopening it, or restarting the app, does not lose what was observed |
 | **S2** | Project projection (T2). Fold T1 into a per-project current-state row; make `buildProjectStateSummary` report a real `basis` and derive all five statuses. | The project surface answers "what is happening now" without the live view being open |
 | **S3** | Relocate signal producers into intake; route through `signalPolicy`; extend session status to include `waitingForUser` / `blocked` (MVP 2). | A completion or a block raises a signal with no live view mounted |
-| **S4** | Resolve D7's surface question and land the overview on the chosen surface. | One project surface owns Summary; the other's role is explicit |
+| **S4** | Land the projection as section 0 of the `ContextView` project page per D7. Migrate `ProjectStateStrip` and the synthesis counts, drop `ProjectPulse`, retire `ProjectView` without deleting it. | The sidebar's project destination opens on current state; `ProjectView` still resolves from its existing entry points |
 | **S5** | Deterministic insight candidates (MVP 6), including cross-session file-overlap conflict detection, which T1's file touches make cheap. Evidence links throughout (MVP 8). | Validation scenario 3 passes with no LLM configured |
 | **S6** | Opportunistic local-LLM enrichment under D5. Optional background tier per D7. | Enrichment never runs while a followed session is working |
 
@@ -306,4 +345,6 @@ if `src-tauri/` changes.
 - It does not add a review queue for observation, and does not remove the review
   gate for interpretation.
 - It does not make Mori drive or start an agent.
-- It does not decide the project surface question (D7).
+- It does not delete a surface. `ProjectView` is retired in place per D7, and
+  `ProjectTimelineSection` is re-homed or retired, never removed.
+- It does not decide whether a background tier ships (D8).
