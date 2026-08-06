@@ -63,10 +63,17 @@ export function buildIntakeRows(
 
   return requests.map((request) => {
     const hasError = request.items.some((item) => item.text.length > 0 && isErrorStep(item.text));
+    // Blocked means the request ENDED on a failure, not that it met one along
+    // the way. Tool errors are ordinary inside a coding session (a grep that
+    // matched nothing, a test run that failed and was then fixed), so keying
+    // `blocked` off `hasError` marked a third of a real store's requests as
+    // stuck and would have made the S3 signal mostly false alarms. `hasError`
+    // survives as its own flag for anything that wants "this hit trouble".
+    const endedOnError = isErrorStep(request.items[request.items.length - 1]?.text ?? "");
     const isNewest = newestPerSession.get(request.sessionKey) === request.id;
     const status: SessionActivityStatus = isNewest
       ? (sessionStatus.get(request.sessionKey) ?? "unknown")
-      : hasError
+      : endedOnError
         ? "blocked"
         : "completed";
 
