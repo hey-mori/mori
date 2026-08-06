@@ -198,7 +198,34 @@ describe("buildIntakeRows", () => {
       expect(rows[0].status).toBe("blocked");
     });
 
-    it("marks an earlier request blocked when it carried an unresolved error", () => {
+    it("does not block an earlier request that met an error and recovered", () => {
+      // Real data caught this: tool errors are ordinary mid-request, so keying
+      // blocked off "any error" marked a third of a real store as stuck.
+      const rows = rowsFor([
+        session("/s/a.jsonl", [
+          message({ id: "m1", content: "first ask", createdAt: at(40) }),
+          message({
+            id: "m2",
+            content: "↳ 도구 오류: command failed",
+            createdAt: at(39),
+          }),
+          message({
+            id: "m3",
+            role: "assistant",
+            content: "fixed it, tests pass",
+            createdAt: at(38),
+          }),
+          message({ id: "m4", content: "second ask", createdAt: at(2) }),
+        ]),
+      ]);
+
+      const first = rows.find((row) => row.title === "first ask");
+      expect(first?.status).toBe("completed");
+      // The trouble is still recorded, just not as a permanent block.
+      expect(first?.hasError).toBe(true);
+    });
+
+    it("marks an earlier request blocked when it ended on an error", () => {
       const rows = rowsFor([
         session("/s/a.jsonl", [
           message({ id: "m1", content: "first ask", createdAt: at(40) }),
