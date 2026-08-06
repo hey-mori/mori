@@ -411,6 +411,80 @@ exists, but everything in §6 below is valuable foreground-only. Background is a
 separate, later opt-in, and §3.4 shows it would first need to read the agent
 stores rather than only the connector inbox.
 
+### D11 · An observation is a claim about the moment it was made
+
+This is the honesty rule the whole projection hangs on, so it comes before the
+shape.
+
+A T1 row's status was true at its `observedAt`. Mori only observes while the app
+is open and the follower is polling, so a row saying `running` proves the request
+was mid-turn **then**, not now. If the app was closed overnight, a projection
+that renders "2개 세션 진행 중" from yesterday's rows is fabricating a present
+tense, which the never-fabricate and no-fake-connected-states invariants
+(`../mori-project-goal.md` §6, §10) both forbid.
+
+So the projection carries its own freshness and the surface must respect it:
+
+| Freshness | Condition | What the surface may claim |
+| --- | --- | --- |
+| `live` | newest contributing observation is within the follow window | present tense: 진행 중 / 대기 중 / 막힘 |
+| `recent` | within a few hours | past tense with a time: "3시간 전 기준" |
+| `stale` | older | no present-tense counts at all; last known activity only |
+
+A `running` row that goes stale does **not** become `completed`. Mori did not
+see it finish, and inventing an ending is the same failure as inventing a
+present. It becomes `unknown`, which the status model already carries for
+exactly this.
+
+This also answers what "continuously updated" honestly means: the overview is
+current whenever Mori is running, and openly says how old it is when not.
+
+### D12 · The `project-state` shape, and what it deliberately omits
+
+One record per project, `layer: "aggregate"`, folded from every T1 row sharing a
+`projectPath` (which is why S1 had to persist that path rather than the trailing
+label). Ordered by the question a returning user asks first.
+
+| Group | Fields | Why |
+| --- | --- | --- |
+| Identity | `projectPath`, `label` | The fold key, per D8 |
+| Freshness | `observedAt`, `freshness` | D11; without it nothing below may be read as present tense |
+| Now | `runningCount`, `waitingCount`, `blockedCount` | "무엇이 지금 돌아가고 있나 / 나를 기다리나 / 막혀 있나" |
+| Lately | `recentRequests[]` (title, status, endedAt, capped) | "무슨 작업을 했나", the question the ledger cannot answer for live work |
+| Touched | `topFiles[]` (path, additions, deletions) | "무엇이 바뀌었나", already rolled up per row in S1 |
+| Since | `changedSince(seenAt)` as a derivation, not a stored field | "내가 안 본 사이 뭐가 바뀌었나" |
+
+Deliberately **not** in the projection:
+
+- **No counts of tools, steps, or tokens.** They measure effort, not state. The
+  same instinct put a contribution heatmap on the project page (D7), and it
+  answered nothing.
+- **No LLM-derived summary.** S2 is deterministic. Interpretation enters at S6
+  and stays labelled `inferred`, per D3.
+- **No risk or conflict field yet.** Those are S5, and they need cross-session
+  file-overlap detection that T1 makes cheap but does not itself perform.
+- **No `lastSeenAt` stored on the record.** When the user last looked is a
+  property of the viewer, not of the project, and storing it inside a shared
+  aggregate would mean a revision every time someone opened a page.
+
+### D13 · `basis` reports what actually contributed, and stops being a constant
+
+`ProjectStateSummary.basis` is typed `"savedSessions"` and is a literal constant,
+which was honest when saved rows were the only input. With T1 it becomes a real
+union, because a project can now be backed by observation, by saved sessions, by
+both, or by neither, and the surface must not imply reach it lacks:
+
+| `basis` | Meaning |
+| --- | --- |
+| `liveAndSaved` | T1 rows and saved sessions both contributed |
+| `liveOnly` | observed but never imported or reviewed |
+| `savedOnly` | imported work Mori never watched run, so no present tense is available at all |
+| `none` | nothing to say; the strip stays hidden |
+
+`savedOnly` is the case worth naming: it is every project in the store today, and
+its overview can only ever be retrospective. Reporting it as such is what keeps
+the new surface from looking broken on old projects.
+
 ## 6. Staged plan
 
 Each stage leaves the product working and is independently valuable. Stages 1
@@ -419,7 +493,7 @@ and 2 are the ones that change what the product *is*; the rest build on them.
 | Stage | Scope | Done when |
 | --- | --- | --- |
 | **S1** | Live Intake Buffer (T1) as a derived index table per D8, carrying the D9 status field and a source locator, written as `liveFeed` produces requests. Rotation recovery in the Rust tail, re-baselining against a bounded tail. No eviction cap (§4.3). | Closing the 세션 view and reopening it, or restarting the app, does not lose what was observed |
-| **S2** | Project projection (T2) as the `project-state` aggregate schema per D8. Fold T1 into it; make `buildProjectStateSummary` report a real `basis` and derive all five project statuses. | The project surface answers "what is happening now" without the live view being open |
+| **S2** | Project projection (T2) as the `project-state` aggregate schema, shaped per D12, folded on `projectPath`. Carry freshness per D11 and a real `basis` per D13. | The project surface answers "what is happening now" without the live view being open, and says how old the answer is |
 | **S3** | Relocate signal producers into intake and route them through `signalPolicy`, which makes its `blocked` reason reachable for the first time (MVP 2, MVP 7). | A completion or a block raises a signal with no live view mounted |
 | **S4** | Land the projection as section 0 of the `ContextView` project page per D7. Migrate `ProjectStateStrip` and the synthesis counts, drop `ProjectPulse`, retire `ProjectView` without deleting it. | The sidebar's project destination opens on current state; `ProjectView` still resolves from its existing entry points |
 | **S5** | Deterministic insight candidates (MVP 6), including cross-session file-overlap conflict detection, which T1's file touches make cheap. Evidence links throughout (MVP 8). | Validation scenario 3 passes with no LLM configured |
