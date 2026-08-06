@@ -152,6 +152,41 @@ observed agent is working: `LiveRequestStatus` in
 with a stall threshold. Mori's own observation layer is therefore the correct
 scheduler input for its analysis layer. No GPU probing is required.
 
+### 4.3 Measured volume, from a real agent store
+
+Sizing T1 by guesswork would set the wrong eviction policy, so this is measured
+against one real Claude Code store (the maintainer's machine, 2026-08-06). It is
+a real-world sample, not a benchmark.
+
+| Quantity | Measured |
+| --- | --- |
+| Project directories | 18 |
+| Session files | 676 |
+| Total on disk | ~950 MB |
+| Largest single session | 134 MB · 44,940 lines |
+| Requests in that session | 638 |
+| Requests per heavy session (top 10) | 89 to 713 |
+| **Total real requests across the entire store** | **4,834** |
+
+"Requests" counts user-role messages excluding tool results, which is the unit
+`liveFeed` already groups by. The gap matters: that largest session holds 13,886
+user-role messages but only 638 actual requests, so a naive row-per-user-message
+design would be 20x too large.
+
+Three consequences:
+
+1. **T1 is small.** The whole history of an 18-project, 950 MB store is under
+   5,000 rows. Storage is not a constraint, so eviction is a retention *choice*,
+   not a capacity requirement. An earlier draft of D8 justified eviction on
+   volume; that justification was wrong and is corrected below.
+2. **The ledger-pollution argument in D8 gets stronger, not weaker.** Roughly
+   5,000 machine-generated rows would still dominate a personal ledger holding a
+   few hundred human notes. Keeping T1 out of the record space is about meaning,
+   not megabytes.
+3. **Bounded reads stay mandatory.** A single 134 MB session file confirms
+   `TAIL_BYTES` (2 MB) is load-bearing, and that the rotation recovery in D4 must
+   re-baseline against a bounded tail rather than re-reading a rotated file whole.
+
 ## 5. Decisions
 
 These resolve the open questions in [`../live-project-intelligence.md`](../live-project-intelligence.md)
@@ -305,10 +340,13 @@ container | source | aggregate`, mirroring the architecture doc §2 layer model,
 and `agent-session` is already a system schema at `layer: "occurrence"`.
 
 The naive reading is that T1 rows are occurrences too, so they should be kernel
-records. That is wrong on volume. An `agent-session` record is one row per
-session; a T1 row is one per *request*, and a long session holds dozens. Making
-them ledger peers would flood the record space with machine-grained rows, which
-is the failure the ledger doctrine exists to prevent and which this repo has
+records. That is wrong, but not for the reason a first draft assumed. An
+`agent-session` record is one row per session; a T1 row is one per *request*,
+and §4.3 measures a heavy session at 89 to 713 requests, with about 4,800 across
+a whole 18-project store. That is trivial to store and would still swamp a
+personal ledger holding a few hundred human-authored notes. The objection is
+semantic, not physical: it would flood the record space with machine-grained
+rows, the failure the ledger doctrine exists to prevent and one this repo has
 already had to fix once for capture.
 
 The architecture supplies the right shape instead. §3.1 establishes that a
@@ -335,9 +373,11 @@ Consequences that fall out and are worth stating:
   (`src/features/record-ledger/recordPresentation.ts:81`) and filtered out of the
   note explorer, so an aggregate row has an established presentation path.
 
-Eviction for T1: bounded per project, oldest-first, with the projection updated
-before rows are dropped so evicting never rewrites current state. The exact cap
-is a tuning decision for S1, not a doctrine question.
+Eviction for T1: per §4.3 this is a retention choice rather than a capacity
+need, so S1 should ship **without** an eviction cap and add one only if a real
+store proves it necessary. If it is ever added, it is bounded per project,
+oldest-first, with the projection updated before rows are dropped so evicting
+never rewrites current state.
 
 ### D9 · The five session statuses are already derivable, just collapsed
 
@@ -378,7 +418,7 @@ and 2 are the ones that change what the product *is*; the rest build on them.
 
 | Stage | Scope | Done when |
 | --- | --- | --- |
-| **S1** | Live Intake Buffer (T1) as a derived index table per D8, carrying the D9 status field and a source locator, written as `liveFeed` produces requests. Rotation recovery in the Rust tail. Eviction cap. | Closing the 세션 view and reopening it, or restarting the app, does not lose what was observed |
+| **S1** | Live Intake Buffer (T1) as a derived index table per D8, carrying the D9 status field and a source locator, written as `liveFeed` produces requests. Rotation recovery in the Rust tail, re-baselining against a bounded tail. No eviction cap (§4.3). | Closing the 세션 view and reopening it, or restarting the app, does not lose what was observed |
 | **S2** | Project projection (T2) as the `project-state` aggregate schema per D8. Fold T1 into it; make `buildProjectStateSummary` report a real `basis` and derive all five project statuses. | The project surface answers "what is happening now" without the live view being open |
 | **S3** | Relocate signal producers into intake and route them through `signalPolicy`, which makes its `blocked` reason reachable for the first time (MVP 2, MVP 7). | A completion or a block raises a signal with no live view mounted |
 | **S4** | Land the projection as section 0 of the `ContextView` project page per D7. Migrate `ProjectStateStrip` and the synthesis counts, drop `ProjectPulse`, retire `ProjectView` without deleting it. | The sidebar's project destination opens on current state; `ProjectView` still resolves from its existing entry points |
