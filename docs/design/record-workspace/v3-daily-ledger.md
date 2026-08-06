@@ -33,15 +33,15 @@ Things / Apple Journal):
 
 ## 2. References (what each contributes)
 
-- **Apple Journal** — capture-first canvas: the prompt is the screen;
+- **Apple Journal** · capture-first canvas: the prompt is the screen;
   your day's entries visibly accumulate under it.
-- **Bear** — list-row anatomy: title + 1-line snippet + trailing time,
+- **Bear** · list-row anatomy: title + 1-line snippet + trailing time,
   soft tinted selection, restrained color.
-- **Things 3** — day headers as the calm organizing device (오늘 with
+- **Things 3** · day headers as the calm organizing device (오늘 with
   count), generous-but-structured whitespace.
-- **Granola** — day-grouped work list (오늘/어제/…) proving day headers
+- **Granola** · day-grouped work list (오늘/어제/…) proving day headers
   scale to auto-captured work items.
-- **Linear** — control diet (search + one icon menu), sticky group
+- **Linear** · control diet (search + one icon menu), sticky group
   headers, keyboard-first invocation.
 
 ## 3. The design
@@ -53,7 +53,7 @@ skeleton, so switching between them never re-flows the frame. Both are
 **full-bleed** inside `.workspace` (no `PageShell`, no floating card):
 a flush left rail (`--ledger-rail`/`.session-index`, **248px**, `border-right`,
 app background) and a content pane filling the rest. The v2 기록 rendered
-as a bordered rounded card floating in a `PageShell` — that mismatch is
+as a bordered rounded card floating in a `PageShell` · that mismatch is
 what read as "the sidebar isn't done right"; it is removed. Do not
 reintroduce a card wrapper on either surface.
 

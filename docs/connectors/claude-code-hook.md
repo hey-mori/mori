@@ -1,7 +1,7 @@
 # Mori · Claude Code hook setup
 
 This document describes how to wire a Claude Code session into Mori as a
-local connector. **The hook is explicit opt-in** — you install it on your
+local connector. **The hook is explicit opt-in** · you install it on your
 own machine, you control the file path, you can uninstall it any time.
 
 Mori's repository ships a setup *template* under
@@ -83,7 +83,7 @@ to clean up.
 ## Security checklist
 
 - [x] The launcher and `mori-claude-hook.py` are short enough to read
-  before installing — do read them.
+  before installing · do read them.
 - [x] The script never opens a network socket.
 - [x] The script reads only the home directory (to resolve the default
   output path) and the hostname (echoed back as `provenance.host`).
@@ -96,14 +96,14 @@ to clean up.
 
 ## Troubleshooting
 
-- **The script does not fire** — confirm Claude Code's hook system is
+- **The script does not fire** · confirm Claude Code's hook system is
   enabled and the `command` path resolves on your machine.
-- **The JSONL file has weird control characters** — make sure your
+- **The JSONL file has weird control characters** · make sure your
   shell wrote UTF-8. The Mori parser tolerates Windows-style `\r\n`.
-- **A line refuses to import** — Mori reports the offending line number
+- **A line refuses to import** · Mori reports the offending line number
   in Import Review. The rest of the file still imports. Edit the bad
   line by hand.
-- **A line looks like it leaked a secret** — Mori's redaction pass runs
+- **A line looks like it leaked a secret** · Mori's redaction pass runs
   before persistence, but the JSONL file itself is unchanged on disk.
   Scrub it manually if you need to share it.
 
@@ -115,7 +115,7 @@ to clean up.
   users can re-import the same JSONL without paying for duplicate
   Review items.
 
-The **Connector JSONL** paste import path is implemented today — the
+The **Connector JSONL** paste import path is implemented today · the
 schema, parser, normaliser, redaction, and Evidence Hub UI all ship.
 Live Claude sync, account integration, OAuth, and background polling
 remain explicitly out of scope.

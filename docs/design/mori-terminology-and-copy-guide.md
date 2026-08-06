@@ -2,19 +2,19 @@
 
 The authoritative vocabulary for Mori's user-facing copy. The goal is one calm,
 precise, professional voice across every surface so the product reads as a
-serious local-first work tool — never casual, never marketing, never "AI magic".
+serious local-first work tool · never casual, never marketing, never "AI magic".
 
 Read alongside:
-- [`mori-brand-identity-reference.md`](mori-brand-identity-reference.md) — the
+- [`mori-brand-identity-reference.md`](mori-brand-identity-reference.md) · the
   brand voice and the colour/semantics contract.
 - The shared label module
   [`src/lib/product-state/productStateLabels.ts`](../../src/lib/product-state/productStateLabels.ts)
-  — the runtime source of truth for status labels. **This guide and that module
+  · the runtime source of truth for status labels. **This guide and that module
   must agree.** When they conflict, fix one of them in the same change.
 
 When a label is rendered in more than one place, derive it from a shared helper
 (`product-state`, `evidence/trust`, session-origin helpers) rather than copying
-the string — drift between hand-rolled copies is the main thing this guide
+the string · drift between hand-rolled copies is the main thing this guide
 exists to prevent.
 
 ---
@@ -68,7 +68,7 @@ Code identifiers, types, and developer-facing docs stay English: `source`,
 | 모순됨 | 상충 / 상충됨 | Align to the shared lifecycle label. |
 
 Note: full polite sentences like "소스를 가져왔습니다." in empty/help text are
-fine — the rule targets terse nominal **labels/badges**, not prose.
+fine · the rule targets terse nominal **labels/badges**, not prose.
 
 ## 5. Status vocabulary
 
@@ -79,7 +79,7 @@ Unavailable, with Korean sub-states 사용 가능 / 부분 구현 / 예정 / 사
 설정 필요 / 데모 전용 / 브라우저 전용 / 데스크톱 전용.
 
 **Trust** (`evidence/trust.ts`): 검증됨 (verified) / 관찰됨 (observed) /
-추론됨 (inferred). Inferred shares the brand purple — an inference is Mori's
+추론됨 (inferred). Inferred shares the brand purple · an inference is Mori's
 own reasoning.
 
 **Data / provenance**: 가져온 소스 (imported) / 클라이언트 안전 (client-safe) /
@@ -128,7 +128,7 @@ A button labels the **result of the action**, not the implementation.
 ## 7. Source / import / capture vocabulary
 
 - **가져오기 vs 불러오기 (decided):** Mori uses **가져오기** for bringing
-  *external* source data in (a connector session, a git diff, pasted text) —
+  *external* source data in (a connector session, a git diff, pasted text) ·
   it is the established, precise Korean term and it is consistent across the
   app. **불러오기** is reserved for opening a *saved file* (a `.mori` package,
   the file picker). The two are not interchangeable.
@@ -151,7 +151,7 @@ A button labels the **result of the action**, not the implementation.
 
 - **Review:** 검토. **Review queue:** 검토 대기열. **Candidate:** 후보.
 - **Accept (review decision):** 수락. **Approve as durable memory:** 승인
-  (`기억으로 승인`). Distinct on purpose — accepting a review item is not the
+  (`기억으로 승인`). Distinct on purpose · accepting a review item is not the
   same gesture as approving durable project memory.
 - **Project memory / durable memory:** 프로젝트 기억.
 - **Lifecycle:** 대체됨 (superseded) / 사용 중지 (retired) / 상충 (contradicted)
@@ -160,7 +160,7 @@ A button labels the **result of the action**, not the implementation.
   **Reject / discard:** 제외 / 폐기.
 - **Report:** 보고서. **Resume prompt:** 재개 프롬프트. **Handoff:** 인계.
 - **Export:** 내보내기. **Full export:** 전체 내보내기. **Client-safe export:**
-  클라이언트 공유용 내보내기 (omits sensitive memory/audit history — say so).
+  클라이언트 공유용 내보내기 (omits sensitive memory/audit history · say so).
 - **`.mori` package:** `.mori` 패키지. **Included / excluded:** 포함됨 / 제외됨.
 
 ## 9. Tone rules
@@ -171,7 +171,7 @@ A button labels the **result of the action**, not the implementation.
 - Primary UI is short; move explanation into disclosure / help / tooltips.
 - Consistent noun/verb forms; a label names the product action or state, not
   the internal implementation.
-- Be honest about capability — never imply capture Mori cannot do, or that a
+- Be honest about capability · never imply capture Mori cannot do, or that a
   planned feature works.
 
 ## 10. Before / after
@@ -189,7 +189,7 @@ A button labels the **result of the action**, not the implementation.
 
 ## 11. Icon / status visual pairing
 
-Icons support recognition only — no decorative icons. Each key concept pairs
+Icons support recognition only · no decorative icons. Each key concept pairs
 with one consistent lucide icon and the semantic tone from `product-state`:
 
 | Concept | Icon (lucide) | Tone |
@@ -207,4 +207,4 @@ with one consistent lucide icon and the semantic tone from `product-state`:
 | Planned / unavailable | dashed / muted, no solid icon | neutral |
 
 Tone → colour is owned by `data-mori-tone` and `MoriStatusBadge`; never hand-pick
-a status colour. Purple is brand/inferred only — it is not a generic status hue.
+a status colour. Purple is brand/inferred only · it is not a generic status hue.

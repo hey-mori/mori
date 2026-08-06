@@ -1,4 +1,4 @@
-# Mori App Icon — Packaging Notes
+# Mori App Icon · Packaging Notes
 
 How Mori's packaged platform app icons are produced and why each platform gets
 a different composition. For the brand mark itself (the guiding star over a
@@ -42,19 +42,19 @@ The CSS/SVG mark in the UI is a flat rounded tile. A packaged *app* icon needs
 platform-native composition, so the generator places the same artwork into a
 per-platform tile:
 
-- **macOS (`.icns`)** — a continuous-corner *squircle* (superellipse, exponent
+- **macOS (`.icns`)** · a continuous-corner *squircle* (superellipse, exponent
   5) on Apple's icon grid: the tile body is ~80% of the canvas with a ~9.8%
   transparent safe-area margin and a corner radius ~22.5% of the body. macOS
   does not mask the icon, so the squircle and the safe area are baked in.
-- **Windows (`.ico`)** — a near-full-bleed rounded tile (small margin) because
+- **Windows (`.ico`)** · a near-full-bleed rounded tile (small margin) because
   Windows does not mask either, and a padded icon looks tiny in the taskbar.
-- **Linux / generic (`.png`)** — a balanced margin between the two.
-- **iOS web-clip** — a full-bleed, fully opaque square; iOS applies its own
+- **Linux / generic (`.png`)** · a balanced margin between the two.
+- **iOS web-clip** · a full-bleed, fully opaque square; iOS applies its own
   rounded mask, so transparent corners would show a fringe.
 
 ## Level of detail by size
 
-Small icons are not just downscaled — detail is dropped so the silhouette
+Small icons are not just downscaled · detail is dropped so the silhouette
 survives:
 
 - **Beam** is drawn only at ≥ 64px. Below that it turns to grey mud and muddies
@@ -74,7 +74,7 @@ neighbour, which is the usual cause of a blurry taskbar icon.
 Entries ≤ 64px are stored as uncompressed 32-bit BMP/DIB with a derived 1-bit
 AND mask. Some Windows shell surfaces (small Explorer views, older code paths)
 render PNG-in-`.ico` poorly at small sizes, so BMP is the safe choice there.
-128 and 256 stay PNG — they only appear in large views that handle PNG fine,
+128 and 256 stay PNG · they only appear in large views that handle PNG fine,
 and PNG keeps the file small.
 
 ## Windows icon cache

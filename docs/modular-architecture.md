@@ -160,7 +160,7 @@ src/
 1. Add the `EventType` to `src/domain/types.ts`.
 2. Add label / tone / icon entries in `src/domain/constants.ts`.
 3. Add a row to `laneOrder` in the same file.
-4. No view-model changes required — the lane will flow through
+4. No view-model changes required · the lane will flow through
    `timelineLanes.ts` automatically.
 
 ### … report section
@@ -175,7 +175,7 @@ src/
    `src/app/featureStatus.ts`.
 2. Add a row to `REGISTRY_DATA`.
 3. Update or read it from any component that wants honest disabled / tooltip
-   behavior — prefer `getFeatureControlProps(id)` over hand-rolled flags.
+   behavior · prefer `getFeatureControlProps(id)` over hand-rolled flags.
 4. Add a test for the row in `src/app/featureStatus.test.ts` if it carries a
    `disabledReason` worth asserting.
 
@@ -187,7 +187,7 @@ src/
 - **Provenance**: every Timeline event displayed in the UI must trace back
   to one or more `SourceRef`s through `event.sourceRefs`. The
   `src/lib/evidence/` helpers are the only way the UI is allowed to derive
-  "where did this event come from?" — no inline filter loops over
+  "where did this event come from?" · no inline filter loops over
   `view.sources.filter(s => event.sourceRefs.includes(s.id))`.
 
 ## Theme tokens
@@ -271,7 +271,7 @@ This pass:
   rules continue to set the outer padding / border / radius.
 - **Adoption count**: `MoriSection` is now used in two surfaces (the
   brief's threshold). `MoriInspectorPanel` ships with `className`
-  passthrough but is **not** yet adopted in any inspector — the existing
+  passthrough but is **not** yet adopted in any inspector · the existing
   `EventInspector` / `TimelineBundleInspector` / `ReviewDetailPanel` /
   `SourceDetailPanel` have years of CSS calibration around their legacy
   `.inspector` / `.evidence-detail` selectors, and a clean migration

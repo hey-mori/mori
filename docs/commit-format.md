@@ -1,7 +1,7 @@
 # Mori Commit Message Format
 
 Every commit in this repository follows one fixed format. It is not a
-preference — treat it as a hard rule, the same way the validation
+preference · treat it as a hard rule, the same way the validation
 contract is a hard rule.
 
 ## Shape
@@ -17,7 +17,7 @@ contract is a hard rule.
 ## Rules
 
 - **Subject line**
-  - Starts with a `type:` prefix — one of `feat`, `fix`, `refactor`,
+  - Starts with a `type:` prefix · one of `feat`, `fix`, `refactor`,
     `test`, `docs`, `chore`.
   - Do not add a scope. Use `feat: ...`, never `feat(scope): ...`.
   - The summary is a lower-case, imperative-mood English phrase
@@ -27,7 +27,7 @@ contract is a hard rule.
   - One blank line after the subject, then a **bullet list only**.
   - Every body line is a bullet starting with `- `.
   - **No prose paragraphs.** If a point needs explanation, it is
-    still one bullet — write a fuller sentence in that bullet rather
+    still one bullet · write a fuller sentence in that bullet rather
     than dropping into paragraph form.
   - English. Each bullet states what changed or why.
   - 3–7 bullets is typical; a trivial change may have fewer.
@@ -58,5 +58,5 @@ feat: filter a .mori package into a client-safe export
 
 ## Not this
 
-A body written as prose paragraphs — even well-written prose — does
+A body written as prose paragraphs, even well-written prose, does
 **not** conform. The body must be a bullet list.

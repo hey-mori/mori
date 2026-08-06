@@ -16,7 +16,7 @@ indiscriminately wastes time.
 | `cargo test` (src-tauri)         | <0.1 s      | <0.1 s        | Negligible |
 
 Test count is **not** the dominant cost today. TypeScript compile time
-is. That's why this milestone enabled `incremental` in `tsconfig.json` —
+is. That's why this milestone enabled `incremental` in `tsconfig.json` ·
 it writes a build info cache to `node_modules/.cache/mori-tsbuildinfo`
 and reuses it on subsequent runs.
 
@@ -55,7 +55,7 @@ npx vitest run src/lib/foo/bar.test.ts
 ```
 
 For longer sessions, leave `npm run test:watch` running in another
-terminal — it re-runs only affected tests on save.
+terminal · it re-runs only affected tests on save.
 
 ### Before commit (always)
 
@@ -88,7 +88,7 @@ cargo test
 cd ..
 ```
 
-`cargo test` is fast (<0.1 s for the current 32-test suite) — there's no
+`cargo test` is fast (<0.1 s for the current 32-test suite) · there's no
 reason to skip it when the desktop layer is touched.
 
 ## TypeScript incremental cache
@@ -147,7 +147,7 @@ When an agent (Claude Code or any contributor) iterates on a milestone:
 
 - The `build` script still runs `tsc` once before `vite build` for
   belt-and-suspenders. When `check:release` runs `check:types` first
-  this means TypeScript is invoked twice — but the second invocation
+  this means TypeScript is invoked twice · but the second invocation
   hits the incremental cache and adds only ~3 seconds. Acceptable for
   the safety it provides.
 - This milestone deliberately did NOT introduce pre-commit hooks,

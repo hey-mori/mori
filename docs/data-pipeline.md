@@ -1,7 +1,7 @@
 # Mori Data Pipeline
 
-Everything Mori displays — events, issues, decisions, reports, project memory
-snapshots — traces back to a `SourceRef` the user explicitly imported. This
+Everything Mori displays · events, issues, decisions, reports, project memory
+snapshots · traces back to a `SourceRef` the user explicitly imported. This
 document is the contract for how data flows from capture to project memory.
 
 The typed contract lives in `src/app/dataPipeline.ts`.
@@ -16,10 +16,10 @@ EvidenceSource (SourceRef)
    │  trustLevel, rawRetention, capture method
    ▼
 NormalizedEventCandidate (NormalizedImportCandidate)
-   │  src/lib/import/normalize* — pure functions
+   │  src/lib/import/normalize* · pure functions
    ▼
 ImportReviewDraft
-   │  src/lib/review — user accept / discard / edit
+   │  src/lib/review · user accept / discard / edit
    ▼
 AppliedTimelineEvent (TimelineEvent)
    │  persisted on the session via useMoriSessionStore.addImport
@@ -74,19 +74,19 @@ Pipeline-layer helpers (all in `src/app/dataPipeline.ts`):
 
 ## Where the boundaries are
 
-- `lib/import` — pure normalizers. No React. No persistence. Tested with
+- `lib/import` · pure normalizers. No React. No persistence. Tested with
   fixture text.
-- `lib/review` — review-draft state machine. Pure functions over the
+- `lib/review` · review-draft state machine. Pure functions over the
   `ImportReviewDraft` shape.
-- `lib/evidence` — trust display + provenance display + evidence joins.
+- `lib/evidence` · trust display + provenance display + evidence joins.
   Single source of truth for source / issue / decision → SourceRef links.
-- `lib/analysis` — Quick Pass providers (`deterministic`, `ollama`). All
+- `lib/analysis` · Quick Pass providers (`deterministic`, `ollama`). All
   side-effects are confined to the network call inside Ollama.
-- `lib/reports/reportContext.ts` — report data-basis + evidence summary.
+- `lib/reports/reportContext.ts` · report data-basis + evidence summary.
   Uses `lib/evidence` for the joins.
-- `lib/memory/projectMemoryContext.ts` — current-session snapshot. Uses
+- `lib/memory/projectMemoryContext.ts` · current-session snapshot. Uses
   `lib/project-memory/projectMemory.ts` for the detailed derivations.
-- `app/dataPipeline.ts` — typed contract + thin adapters. **The only place
+- `app/dataPipeline.ts` · typed contract + thin adapters. **The only place
   React features should import from when they need the canonical names.**
 
 ## Demo data isolation
@@ -131,7 +131,7 @@ demo session is open (`demoSessionId === null`).
 3. **Feature registry**: add a `connector.<name>` row in
    `src/app/featureStatus.ts` and (if the surface should show up in
    Evidence Hub) an `evidence.addSource.<name>` row too.
-4. **Wire**: feed the normalizer through Evidence Hub's import flow —
+4. **Wire**: feed the normalizer through Evidence Hub's import flow ·
    `useMoriSessionStore.addImport` already accepts any
    `NormalizedImportCandidate`.
 5. **Tests**: assert the normalizer's fixture output + the capture surface

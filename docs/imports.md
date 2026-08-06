@@ -10,9 +10,9 @@ browser draft repository today and through SQLite when running in Tauri mode.
 ## Evidence is the source of truth
 
 The imported `SourceRef`s and `TimelineEvent`s are Mori's durable
-ground truth. Anything Mori derives from them — Quick Pass issues
+ground truth. Anything Mori derives from them · Quick Pass issues
 and decisions, Project Memory aggregations, consolidated memories,
-Resume Prompt sections — is a **reviewable proposal** layered on
+Resume Prompt sections · is a **reviewable proposal** layered on
 top of that evidence.
 
 This has two practical consequences:
@@ -107,14 +107,14 @@ Detected roles:
 
 Per-turn signals:
 
-- `hasCodeBlocks` — at least one triple-backtick fence in the turn.
-- `hasToolUse` — `<function`, `<tool`, or `tool_use` markers in the turn.
+- `hasCodeBlocks` · at least one triple-backtick fence in the turn.
+- `hasToolUse` · `<function`, `<tool`, or `tool_use` markers in the turn.
 
 Aggregate metadata stored on the resulting `SourceRef`:
 
 - `turnCount` (total), `userTurns`, `assistantTurns`.
-- `codeBlockCount` — number of turns containing fenced code.
-- `estimatedTokens` — rough character / 4 estimate. Word-based variants are
+- `codeBlockCount` · number of turns containing fenced code.
+- `estimatedTokens` · rough character / 4 estimate. Word-based variants are
   similar to a 0.75 words-per-token approximation.
 
 The generated `TimelineEvent`:
@@ -161,7 +161,7 @@ normalizes it in
 - Optional origin label (e.g. `HEAD~1..HEAD` or a PR URL) recorded as
   `SourceRef.uri`.
 - Invalid input rejected up front via `isLikelyGitDiff` and
-  `GitDiffParseError` with a clear message — no fake source or event is
+  `GitDiffParseError` with a clear message · no fake source or event is
   created.
 
 The generated event:
@@ -178,7 +178,7 @@ The generated event:
 - Binary files are noted in the header detection but otherwise ignored.
 - Merge conflict markers and three-way diffs.
 - Submodule diffs.
-- A semantic interpreter that says "this diff added auth logic" — Mori
+- A semantic interpreter that says "this diff added auth logic" · Mori
   intentionally only reports verified evidence. Quick Pass still applies its
   heuristic keyword scan to the summary text, and a future local-LLM Quick
   Pass run can read the same source/event.
@@ -191,7 +191,7 @@ provided repository path. The implementation lives in
 [src-tauri/src/git/diff.rs](../src-tauri/src/git/diff.rs) and is exposed as the
 Tauri command `run_git_diff`. The frontend uses
 [`runGitDiff` in src/lib/desktop/gitCommands.ts](../src/lib/desktop/gitCommands.ts)
-— React components never invoke Tauri directly.
+· React components never invoke Tauri directly.
 
 ### Saved repositories
 
@@ -224,10 +224,10 @@ keeps working.
 
 Supported range examples:
 
-- `HEAD` — unstaged working-tree changes (the default).
-- `HEAD~1..HEAD` — last commit.
-- `main..feature-branch` — branch diff.
-- Empty range with **`--staged`** toggle — index vs HEAD.
+- `HEAD` · unstaged working-tree changes (the default).
+- `HEAD~1..HEAD` · last commit.
+- `main..feature-branch` · branch diff.
+- Empty range with **`--staged`** toggle · index vs HEAD.
 
 Safety constraints, all in `src-tauri/src/git/diff.rs`:
 
@@ -236,7 +236,7 @@ Safety constraints, all in `src-tauri/src/git/diff.rs`:
 - Mori runs `git -C <repo_path> rev-parse --show-toplevel` first to refuse
   non-Git directories.
 - The actual diff call uses `std::process::Command::new("git").arg(...)` with
-  explicit args — never shell interpolation, never string concatenation.
+  explicit args · never shell interpolation, never string concatenation.
 - Output is capped at ~2 MB. Larger diffs are returned with `truncated: true`
   so the UI can show that detection without exploding the renderer.
 - Errors are returned as `Result<_, String>` with the exit code and stderr,
@@ -269,12 +269,12 @@ Saved repositories can also be **verified** on demand. The Verify button in
 saved path through the Tauri command `verify_repository_path`
 ([src-tauri/src/git/verify.rs](../src-tauri/src/git/verify.rs)):
 
-- `git -C <path> rev-parse --show-toplevel` — confirms the path is inside a
+- `git -C <path> rev-parse --show-toplevel` · confirms the path is inside a
   Git work tree and resolves the repository root.
-- `git -C <path> rev-parse HEAD` — captures the current commit SHA.
-- `git -C <path> branch --show-current` — current branch name, or `null` on
+- `git -C <path> rev-parse HEAD` · captures the current commit SHA.
+- `git -C <path> branch --show-current` · current branch name, or `null` on
   detached HEAD.
-- `git -C <path> status --porcelain` — used only to determine `isDirty`
+- `git -C <path> status --porcelain` · used only to determine `isDirty`
   (the porcelain output is not stored, just whether it was empty).
 
 The same safety rules as `run_git_diff` apply: explicit args, no shell
@@ -311,7 +311,7 @@ Privacy promises:
 - App start, store hydrate, focus, and SQLite hydrate never call
   `verify_repository_path`.
 - Browser mode disables the Verify button and the bridge throws the
-  standard "requires the Tauri app" error — manual repo paths remain
+  standard "requires the Tauri app" error · manual repo paths remain
   editable in the prototype.
 - Clearing verification metadata is one click and drops everything except
   the saved label/path.
@@ -323,15 +323,15 @@ Saved verifications get stale. Mori treats anything older than
 [src/lib/repositories/verificationFreshness.ts](../src/lib/repositories/verificationFreshness.ts))
 as a stale record and flags it in both Settings and the Git Diff dropdown:
 
-- **Verified just now / N hours ago / N days ago** — the green badge plus
+- **Verified just now / N hours ago / N days ago** · the green badge plus
   a small grey age label.
-- **Stale · `<branch> <sha7>` (N days ago)** — orange badge in both
+- **Stale · `<branch> <sha7>` (N days ago)** · orange badge in both
   places. The Settings button flips from `Verify` to `Re-verify` so the
   intent is obvious.
-- **Unverified** / **Verification failed** — unchanged.
+- **Unverified** / **Verification failed** · unchanged.
 
 The threshold and labels are pure functions and fully covered by tests.
-None of them trigger any Git or filesystem activity — they only describe
+None of them trigger any Git or filesystem activity · they only describe
 what is already stored.
 
 ### Refresh after explicit Git diff capture
@@ -347,7 +347,7 @@ metadata. After a successful `runGitDiff`:
    short SHA, and dirty status.
 4. If step 3 fails, the diff stays in the textarea, the status line shows
    "Diff fetched, but repository metadata refresh failed: \<reason\>",
-   and any previously verified metadata is **preserved** — a transient
+   and any previously verified metadata is **preserved** · a transient
    refresh failure never erases earlier good metadata. Only repos that
    had no prior verified record get a `failed` status written.
 
@@ -401,7 +401,7 @@ and
 The connector pipeline is local-only:
 
 - no network calls, ever
-- no background daemon — events appear in the JSONL file only when the
+- no background daemon · events appear in the JSONL file only when the
   external tool runs
 - no automatic browser / app / filesystem scanning
 - no credentials, no OAuth, no account auto-connect
@@ -429,7 +429,7 @@ On the Tauri desktop build, the Connector JSONL tab also exposes a
 **Connector inbox** section above the paste textarea. It lists the
 `.jsonl` / `.ndjson` / `.log` / `.txt` files Mori finds under
 `~/.mori/connectors/` (Windows: `%USERPROFILE%\.mori\connectors\`). The
-listing is **driven entirely by the Refresh inbox button** — Mori does
+listing is **driven entirely by the Refresh inbox button** · Mori does
 not watch the folder, does not poll it, and does not auto-read files on
 startup. The Rust side restricts file access to that single directory:
 
@@ -440,7 +440,7 @@ startup. The Rust side restricts file access to that single directory:
   at the inbox root.
 - Only `.jsonl`, `.ndjson`, `.log`, `.txt` extensions are read.
 - Files above an 8 MB cap are rejected.
-- The Rust side never parses or normalises the JSONL content — it only
+- The Rust side never parses or normalises the JSONL content · it only
   returns the file's bytes; the existing TypeScript parser owns the
   parse/preview pass.
 
@@ -471,7 +471,7 @@ preview card surfaces:
   sessions · N`, `Repeated in this file · N`, and `Invalid lines · N`
   badges so the user can see the split before clicking anything.
 - An **Include duplicates** toggle (off by default). When the user opts
-  in, duplicate events ride through Import Review again — useful for
+  in, duplicate events ride through Import Review again · useful for
   re-running Quick Pass over the same batch, at the cost of repeated
   Timeline cards.
 - An `all_duplicate` warning + a disabled Import to Review button when
@@ -484,7 +484,7 @@ preview card surfaces:
   history could be loaded for the current runtime, so the UI never
   pretends cross-session detection ran.
 
-Identity preservation is **forward-only** — events imported before this
+Identity preservation is **forward-only** · events imported before this
 milestone don't carry `connectorEventId` and are treated as
 "identity-unavailable" rather than as duplicates. Saved sessions that
 contain only such legacy events are reported as `legacySavedSessionCount`
@@ -541,7 +541,7 @@ the UI surfaces in three places:
 
 The summary lives in
 [`src/lib/connectors/connectorImportSummary.ts`](../src/lib/connectors/connectorImportSummary.ts)
-and is built by `buildConnectorSourceImportSummary(preview)` — pure,
+and is built by `buildConnectorSourceImportSummary(preview)` · pure,
 no IO, derived entirely from `ConnectorJsonlPreview`. Possible states:
 
 | Status | What it means | Default action |
@@ -549,7 +549,7 @@ no IO, derived entirely from `ConnectorJsonlPreview`. Possible states:
 | `new` | every event is fresh; saved-session history was checked | `importNewEvents` |
 | `partialReimport` | mix of new + duplicate | `importNewEvents` (skip duplicates) |
 | `duplicateOnly` | every valid event already exists locally | `reviewDuplicatesOptional` |
-| `historyUnavailable` | saved-session history could not be loaded — current session + in-batch only | `historyUnavailableReview` |
+| `historyUnavailable` | saved-session history could not be loaded · current session + in-batch only | `historyUnavailableReview` |
 | `invalidOnly` | no valid events parsed | `fixInvalidLines` |
 | `unknown` | empty preview, render nothing | `noNewEvents` |
 
@@ -571,18 +571,18 @@ The summary is **optionally persisted** alongside the import:
 written when `addSessionImport(sessionId, candidate, { importSummary })`
 is called from the Import Review apply path. Legacy records without
 the field read back as `undefined` and the row simply omits the
-badge — no migration needed.
+badge · no migration needed.
 
 > **Local-only and honest.** The summary is derived from local
 > persistence and connector identities. Mori does not check cloud
 > accounts, does not watch the inbox folder, and does not chase
 > remote sessions. Old imports without `connectorEventId` cannot be
-> deduplicated retroactively — the summary classifies them as
+> deduplicated retroactively · the summary classifies them as
 > "identity unavailable", never as duplicates.
 
-The full **capture surface matrix** — every paste / hook / CLI /
+The full **capture surface matrix** · every paste / hook / CLI /
 desktop / web / IDE / browser / GitHub path that Mori does and does not
-support today — lives in
+support today · lives in
 [`docs/connectors/capture-surface-matrix.md`](./connectors/capture-surface-matrix.md).
 The matching honest boundaries for Claude Desktop, Claude Web, ChatGPT,
 Codex Desktop, Codex Web, and Codex's GitHub workflow live in
@@ -609,14 +609,14 @@ their own. Instead, clicking "세션에 추가" on those flows hands the
 5. "Cancel" clears the draft without committing anything; the original
    text never reaches the session store.
 
-Manual Note and URL imports skip the review and apply directly today —
+Manual Note and URL imports skip the review and apply directly today ·
 each produces exactly one user-typed event, so the review step adds no
 real safety. That trade-off is documented in
 [product-screen-reference.md#import-review-evidence-mapping](product-screen-reference.md#import-review-evidence-mapping).
 
 The right "Generated items" column on the review screen stays empty by
 design. Issues, decisions, and next actions are still produced by Quick
-Pass running over the whole session — Import Review does not silently
+Pass running over the whole session · Import Review does not silently
 trigger Quick Pass.
 
 ## Evidence Hub entry point
@@ -640,7 +640,7 @@ clicking a card opens the `ImportPanel` embedded inside the Hub with
 `initialKind` (and `initialAiPlatform` for AI transcripts) set, so the user
 never has to find the correct tab manually.
 
-Planned connector cards never open an import flow — they are kept in the Hub
+Planned connector cards never open an import flow · they are kept in the Hub
 only so the user can inspect what each connector will and will not access
 once it lands.
 
@@ -655,7 +655,7 @@ contract and the data-basis flag the page renders.
 
 Notes:
 
-- Old imports without `importSummary` never contribute to the rollup —
+- Old imports without `importSummary` never contribute to the rollup ·
   the rollup is forward-only.
 - SQLite-saved sessions don't expose imports today; their re-import
   rollup is empty by design and surfaced as a warning.
@@ -674,7 +674,7 @@ re-import duplicate detection), follow
 ## Where imports live
 
 - Pure normalizers: [src/lib/import/](../src/lib/import/)
-- UI: [src/features/import/ImportPanel.tsx](../src/features/import/ImportPanel.tsx) — accepts `initialKind` and `initialAiPlatform` props for Evidence Hub embedding
+- UI: [src/features/import/ImportPanel.tsx](../src/features/import/ImportPanel.tsx) · accepts `initialKind` and `initialAiPlatform` props for Evidence Hub embedding
 - Evidence Hub entry point: [src/features/evidence/EvidenceView.tsx](../src/features/evidence/EvidenceView.tsx)
 - Integration grouping helper: [src/lib/sources/integrationGroups.ts](../src/lib/sources/integrationGroups.ts)
 - Review-before-apply state: [src/lib/review/](../src/lib/review/) + [src/app/reviewStore.ts](../src/app/reviewStore.ts)

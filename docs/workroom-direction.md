@@ -2,7 +2,7 @@
 
 Forward-looking design note. Mori is a single-user local-first app today. The
 working hypothesis: the durable unit of value will shift from **"a session"**
-to **"a project workroom"** — a shared space that holds many sessions from
+to **"a project workroom"** · a shared space that holds many sessions from
 many collaborators, with explicit visibility tiers and review-before-share
 gates.
 
@@ -19,7 +19,7 @@ The session-centric model works for one person watching one AI conversation
 at a time. It strains for:
 
 - A user with **many parallel sessions** (different Claude projects, Codex
-  CLI runs, manual notes) — the "1 conversation = 1 session" model is too
+  CLI runs, manual notes) · the "1 conversation = 1 session" model is too
   fine-grained when "what am I working on" is the real unit.
 - A team where multiple people **contribute to the same project**. Without a
   unit above the session, there is no place for "decisions the team made"
@@ -49,7 +49,7 @@ is the prototype for this workflow.
 
 Memory records already carry their own per-content tiers
 (`sensitivity` + `reportEligibility`); those are content boundaries. The
-session-level `visibility` is the *container* boundary — "can this teammate
+session-level `visibility` is the *container* boundary · "can this teammate
 see I had this conversation at all?"
 
 ## 3. What's shareable, what isn't
@@ -77,7 +77,7 @@ behaviour), and unblock the workroom direction without forcing a rewrite:
   `StoredSessionSummary` (`src/lib/storage/storageTypes.ts`) so the sidebar /
   workspace can filter without loading bodies.
 - **`SidebarGroupingMode`** abstraction in `src/lib/sidebar/sessionList.ts`.
-  `groupSidebarRows` now accepts `"recency"` (default — today's behaviour) or
+  `groupSidebarRows` now accepts `"recency"` (default · today's behaviour) or
   `"project"` (groups by `sourceLabel`, with an "기타" trailing bucket). The
   renderer can switch modes without rewriting the data layer.
 - **`actorVisibilityFilter`** pure helper in
@@ -110,7 +110,7 @@ backend lands:
   silent leak is impossible by construction. Silent omissions degrade
   visibility, never expand it.
 - The `clientSafe` export is the prototype for "what an external collaborator
-  sees" — the existing
+  sees" · the existing
   [`buildClientSafeMoriPackage`](../src/lib/mori-package/clientSafe.ts) stays
   the reference filter.
 - We will not write a server. The team backend, when it lands, plugs into
@@ -130,5 +130,5 @@ backend lands:
   keeps every action; we will need a "left at" marker without rewriting
   history.
 
-These are explicit deferrals — the answer is "decide when we commit to the
+These are explicit deferrals · the answer is "decide when we commit to the
 workroom direction," not "ignore."

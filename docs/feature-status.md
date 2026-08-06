@@ -12,7 +12,7 @@ This document is the policy. The registry is the source of truth.
 |---|---|---|
 | `implemented` | Fully works today in the current runtime. | Renders active. |
 | `partial` | Core works, some sub-capabilities are still Planned. | Renders active with a status badge that surfaces what's missing. |
-| `planned` | Designed and documented; not yet implemented. | Renders disabled with the registry's `disabledReason` as tooltip. Never hidden — the surface stays legible. |
+| `planned` | Designed and documented; not yet implemented. | Renders disabled with the registry's `disabledReason` as tooltip. Never hidden · the surface stays legible. |
 | `unavailable` | Runtime-blocked (e.g. desktop-only features in the browser build). | Renders disabled with the runtime explanation. |
 
 ## Registry shape

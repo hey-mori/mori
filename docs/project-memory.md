@@ -30,19 +30,19 @@ following inputs:
 
 The output is a `ProjectMemoryViewModel` with the following surfaces:
 
-- `summaryStats` — session / decision / issue / source / report / re-import
+- `summaryStats` · session / decision / issue / source / report / re-import
   counters.
-- `recentSessions` — current session + saved sessions, deduped by id,
+- `recentSessions` · current session + saved sessions, deduped by id,
   ordered active-first then by `savedAt`/`endedAt` desc.
-- `keyDecisions`, `recurringIssues`, `keyEvidence` — scoped to the active
+- `keyDecisions`, `recurringIssues`, `keyEvidence` · scoped to the active
   session today (saved-session bodies are not loaded).
-- `reimportSummary` — connector re-import rollup across saved sessions
+- `reimportSummary` · connector re-import rollup across saved sessions
   whose imports carry `StoredSessionImport.importSummary`.
-- `savedReports` / `moriPackages` — every persisted `.mori v0` package.
+- `savedReports` / `moriPackages` · every persisted `.mori v0` package.
 - `unresolvedRisks`, `latestImportantDecision`, `recommendedNextSession`
-  — feed the right summary panel.
-- `warnings` — honest notes about what is *not* currently aggregated.
-- `privacyNotice` — one-line copy for the page footer.
+  · feed the right summary panel.
+- `warnings` · honest notes about what is *not* currently aggregated.
+- `privacyNotice` · one-line copy for the page footer.
 
 ---
 
@@ -66,19 +66,19 @@ The page renders the data-basis label in the header as a Mori badge.
 Project Memory uses `loadProjectMemorySessions` to fetch saved-session
 bodies safely:
 
-- **Active session** — always included, never mutated.
-- **Desktop SQLite** — `SessionPersistenceService.loadSessionFromDesktop`
+- **Active session** · always included, never mutated.
+- **Desktop SQLite** · `SessionPersistenceService.loadSessionFromDesktop`
   reconstructs the full `MoriMockSession` (project + session + events +
   sources + issues + decisions + nextActions). Calls run in parallel via
   `Promise.allSettled`; one failure does not block the page.
-- **Browser localStorage** — `BrowserDraftRepository.listSessionImports`
+- **Browser localStorage** · `BrowserDraftRepository.listSessionImports`
   yields the per-session events/sources via the persisted imports.
   `loadSessionMemoryBody` lifts the durable issues / decisions /
   next-actions snapshot (`StoredSessionMemoryBody`); when missing the
   loader falls back to `loadSessionAnalysis`. Sessions that never ran
   Quick Pass and have no memory body load as `metadataOnly` for those
   fields rather than fabricating empty rows.
-- **Cap** — `DEFAULT_SAVED_SESSION_CAP = 20`. SQLite-saved sessions take
+- **Cap** · `DEFAULT_SAVED_SESSION_CAP = 20`. SQLite-saved sessions take
   precedence over browser ones because their payloads are richer.
 
 Each loaded entry carries a `loadStatus`:
@@ -90,7 +90,7 @@ Each loaded entry carries a `loadStatus`:
 | `failed`         | Loader rejected; `failureReason` is surfaced as a warning.                 |
 
 The loader never throws past the caller and never mutates the active
-session — the previous `loadDesktopSession` path that swapped the active
+session · the previous `loadDesktopSession` path that swapped the active
 draft is NOT used here.
 
 ---
@@ -121,32 +121,32 @@ The Memory page's right summary panel now renders a Project Memory
 based resume prompt via
 `buildProjectMemoryResumePrompt(input)` in
 `src/lib/project-memory/projectMemoryResumePrompt.ts`. The builder is
-a pure derivation over `ProjectMemoryViewModel` — same data the page
+a pure derivation over `ProjectMemoryViewModel` · same data the page
 already shows, packaged into a copy-pastable continuation prompt.
 
 Inputs:
 
-- `memory` — the `ProjectMemoryViewModel`.
-- `audience` — `"self"` / `"claude"` / `"codex"` / `"chatgpt"` /
+- `memory` · the `ProjectMemoryViewModel`.
+- `audience` · `"self"` / `"claude"` / `"codex"` / `"chatgpt"` /
   `"handoff"`. Selects the preamble + closing language.
-- `privacyMode` — `"normal"` / `"summaryOnly"` / `"clientSafe"`.
-- `acceptedMemories?` — `StoredAcceptedProjectMemory[]`. When
+- `privacyMode` · `"normal"` / `"summaryOnly"` / `"clientSafe"`.
+- `acceptedMemories?` · `StoredAcceptedProjectMemory[]`. When
   present, eligible records render as a reviewed "Accepted project
   memory" section (see "Accepted memory in the resume prompt"
-  below). Optional — omitting it produces the live-only prompt.
-- `includeSections?` — subset of `summary` / `consolidatedMemory` /
+  below). Optional · omitting it produces the live-only prompt.
+- `includeSections?` · subset of `summary` / `consolidatedMemory` /
   `recentSessions` / `decisions` / `issues` / `evidence` /
   `nextActions` / `reimports` / `limitations`. Defaults to the full
   set.
-- `maxItems?` — per-section cap, default 5.
+- `maxItems?` · per-section cap, default 5.
 
 Output:
 
-- `title` — short label.
-- `body` — final rendered prompt.
-- `sections[]` — structured per-section breakdown (heading + lines).
-- `dataBasisLabel` — what data was actually aggregated.
-- `warnings[]` — echoed from the view model so the UI can render
+- `title` · short label.
+- `body` · final rendered prompt.
+- `sections[]` · structured per-section breakdown (heading + lines).
+- `dataBasisLabel` · what data was actually aggregated.
+- `warnings[]` · echoed from the view model so the UI can render
   limitations alongside the prompt.
 
 Audience variants:
@@ -185,7 +185,7 @@ exercise it. The Memory page no longer calls it.
 When `acceptedMemories` is supplied, the builder applies the
 `isResumeGuidanceMemory` inclusion policy and renders a dedicated
 **Accepted project memory (reviewed)** section directly after the
-summary — ahead of the live `decisions` / `issues` aggregation — so
+summary, ahead of the live `decisions` / `issues` aggregation, so
 reviewed, durable memory outranks recomputed rows.
 
 A record is used as **current guidance** only when it is
@@ -195,7 +195,7 @@ sensitivity is `normal`. Records that fail the policy are handled
 honestly:
 
 - `staleMemory` / `contradiction` kinds and `watching`-status
-  records are **flagged for re-review** — counted in the Limitations
+  records are **flagged for re-review** · counted in the Limitations
   section, never shown as guidance (`isMemoryFlaggedForReview`).
 - `superseded` / `retired` records are history and excluded
   entirely.
@@ -231,23 +231,23 @@ surface.
 When `loadedSessions` contributes real bodies, the view-model builder
 delegates to `crossSessionAggregation.ts`:
 
-- **Key decisions** — collected from every loaded session, ranked by
+- **Key decisions** · collected from every loaded session, ranked by
   importance, with the active session winning ties so live work surfaces
   first. Each row carries `sessionId` + `sessionTitle` + `sessionIsActive`.
-- **Recurring issues** — grouped by normalized issue title (lowercase,
+- **Recurring issues** · grouped by normalized issue title (lowercase,
   trimmed, trailing punctuation stripped). When a normalized title
   appears in more than one loaded session the row is flagged
   `crossSession: true` with `affectedSessions[]` and `affectedSessionCount`.
-- **Key evidence** — sources deduplicated by `source.id` across loaded
+- **Key evidence** · sources deduplicated by `source.id` across loaded
   sessions, ranked by linked event count with active-session ties broken
   in favour of the live session.
-- **Unresolved risks** — open issues at high priority OR low-confidence
+- **Unresolved risks** · open issues at high priority OR low-confidence
   inferred issues across loaded sessions, ranked by priority then active
   first.
-- **Counters** — `aggregateCounters` de-duplicates timeline events and
+- **Counters** · `aggregateCounters` de-duplicates timeline events and
   sources by id so an active session that's also persisted is never
   double-counted.
-- **Recommended next session** — prefers cross-session recurring issues,
+- **Recommended next session** · prefers cross-session recurring issues,
   falls back to in-progress / next-action / generic prompt.
 
 Metadata-only and failed sessions contribute nothing to aggregation;
@@ -257,7 +257,7 @@ badge.
 ## Controlled Project Memory Consolidation
 
 Project Memory today is **computed live** every render. There is no
-durable project-level memory record yet — pruning a saved session
+durable project-level memory record yet · pruning a saved session
 erases the aggregations that session contributed.
 
 **Controlled Project Memory Consolidation** is the user-triggered
@@ -312,7 +312,7 @@ from the Consolidation Review apply pass writes an append-only
 Project Memory page makes that log visible:
 
 - `buildMemoryAuditTrailViewModel`
-  (`src/lib/project-memory/memoryAuditTrail.ts`) is a pure helper —
+  (`src/lib/project-memory/memoryAuditTrail.ts`) is a pure helper ·
   it sorts actions newest-first, groups them by UTC date, formats
   action labels, counts affected memories, and supports an
   action-type filter.
@@ -323,7 +323,7 @@ Project Memory page makes that log visible:
   affected-memory count, source proposal id, optional reviewer note,
   reversible flag, and a derived `statusChange` (the memory status
   transition, e.g. `accepted → stale`). Only the `status` string is
-  read from the `before` / `after` snapshots — their `title` /
+  read from the `before` / `after` snapshots · their `title` /
   `summary` fields are never rendered, so no raw evidence content or
   local paths reach the audit surface.
 - Legacy / missing fields are tolerated: an unknown action type
@@ -342,7 +342,7 @@ Undo / revert (a new `actionType: "revert"` row) and the `.mori v0`
 
 `searchAcceptedMemories` (`src/lib/project-memory/queryableMemory.ts`)
 is a pure, deterministic structured search over the project's
-accepted memories — the foundation of the Queryable Memory
+accepted memories · the foundation of the Queryable Memory
 capability:
 
 - Text matches against the memory title, summary, evidence-ref ids /
@@ -351,15 +351,15 @@ capability:
   `reportEligibility`.
 - Results carry an evidence count, source-session count, a curated
   snippet (never raw transcripts or connector logs), and an
-  `isCurrent` flag — `stale` / `contradicted` / `superseded` /
+  `isCurrent` flag · `stale` / `contradicted` / `superseded` /
   `retired` / `watching` / `deferred` memory stays searchable but is
   marked non-current.
-- No embeddings, no vector store, no LLM — local and deterministic.
+- No embeddings, no vector store, no LLM · local and deterministic.
 
 `searchProjectMemoryReferences` extends the same search to the
 active session's **timeline events** (title / summary), **evidence
 sources** (title / detail), and **Memory Audit Trail review actions**
-(reviewer `note` only — never the before/after snapshots), returning
+(reviewer `note` only · never the before/after snapshots), returning
 typed `QueryableMemoryReference` hits. References are search-only (an
 empty query returns none). Snippets come only from those curated
 fields; raw transcripts and connector logs are never searched.
@@ -384,7 +384,7 @@ adopts, defers, or rejects, see
 ## See it working
 
 Use the end-to-end walkthrough at
-[docs/e2e-smoke-flow.md](e2e-smoke-flow.md) — paste the sample
+[docs/e2e-smoke-flow.md](e2e-smoke-flow.md) · paste the sample
 Connector JSONL at
 [docs/fixtures/connector-sample-mori-session.jsonl](fixtures/connector-sample-mori-session.jsonl),
 apply it, optionally run Quick Pass, then open Project Memory. The
@@ -450,7 +450,7 @@ any of these:
 ## Limitations and future work
 
 - **Cross-session decision / issue / next-action aggregation in browser
-  mode** — browser-saved drafts now persist a durable
+  mode** · browser-saved drafts now persist a durable
   `StoredSessionMemoryBody` snapshot (issues / decisions / next-actions
   / optional summary snapshot) so browser-saved sessions can contribute
   these fields to Project Memory. The body is written:
@@ -458,16 +458,16 @@ any of these:
     - during `hydrate` as a one-time forward migration when a saved
       analysis exists but no body has been written yet.
   Sessions that never ran Quick Pass remain memory-body-less and load
-  as `metadataOnly` for those fields — no fake rows are produced.
-- **SQLite import summary persistence** — `importSummary` lives in
+  as `metadataOnly` for those fields · no fake rows are produced.
+- **SQLite import summary persistence** · `importSummary` lives in
   browser localStorage today; SQLite-saved sessions therefore cannot
   contribute to the re-import rollup. A `warning` of kind
   `import-summaries-unavailable / reason: sqlite-only` documents the gap.
-- **Body-loading cap** — `DEFAULT_SAVED_SESSION_CAP = 20`. Older saved
+- **Body-loading cap** · `DEFAULT_SAVED_SESSION_CAP = 20`. Older saved
   sessions beyond the cap are not loaded; they still appear in the
   recent list as `metadataOnly`. Raise the cap deliberately if needed.
-- **Cross-device project memory** — explicit `.mori v0` package export
+- **Cross-device project memory** · explicit `.mori v0` package export
   and import is the supported path. There is no background sync.
-- **Session Canvas / Workroom** — deferred. The current Memory page is
+- **Session Canvas / Workroom** · deferred. The current Memory page is
   a card-based aggregation; a visual board / canvas surface is documented
   in `docs/roadmap.md` and is not part of this milestone.

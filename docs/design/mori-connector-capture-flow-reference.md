@@ -1,4 +1,4 @@
-# Mori Connector / Capture Flow — Design Reference
+# Mori Connector / Capture Flow · Design Reference
 
 Eight UI concept images (saved under
 [`docs/assets/screenshots/connector-capture-flow/`](../assets/screenshots/connector-capture-flow/))
@@ -39,17 +39,17 @@ pipeline feeding them.
   Timeline → Review → Memory as columns is a strong way to teach the model
   without paragraphs of copy.
 - **Privacy as a dedicated surface** (8), not scattered reassurance text.
-- **Status tiles summarise, then a list drills in** (2, 6) — summary up top,
+- **Status tiles summarise, then a list drills in** (2, 6) · summary up top,
   operational detail below.
 
 ## 3. What NOT to copy blindly
 
 - **The big live dashboard (2) implies always-on recording.** Mori is
-  explicit-import, local-first — not a monitor. A "live session overview"
+  explicit-import, local-first · not a monitor. A "live session overview"
   with running counters risks selling surveillance Mori does not do. Keep a
   *current work context* indicator; do not build a stock-ticker dashboard.
 - **Eight new top-level screens would shatter the IA.** The references are a
-  superset. Building all of them produces disconnected panels — exactly the
+  superset. Building all of them produces disconnected panels · exactly the
   "screen full of disconnected panels" the product must avoid.
 - **The running stopwatch** in the lower-left (every image) is the current
   model's mistake repeated. An imported session has a *span*, not a live
@@ -63,15 +63,15 @@ pipeline feeding them.
 ## 4. Fit with Mori's product direction
 
 Strong fit (build toward):
-- Capture Review Queue (6) — a real review-before-apply gate as a dense list.
-- Data Intake Inspector (5) — raw / normalized / extracted is honest provenance.
-- Source-to-Timeline Mapping (3) — teaches "evidence is the source of truth".
-- Privacy & Local Data Center (8) — consolidates `rawRetention`, secret
+- Capture Review Queue (6) · a real review-before-apply gate as a dense list.
+- Data Intake Inspector (5) · raw / normalized / extracted is honest provenance.
+- Source-to-Timeline Mapping (3) · teaches "evidence is the source of truth".
+- Privacy & Local Data Center (8) · consolidates `rawRetention`, secret
   detection, storage, retention into one honest surface.
 
 Conditional fit (only when a live connector exists):
 - Connector Setup Wizard (1), Connector Health / Diagnostics (4),
-  Connector Rules / Filters (7) — these assume a running connector pipeline.
+  Connector Rules / Filters (7) · these assume a running connector pipeline.
   Mori's connectors are explicit template scripts today; a full control
   center is premature. Keep planned, honest.
 
@@ -80,7 +80,7 @@ Weak fit (resist):
   (recent sessions, current context) into the Sessions/Work-Context surface;
   drop the always-on-monitor framing.
 
-## 5. Session model audit — the core problem
+## 5. Session model audit · the core problem
 
 ### Current model (as shipped)
 - One **active session** in memory; the lower-left widget shows it with a
@@ -94,7 +94,7 @@ Weak fit (resist):
    Mori reconstructs work from explicitly imported evidence.
 2. **A session is usually reconstructed, not started.** The dominant path is
    "import a past Claude conversation", which has its own start/end in the
-   past — not "press Start now".
+   past · not "press Start now".
 3. **There are many sessions, across time and projects.** The single-active
    widget hides this. The user must be able to see, group, switch, merge,
    split, rename, and archive sessions.
@@ -106,14 +106,14 @@ A **Session** is *a bounded unit of reconstructed work*, identified by a
 `kind` and a lifecycle `state`, belonging to a **Project**.
 
 - `kind`:
-  - `imported` — reconstructed from external evidence (Claude Code/Desktop,
+  - `imported` · reconstructed from external evidence (Claude Code/Desktop,
     Codex, transcript, git). **The dominant case.**
-  - `manual` — a blank session the user started inside Mori.
-  - `live` — a connector stream Mori is actively receiving (future; rare).
+  - `manual` · a blank session the user started inside Mori.
+  - `live` · a connector stream Mori is actively receiving (future; rare).
 - `state` (lifecycle): `draft` → `reviewing` → `active` → `reviewed` →
   `archived`, plus `merged` (folded into another).
 - A **Project** owns many sessions over a long-running stream of work.
-- A **live capture stream** is *not* a session — it is a source that can
+- A **live capture stream** is *not* a session · it is a source that can
   produce one or more candidate sessions, each still reviewed before apply.
 
 ### Distinctions to keep straight
@@ -125,7 +125,7 @@ A **Session** is *a bounded unit of reconstructed work*, identified by a
 | Project memory timeline | Durable cross-session accepted memory | Persistent, project-level |
 
 ### The lower-left widget
-Keep a persistent indicator — but it is **Current Work Context**, not an
+Keep a persistent indicator · but it is **Current Work Context**, not an
 ongoing recording:
 - Shows the **project** and the **session currently in focus**, with a
   state chip (`가져옴` / `검토 중` / `초안` / `라이브`).
@@ -139,7 +139,7 @@ ongoing recording:
   lists sessions grouped by project, filterable by `kind` / `state`, with
   rename / merge / split / archive. This replaces "Start Session" as the
   primary entry.
-- **Start Session is demoted** to "새 작업 세션" — a secondary action, not the
+- **Start Session is demoted** to "새 작업 세션" · a secondary action, not the
   app's front door. Importing (Connections) is the real front door.
 - **Project Memory is project-level**, aggregating across that project's
   sessions (already mostly true; make the framing explicit).
@@ -170,11 +170,11 @@ ongoing recording:
 3. **Shared layout primitives**: `PageShell` / `PageHeader` / `ActionBar` /
    `InspectorPanel` / `EmptyState`; apply to 2–3 high-traffic screens.
 4. **Capture Review Queue + Intake Inspector**: a dense review-before-apply
-   list with raw/normalized/extracted inspection — the first capture surface.
+   list with raw/normalized/extracted inspection · the first capture surface.
 5. **Copy diet + progressive disclosure**: compact primary surfaces, detail
    behind disclosures.
 6. **Notification / alert routing**: connector-stale, privacy-risk,
-   review-growing, handoff-ready — routed through Companion + a center.
+   review-growing, handoff-ready · routed through Companion + a center.
 7. **Privacy & Local Data Center**: consolidate retention / secret / storage.
 8. **Connector control center / wizard / diagnostics**: only when a live
    connector pipeline exists. Planned, honest, until then.

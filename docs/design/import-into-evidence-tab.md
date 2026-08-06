@@ -67,8 +67,8 @@ always revisitable:
 "Review-before-apply" exists so that **AI may propose, only the user makes
 memory durable** and so raw text is not silently captured. Its real subject is:
 
-- **AI-derived items** (issues / decisions / relationships) — still proposals.
-- **Durable project memory** (consolidation) — still a non-bypassable review
+- **AI-derived items** (issues / decisions / relationships) · still proposals.
+- **Durable project memory** (consolidation) · still a non-bypassable review
   gate. This is where "is this worth keeping as our knowledge" is decided.
 
 Deterministic import events are **evidence**, and the goal doc already says
@@ -93,7 +93,7 @@ detection stays (now inline).
 2. **Persistent curation section** in the 자료 tab: per-event include / trim /
    restore over the applied import (revisitable), replacing the transient
    per-event review. Inline secret flags.
-3. **Retire `ImportReviewView`** as the standing import gate — keep it reachable
+3. **Retire `ImportReviewView`** as the standing import gate · keep it reachable
    (advanced / command palette) per the retire-don't-delete rule, not deleted.
 4. **Docs reconciliation:** update `imports.md` and the goal doc so Import
    Review is described as optional curation, with the gate documented at

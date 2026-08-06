@@ -29,7 +29,7 @@ silently.
 
 A future **browser extension** is *Planned*. Even then, the extension
 must let the user explicitly click "Add this page to Mori" on a per-page
-basis — there will be no background tab reading. See
+basis · there will be no background tab reading. See
 [`capture-surface-matrix.md`](./capture-surface-matrix.md) row
 `browserExtension`.
 

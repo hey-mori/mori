@@ -12,9 +12,9 @@ end up in Mori as a local connector event batch.
 
 Each invocation appends these events to a local JSONL file:
 
-1. `session_started` — start time, working directory, short task label
-2. `command_finished` — exit code + total duration
-3. *(optional)* `git_diff_captured` — `git diff --shortstat` summary
+1. `session_started` · start time, working directory, short task label
+2. `command_finished` · exit code + total duration
+3. *(optional)* `git_diff_captured` · `git diff --shortstat` summary
    (no diff content) when the wrapper is run with `--git`
 
 The wrapper truncates the task label to **280 characters** before
@@ -54,7 +54,7 @@ on import.
 4. After Codex exits, open Mori → Evidence → 소스 추가 → **Connector
    JSONL** tab. On the Tauri desktop build click **Refresh inbox** and
    pick the `codex-cli` row Mori finds in `~/.mori/connectors/codex-cli/`
-   — the contents load into the textarea and Parse / Preview runs
+   · the contents load into the textarea and Parse / Preview runs
    automatically. In the browser build paste the JSONL contents into the
    textarea and click **Parse / Preview** manually. Then click **Import
    to Review**.
@@ -67,13 +67,13 @@ on import.
 
 ## Security checklist
 
-- [x] The wrapper is small enough to read in one screen — read it
+- [x] The wrapper is small enough to read in one screen · read it
   before installing.
 - [x] It does not open network sockets.
 - [x] It does not call any tool outside `git diff --shortstat` (and
   only when `--git` is passed).
 - [x] It does not log raw stdout / stderr from Codex.
-- [x] The JSONL file is plain text — you can inspect, edit, or delete
+- [x] The JSONL file is plain text · you can inspect, edit, or delete
   it with any text editor.
 - [x] On import, Mori applies a best-effort redaction pass before
   persistence (API keys, bearer tokens, AWS access keys, `.env` style
@@ -81,14 +81,14 @@ on import.
 
 ## Troubleshooting
 
-- **The wrapper exits 64** — you forgot the `--` separator between
+- **The wrapper exits 64** · you forgot the `--` separator between
   wrapper flags and the Codex command.
-- **No JSONL file appears** — check the `--out` flag (defaults to
+- **No JSONL file appears** · check the `--out` flag (defaults to
   `~/.mori/connectors/codex-cli/`) and that the parent directory is
   writable.
-- **The exit code differs from Codex** — it should not; the wrapper
+- **The exit code differs from Codex** · it should not; the wrapper
   forwards Codex's exit code verbatim. If it differs, the wrapper itself
-  crashed before reaching the forward — open the script and inspect the
+  crashed before reaching the forward · open the script and inspect the
   set -e early exit.
 
 ## Next steps (planned)
@@ -102,7 +102,7 @@ on import.
 - A Tauri-side ingest command that reads JSONL files from the inbox on
   explicit "Refresh" clicks.
 
-The **Connector JSONL** paste import path is implemented today — the
+The **Connector JSONL** paste import path is implemented today · the
 schema, parser, normaliser, redaction, wrapper templates, and Evidence
 Hub UI all ship. Live Codex sync, desktop/web capture, and account
 integration remain explicitly out of scope.

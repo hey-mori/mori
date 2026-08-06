@@ -1,9 +1,9 @@
-# Claude Design prototype — reconciliation
+# Claude Design prototype · reconciliation
 
 A high-fidelity Claude Design prototype of Mori (v0.5, dated 2026.05.26)
 was supplied as a **direction reference**, not production code. This note
 records what the prototype is, what it gets right, what is already built
-better in the real app, and — most importantly — what must **not** be
+better in the real app, and, most importantly, what must **not** be
 copied. Read it alongside [`mori-project-goal.md`](../mori-project-goal.md)
 (canonical product direction) and [`mori-timeline-view-strategy.md`](mori-timeline-view-strategy.md).
 
@@ -15,7 +15,7 @@ It lives on the author's machine (supplied from `~/Downloads/Mori/`); it is
 already captured here:
 
 - The signature concept screenshots are already saved under
-  `docs/assets/screenshots/` — `evidence-hub-reference.png`,
+  `docs/assets/screenshots/` · `evidence-hub-reference.png`,
   `flow-focus-reference.png`, `narrative-timeline-reference.png`,
   `project-memory-reference.png`, and the connector / import set.
 - The prototype's own analysis docs (Developer Handoff, Priority Map,
@@ -48,15 +48,15 @@ reference, not a target to port toward.
 
 ## What is worth pulling forward
 
-Narrow, additive ideas only — each must still pass the review-before-apply
+Narrow, additive ideas only · each must still pass the review-before-apply
 and honest-status bars:
 
-- **Cluster density micro-bars** — the prototype's bundle cards show a
+- **Cluster density micro-bars** · the prototype's bundle cards show a
   small per-minute density sparkline. Our bundles already exist; a calm,
   subordinate density glyph could be a future Timeline polish item.
-- **Phase-band tone discipline** — the prototype keeps phase bands at very
+- **Phase-band tone discipline** · the prototype keeps phase bands at very
   low opacity so they annotate without competing. Good guardrail to keep.
-- **Story / thread reading of a session** — already reflected by the
+- **Story / thread reading of a session** · already reflected by the
   conversation-flow mode; the prototype's "Story" framing is a useful name
   for the Report-preview thread if/when that surface is built.
 
@@ -66,13 +66,13 @@ and honest-status bars:
 - **Fake-connected** connector states and active buttons for unbuilt actions.
 - **`+N more`** density collapse (we use named bundles).
 - **English-only labels** on a Korean-first surface (this session removed
-  the last timeline leak — see below).
+  the last timeline leak · see below).
 - **Purple as a status color** (purple is identity only).
 - Any **background-watch / always-on capture** affordance.
 
 ## Shipped from this reconciliation pass
 
-- `fix: localize timeline source and trust labels to korean` — the timeline
+- `fix: localize timeline source and trust labels to korean` · the timeline
   source-family / activity-kind / lane labels in `activityModel.ts` were
   still English (added by the recent source-aware-lanes work and never
   localized), and `timelineCards.ts` carried a duplicate English trust map.

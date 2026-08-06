@@ -13,7 +13,7 @@ is lost; items are grouped by how they ship.
   prefills, but the user can pick an existing project or rename; the modal no
   longer pops automatically.
 - **Copy diet**: removed the always-visible explanatory prose the user flagged
-  — "반영하면 이 대화가 세션 타임라인이 됩니다…", "이렇게 들어갑니다",
+  · "반영하면 이 대화가 세션 타임라인이 됩니다…", "이렇게 들어갑니다",
   "세션은 하나의 AI 작업에서 만들어집니다 …", "가져온 근거만 표시됩니다 …",
   "자료 탭에서 대화를 가져오면 이슈·결정·다음 액션을 자동으로 정리합니다".
   Empty states keep one calm line.
@@ -65,7 +65,7 @@ is lost; items are grouped by how they ship.
 
 ## Next (UI, needs a visual pass)
 
-1. **Session title = the session's own name** — BLOCKED on Rust. The Claude
+1. **Session title = the session's own name** · BLOCKED on Rust. The Claude
    Code title is "the first user message, truncated" on the Tauri side
    (`ClaudeCodeSessionDetail.title`). The fix: in the Rust discovery, prefer the
    Claude-generated session summary entry when present, else the first message.

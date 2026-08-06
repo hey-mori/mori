@@ -48,7 +48,7 @@ shows the resolved path when running in the desktop runtime.
 | ------- | -------- | ------- |
 | `001` | `V001__initial_schema.sql` | Full normalized session schema: projects, sessions, sources, events, issues, decisions, relationships, artifacts, next_actions, summaries, and the `events_fts` / `sources_fts` virtual tables. |
 | `002` | `V002__events_connector_identity.sql` | Add `events.connector_event_id` (TEXT, nullable) and `idx_events_connector_event_id` so cross-session connector duplicate detection survives SQLite round-trips. NULL on every non-connector import. |
-| `003` | `V003__consolidated_memories.sql` | Add `consolidated_memories` and `consolidated_memory_audit` tables for SQLite Accepted Memory Storage. Object / array fields are flattened to JSON `*_json` columns. No foreign key to `projects` / `sessions` — consolidated memory must survive session pruning. |
+| `003` | `V003__consolidated_memories.sql` | Add `consolidated_memories` and `consolidated_memory_audit` tables for SQLite Accepted Memory Storage. Object / array fields are flattened to JSON `*_json` columns. No foreign key to `projects` / `sessions` · consolidated memory must survive session pruning. |
 | `004` | `V004__session_imports.sql` | Add the `session_imports` table mirroring the browser `StoredSessionImport` record (`source_json`, `events_json`, `saved_at`, nullable `import_summary_json`). Foundation for desktop SQLite-saved sessions to carry their connector re-import summary; row converters in `src/lib/sqlite/sessionImportRows.ts`. The Tauri command + repository wiring is a follow-up slice. |
 
 ## Accepted memory runtime routing
@@ -57,8 +57,8 @@ shows the resolved path when running in the desktop runtime.
 (`src/lib/project-memory/acceptedMemoryRepository.ts`) routes accepted
 project memories and memory review actions between backends:
 
-- **Browser mode** — `BrowserDraftRepository` (localStorage).
-- **Tauri desktop mode** — the V003 tables via the
+- **Browser mode** · `BrowserDraftRepository` (localStorage).
+- **Tauri desktop mode** · the V003 tables via the
   `save_accepted_project_memories`, `list_accepted_project_memories`,
   `append_memory_review_action_rows`, and
   `list_memory_review_action_rows` commands.
@@ -76,9 +76,9 @@ all read and write through this repository.
 (`src/lib/storage/sessionImportRepository.ts`) routes session imports
 (`StoredSessionImport`) the same way:
 
-- **Browser mode** — `BrowserDraftRepository.putSessionImports` /
+- **Browser mode** · `BrowserDraftRepository.putSessionImports` /
   `listSessionImports` (localStorage).
-- **Tauri desktop mode** — the V004 `session_imports` table via the
+- **Tauri desktop mode** · the V004 `session_imports` table via the
   `persist_session_imports` / `list_session_import_rows` commands,
   converted through `src/lib/sqlite/sessionImportRows.ts`.
 
@@ -131,21 +131,21 @@ Indexes:
 All commands live in [src-tauri/src/sqlite.rs](../src-tauri/src/sqlite.rs) and
 take `tauri::State<SqliteState>`.
 
-- `get_sqlite_migration_status` — current path, applied/pending versions,
+- `get_sqlite_migration_status` · current path, applied/pending versions,
   table list, and migration records.
-- `initialize_sqlite_database` — opens the DB file and applies any pending
+- `initialize_sqlite_database` · opens the DB file and applies any pending
   migrations. Idempotent.
-- `persist_session_snapshot` — accepts a typed `SessionSnapshot` payload and
+- `persist_session_snapshot` · accepts a typed `SessionSnapshot` payload and
   upserts project + session, then replaces sources, events, issues,
   decisions, relationships, artifacts, next_actions, and summaries for that
   session inside a single transaction.
-- `load_sqlite_session_snapshot` — returns the full `SessionSnapshot` for a
+- `load_sqlite_session_snapshot` · returns the full `SessionSnapshot` for a
   given session id.
-- `list_sqlite_sessions` — returns each session's project name, started_at,
+- `list_sqlite_sessions` · returns each session's project name, started_at,
   ended_at, status, and a `event_count` / `source_count` aggregate.
 
 Errors are returned to the frontend as strings. The commands do not fake
-success — `cargo test` exercises both the migration runner and the
+success · `cargo test` exercises both the migration runner and the
 save/load round-trip with an in-memory `rusqlite` database.
 
 ## Frontend boundary
@@ -227,7 +227,7 @@ Timeline, and Reports.
 - The migration table currently records `applied_at` as `"epoch:<seconds>"`.
   Replace with ISO-8601 when a `chrono`/`time` dependency lands.
 - FTS5 indexes are created but not populated.
-- Auto write-through after Import / Quick Pass is not implemented yet — the
+- Auto write-through after Import / Quick Pass is not implemented yet · the
   user has to click **현재 세션 SQLite 저장** explicitly. This is the next
   milestone candidate.
 - No deletion or merge commands yet.

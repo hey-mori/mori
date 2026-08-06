@@ -53,14 +53,14 @@ MoriPackageV0
 ## Accepted project memory slice
 
 `consolidatedMemories` carries the project's accepted (reviewed,
-durable) project memory — `StoredAcceptedProjectMemory[]` — so
+durable) project memory, `StoredAcceptedProjectMemory[]`, so
 consolidated memory can travel with an exported `.mori v0` package.
 
 - **Optional and additive.** The field is absent on packages
   exported before it existed. `deserializeMoriPackage` leaves it
   `undefined`; `getPackageConsolidatedMemories(pkg)` normalises both
   the absent and present cases to a list. No `formatVersion` bump is
-  needed for an absent-safe additive field — each record carries its
+  needed for an absent-safe additive field · each record carries its
   own `schemaVersion`.
 - **Populated explicitly.** `createMoriPackageFromSession(session,
   { consolidatedMemories })` writes the slice; the Reports page
@@ -71,18 +71,18 @@ consolidated memory can travel with an exported `.mori v0` package.
 - **No auto-merge on import.** Carrying memory in a package does not
   make it durable on the importing device. `buildImportedMemoryProposals`
   (`src/lib/project-memory/importedMemoryReview.ts`) converts the
-  slice into reviewable proposals — deduplicated against the project's
-  existing accepted memories — and `parseImportedMemoryProposals`
+  slice into reviewable proposals · deduplicated against the project's
+  existing accepted memories · and `parseImportedMemoryProposals`
   wraps it for a raw package-JSON string. The Consolidation Review
   Surface has an **Import accepted memory from a .mori package** panel
-  — paste the package JSON or pick a `.mori` file (a native Open
+  · paste the package JSON or pick a `.mori` file (a native Open
   dialog on desktop via `pick_mori_package_file`, the browser `File`
   API otherwise): imported memory enters the review list as proposals
   and only becomes durable through the normal accept / apply path.
 ## Memory Audit Trail slice
 
 `auditTrail` carries the project's Memory Audit Trail review actions
-— `StoredMemoryReviewAction[]` — so an exported `.mori v0` package
+(`StoredMemoryReviewAction[]`) so an exported `.mori v0` package
 preserves not just accepted memory but the review history that
 produced it.
 
@@ -90,7 +90,7 @@ produced it.
   The field is absent on packages exported before it existed.
   `deserializeMoriPackage` leaves it `undefined`;
   `getPackageAuditTrail(pkg)` normalises both the absent and present
-  cases to a list. No `formatVersion` bump is needed — each record
+  cases to a list. No `formatVersion` bump is needed · each record
   carries its own `schemaVersion`.
 - **Populated explicitly.** `createMoriPackageFromSession(session,
   { auditTrail })` writes the slice; the Reports page `.mori v0`
@@ -100,7 +100,7 @@ produced it.
 - **Validation.** `validateMoriPackage` accepts an absent field and
   rejects a present non-array value.
 - **History, not writes.** These rows are review history. Importing a
-  package never replays them — they travel so an exported package
+  package never replays them · they travel so an exported package
   preserves the review history behind its accepted memory. `before`
   / `after` snapshots are carried only as the records already hold
   them; no extra raw content is exposed.
@@ -142,10 +142,10 @@ normalised to `[]` when the package predates those slices.
 
 `zipMoriPackage(pkg)` archives the canonical file layout into a real
 `.mori` zip container (a `Uint8Array`); `unzipMoriPackage(bytes)`
-reads it back. Zip is a **packaging layer**, not the source of truth —
+reads it back. Zip is a **packaging layer**, not the source of truth ·
 it wraps `buildMoriPackageFileLayout` / `parseMoriPackageFileLayout`,
 so `unzipMoriPackage` runs the same validation and per-record checks
-as any other import. The zip codec is `fflate` — a small,
+as any other import. The zip codec is `fflate` · a small,
 dependency-free, pure-JS library: no native code, no network.
 `unzipMoriPackage` throws on a corrupt archive or a missing required
 file.
@@ -160,24 +160,24 @@ Picked file bytes are inspected for the `PK` zip magic: a zip routes
 through `parseImportedMemoryProposalsFromZip` (`unzipMoriPackage` +
 validation); anything else is decoded as JSON / pasted package text.
 Desktop reads the bytes via `read_mori_package_file`; the browser
-uses `File.arrayBuffer()`. Imported memory still enters review — no
+uses `File.arrayBuffer()`. Imported memory still enters review · no
 auto-merge.
 
 ## Client-safe export filter
 
 `buildClientSafeMoriPackage(pkg)` is a pure `MoriPackageV0` →
 `MoriPackageV0` transform that produces a **client-safe** copy of a
-package — one an Author can hand to a non-teammate (see
+package · one an Author can hand to a non-teammate (see
 `docs/team-shared-memory.md` §5). It keeps only `consolidatedMemories`
 whose `reportEligibility` is `clientSafe` and whose `sensitivity` is
 `normal`, keeps `auditTrail` rows only for surviving memories, and
 marks the manifest `clientSafeExport: true`. The marker is optional
-and additive — absent on a normal package, no `formatVersion` bump —
+and additive (absent on a normal package, no `formatVersion` bump)
 and `getPackageIsClientSafe(pkg)` reads it. The input package is never
 mutated.
 
 The Reports `.mori` package strip exposes this as a second export
-action — **클라이언트 공유용 .mori 내보내기** — alongside the normal
+action, **클라이언트 공유용 .mori 내보내기**, alongside the normal
 export. It runs `buildClientSafeMoriPackage`, writes a
 `-client-safe.mori` file, and reports how many memories the filter
 kept vs dropped so the Author sees what a recipient will receive.

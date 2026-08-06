@@ -1,4 +1,4 @@
-# Work Bundle Import — composite multi-source work units
+# Work Bundle Import · composite multi-source work units
 
 This document records the Work Bundle capability and the product-value
 assessment behind it. It is a companion to
@@ -15,7 +15,7 @@ normalized candidates as *one work unit*, shows a reconstructed preview before
 anything is applied, and applies them together while keeping each source
 distinct.
 
-- `src/lib/import/workBundle.ts` — `buildWorkBundlePreview(items)` is a pure
+- `src/lib/import/workBundle.ts` · `buildWorkBundlePreview(items)` is a pure
   derivation (no I/O, no LLM, no network) that answers the product-validation
   questions directly from the already-normalized evidence: detected source
   families, a work-context hint (the shared work area inferred from the files
@@ -23,15 +23,15 @@ distinct.
   counts, cross-source duplicate counts, a trust + capture-fidelity summary,
   redaction / secret flags, the time span, and a "what will be created"
   summary.
-- `src/lib/import/fixtures/workBundleFixture.ts` — a synthetic but realistic
+- `src/lib/import/fixtures/workBundleFixture.ts` · a synthetic but realistic
   bundle for a fictional `acme-notes-app` offline-sync session (Claude design
   transcript + Codex run JSONL + git diff + terminal log JSONL + hand-off
   note). No secrets, no real paths, no tokens.
-- `addImportBatch` on the session store — applies the bundle by persisting
+- `addImportBatch` on the session store · applies the bundle by persisting
   **each source as its own session import** (its own `SourceRef` + events), so
   per-source provenance survives into the Evidence Hub and Timeline. The
   bundle is not flattened into one merged source.
-- `WorkBundlePanel` (in the Connections source hub) — load the sample bundle
+- `WorkBundlePanel` (in the Connections source hub) · load the sample bundle
   or paste sources (AI transcript / Connector JSONL / git diff / note / URL),
   stage them, review the composite preview, and apply to the Timeline.
 
@@ -43,7 +43,7 @@ created, and the user can remove any source first. Apply requires an active
 session; in demo mode the preview still renders read-only and Apply is
 disabled with an honest reason. After apply, per-event correction stays
 available in the Timeline / Review surfaces, and nothing becomes durable
-project memory without passing through Consolidation Review — so no
+project memory without passing through Consolidation Review · so no
 memory-protecting gate is bypassed.
 
 ## Product-value assessment
@@ -62,7 +62,7 @@ Timeline / Evidence):
   before any write. The work-context hint (`src/sync`) and proposed title
   (taken from the first AI turn's goal) make the unit legible at a glance.
 - **What was noisy?** Best-effort file detection from event titles / summaries
-  is approximate — it dedupes bare filenames against fuller paths, but it can
+  is approximate · it dedupes bare filenames against fuller paths, but it can
   still miss a path that only appears in a connector `command` field rather
   than the rendered summary. It is honest ("detected files"), not an
   authoritative file list.
@@ -92,7 +92,7 @@ Timeline / Evidence):
 ## Best next source integration
 
 Structured connector run logs (Codex / OpenCode) are the highest-signal
-source — they already carry per-event kinds, files, commands, and timing.
+source · they already carry per-event kinds, files, commands, and timing.
 Strengthening the connector → timeline mapping (explicit file artifacts, test
 pass/fail events) would most improve the reconstructed-work quality for the
 bundle.

@@ -27,8 +27,8 @@ Today the search/ask layer sees two scopes unevenly:
 
 The data already exists: `loadProjectMemorySessions`
 ([`loadProjectMemorySessions.ts`](../../src/lib/project-memory/loadProjectMemorySessions.ts))
-returns `ProjectMemoryLoadedSession[]` — each carrying `sessionId`, `title`,
-`loadStatus`, and the session's `events` / `sources` — capped at 20 sessions,
+returns `ProjectMemoryLoadedSession[]` · each carrying `sessionId`, `title`,
+`loadStatus`, and the session's `events` / `sources` · capped at 20 sessions,
 parallelised, non-mutating, browser + SQLite aware. This milestone routes that
 same loaded set into the search layer.
 
@@ -46,13 +46,13 @@ same loaded set into the search layer.
     top-level `timelineEvents` / `evidenceSources` keep working unchanged
     (active-session, unattributed). Results are deduped by `refId` so the same
     event never appears twice if a caller passes it through both paths.
-  - The tool-envelope filter and curated-snippet rules are unchanged — raw
+  - The tool-envelope filter and curated-snippet rules are unchanged · raw
     transcripts / connector logs are never read or shown.
-- **`ask-mori/askMoriContext.ts`** — when a reference carries a `sessionLabel`,
+- **`ask-mori/askMoriContext.ts`** · when a reference carries a `sessionLabel`,
   the grounded prompt line and the citation's `contextLabel` name the session
   (e.g. `타임라인 · ng-gw 라우팅`) so the LLM and the cited row both show where
   the evidence lives.
-- **`memory-api`** — `MemoryCapabilityInput` gains optional
+- **`memory-api`** · `MemoryCapabilityInput` gains optional
   `sessionEvidence?: ProjectMemorySessionEvidence[]`. `memorySearch` /
   `memoryAsk` route it into the references input when present, else fall back
   to the active-session `events` / `sources` (backward compatible: a caller

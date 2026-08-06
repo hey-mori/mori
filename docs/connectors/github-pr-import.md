@@ -18,7 +18,7 @@ import surfaces:
   Tauri Git diff capture against the local checkout of the PR branch.
 - **Codex / Claude PR conversation** → Evidence Hub → AI 대화 paste.
 
-This is exactly the same posture as Codex Web — see
+This is exactly the same posture as Codex Web · see
 [`desktop-web-capture.md`](./desktop-web-capture.md).
 
 ## What the planned import will do

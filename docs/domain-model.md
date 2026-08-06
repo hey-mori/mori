@@ -194,9 +194,9 @@ Typical fields:
 - `priority`
 - `relatedIssueIds`
 - `relatedEventIds`
-- `done` — optional user-set completion state; absent means pending, so
+- `done` · optional user-set completion state; absent means pending, so
   sessions saved before the completion capability stay valid
-- `completedAt` — optional ISO timestamp, set when the user marks the
+- `completedAt` · optional ISO timestamp, set when the user marks the
   action done and cleared when it is reopened
 
 ## Trust Levels
