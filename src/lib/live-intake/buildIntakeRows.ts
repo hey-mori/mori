@@ -36,7 +36,9 @@ export function buildIntakeRows(
 ): IntakeRequestRow[] {
   const sessionStatus = new Map<string, SessionActivityStatus>();
   const sessionOffset = new Map<string, number>();
+  const sessionProject = new Map<string, string>();
   for (const { meta, follow } of sessions) {
+    sessionProject.set(meta.filePath, (meta.projectPath ?? "").trim());
     sessionStatus.set(
       meta.filePath,
       deriveSessionActivity(follow.messages, {
@@ -84,6 +86,7 @@ export function buildIntakeRows(
       schemaVersion: INTAKE_ROW_VERSION,
       id: request.id,
       sessionKey: request.sessionKey,
+      projectPath: sessionProject.get(request.sessionKey) ?? "",
       sessionLabel: request.sessionLabel,
       title: truncated ? `${title.slice(0, INTAKE_TITLE_MAX).trimEnd()}...` : title,
       titleTruncated: truncated,

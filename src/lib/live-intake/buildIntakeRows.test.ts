@@ -24,12 +24,12 @@ function message(partial: Partial<ClaudeMessage> & { id: string }): ClaudeMessag
 function session(
   filePath: string,
   messages: ClaudeMessage[],
-  opts: { offset?: number; modifiedAt?: string } = {},
+  opts: { offset?: number; modifiedAt?: string; projectPath?: string } = {},
 ): FollowedSession {
   const follow = initialAgentStoreFollowState(opts.offset ?? 0);
   const meta: ClaudeCodeSessionMeta = {
     sessionId: filePath.replace(/\W/g, ""),
-    projectPath: "/dev/mori",
+    projectPath: opts.projectPath ?? "/dev/mori",
     projectName: "mori",
     filePath,
     startedAt: at(60),
@@ -59,6 +59,27 @@ describe("buildIntakeRows", () => {
     expect(rows[0].stepCount).toBe(1);
     // The row carries no field that could hold a message body.
     expect(JSON.stringify(rows[0])).not.toContain("a very long reply body");
+  });
+
+  it("carries the full project path, not just the label the projection cannot key on", () => {
+    const rows = rowsFor([
+      session("/s/a.jsonl", [message({ id: "m1", content: "ask" })], {
+        projectPath: "C:\\work\\api",
+      }),
+    ]);
+
+    expect(rows[0].projectPath).toBe("C:\\work\\api");
+    // The label is the trailing segment, which two different projects can
+    // share; folding on it would merge /work/api with /play/api.
+    expect(rows[0].sessionLabel).not.toBe(rows[0].projectPath);
+  });
+
+  it("leaves the project path empty rather than guessing one", () => {
+    const rows = rowsFor([
+      session("/s/a.jsonl", [message({ id: "m1", content: "ask" })], { projectPath: "" }),
+    ]);
+
+    expect(rows[0].projectPath).toBe("");
   });
 
   it("carries a locator so a reduced row stays re-derivable", () => {

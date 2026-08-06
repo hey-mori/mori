@@ -22,7 +22,19 @@
 import type { FileChangeKind } from "../../domain/types";
 import type { SessionActivityStatus } from "../../features/live-session/liveFeed";
 
-export const INTAKE_ROW_VERSION = 1 as const;
+/**
+ * Row shape version.
+ *
+ * Because T1 is a derived index whose every row is re-derivable from its
+ * locator (D1), an incompatible shape change is handled by **dropping and
+ * re-deriving**, never by writing migration code. `intakeStore` already reads an
+ * unrecognised envelope as empty, so bumping this is the whole migration: the
+ * next poll rewrites each followed session from scratch.
+ *
+ * v2 added `projectPath`, without which rows cannot be folded per project
+ * safely.
+ */
+export const INTAKE_ROW_VERSION = 2 as const;
 
 /**
  * Where the row came from, precisely enough to re-read it. The path plus the
@@ -52,6 +64,17 @@ export type IntakeRequestRow = {
   id: string;
   /** The session file path, which is also the follower's identity for it. */
   sessionKey: string;
+  /**
+   * The project's full path as the reader resolved it (`C:\dev\mori`), which is
+   * the only safe key for folding rows into a per-project projection.
+   *
+   * `sessionLabel` cannot serve: it is the trailing segment, and
+   * `projectConnection.ts` is explicit that a basename match must never be
+   * auto-grouped, because `/work/api` and `/play/api` are different projects
+   * that share a name. Empty when the reader could not resolve one, which the
+   * projection must treat as unattributed rather than guess.
+   */
+  projectPath: string;
   sessionLabel: string;
   /**
    * The request text, capped. Not the full body: a long paste re-reads from the
