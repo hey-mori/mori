@@ -13,6 +13,7 @@ function row(partial: Partial<IntakeRequestRow> & { id: string }): IntakeRequest
   return {
     schemaVersion: INTAKE_ROW_VERSION,
     sessionKey: "/s/a.jsonl",
+    projectPath: "C:\\dev\\mori",
     sessionLabel: "mori",
     title: "an ask",
     titleTruncated: false,
@@ -85,6 +86,22 @@ describe("IntakeBrowserStore", () => {
       JSON.stringify({ envelopeVersion: 99, savedAt: "x", data: [row({ id: "r1" })] }),
     );
 
+    expect(new IntakeBrowserStore(storage).listSessionRows("/s/a.jsonl")).toEqual([]);
+  });
+
+  it("drops rows written by an older shape, so a bump re-derives instead of migrating", () => {
+    const storage = new MemoryKeyValueStorage();
+    // A v1 row, from before `projectPath` existed.
+    storage.setItem(
+      "mori.liveIntake.session.%2Fs%2Fa.jsonl",
+      JSON.stringify({
+        envelopeVersion: 1,
+        savedAt: "2026-08-06T23:36:29.855Z",
+        data: [{ schemaVersion: 1, id: "r1", sessionKey: "/s/a.jsonl" }],
+      }),
+    );
+
+    // Nothing is lost: every row re-derives from its locator on the next poll.
     expect(new IntakeBrowserStore(storage).listSessionRows("/s/a.jsonl")).toEqual([]);
   });
 

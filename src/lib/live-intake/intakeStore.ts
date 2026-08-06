@@ -26,7 +26,13 @@ import {
 import type { KeyValueStorage } from "../storage/storageTypes";
 import type { IntakeRequestRow } from "./intakeTypes";
 
-const INTAKE_ENVELOPE_VERSION = 1 as const;
+/**
+ * Moves with `INTAKE_ROW_VERSION`, so a row-shape change makes stored data
+ * unreadable on purpose and the next poll re-derives it. Dropping is the
+ * correct migration for a derived index, and only for one: nothing here is
+ * authored, so nothing is lost.
+ */
+const INTAKE_ENVELOPE_VERSION = 2 as const;
 const PREFIX = "mori.liveIntake.session.";
 
 type Envelope = {
