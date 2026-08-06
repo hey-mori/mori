@@ -874,6 +874,14 @@ focused next step, not rushed:
   stage: a later responsive pass.
 - `manualNote` (failed → 노트로 저장) still creates a second source for the
   same text; dedupe when the composer gains source-reuse.
+- The 프로젝트 page (v8 §5) is due a **section 0**: a durable per-project
+  current-state block above 하위 프로젝트, fed by the Live Project Intelligence
+  projection rather than recomputed from saved sessions. `ProjectStateStrip` +
+  synthesis counts migrate in from `ProjectView` (which is then retired in
+  place, not deleted); the activity heatmap does not migrate. Planning only, no
+  code yet. See
+  [`../live-project-intelligence-execution-plan.md`](../live-project-intelligence-execution-plan.md)
+  D7 / S4.
 
 ## Commits
 

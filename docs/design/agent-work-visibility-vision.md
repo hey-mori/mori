@@ -210,8 +210,14 @@ the always-visible "watching" cost vs staying foreground-only.
 possibly other channels, and a more developed in-app notification surface.
 
 **Current state.** In-app Notification Center shipped (sidebar bell + 알림 page,
-honest unread count, five producers). OS-native notifications are absent (no
-Tauri notification call exists).
+honest unread count, five producers). OS-native delivery has since shipped too:
+`tauri-plugin-notification` is a declared dependency and
+`src/lib/notifications/osNotification.ts` is the pure allowlist + dedupe +
+freshness gate in front of it, sitting behind
+`src/lib/notifications/signalPolicy.ts`. What is still missing is upstream, not
+downstream: `signalPolicy` has no producer feeding it signal candidates. See
+[`live-project-intelligence-execution-plan.md`](live-project-intelligence-execution-plan.md)
+§2 and D6.
 
 **Direction.** Add OS-native delivery for the few signals that deserve to
 interrupt (work finished, risky action), keep the in-app feed calm and never a

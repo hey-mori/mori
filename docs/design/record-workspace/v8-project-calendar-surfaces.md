@@ -155,6 +155,18 @@ that name, after which the group is a real project and nests like any other.
 
 ## 5. 프로젝트 · the page
 
+> **Amendment, 2026-08-06 · a section 0 is coming.** This ordering is right on
+> its own principle but starts one question too late. The first thing a
+> returning user asks is what is happening now and what changed since they last
+> looked, and today no surface answers it durably. The Live Project Intelligence
+> execution plan decides that this page owns that Summary role and receives a
+> current-state section **above 하위 프로젝트**, fed by a persisted per-project
+> projection rather than recomputed from saved sessions. `ProjectStateStrip` and
+> the synthesis counts migrate in from `ProjectView`; the activity heatmap does
+> not. See
+> [`../live-project-intelligence-execution-plan.md`](../live-project-intelligence-execution-plan.md)
+> D7 and stage S4. The sections below are otherwise unchanged.
+
 The pane is the project's substance, ordered by what a returning user asks:
 
 1. **Band**: dim parent path crumb (`회사 /`), name, 기록·세션 count, spacer,
