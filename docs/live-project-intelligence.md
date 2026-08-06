@@ -1,10 +1,19 @@
 # Live Project Intelligence
 
-Planning status: **Draft**
+Planning status: **Thesis approved; execution planned separately.**
 
 This document defines how Mori should evolve from explicit session import into
 an opt-in, near-real-time project intelligence layer. It is a planning and
 review document, not proof that the feature is fully implemented.
+
+The product thesis, event taxonomy, notification policy, and local-LLM
+guardrails below remain canonical. The **execution layer** lives in
+[`design/live-project-intelligence-execution-plan.md`](design/live-project-intelligence-execution-plan.md):
+a code-verified audit of what shipped against the MVP list, the research that
+constrains the design, the decisions resolving the open questions that blocked
+the first slice, and a staged plan. Read that document before starting work
+here. Where this document's *status* claims conflict with it, the execution
+plan is newer and wins; where the *thesis* conflicts, this document wins.
 
 Related canonical docs:
 
@@ -97,7 +106,7 @@ Live Project Intelligence should extend that principle, not replace it.
 | Connector JSONL import | File/batch | Manual | User refreshes or pastes; Import Review applies events. |
 | Session Live Follow | One external session | Off | Foreground polling of one known connector file while app is open. |
 | Project live summary | Connected Mori project | Off/planned | Aggregates followed or recently refreshed sessions into Summary/Signal. |
-| Background watcher | Whole machine | Non-goal | Not allowed in this planning slice. |
+| Background watcher | Whole machine | Non-goal | Not allowed in this planning slice. **Superseded 2026-08-06:** an opt-in, off-by-default connector-inbox watcher shipped (`mori-project-goal.md` §5), and the surveillance-line rail B (§6) permits reading explicitly connected sources while the app runs. A whole-machine watcher remains banned; see the execution plan §3.3 and D7. |
 
 Recommended wording:
 
@@ -589,7 +598,10 @@ Suggested AI review prompts:
 - Start MVP notification scope with decision-needed, completed, and blocked.
 - Preserve the existing connector privacy boundary and reviewability principles.
 - Treat session-scoped foreground Live Follow as the only live mechanism in the
-  first planning slice.
+  first planning slice. **Amended 2026-08-06:** the shipped foreground follow is
+  multi-session (`useLiveSessions` discovers and follows the active set), which
+  is still foreground-only and still limited to connected sources. See the
+  execution plan §3.2.
 - Keep project-level live summaries derived from followed/refreshed sessions,
   not from a global background watcher.
 

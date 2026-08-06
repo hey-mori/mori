@@ -84,6 +84,27 @@ A true always-on background watcher (runs while the app is closed)
 remains a non-goal and a separate, identity-changing decision; it is
 explicitly out of scope here.
 
+**Amendment, 2026-08-06 · the boundary is multi-session, not
+single-session.** The shipped 세션 surface
+(`src/features/live-session/useLiveSessions.ts`) discovers the currently
+active sessions and follows up to eight at once, re-discovering
+periodically, rather than one session the user registered. It also reads
+the agent's own store directly (Claude Code JSONL via
+`get_claude_code_session_delta`) rather than only a hook-written
+connector file, so following needs no script install.
+
+Every constraint above still holds unchanged: foreground only, pauses
+when the tab is hidden, no new capture, reads only sources the user
+connected, never starts or drives an agent. What changed is the *count*
+and the *reader*, not the rails. The "only that session's file" wording
+is superseded; the product needs a view of concurrent work, which is the
+whole point of the 세션 dashboard. Read the boundary as: **explicit,
+foreground, connected-sources-only, multi-session.**
+
+See [`live-project-intelligence-execution-plan.md`](live-project-intelligence-execution-plan.md)
+§3.2 for the audit that found this, and D5 there for the local-LLM
+scheduling rule that follows from watching several sessions at once.
+
 This maps onto the A-vs-B surveillance line in `mori-project-goal.md` §6:
 reading the followed session's already-connected file while the app is
 running (even minimized / unfocused), and surfacing an OS notification, is

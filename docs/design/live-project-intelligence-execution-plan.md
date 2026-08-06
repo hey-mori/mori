@@ -1,0 +1,309 @@
+# Live Project Intelligence · execution plan
+
+Status: **proposal, 2026-08-06.** Planning only. No product code was written
+for this document.
+
+This is the execution layer for [`../live-project-intelligence.md`](../live-project-intelligence.md),
+which has carried the status `Draft` since it was written. That document's
+product thesis (Signal / Summary / Trace, the event taxonomy, the notification
+policy, the local-LLM guardrails) is still correct and is not restated here.
+What it lacks is an honest read of what the repository actually built against
+it, answers to the open questions that block the first slice, and a staged
+plan. This document supplies those three things.
+
+Companion docs:
+[`../mori-project-goal.md`](../mori-project-goal.md) (identity, invariants,
+apply policy), [`agent-work-visibility-vision.md`](agent-work-visibility-vision.md)
+(the north-star direction this serves, especially §7),
+[`local-llm-understanding-and-live-follow.md`](local-llm-understanding-and-live-follow.md)
+(the Live Follow boundary decision),
+[`../project-connection-mapping.md`](../project-connection-mapping.md)
+(project identity, shipped).
+
+---
+
+## 1. The finding in one paragraph
+
+Mori did not fail to build Live Project Intelligence. It built **both ends and
+skipped the middle**. Observation is strong: `useLiveSessions` polls every
+active agent session at once and `liveFeed` merges them into request blocks
+with per-request status and file touches. Delivery is strong: `signalPolicy`
+implements all six notification reasons with delivery gating, and
+`osNotification` bridges to the OS. Project identity is strong and tested
+(`projectConnection`, `projectExternalSessions`). What does not exist is
+everything between observation and delivery: nothing persists what the live
+layer sees, nothing folds it into project state, and nothing produces the
+signal candidates the policy was built to gate. The live layer's only signal
+producer is called from inside a React component
+(`src/features/live-session/LiveSessionView.tsx:491`), so when the view
+unmounts, the product's awareness of the user's work stops existing.
+
+That is why a project overview cannot stay current, and why
+`buildProjectStateSummary` can only ever report `basis: "savedSessions"`.
+
+## 2. Code-verified status of the MVP
+
+Against the MVP list in [`../live-project-intelligence.md`](../live-project-intelligence.md)
+§ MVP Scope, verified 2026-08-06.
+
+| # | MVP item | Status | Evidence |
+| --- | --- | --- | --- |
+| 1 | Associate connector / discovery events with a project | **Shipped** (pure layer) | `src/lib/projects/projectConnection.ts`, `src/lib/projects/projectExternalSessions.ts`, both tested |
+| 2 | External agent session status (running / waiting / blocked / completed / unknown) | **Partial** | `liveFeed.ts` derives `working` / `recent` / `done` only; no `waitingForUser`, no `blocked`, and the status is per *request*, not per session |
+| 3 | Live Intake Buffer producing pending events | **Missing** | no match for `intake` anywhere in `src/` or `src-tauri/src/` |
+| 4 | Provisional live events in the session trace with trust labels | **Missing** | no match for `provisional` under `src/features/timeline/` or `src/features/session/` |
+| 5 | Project current-state strip | **Partial** | `ProjectStateStrip.tsx` + `buildProjectStateSummary` exist, but `basis` is hard-wired to `"savedSessions"` and `riskDetected` / `blocked` are documented as never produced (`src/lib/project/projectStateSummary.ts:18`) |
+| 6 | Deterministic / local insight candidates | **Missing** | no match for `InsightCandidate` |
+| 7 | Promote three notification classes | **Shipped past scope, but unwired** | `src/lib/notifications/signalPolicy.ts` implements all six reasons; its only non-test caller is `osNotification.ts`. No producer feeds it a candidate |
+| 8 | Link every summary and signal to supporting events | **Partial** | companion signals carry `evidenceRefs`; the live path carries none |
+
+Shipped: 1. Partial: 2, 5, 8. Missing: 3, 4, 6. Built-but-unwired: 7.
+
+Note that the missing and unwired items form one contiguous band: intake (3),
+provisional state (4), candidates (6), and the producers that would drive the
+policy (7). This is the middle described in §1.
+
+## 3. Doc drift found while auditing
+
+Four conflicts between the doc set and the code. Each needs a correction; none
+changes the product direction.
+
+1. **OS notifications are described as absent.**
+   [`agent-work-visibility-vision.md`](agent-work-visibility-vision.md) §8 says
+   "OS-native notifications are absent (no Tauri notification call exists)".
+   `src/lib/notifications/osNotification.ts` exists and `tauri-plugin-notification`
+   is a declared dependency (`src-tauri/Cargo.toml:22`). The doc is stale.
+
+2. **Live Follow is described as single-session; the code follows many.**
+   [`local-llm-understanding-and-live-follow.md`](local-llm-understanding-and-live-follow.md)
+   §3.1 decides Live Follow polls "**only that session's** already-growing
+   connector file" and is "not a global machine watcher".
+   `src/features/live-session/useLiveSessions.ts` discovers the active set and
+   follows up to eight sessions at once, re-discovering periodically. The code
+   is still foreground-only and still reads only connected sources, so no
+   invariant is broken, but the written boundary no longer describes it. The
+   code went the right way for the product; the doc must be updated to a
+   multi-session foreground boundary rather than the code narrowed.
+
+3. **The background watcher is listed as a non-goal; it shipped.**
+   [`../live-project-intelligence.md`](../live-project-intelligence.md)
+   § Relationship To Existing Live Follow tabulates "Background watcher | Whole
+   machine | Non-goal | Not allowed in this planning slice", and § Current
+   Planning Decisions repeats it. [`../mori-project-goal.md`](../mori-project-goal.md)
+   §5 records the opt-in watched inbox as **shipped**, and §6's surveillance-line
+   note records rail B as designed and shipped. The planning doc predates that
+   decision.
+
+4. **The live view and the background watcher read different sources.**
+   Not a doc error, but an unstated structural fact. `useLiveSessions` reads the
+   agent's own store (Claude Code JSONL, via `discoverClaudeCodeSessions` /
+   `get_claude_code_session_delta`), which needs no user setup and carries rich
+   data. `src/lib/background-watch/inboxWatch.ts` fingerprints the **connector
+   inbox** (`~/.mori/connectors/`), which requires the user to have installed a
+   hook script and carries less. So the background path cannot today feed the
+   project overview with what the foreground path already sees. Any background
+   slice must read the agent stores, not only the inbox.
+
+## 4. Research findings that constrain the design
+
+### 4.1 File watching on Windows
+
+A native watcher does not pay for itself here. `ReadDirectoryChangesW`
+allocates a fixed-size buffer per directory handle and fails with
+`ERROR_NOTIFY_ENUM_DIR` when it cannot record all changes, at which point the
+caller must fall back to enumerating the directory anyway; its behaviour is
+also inconsistent across Windows versions and degrades on large batches. The
+Rust `notify` crate wraps it and inherits those limits, which is why
+`notify-debouncer-mini` exists.
+
+Decisive point for Mori: a change notification only says *something changed*.
+Mori needs the appended bytes, so it must still perform a byte-offset tail
+read. The watcher would replace one cheap `stat` call, not the read. Adding it
+buys a Windows-specific failure mode for almost no saving.
+
+The repository is already well positioned. `tail_new_complete_lines`
+(`src-tauri/src/claude/code.rs:442`) is partial-line safe, never lands
+mid-line, never decodes a torn UTF-8 sequence, and enforces path containment.
+Its one documented gap is rotation: `src-tauri/src/claude/code.rs:447` states
+that re-reading a shrunk file from its new start "is a later slice; we never
+read backwards here". Today a truncated or rotated session file silently stops
+producing deltas forever.
+
+### 4.2 Local LLM contention
+
+Ollama does not gracefully share a saturated GPU. When memory is insufficient
+for a new model, "all new requests will be queued until the new model can be
+loaded"; an overloaded server returns 503; idle models are unloaded to make
+room. So a background analysis pass launched while the user's local agent is
+generating does not run alongside it, it queues behind it or evicts it. Mori
+would degrade the very work it exists to observe. Holding a model warm makes
+this worse, because the warm model holds VRAM the agent may need. The
+prewarm-at-startup and TTL work (commits `6c2447c`, `4f7c578`) was tuned for
+foreground responsiveness and must be re-evaluated before any background pass.
+
+The established pattern for background inference under contention is
+opportunistic scheduling: attempt work only when there is idle capacity, and
+back off when local activity is high. Prefetching under contention actively
+hurts.
+
+**Mori has an unusually good signal for this.** It already computes whether the
+observed agent is working: `LiveRequestStatus` in
+`src/features/live-session/liveFeed.ts` derives `working` / `recent` / `done`,
+with a stall threshold. Mori's own observation layer is therefore the correct
+scheduler input for its analysis layer. No GPU probing is required.
+
+## 5. Decisions
+
+These resolve the open questions in [`../live-project-intelligence.md`](../live-project-intelligence.md)
+§ Open Questions that block the first slice. Questions not listed here remain
+open and are deliberately deferred.
+
+### D1 · The raw trace already persists outside Mori, so intake may be lossy
+
+The no-data-loss invariant (`../mori-project-goal.md` §6, and architecture doc
+§16.4) requires raw inputs to be preserved for re-derivation. For agent
+sessions that requirement is **already satisfied without Mori copying
+anything**: the agent's own JSONL file is the durable raw trace, it lives on
+the user's disk, and Mori addresses it by path plus byte offset.
+
+Therefore the intake layer may persist a reduced record, provided every
+persisted row carries a `SourceLink`-style locator (path, byte range, content
+hash) sufficient to re-derive the full detail on demand. This is the unlock
+that lets Mori keep a durable project overview without becoming the raw log
+viewer its own thesis forbids.
+
+Consequence for the retention policy: intake rows are `rawRetention:
+summaryOnly` with a re-derivable origin, not `retained`.
+
+### D2 · Three retention tiers, aligned to Signal / Summary / Trace
+
+| Tier | Contents | Lifetime | Persisted |
+| --- | --- | --- | --- |
+| T0 · raw window | full message text, per message, as `liveFeed` builds today | minutes, current view only | no |
+| T1 · request records | one row per request block: title, actor, start / end, step count, tools used, files touched with `+N / -M`, error flag, terminal status, source locator | bounded per project | yes |
+| T2 · project projection | one mutable row per project, folded from T1 | until superseded | yes |
+
+T0 is what exists. T1 is the Live Intake Buffer (MVP 3). T2 is the object that
+makes an overview "continuously updated" rather than recomputed from saved
+sessions.
+
+The tiers are a decay gradient, not three copies: T0 never becomes durable, T1
+drops message bodies, T2 keeps only current state. Detail is recovered by
+re-deriving from the origin locator (D1), not by storing more.
+
+### D3 · Observation auto-applies; interpretation stays gated
+
+Run the six-factor apply matrix (`../mori-project-goal.md` §3, architecture
+§5.2) over T1 and T2 honestly:
+
+| Factor | T1 / T2 observation |
+| --- | --- |
+| Interpretation confidence | high · deterministic parse of a structured log |
+| Mutates existing records? | creates only (T1); T2 is a projection, not an authored record |
+| Creates new entity / context? | resolves to a known project via `projectConnection` |
+| Sensitivity | no message bodies persisted (D1) |
+| Reversibility | single-row, undoable, re-derivable |
+
+Every column points to auto. So T1 and T2 **auto-apply with a `Revision`**, and
+no review queue stands between the user's work and their overview. This is
+consistent with the existing doctrine that timeline events are deterministic
+parses and AI is a separate proposal layer.
+
+Interpretation is unchanged: `InsightCandidate` output from a local LLM stays
+`inferred`, carries supporting row ids, and remains review-gated before it
+becomes distilled memory.
+
+This answers the doc's first open question ("Should provisional live events
+bypass Import Review visually but require review before durable memory, or
+should every live event wait behind review?"): **observation does not wait;
+interpretation does.**
+
+### D4 · Keep polling; add stat-gating and rotation recovery
+
+Per §4.1, do not add `notify`. Instead:
+
+- Make each poll two-stage: a cheap metadata sweep (size, mtime) across the
+  active set, then a tail read only for files whose size grew. This is the same
+  fingerprint shape `inboxWatch.ts` already uses for the connector inbox.
+- Add rotation recovery to `tail_new_complete_lines`: when file length is below
+  the stored offset, re-baseline instead of going permanently silent. This is
+  the gap the code itself flags at `src-tauri/src/claude/code.rs:447`.
+- Keep the existing adaptive cadence and error backoff from `useLiveSessions`.
+
+### D5 · Local LLM work is opportunistic, gated on Mori's own live status
+
+No analysis pass starts while any followed session is in `working` state.
+Release the warm model when the observed agent becomes active, and re-warm on
+idle. Per §4.2 this avoids queueing behind (or evicting) the agent the user
+actually cares about. Deterministic candidates are exempt: they are cheap and
+may run at any time, which also means a project overview stays useful with no
+LLM configured at all.
+
+### D6 · Signal producers move out of the view layer
+
+`buildLiveCompletionNotification` is invoked from
+`src/features/live-session/LiveSessionView.tsx:491`. Signal production belongs
+in the intake layer so it fires regardless of which screen is mounted, and it
+must route through `signalPolicy` rather than composing a feed notification
+directly. That gives `signalPolicy` the producer it was built for and makes the
+remaining five reasons reachable.
+
+### D7 · Deferred, needs a product decision
+
+Two questions this plan deliberately does not settle, because they are the
+user's call and not derivable from the code:
+
+- **Which surface owns the project Summary role.** `ProjectView` (session-centric,
+  carries `ProjectStateStrip` and the synthesis section, reached from Dashboard,
+  Graph, Home, Session detail) and `ContextView` (record-centric project tree,
+  the sidebar's `contexts` destination) both claim it. Two project surfaces
+  competing is the reason the live-intelligence work has nowhere obvious to
+  land. See [`record-workspace/v8-project-calendar-surfaces.md`](record-workspace/v8-project-calendar-surfaces.md)
+  for the record-side position.
+- **Whether a background tier ships in this program at all.** The rails permit
+  it (`../mori-project-goal.md` §6, rail B) and the opt-in inbox watcher already
+  exists, but everything in §6 below is valuable foreground-only. Background is
+  a separate, later opt-in.
+
+## 6. Staged plan
+
+Each stage leaves the product working and is independently valuable. Stages 1
+and 2 are the ones that change what the product *is*; the rest build on them.
+
+| Stage | Scope | Done when |
+| --- | --- | --- |
+| **S1** | Live Intake Buffer (T1). Persist request records with source locators as `liveFeed` produces them. Rotation recovery in the Rust tail. | Closing the 세션 view and reopening it, or restarting the app, does not lose what was observed |
+| **S2** | Project projection (T2). Fold T1 into a per-project current-state row; make `buildProjectStateSummary` report a real `basis` and derive all five statuses. | The project surface answers "what is happening now" without the live view being open |
+| **S3** | Relocate signal producers into intake; route through `signalPolicy`; extend session status to include `waitingForUser` / `blocked` (MVP 2). | A completion or a block raises a signal with no live view mounted |
+| **S4** | Resolve D7's surface question and land the overview on the chosen surface. | One project surface owns Summary; the other's role is explicit |
+| **S5** | Deterministic insight candidates (MVP 6), including cross-session file-overlap conflict detection, which T1's file touches make cheap. Evidence links throughout (MVP 8). | Validation scenario 3 passes with no LLM configured |
+| **S6** | Opportunistic local-LLM enrichment under D5. Optional background tier per D7. | Enrichment never runs while a followed session is working |
+
+Sequencing rationale: S1 before everything because every later stage consumes
+T1; S2 before S3 because a signal needs project state to be about; S4 before S5
+so candidates have one home; S5 before S6 so the deterministic floor exists
+before the LLM is layered on and a failed engine degrades to something useful.
+
+## 7. Validation
+
+Reuse the four validation scenarios in [`../live-project-intelligence.md`](../live-project-intelligence.md)
+§ Validation Scenarios unchanged. Add two that target this plan's specific
+claims:
+
+- **Durability.** Observe a session, navigate away, restart the app. The
+  project overview still reports the work and cites its origin locator.
+- **Non-interference.** With a local engine configured and a session actively
+  working, no analysis request is issued, and no warm model is held.
+
+Per `../mori-project-goal.md` §12: pure derivations get colocated Vitest
+coverage, `npm run check:full` before commit, and `cargo check` / `cargo test`
+if `src-tauri/` changes.
+
+## 8. What this plan does not do
+
+- It does not widen capture. Every source read here is one the user already
+  connected; the A-ban is untouched.
+- It does not add a review queue for observation, and does not remove the review
+  gate for interpretation.
+- It does not make Mori drive or start an agent.
+- It does not decide the project surface question (D7).
