@@ -296,7 +296,74 @@ which is a genuine capability and squarely a **Trace**-level surface, not
 Summary. It should be re-homed under Trace when S5 lands, or explicitly retired.
 It must not be pulled into section 0.
 
-### D8 · Deferred, needs a product decision
+### D8 · T1 is a derived index, T2 is an aggregate record
+
+Where the two durable tiers live is the last question blocking S1, and the
+kernel already carries the vocabulary to answer it. `RecordLayer`
+(`src/lib/record-kernel/kernelTypes.ts:75`) is `occurrence | distilled |
+container | source | aggregate`, mirroring the architecture doc §2 layer model,
+and `agent-session` is already a system schema at `layer: "occurrence"`.
+
+The naive reading is that T1 rows are occurrences too, so they should be kernel
+records. That is wrong on volume. An `agent-session` record is one row per
+session; a T1 row is one per *request*, and a long session holds dozens. Making
+them ledger peers would flood the record space with machine-grained rows, which
+is the failure the ledger doctrine exists to prevent and which this repo has
+already had to fix once for capture.
+
+The architecture supplies the right shape instead. §3.1 establishes that a
+high-volume derived series is a **projection materialized in a derived index
+table**, explicitly *not* a separate authored object (the wording is about
+metrics, but the principle is general). So:
+
+| Tier | Home | Precedent | Why |
+| --- | --- | --- | --- |
+| T1 · request records | derived index table, new SQLite migration, keyed by session with a source locator | architecture §3.1 derived index | high volume, machine-grained, evictable, must not enter the record space |
+| T2 · project projection | kernel record, new system schema `project-state`, `layer: "aggregate"` | `daily-entry`, the existing aggregate schema | one row per project, genuinely a folded summary, and it *should* be searchable, context-linked, and revisioned |
+
+Consequences that fall out and are worth stating:
+
+- T2 gets FTS, context links, and `kernel_revisions` for free, which satisfies
+  the visible-and-reversible invariant with no new machinery.
+- T1 is deletable at any time without data loss, because D1's source locator
+  makes it re-derivable from the agent's own JSONL. That is what makes an
+  eviction policy safe rather than lossy.
+- T1 is a projection, so it needs no schema registration and cannot collide with
+  a user-defined schema.
+- The existing treatment of derived occurrences carries over for T2: `qa`,
+  `source-document`, and `agent-session` are already grouped as derived kinds
+  (`src/features/record-ledger/recordPresentation.ts:81`) and filtered out of the
+  note explorer, so an aggregate row has an established presentation path.
+
+Eviction for T1: bounded per project, oldest-first, with the projection updated
+before rows are dropped so evicting never rewrites current state. The exact cap
+is a tuning decision for S1, not a doctrine question.
+
+### D9 · The five session statuses are already derivable, just collapsed
+
+MVP 2 reads as missing data. It is not. `isSessionWorking`
+(`src/features/live-session/liveFeed.ts:169`) already separates "the agent
+finished and is waiting for the user" from "the agent is mid-turn" using the
+transcript's own `stop_reason`, and pairs it with a stall threshold. The live
+feed then collapses all of it into three presentation states
+(`working / recent / done`) and persists none of it.
+
+So the full status model is a mapping over signals that already exist:
+
+| Status | Derivation |
+| --- | --- |
+| `running` | open turn, last activity within the stall threshold |
+| `waitingForUser` | last message is an assistant turn with `stop_reason` `end_turn` or `stop_sequence` |
+| `blocked` | open turn, but stalled past the threshold, or the last step carried a tool error |
+| `completed` | session file quiet beyond the active window, last turn ended cleanly |
+| `unknown` | no readable last message, or an unparsed transcript shape |
+
+This is a T1 field, not a new reader. S3 lands it by persisting what the feed
+already computes rather than by extracting anything new, which also means
+`blocked` becomes available to `signalPolicy`, whose `blocked` reason has never
+been reachable.
+
+### D10 · Deferred, needs a product decision
 
 **Whether a background tier ships in this program at all.** The rails permit it
 (`../mori-project-goal.md` §6, rail B) and the opt-in inbox watcher already
@@ -311,12 +378,12 @@ and 2 are the ones that change what the product *is*; the rest build on them.
 
 | Stage | Scope | Done when |
 | --- | --- | --- |
-| **S1** | Live Intake Buffer (T1). Persist request records with source locators as `liveFeed` produces them. Rotation recovery in the Rust tail. | Closing the 세션 view and reopening it, or restarting the app, does not lose what was observed |
-| **S2** | Project projection (T2). Fold T1 into a per-project current-state row; make `buildProjectStateSummary` report a real `basis` and derive all five statuses. | The project surface answers "what is happening now" without the live view being open |
-| **S3** | Relocate signal producers into intake; route through `signalPolicy`; extend session status to include `waitingForUser` / `blocked` (MVP 2). | A completion or a block raises a signal with no live view mounted |
+| **S1** | Live Intake Buffer (T1) as a derived index table per D8, carrying the D9 status field and a source locator, written as `liveFeed` produces requests. Rotation recovery in the Rust tail. Eviction cap. | Closing the 세션 view and reopening it, or restarting the app, does not lose what was observed |
+| **S2** | Project projection (T2) as the `project-state` aggregate schema per D8. Fold T1 into it; make `buildProjectStateSummary` report a real `basis` and derive all five project statuses. | The project surface answers "what is happening now" without the live view being open |
+| **S3** | Relocate signal producers into intake and route them through `signalPolicy`, which makes its `blocked` reason reachable for the first time (MVP 2, MVP 7). | A completion or a block raises a signal with no live view mounted |
 | **S4** | Land the projection as section 0 of the `ContextView` project page per D7. Migrate `ProjectStateStrip` and the synthesis counts, drop `ProjectPulse`, retire `ProjectView` without deleting it. | The sidebar's project destination opens on current state; `ProjectView` still resolves from its existing entry points |
 | **S5** | Deterministic insight candidates (MVP 6), including cross-session file-overlap conflict detection, which T1's file touches make cheap. Evidence links throughout (MVP 8). | Validation scenario 3 passes with no LLM configured |
-| **S6** | Opportunistic local-LLM enrichment under D5. Optional background tier per D7. | Enrichment never runs while a followed session is working |
+| **S6** | Opportunistic local-LLM enrichment under D5. Optional background tier per D10. | Enrichment never runs while a followed session is working |
 
 Sequencing rationale: S1 before everything because every later stage consumes
 T1; S2 before S3 because a signal needs project state to be about; S4 before S5
@@ -347,4 +414,4 @@ if `src-tauri/` changes.
 - It does not make Mori drive or start an agent.
 - It does not delete a surface. `ProjectView` is retired in place per D7, and
   `ProjectTimelineSection` is re-homed or retired, never removed.
-- It does not decide whether a background tier ships (D8).
+- It does not decide whether a background tier ships (D10).
