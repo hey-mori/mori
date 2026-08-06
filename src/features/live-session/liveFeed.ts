@@ -33,6 +33,9 @@ export type LiveRequestStatus = "working" | "recent" | "done";
 const STALL_MS = 5 * 60_000;
 /** A finished request touched within this window stays surfaced as "recent". */
 const RECENT_MS = 6 * 60_000;
+/** A cleanly ended session quiet this long counts as finished, not as waiting
+ *  on the user. Matches the follower's active-session discovery window. */
+const SESSION_QUIET_MS = 30 * 60_000;
 
 export type LiveFeedItem = {
   id: string;
@@ -158,25 +161,78 @@ export function buildLiveFeed(
 }
 
 /**
- * Whether a session is genuinely working right now, from its last message.
- * A finished assistant turn (`end_turn` / `stop_sequence`) means the agent is
- * idle and waiting for the user, so the session is NOT working even if the reply
- * just landed a second ago. Any open turn (a tool step awaiting its result, a
- * tool result / request awaiting the reply, or a mid-stream message) is working
- * while fresh; a long stall reads as not working so a crashed run stops pulsing.
- * The `stop_reason` is the precise signal a time window alone cannot give.
+ * A session's real activity state, from its last message.
+ *
+ * The feed renders only three presentation states, but the transcript carries
+ * enough to say more, and the intake buffer persists the fuller answer. The
+ * precise signal is `stop_reason`: a finished assistant turn (`end_turn` /
+ * `stop_sequence`) means the agent is idle and waiting for the user, which a
+ * time window alone cannot distinguish from a reply that merely landed a second
+ * ago. Any open turn (a tool step awaiting its result, a tool result awaiting
+ * the reply, a mid-stream message) is running while fresh; a long stall reads as
+ * blocked so a crashed run stops pulsing forever.
  */
-function isSessionWorking(messages: readonly ClaudeMessage[], now: number): boolean {
+export type SessionActivityStatus =
+  | "running"
+  | "waitingForUser"
+  | "blocked"
+  | "completed"
+  | "unknown";
+
+export function deriveSessionActivity(
+  messages: readonly ClaudeMessage[],
+  opts: { now: number; lastActiveAt?: string },
+): SessionActivityStatus {
   const last = messages[messages.length - 1];
-  if (!last) return false;
-  if (
-    last.role === "assistant" &&
-    (last.stopReason === "end_turn" || last.stopReason === "stop_sequence")
-  ) {
-    return false;
+  if (!last) return "unknown";
+  // An errored final step is blocked regardless of how recent it is: the run
+  // stopped for a reason the user may need to act on.
+  if (isErrorStep(last.content)) return "blocked";
+
+  if (last.role === "assistant" && endsTheTurn(last.stopReason)) {
+    // A cleanly ended turn is only "completed" once the session itself has gone
+    // quiet. Until then the user could still reply, so it is waiting on them.
+    const quietSince = Date.parse(opts.lastActiveAt ?? last.createdAt);
+    const quietFor = opts.now - (Number.isFinite(quietSince) ? quietSince : opts.now);
+    return quietFor >= SESSION_QUIET_MS ? "completed" : "waitingForUser";
   }
-  const age = now - (Date.parse(last.createdAt) || 0);
-  return age < STALL_MS;
+
+  const age = opts.now - (Date.parse(last.createdAt) || 0);
+  return age < STALL_MS ? "running" : "blocked";
+}
+
+/**
+ * Whether an assistant `stop_reason` ends the turn.
+ *
+ * Stated as "anything but `tool_use`" rather than as a list of terminal values,
+ * because the list is open: a real transcript carries `end_turn`,
+ * `stop_sequence` and `refusal`, and the API can add more. Enumerating the
+ * terminal side would silently read each new one as an open turn, which is the
+ * failure that leaves a finished session pulsing as if it were still working.
+ * `tool_use` is the only reason that genuinely means "more is coming".
+ */
+function endsTheTurn(stopReason: string | undefined): boolean {
+  return Boolean(stopReason) && stopReason !== "tool_use";
+}
+
+/** Whether a session is genuinely mid-turn right now. */
+function isSessionWorking(messages: readonly ClaudeMessage[], now: number): boolean {
+  return deriveSessionActivity(messages, { now }) === "running";
+}
+
+/**
+ * Whether a step reads as a tool failure. Deliberately conservative, because it
+ * decides a `blocked` status that can raise a signal, and a false alarm there
+ * costs more than a miss. Only unambiguous machine markers count; prose that
+ * merely mentions an error does not.
+ */
+export function isErrorStep(text: string): boolean {
+  const head = text.slice(0, 200).toLowerCase();
+  return (
+    head.includes("<tool_use_error>") ||
+    head.includes("command failed with exit code") ||
+    head.includes("↳ 도구 오류")
+  );
 }
 
 /** Whether a message opens a request: a real human turn, not a tool result or
