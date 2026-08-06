@@ -4,24 +4,70 @@
  * This is the write end of the Live Intake Buffer (stage S1 of
  * `docs/design/live-project-intelligence-execution-plan.md`). The follower and
  * the feed are unchanged: they still hold full text in memory and still own the
- * present. This hook only reduces each poll's requests to durable rows and
- * writes them per session.
+ * present. This module only reduces each poll's requests to durable rows and
+ * writes them per session. Observation auto-applies with no review queue in
+ * front of it (D3): these are deterministic parses of a structured log, not
+ * interpretation.
  *
- * Writes are keyed and batched by session because a session's rows are rewritten
- * whole (see `intakeStore`), and are skipped when nothing about a session
- * changed, so an idle poll costs no storage traffic. Observation auto-applies
- * with no review queue in front of it (D3): these are deterministic parses of a
- * structured log, not interpretation.
- *
- * A quota failure is reported through the shared health observer and then
- * swallowed HERE rather than thrown, because the live view must keep rendering:
- * the rows are re-derivable from the locator, so the cost of a failed write is
- * a stale overview, not lost work, and the observer is what makes it visible.
+ * The work lives in `persistObservedRows`, a plain function, so the failure
+ * contract is testable without rendering: the hook is a two-line caller.
  */
 import { useEffect, useMemo, useRef } from "react";
 import { buildIntakeRows, IntakeBrowserStore, type IntakeRequestRow } from "../../lib/live-intake";
 import { isStorageQuotaError } from "../../lib/storage/storageQuota";
 import type { FollowedSession, LiveFeedRequest } from "./liveFeed";
+
+export type IntakeWriteResult = {
+  /** Sessions actually rewritten this pass. Unchanged ones are skipped. */
+  writtenSessions: number;
+  /** What went wrong, if anything. Never thrown: see the note below. */
+  failure: unknown | null;
+};
+
+/**
+ * Reduce this poll's requests and write the sessions that changed.
+ *
+ * **Nothing in here may take down the live view.** Observation is the product;
+ * intake is an addition to it. So every fault, in derivation as much as in
+ * storage, is caught and returned rather than thrown: a persistence problem
+ * degrades to "the overview is stale", never to "the user cannot watch their
+ * own work". The rows re-derive from the locator (D1) on the next poll either
+ * way, which is what makes swallowing safe rather than lossy.
+ */
+export function persistObservedRows(
+  store: IntakeBrowserStore,
+  sessions: readonly FollowedSession[],
+  requests: readonly LiveFeedRequest[],
+  written: Map<string, string>,
+  now: () => number = Date.now,
+): IntakeWriteResult {
+  let writtenSessions = 0;
+  try {
+    const at = now();
+    const rows = buildIntakeRows(sessions, requests, {
+      now: at,
+      observedAt: new Date(at).toISOString(),
+    });
+
+    const bySession = new Map<string, IntakeRequestRow[]>();
+    for (const session of sessions) bySession.set(session.meta.filePath, []);
+    for (const row of rows) {
+      bySession.get(row.sessionKey)?.push(row);
+    }
+
+    for (const [sessionKey, sessionRows] of bySession) {
+      if (sessionRows.length === 0) continue;
+      const fingerprint = fingerprintRows(sessionRows);
+      if (written.get(sessionKey) === fingerprint) continue;
+      store.saveSessionRows(sessionKey, sessionRows);
+      written.set(sessionKey, fingerprint);
+      writtenSessions += 1;
+    }
+  } catch (error) {
+    return { writtenSessions, failure: error };
+  }
+  return { writtenSessions, failure: null };
+}
 
 export function useIntakeWriter(
   sessions: readonly FollowedSession[],
@@ -38,31 +84,11 @@ export function useIntakeWriter(
 
   useEffect(() => {
     if (!enabled || !store || sessions.length === 0) return;
-
-    const rows = buildIntakeRows(sessions, requests, {
-      now: Date.now(),
-      observedAt: new Date().toISOString(),
-    });
-
-    const bySession = new Map<string, IntakeRequestRow[]>();
-    for (const session of sessions) bySession.set(session.meta.filePath, []);
-    for (const row of rows) {
-      const held = bySession.get(row.sessionKey);
-      if (held) held.push(row);
-    }
-
-    for (const [sessionKey, sessionRows] of bySession) {
-      if (sessionRows.length === 0) continue;
-      const fingerprint = fingerprintRows(sessionRows);
-      if (written.current.get(sessionKey) === fingerprint) continue;
-      try {
-        store.saveSessionRows(sessionKey, sessionRows);
-        written.current.set(sessionKey, fingerprint);
-      } catch (error) {
-        // The health observer has already been notified by the store. Keep the
-        // live view alive; the rows re-derive from the locator next poll.
-        if (!isStorageQuotaError(error)) throw error;
-      }
+    const { failure } = persistObservedRows(store, sessions, requests, written.current);
+    // A quota failure already reached the shared health observer through the
+    // store, so it needs no second report. Anything else is a bug worth seeing.
+    if (failure && !isStorageQuotaError(failure)) {
+      console.error("[live-intake] failed to persist observed rows", failure);
     }
   }, [enabled, store, sessions, requests]);
 }
