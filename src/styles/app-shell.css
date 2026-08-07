@@ -713,8 +713,15 @@
   color: var(--text);
 }
 
-.sidebar-observing.is-on {
+.sidebar-observing.is-watching {
   color: var(--ok, #16a34a);
+}
+
+/* Turned on, but this build cannot read agent sessions. Muted and plainly
+   labelled, never dressed as watching. */
+.sidebar-observing.is-unavailable {
+  color: var(--muted-2);
+  opacity: 0.75;
 }
 
 .sidebar-observing-label {

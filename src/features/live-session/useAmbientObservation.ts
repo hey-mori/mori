@@ -36,6 +36,15 @@ export type AmbientObservation = {
   feed: LiveFeedRequest[];
   /** Why observation is running, or that it is not. Drives the visible state. */
   reason: "ambient" | "sessionView" | "off";
+  /**
+   * Whether this environment can observe at all (the desktop agent bridge).
+   *
+   * Carried separately from `reason` because "off because the user chose so" and
+   * "off because there is nothing to read here" must not look the same on a
+   * surface: claiming to watch where watching is impossible is the fake
+   * connected state the product bans.
+   */
+  available: boolean;
 };
 
 const EMPTY: AmbientObservation = {
@@ -50,6 +59,7 @@ const EMPTY: AmbientObservation = {
   },
   feed: [],
   reason: "off",
+  available: false,
 };
 
 const ObservationContext = createContext<AmbientObservation>(EMPTY);
@@ -70,10 +80,13 @@ export function AmbientObservationProvider({
   sessionViewOpen: boolean;
   available: boolean;
 }) {
-  const { snapshot, feed, reason } = useAmbientObservation(opts);
+  const { snapshot, feed, reason, available } = useAmbientObservation(opts);
   // Memoised because this is the context value for the whole shell: a fresh
   // object each render would re-render every consumer on every poll tick.
-  const value = useMemo(() => ({ snapshot, feed, reason }), [snapshot, feed, reason]);
+  const value = useMemo(
+    () => ({ snapshot, feed, reason, available }),
+    [snapshot, feed, reason, available],
+  );
   return createElement(ObservationContext.Provider, { value }, children);
 }
 
@@ -127,5 +140,5 @@ export function useAmbientObservation(opts: {
     onNotify: pushLiveNotification,
   });
 
-  return { snapshot, feed, reason };
+  return { snapshot, feed, reason, available: opts.available };
 }
