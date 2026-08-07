@@ -19,4 +19,36 @@ export default defineConfig(({ mode }) => ({
         })
       : null,
   ].filter(Boolean),
+  test: {
+    // Two pools, because two kinds of test live here.
+    //
+    // Almost everything is a pure derivation and parallelises happily. A handful
+    // of connector smoke tests are different in kind: they spawn real `bash`,
+    // `python3` and `git` processes, dozens per file. Measured alone the slowest
+    // takes ~10s against a 60s budget, but in the shared pool they land on
+    // workers already contending for CPU and disk (and, on a dev machine, with a
+    // `cargo` build), and blow the budget. That produced an intermittently red
+    // suite, which teaches people to ignore red.
+    //
+    // Serialising the process-spawning group is the fix, rather than raising
+    // their timeouts again: the previous round already did that, and a bigger
+    // number only lengthens how long a genuinely hung test takes to report.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          exclude: ["**/node_modules/**", "**/dist/**", "src/lib/connectors/*Smoke.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "smoke",
+          include: ["src/lib/connectors/*Smoke.test.ts"],
+          fileParallelism: false,
+        },
+      },
+    ],
+  },
 }));
