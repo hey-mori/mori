@@ -70,7 +70,10 @@ export function AmbientObservationProvider({
   sessionViewOpen: boolean;
   available: boolean;
 }) {
-  const value = useAmbientObservation(opts);
+  const { snapshot, feed, reason } = useAmbientObservation(opts);
+  // Memoised because this is the context value for the whole shell: a fresh
+  // object each render would re-render every consumer on every poll tick.
+  const value = useMemo(() => ({ snapshot, feed, reason }), [snapshot, feed, reason]);
   return createElement(ObservationContext.Provider, { value }, children);
 }
 
@@ -93,7 +96,18 @@ export function useAmbientObservation(opts: {
 
   const snapshot = useLiveSessions(reason !== "off");
   const feed = useMemo(
-    () => buildLiveFeed(snapshot.sessions, { now: Date.now() }),
+    () => {
+      // This now runs for the whole shell rather than for one screen, so a
+      // malformed session read from disk would blank the entire app instead of
+      // one view. Observation is an addition to Mori; it must never be able to
+      // take the product down with it.
+      try {
+        return buildLiveFeed(snapshot.sessions, { now: Date.now() });
+      } catch (error) {
+        console.error("[live-intake] failed to build the live feed", error);
+        return [];
+      }
+    },
     // Recompute each poll so live status stays fresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [snapshot.sessions, snapshot.lastPolledAt],
