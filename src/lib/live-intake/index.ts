@@ -1,4 +1,5 @@
 export { buildIntakeRows } from "./buildIntakeRows";
+export { buildIntakeSignals, type BuildIntakeSignalsInput } from "./buildIntakeSignals";
 export {
   buildProjectProjections,
   selectProjectionForLabel,

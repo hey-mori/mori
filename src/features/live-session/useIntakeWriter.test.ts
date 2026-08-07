@@ -41,10 +41,68 @@ function ask(id: string, content: string): ClaudeMessage {
   } as ClaudeMessage;
 }
 
+/** An assistant step with the turn still open, so the session reads as working. */
+function midTurn(id: string, content: string): ClaudeMessage {
+  return {
+    id,
+    role: "assistant",
+    content,
+    createdAt: new Date(NOW - 30_000).toISOString(),
+  } as ClaudeMessage;
+}
+
+/** A cleanly ended assistant turn, which is what a finished run looks like. */
+function endedTurn(id: string, content: string): ClaudeMessage {
+  return {
+    id,
+    role: "assistant",
+    content,
+    stopReason: "end_turn",
+    createdAt: new Date(NOW - 30_000).toISOString(),
+  } as ClaudeMessage;
+}
+
 function run(store: IntakeBrowserStore, sessions: FollowedSession[], written = new Map()) {
   const requests = buildLiveFeed(sessions, { now: NOW });
   return { result: persistObservedRows(store, sessions, requests, written, () => NOW), written };
 }
+
+describe("persistObservedRows · signals", () => {
+  it("raises nothing the first time it sees a session", () => {
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const { result } = run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
+
+    expect(result.notifications).toEqual([]);
+  });
+
+  it("raises a completion from the change between two observations", () => {
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const written = new Map<string, string>();
+    const working = [
+      session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "still going")]),
+    ];
+    run(store, working, written);
+
+    // The agent finished. The transition is read from what was stored, not from
+    // a component's memory, which is the whole point of moving it here.
+    const done = [session("/s/a.jsonl", [ask("a1", "ask a"), endedTurn("a2", "done")])];
+    const { result } = run(store, done, written);
+
+    expect(result.notifications).toHaveLength(1);
+    expect(result.notifications[0].title).toContain("마쳤습니다");
+    expect(result.notifications[0].source?.sessionId).toBe("/s/a.jsonl");
+  });
+
+  it("does not raise the same completion twice", () => {
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const written = new Map<string, string>();
+    run(store, [session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "going")])], written);
+    const done = [session("/s/a.jsonl", [ask("a1", "ask a"), endedTurn("a2", "done")])];
+    run(store, done, written);
+
+    expect(run(store, done, written).result.notifications).toEqual([]);
+  });
+});
 
 describe("persistObservedRows", () => {
   it("writes each observed session once", () => {
