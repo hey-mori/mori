@@ -1,0 +1,239 @@
+/**
+ * The T2 project projection · what is happening in one project, folded from the
+ * intake buffer's rows.
+ *
+ * This is the object that makes an overview "continuously updated" instead of
+ * recomputed from saved session metadata. It is a pure derivation: give it the
+ * rows and a clock, get one entry per project.
+ *
+ * Two rules from the execution plan shape everything here.
+ *
+ * **D11 · an observation is a claim about the moment it was made.** Mori only
+ * watches while it is open, so a row saying `running` proves the request was
+ * mid-turn *then*. Past the live window this projection stops reporting present
+ * tense at all rather than letting a surface imply Mori is watching something it
+ * is not. A stale `running` becomes `unknown`, never `completed`: Mori did not
+ * see it end, and inventing an ending is the same failure as inventing a
+ * present.
+ *
+ * **D12 · current effort counts, accumulated effort does not.** Each running
+ * request carries its elapsed time and step count, because "71스텝째, 30분째"
+ * says whether the work is going well or is stuck. Sums over time are a
+ * different surface's job and are not folded here.
+ */
+import type { IntakeRequestRow } from "./intakeTypes";
+import type { SessionActivityStatus } from "../../features/live-session/liveFeed";
+
+/**
+ * How current the newest observation backing a projection is.
+ *
+ * `live` matches the feed's own stall threshold, the same 5 minutes it uses to
+ * decide a session is still working, so the two layers cannot disagree about
+ * what "now" means.
+ */
+export type ProjectFreshness = "live" | "recent" | "stale";
+
+const LIVE_MS = 5 * 60_000;
+const RECENT_MS = 6 * 60 * 60_000;
+
+/** A request still in flight, with what tells the user whether it is healthy. */
+export type ProjectRunningRequest = {
+  id: string;
+  title: string;
+  sessionLabel: string;
+  startedAt: string;
+  /** Wall time since the request opened. */
+  elapsedMs: number;
+  stepCount: number;
+};
+
+export type ProjectRecentRequest = {
+  id: string;
+  title: string;
+  sessionLabel: string;
+  status: SessionActivityStatus;
+  endedAt: string;
+};
+
+export type ProjectTouchedFile = {
+  path: string;
+  additions: number;
+  deletions: number;
+};
+
+export type ProjectProjection = {
+  projectPath: string;
+  /** Trailing segment, for display only. Never the fold key (see D8 / S1). */
+  label: string;
+  /** Newest observation across contributing rows. */
+  observedAt: string;
+  freshness: ProjectFreshness;
+  /** Present-tense counts. All zero once `freshness` is `stale`, by D11. */
+  runningCount: number;
+  waitingCount: number;
+  blockedCount: number;
+  /** Detail for each in-flight request; empty unless `freshness` is not stale. */
+  running: ProjectRunningRequest[];
+  recentRequests: ProjectRecentRequest[];
+  topFiles: ProjectTouchedFile[];
+  /** Newest request end across the project, present even when stale. */
+  lastActivityAt: string | null;
+  /** Rows folded in, so a caller can tell an empty projection from a thin one. */
+  rowCount: number;
+};
+
+export type BuildProjectProjectionOptions = {
+  now: number;
+  recentRequestLimit?: number;
+  topFileLimit?: number;
+};
+
+const DEFAULT_RECENT_REQUESTS = 6;
+const DEFAULT_TOP_FILES = 5;
+
+/**
+ * Fold intake rows into one projection per project, newest activity first.
+ *
+ * Rows with no resolved project path are dropped rather than bucketed under a
+ * placeholder: S1 leaves the path empty precisely when the reader could not
+ * attribute the session, and inventing a project for it would be the same class
+ * of error as folding on a basename.
+ */
+export function buildProjectProjections(
+  rows: readonly IntakeRequestRow[],
+  opts: BuildProjectProjectionOptions,
+): ProjectProjection[] {
+  const recentLimit = Math.max(1, opts.recentRequestLimit ?? DEFAULT_RECENT_REQUESTS);
+  const fileLimit = Math.max(1, opts.topFileLimit ?? DEFAULT_TOP_FILES);
+
+  const byProject = new Map<string, IntakeRequestRow[]>();
+  for (const row of rows) {
+    const key = row.projectPath?.trim();
+    if (!key) continue;
+    const held = byProject.get(key);
+    if (held) held.push(row);
+    else byProject.set(key, [row]);
+  }
+
+  const projections: ProjectProjection[] = [];
+  for (const [projectPath, projectRows] of byProject) {
+    projections.push(foldProject(projectPath, projectRows, opts.now, recentLimit, fileLimit));
+  }
+
+  projections.sort((a, b) => epoch(b.lastActivityAt) - epoch(a.lastActivityAt));
+  return projections;
+}
+
+function foldProject(
+  projectPath: string,
+  rows: readonly IntakeRequestRow[],
+  now: number,
+  recentLimit: number,
+  fileLimit: number,
+): ProjectProjection {
+  const observedAt = rows.reduce(
+    (newest, row) => (epoch(row.observedAt) > epoch(newest) ? row.observedAt : newest),
+    rows[0]?.observedAt ?? "",
+  );
+  const freshness = freshnessOf(observedAt, now);
+
+  // Past the live window nothing may be reported in the present tense, so the
+  // counts and the in-flight detail collapse rather than being shown stale.
+  const reportsPresent = freshness !== "stale";
+
+  let runningCount = 0;
+  let waitingCount = 0;
+  let blockedCount = 0;
+  const running: ProjectRunningRequest[] = [];
+
+  if (reportsPresent) {
+    for (const row of rows) {
+      if (row.status === "running") {
+        runningCount += 1;
+        running.push({
+          id: row.id,
+          title: row.title,
+          sessionLabel: row.sessionLabel,
+          startedAt: row.startedAt,
+          elapsedMs: Math.max(0, now - epoch(row.startedAt)),
+          stepCount: row.stepCount,
+        });
+      } else if (row.status === "waitingForUser") waitingCount += 1;
+      else if (row.status === "blocked") blockedCount += 1;
+    }
+    running.sort((a, b) => b.elapsedMs - a.elapsedMs);
+  }
+
+  const ordered = [...rows].sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
+
+  return {
+    projectPath,
+    label: labelOf(projectPath),
+    observedAt,
+    freshness,
+    runningCount,
+    waitingCount,
+    blockedCount,
+    running,
+    recentRequests: ordered.slice(0, recentLimit).map((row) => ({
+      id: row.id,
+      title: row.title,
+      sessionLabel: row.sessionLabel,
+      // A past request's own status is a past fact and does not decay; only the
+      // present-tense reading of a live row does.
+      status: reportsPresent ? row.status : decay(row.status),
+      endedAt: row.endedAt,
+    })),
+    topFiles: rollUpFiles(rows, fileLimit),
+    lastActivityAt: ordered[0]?.endedAt ?? null,
+    rowCount: rows.length,
+  };
+}
+
+/**
+ * What a status means once Mori has stopped watching. `completed` is a fact
+ * about the past and survives; every present-tense status becomes `unknown`,
+ * because Mori has no evidence either way and would otherwise be guessing.
+ */
+function decay(status: SessionActivityStatus): SessionActivityStatus {
+  return status === "completed" ? "completed" : "unknown";
+}
+
+function freshnessOf(observedAt: string, now: number): ProjectFreshness {
+  const age = now - epoch(observedAt);
+  if (age <= LIVE_MS) return "live";
+  if (age <= RECENT_MS) return "recent";
+  return "stale";
+}
+
+/** Files by how much this project's observed work changed them. */
+function rollUpFiles(rows: readonly IntakeRequestRow[], limit: number): ProjectTouchedFile[] {
+  const byPath = new Map<string, ProjectTouchedFile>();
+  for (const row of rows) {
+    for (const file of row.files) {
+      const held = byPath.get(file.path);
+      if (held) {
+        held.additions += file.additions;
+        held.deletions += file.deletions;
+      } else {
+        byPath.set(file.path, {
+          path: file.path,
+          additions: file.additions,
+          deletions: file.deletions,
+        });
+      }
+    }
+  }
+  return [...byPath.values()]
+    .sort((a, b) => b.additions + b.deletions - (a.additions + a.deletions))
+    .slice(0, limit);
+}
+
+function labelOf(projectPath: string): string {
+  const parts = projectPath.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] ?? projectPath;
+}
+
+function epoch(iso: string | null | undefined): number {
+  return Date.parse(iso ?? "") || 0;
+}
