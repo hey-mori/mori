@@ -100,6 +100,13 @@ export function persistObservedRows(
     // Conflicts are the one finding that cannot be seen from inside a single
     // session, so they are derived across every session at once, after the
     // writes. Each agent's transcript looks perfectly reasonable alone.
+    //
+    // Read from the store, not from the rows just built. A session that has
+    // dropped out of the followed set still has stored rows, and a run that just
+    // finished colliding with one still going is precisely the case worth
+    // warning about. Deriving this from memory alone was tried and lost that
+    // case; the store is small (tens of KB), so the read is not the cost it
+    // looked like.
     if (writtenSessions > 0) {
       const findings = findCrossSessionConflicts({ rows: store.listAllRows(), now: at });
       const byId = new Map(findings.map((finding) => [conflictId(finding), finding]));

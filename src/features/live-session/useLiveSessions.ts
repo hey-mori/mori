@@ -62,7 +62,23 @@ function empty(status: LiveSessionsStatus): LiveSessionsSnapshot {
   };
 }
 
-export function useLiveSessions(enabled: boolean): LiveSessionsSnapshot {
+/**
+ * How much to slow the loop when nobody is watching the live screen.
+ *
+ * Observation exists so the user does not miss what an agent did, not so a
+ * screen they are not looking at updates within nine seconds. Each poll rebuilds
+ * the merged feed across every followed session, so on an app that now observes
+ * from every screen this multiplier is the difference between a background cost
+ * and a constant one. Work is still never missed: the tail resumes from the byte
+ * offset, so a longer gap reads more per poll rather than less in total.
+ */
+const BACKGROUND_POLL_FACTOR = 4;
+
+export function useLiveSessions(
+  enabled: boolean,
+  opts: { background?: boolean } = {},
+): LiveSessionsSnapshot {
+  const background = opts.background === true;
   const [snapshot, setSnapshot] = useState<LiveSessionsSnapshot>(() => empty("idle"));
 
   useEffect(() => {
@@ -80,6 +96,9 @@ export function useLiveSessions(enabled: boolean): LiveSessionsSnapshot {
     const entries = new Map<string, FollowedSession>();
     let lastActivity = Date.now();
     let tick = 0;
+    /** Session count at the last published snapshot, so a set change still
+     *  publishes even when no new messages arrived. */
+    let snapshotSessionCount = -1;
 
     setSnapshot(empty("watching"));
 
@@ -151,7 +170,22 @@ export function useLiveSessions(enabled: boolean): LiveSessionsSnapshot {
           // the live view actually feels live, not frozen between polls.
           { activeIntervalMs: 2000 },
         );
-        const nextDelayMs = Math.min(cadence.nextDelayMs, MAX_POLL_MS);
+        const nextDelayMs =
+          Math.min(cadence.nextDelayMs, MAX_POLL_MS) * (background ? BACKGROUND_POLL_FACTOR : 1);
+
+        // An idle background poll publishes nothing.
+        //
+        // This snapshot is the shell's context value now, so every update
+        // re-renders every screen and rebuilds the merged feed downstream. When
+        // the live screen is open that is the point, and `lastPolledAt` is on
+        // display. When it is not, republishing an unchanged snapshot just to
+        // move a clock nobody can see makes an idle app pay a full render on
+        // every tick.
+        if (background && newTotal === 0 && sessions.length === snapshotSessionCount) {
+          schedule(nextDelayMs);
+          return;
+        }
+        snapshotSessionCount = sessions.length;
         setSnapshot({
           status: "watching",
           sessions,
@@ -180,7 +214,7 @@ export function useLiveSessions(enabled: boolean): LiveSessionsSnapshot {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [enabled]);
+  }, [enabled, background]);
 
   return snapshot;
 }
