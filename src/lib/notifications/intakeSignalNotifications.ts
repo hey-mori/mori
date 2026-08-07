@@ -15,6 +15,7 @@
 import type { PromotedSignal } from "./signalPolicy";
 import type { CompanionNotification } from "./notification";
 import type { IntakeRequestRow } from "../live-intake/intakeTypes";
+import type { ConflictFinding } from "../live-intake/buildConflictSignals";
 
 const COPY: Record<
   string,
@@ -33,6 +34,36 @@ const COPY: Record<
     severity: "info",
   },
 };
+
+/**
+ * A cross-session conflict, which has no single owning request and so cannot use
+ * the row-shaped builder above. It names the file and who is touching it, and
+ * links both sessions as evidence: the point of the notice is that the user goes
+ * and looks at two traces, not that they trust this one line.
+ */
+export function buildConflictNotification(finding: ConflictFinding): CompanionNotification {
+  const labels = finding.sessions.map((session) => session.sessionLabel);
+  const where = finding.path.split(/[\\/]/).filter(Boolean).slice(-2).join("/");
+  return {
+    id: `intake:conflict:${finding.projectPath} ${finding.path}`,
+    kind: "live_follow_update",
+    severity: "review",
+    title: "두 세션이 같은 파일을 고치고 있습니다",
+    message: `${where} · ${labels.join(", ")}`,
+    // Observed: the file changes are parsed from each transcript. The reading
+    // that they collide is Mori's, which is why the policy keeps this in-app.
+    basis: "mixed",
+    linkedItemIds: finding.sessions.map((session) => session.requestId),
+    evidenceRefs: finding.sessions.map((session) => session.sessionKey),
+    actionLabel: "라이브 열기",
+    actionTarget: { kind: "view", view: "liveSession" },
+    createdAt: finding.at,
+    source: {
+      projectLabel: finding.sessions[0]?.sessionLabel,
+      sessionId: finding.sessions[0]?.sessionKey,
+    },
+  };
+}
 
 export function buildIntakeSignalNotification(
   signal: PromotedSignal,

@@ -1,6 +1,12 @@
 export { buildIntakeRows } from "./buildIntakeRows";
 export { buildIntakeSignals, type BuildIntakeSignalsInput } from "./buildIntakeSignals";
 export {
+  buildConflictSignals,
+  findCrossSessionConflicts,
+  type ConflictFinding,
+  type ConflictSession,
+} from "./buildConflictSignals";
+export {
   buildProjectProjections,
   selectProjectionForLabel,
   type BuildProjectProjectionOptions,
