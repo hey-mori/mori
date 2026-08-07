@@ -10,6 +10,8 @@ import { useOnboardingStore } from "./onboardingStore";
 import { FirstRunGuide } from "../features/onboarding/FirstRunGuide";
 import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
 import { isImportFlowView } from "../lib/session/importFlowView";
+import { isClaudeBridgeAvailable } from "../lib/claude/claudeTauri";
+import { AmbientObservationProvider } from "../features/live-session/useAmbientObservation";
 // HomeView is the landing surface — stay eager so first paint never waits
 // on a chunk fetch. Every other surface is loaded on demand; Vite emits a
 // separate chunk per dynamic import, shrinking the entry bundle.
@@ -159,7 +161,11 @@ export default function App() {
   // user's last real surface.
   return (
     <BaseTooltipProvider>
-      <AppShell>
+      <AmbientObservationProvider
+        sessionViewOpen={currentView === "sessions"}
+        available={isClaudeBridgeAvailable()}
+      >
+        <AppShell>
         <ErrorBoundary resetKey={currentView}>
           <Suspense fallback={<RouteFallback />}>
             {currentView === "home" ? <HomeView /> : null}
@@ -196,7 +202,8 @@ export default function App() {
             {currentView === "contexts" ? <ContextView /> : null}
           </Suspense>
         </ErrorBoundary>
-      </AppShell>
+        </AppShell>
+      </AmbientObservationProvider>
       {/* First-run guide: a full-bleed overlay above the shell that shows only
           on a truly empty first launch or when reopened. It renders null
           otherwise, so it costs nothing on a returning user. */}

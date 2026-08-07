@@ -690,6 +690,48 @@
   gap: 4px;
 }
 
+/* The always-visible watching state (rail B transparency). Quiet by design: it
+   is a standing disclosure, not a status badge competing for attention, so it
+   reads as muted text until observation is actually running. */
+.sidebar-observing {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-2);
+  font-size: var(--base-font-size-2xs);
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-observing:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.sidebar-observing.is-on {
+  color: var(--ok, #16a34a);
+}
+
+.sidebar-observing-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The narrow column drops micro-labels; the icon alone still discloses. */
+.app-sidebar.is-collapsed .sidebar-observing {
+  justify-content: center;
+}
+
+.app-sidebar.is-collapsed .sidebar-observing-label {
+  display: none;
+}
+
 .sidebar-collapse-toggle {
   display: inline-flex;
   align-items: center;
