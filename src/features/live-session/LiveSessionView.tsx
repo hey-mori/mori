@@ -24,7 +24,6 @@ import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { useSessionStore } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { buildLiveCompletionNotification } from "../../lib/notifications/liveSessionNotifications";
 import { isClaudeBridgeAvailable, formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { EventActor, FileTouch } from "../../domain/types";
 import {
@@ -124,10 +123,15 @@ export function LiveSessionView() {
     [snapshot.sessions, snapshot.lastPolledAt],
   );
 
-  // Persist what was observed. Writes the UNFILTERED feed on purpose: a focus
-  // filter is a reading preference, and letting it decide what becomes durable
-  // would make the record depend on where the user happened to be looking.
-  useIntakeWriter(snapshot.sessions, fullFeed, { enabled: watching && available });
+  // Persist what was observed, and raise signals from what changed. Writes the
+  // UNFILTERED feed on purpose: a focus filter is a reading preference, and
+  // letting it decide what becomes durable would make the record depend on where
+  // the user happened to be looking.
+  const pushLiveNotification = useSessionStore((state) => state.pushLiveNotification);
+  useIntakeWriter(snapshot.sessions, fullFeed, {
+    enabled: watching && available,
+    onNotify: pushLiveNotification,
+  });
 
   // Drop a focus that no longer maps to a live session (it ended or aged out), so
   // the filter never strands the feed empty with no way back but the clear button.
@@ -481,11 +485,14 @@ function RequestBlockImpl({
   const expanded = override ?? request.status === "working";
 
   // A one-shot light sweep the moment a request stops working, so a finish reads
-  // as a small event rather than a card blinking shut. The same transition also
-  // pushes a completion notice into the cross-session feed, so a run that
-  // finished while the user was elsewhere still surfaces (and, being an
-  // OS-eligible kind, fires a single fresh OS ping).
-  const pushLiveNotification = useSessionStore((state) => state.pushLiveNotification);
+  // as a small event rather than a card blinking shut.
+  //
+  // This used to also push the completion notice. It no longer does: notifying
+  // from a card meant the notice existed only while that card was mounted, and
+  // it bypassed `signalPolicy` entirely, so it could not be muted, batched, or
+  // reasoned about. Signals now come from the intake buffer's diff
+  // (`buildIntakeSignals`), which is also what finally makes the policy's
+  // `blocked` reason reachable. What stays here is presentation only.
   const [finished, setFinished] = useState(false);
   const prevStatus = useRef(request.status);
   useEffect(() => {
@@ -493,25 +500,10 @@ function RequestBlockImpl({
     prevStatus.current = request.status;
     if (was === "working" && request.status !== "working") {
       setFinished(true);
-      pushLiveNotification(
-        buildLiveCompletionNotification({
-          requestId: request.id,
-          requestTitle: request.requestTitle,
-          stepCount: request.items.length,
-          hasError: request.items.some((item) => item.text.startsWith("↳ 도구 오류")),
-          sessionId: request.sessionKey,
-          sessionTitle: request.sessionLabel,
-          projectLabel: request.sessionLabel,
-          at: request.updatedAt,
-        }),
-      );
       const timer = setTimeout(() => setFinished(false), 1000);
       return () => clearTimeout(timer);
     }
     return undefined;
-    // Only react to the status transition; the other request fields are read
-    // from the closure at the moment of the change, which is exactly correct.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request.status]);
 
   const latest = items[items.length - 1];

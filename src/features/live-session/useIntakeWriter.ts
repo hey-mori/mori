@@ -13,13 +13,23 @@
  * contract is testable without rendering: the hook is a two-line caller.
  */
 import { useEffect, useMemo, useRef } from "react";
-import { buildIntakeRows, IntakeBrowserStore, type IntakeRequestRow } from "../../lib/live-intake";
+import {
+  buildIntakeRows,
+  buildIntakeSignals,
+  IntakeBrowserStore,
+  type IntakeRequestRow,
+} from "../../lib/live-intake";
+import { buildIntakeSignalNotification } from "../../lib/notifications/intakeSignalNotifications";
+import type { CompanionNotification } from "../../lib/notifications/notification";
+import { promoteNotificationSignals } from "../../lib/notifications/signalPolicy";
 import { isStorageQuotaError } from "../../lib/storage/storageQuota";
 import type { FollowedSession, LiveFeedRequest } from "./liveFeed";
 
 export type IntakeWriteResult = {
   /** Sessions actually rewritten this pass. Unchanged ones are skipped. */
   writtenSessions: number;
+  /** Signals that survived the policy, ready to push into the feed. */
+  notifications: CompanionNotification[];
   /** What went wrong, if anything. Never thrown: see the note below. */
   failure: unknown | null;
 };
@@ -42,6 +52,7 @@ export function persistObservedRows(
   now: () => number = Date.now,
 ): IntakeWriteResult {
   let writtenSessions = 0;
+  const notifications: CompanionNotification[] = [];
   try {
     const at = now();
     const rows = buildIntakeRows(sessions, requests, {
@@ -59,22 +70,44 @@ export function persistObservedRows(
       if (sessionRows.length === 0) continue;
       const fingerprint = fingerprintRows(sessionRows);
       if (written.get(sessionKey) === fingerprint) continue;
+
+      // Signals are a function of what CHANGED, so the stored rows are read
+      // before they are overwritten. Deriving them here rather than in a
+      // component is the point: a transition observed a moment before the user
+      // navigates away is still a transition, and used to be lost with the
+      // component that held it.
+      const before = store.listSessionRows(sessionKey);
+      for (const signal of promoteNotificationSignals(
+        buildIntakeSignals({ previous: before, next: sessionRows, now: at }),
+        { allowSystem: true },
+      )) {
+        if (signal.delivery !== "inApp" && signal.delivery !== "system") continue;
+        const row = sessionRows.find((candidate) => signal.id.endsWith(candidate.id));
+        const notification = row ? buildIntakeSignalNotification(signal, row) : null;
+        if (notification) notifications.push(notification);
+      }
+
       store.saveSessionRows(sessionKey, sessionRows);
       written.set(sessionKey, fingerprint);
       writtenSessions += 1;
     }
   } catch (error) {
-    return { writtenSessions, failure: error };
+    return { writtenSessions, notifications, failure: error };
   }
-  return { writtenSessions, failure: null };
+  return { writtenSessions, notifications, failure: null };
 }
 
 export function useIntakeWriter(
   sessions: readonly FollowedSession[],
   requests: readonly LiveFeedRequest[],
-  opts: { enabled: boolean; store?: IntakeBrowserStore },
+  opts: {
+    enabled: boolean;
+    store?: IntakeBrowserStore;
+    /** Where a promoted signal goes. Omitted in tests and in browser mode. */
+    onNotify?: (notification: CompanionNotification) => void;
+  },
 ): void {
-  const { enabled } = opts;
+  const { enabled, onNotify } = opts;
   const store = useMemo(
     () => opts.store ?? (typeof window === "undefined" ? null : new IntakeBrowserStore()),
     [opts.store],
@@ -84,13 +117,19 @@ export function useIntakeWriter(
 
   useEffect(() => {
     if (!enabled || !store || sessions.length === 0) return;
-    const { failure } = persistObservedRows(store, sessions, requests, written.current);
+    const { failure, notifications } = persistObservedRows(
+      store,
+      sessions,
+      requests,
+      written.current,
+    );
+    for (const notification of notifications) onNotify?.(notification);
     // A quota failure already reached the shared health observer through the
     // store, so it needs no second report. Anything else is a bug worth seeing.
     if (failure && !isStorageQuotaError(failure)) {
       console.error("[live-intake] failed to persist observed rows", failure);
     }
-  }, [enabled, store, sessions, requests]);
+  }, [enabled, store, sessions, requests, onNotify]);
 }
 
 /**
