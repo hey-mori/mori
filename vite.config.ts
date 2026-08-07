@@ -47,6 +47,19 @@ export default defineConfig(({ mode }) => ({
           name: "smoke",
           include: ["src/lib/connectors/*Smoke.test.ts"],
           fileParallelism: false,
+          // Measured, after serialising was not enough on its own: these four
+          // files take ~230s to run alone on a loaded machine, about 29s per
+          // test, because each spawns real bash, python3 and git processes.
+          // Against that, the previous 60s budget was barely 2x headroom and
+          // still lost whenever the unit project ran alongside.
+          //
+          // An earlier round of this argued that raising the timeout only hides
+          // the problem. That was wrong here: these tests do not hang, they are
+          // genuinely slow, and a budget calibrated on an idle machine is not a
+          // budget. Serialising the group is still what stops them competing
+          // with each other; this is what stops a loaded machine failing them.
+          testTimeout: 180_000,
+          hookTimeout: 180_000,
         },
       },
     ],

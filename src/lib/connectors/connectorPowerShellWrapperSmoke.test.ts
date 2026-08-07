@@ -83,7 +83,6 @@ function runPowerShell(script: string, args: string[], input?: string): void {
   );
 }
 
-const SMOKE_TIMEOUT = 60_000;
 const describeIfWindows = process.platform === "win32" ? describe : describe.skip;
 
 describeIfWindows("PowerShell connector wrappers", () => {
@@ -104,7 +103,7 @@ describeIfWindows("PowerShell connector wrappers", () => {
     expect(jsonl).toContain('\\"quoted\\"');
     expect(jsonl).toContain("\uD55C\uAD6D\uC5B4");
     assertReviewDraft(jsonl, "codexCliWrapper");
-  }, SMOKE_TIMEOUT);
+  });
 
   it("OpenCode wrapper emits valid escaped JSONL for quoted / Korean args", () => {
     const root = makeTempRoot();
@@ -122,7 +121,7 @@ describeIfWindows("PowerShell connector wrappers", () => {
     const jsonl = readJsonl(outDir);
     expect(jsonl).toContain('\\"\uC5C5\uB85C\uB4DC\\"');
     assertReviewDraft(jsonl, "openCodeCli");
-  }, SMOKE_TIMEOUT);
+  });
 
   it("Claude hook launcher maps a synthetic UTF-8 hook payload", () => {
     const root = makeTempRoot();
@@ -137,5 +136,5 @@ describeIfWindows("PowerShell connector wrappers", () => {
     const jsonl = readJsonl(outDir);
     expect(jsonl).toContain('\\"\uC5F0\uB3D9\\"');
     assertReviewDraft(jsonl, "claudeCodeHook");
-  }, SMOKE_TIMEOUT);
+  });
 });

@@ -51,9 +51,6 @@ function run(command: string, args: string[], cwd?: string): string {
   });
 }
 
-// Spawns several git + python3 subprocesses; generous timeout avoids flaky
-// timeouts on Windows under parallel load.
-const SMOKE_TIMEOUT = 60_000;
 
 describe("mori-local-capture.py generated output", () => {
   it("emits explicit transcript, note, and git metadata that reach an Import Review draft", () => {
@@ -136,5 +133,5 @@ describe("mori-local-capture.py generated output", () => {
       expect(event.connectorEventId).toBeTruthy();
       expect(event.sourceRefs).toContain(reviewDraft!.source.id);
     }
-  }, SMOKE_TIMEOUT);
+  });
 });

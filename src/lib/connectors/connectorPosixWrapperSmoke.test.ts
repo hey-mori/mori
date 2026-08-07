@@ -77,12 +77,6 @@ function assertReviewDraft(jsonl: string, expectedConnectorId: string): void {
   }
 }
 
-// Spawns bash/python subprocesses, which are slow on Windows (git-bash). This
-// budget is ample when the file runs as intended: measured worst case is ~10s.
-// It was being blown only because every smoke file raced the rest of the suite,
-// which `vite.config.ts` now prevents by running this group serially. Raising
-// the number further would have hidden that, not fixed it.
-const SMOKE_TIMEOUT = 60_000;
 
 /**
  * Whether a POSIX runtime is usable, decided without a login shell.
@@ -128,7 +122,7 @@ describeIfPosix("POSIX connector wrappers", () => {
     expect(jsonl).toContain('\\"quoted\\"');
     expect(jsonl).toContain("한국어");
     assertReviewDraft(jsonl, "codexCliWrapper");
-  }, SMOKE_TIMEOUT);
+  });
 
   it("OpenCode wrapper emits valid escaped JSONL for quoted / Korean args", () => {
     const root = makeTempRoot();
@@ -148,7 +142,7 @@ describeIfPosix("POSIX connector wrappers", () => {
     const jsonl = readJsonl(outDir);
     expect(jsonl).toContain('\\"업로드\\"');
     assertReviewDraft(jsonl, "openCodeCli");
-  }, SMOKE_TIMEOUT);
+  });
 
   it("Claude hook launcher maps a synthetic UTF-8 hook payload", () => {
     const root = makeTempRoot();
@@ -166,5 +160,5 @@ describeIfPosix("POSIX connector wrappers", () => {
     const jsonl = readJsonl(outDir);
     expect(jsonl).toContain('\\"연동\\"');
     assertReviewDraft(jsonl, "claudeCodeHook");
-  }, SMOKE_TIMEOUT);
+  });
 });

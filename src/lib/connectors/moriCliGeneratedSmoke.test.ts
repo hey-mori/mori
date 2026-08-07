@@ -60,10 +60,6 @@ function makeStub(root: string, name: string): string {
   return path;
 }
 
-// These smoke tests spawn many real git / python3 subprocesses; subprocess
-// startup is slow on Windows, so a generous timeout avoids flaky timeouts
-// under parallel load.
-const SMOKE_TIMEOUT = 60_000;
 // Some cases exercise POSIX-only execution (a PATH symlink, a bash-shebang
 // stub) that cannot run on Windows; skip them there rather than fail.
 const POSIX_ONLY = process.platform === "win32" ? it.skip : it;
@@ -102,7 +98,7 @@ describe("mori capture CLI", () => {
     expect(result.outcome.errors).toEqual([]);
     expect(result.outcome.events).toHaveLength(1);
     expect(result.outcome.events[0]?.kind).toBe("session_finished");
-  }, SMOKE_TIMEOUT);
+  });
 
   POSIX_ONLY("runs Codex and OpenCode commands through bundled wrappers", () => {
     const root = makeTempRoot();
@@ -177,7 +173,7 @@ describe("mori capture CLI", () => {
 
     expect(mergeConnectorCandidatesForReview(codex.candidates)?.events.length).toBe(1);
     expect(mergeConnectorCandidatesForReview(openCode.candidates)?.events.length).toBe(3);
-  }, SMOKE_TIMEOUT);
+  });
 
   it("captures note, transcript, git, and commit commands into reviewable Connector JSONL", () => {
     const root = makeTempRoot();
@@ -259,5 +255,5 @@ describe("mori capture CLI", () => {
       expect(event.connectorEventId).toBeTruthy();
       expect(event.sourceRefs).toContain(reviewDraft!.source.id);
     }
-  }, SMOKE_TIMEOUT);
+  });
 });
