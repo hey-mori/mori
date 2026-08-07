@@ -30,9 +30,18 @@ FULL=0
 # On a detached or unknown base we assume the widest scope rather than silently
 # skipping work.
 changed_files() {
-  local base committed uncommitted
+  local base committed uncommitted ref
   uncommitted="$(git status --porcelain --untracked-files=all 2>/dev/null | cut -c4- || true)"
-  base="$(git merge-base HEAD main 2>/dev/null || true)"
+  # `main` on a working clone; `origin/main` in CI, where a pull request is checked
+  # out at a detached merge ref and no local branch of that name exists. `git
+  # merge-base` resolves a name the way `rev-parse` does and will not reach for the
+  # remote-tracking ref on its own, so naming both is what keeps the scope the same
+  # in both places. Asking for only `main` made every CI run fall through to
+  # __ALL__, which pulled the Rust pass onto a runner that cannot build it.
+  for ref in main origin/main; do
+    base="$(git merge-base HEAD "$ref" 2>/dev/null || true)"
+    [[ -n "$base" ]] && break
+  done
   if [[ -z "$base" ]]; then
     echo "__ALL__"
     return
