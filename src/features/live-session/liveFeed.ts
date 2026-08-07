@@ -63,12 +63,31 @@ export type LiveFeedRequest = {
 };
 
 /**
+ * How many of a session's most recent messages to scan when a caller asks for a
+ * bounded build.
+ *
+ * The whole feed is rebuilt from scratch on every poll, so its cost is a
+ * function of accumulated history rather than of what actually arrived. At the
+ * follower's ceiling (8 sessions x 4000 messages) a full rebuild measured ~90ms,
+ * which is a visible main-thread stall every few seconds now that observation
+ * runs app-wide.
+ *
+ * Bounding the scan is safe because nothing downstream needs the whole history:
+ * the feed itself caps at 60 requests, and the intake buffer upserts by row id,
+ * so a request that falls outside the window keeps the row it was already given.
+ */
+const BOUNDED_SCAN_MESSAGES = 1200;
+
+/**
  * Build the merged, newest-first live feed. `now` (ms) drives each request's
  * live status; pass the poll time so status refreshes each poll.
+ *
+ * `bounded` limits how far back each session is scanned. Callers that poll
+ * continuously should pass it; a one-off build over a small session need not.
  */
 export function buildLiveFeed(
   sessions: readonly FollowedSession[],
-  opts: { now: number; limit?: number },
+  opts: { now: number; limit?: number; bounded?: boolean },
 ): LiveFeedRequest[] {
   const limit = opts.limit ?? 60;
   const requests: LiveFeedRequest[] = [];
@@ -77,11 +96,16 @@ export function buildLiveFeed(
 
   for (const { meta, follow } of sessions) {
     if (follow.messages.length === 0) continue;
+    // Slice before grouping touches, so both stay in step.
+    const scanned =
+      opts.bounded && follow.messages.length > BOUNDED_SCAN_MESSAGES
+        ? follow.messages.slice(-BOUNDED_SCAN_MESSAGES)
+        : follow.messages;
     const touchesByMessage = groupTouches(follow.fileTouches);
     const sessionLabel = sessionShortLabel(meta);
     let current: LiveFeedRequest | null = null;
 
-    for (const message of follow.messages) {
+    for (const message of scanned) {
       const text = message.content.trim();
       if (!text) continue;
 
@@ -136,7 +160,7 @@ export function buildLiveFeed(
 
     // The session's newest request is "working" only when the session is truly
     // mid-turn (its last message is not a finished assistant turn).
-    if (current && isSessionWorking(follow.messages, opts.now)) {
+    if (current && isSessionWorking(scanned, opts.now)) {
       workingIds.add(current.id);
     }
   }

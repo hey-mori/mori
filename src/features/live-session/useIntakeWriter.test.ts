@@ -88,6 +88,42 @@ function run(store: IntakeBrowserStore, sessions: FollowedSession[], written = n
   return { result: persistObservedRows(store, sessions, requests, written, () => NOW), written };
 }
 
+describe("persistObservedRows · retention", () => {
+  it("keeps rows the follower has since forgotten", () => {
+    // The follower trims its own message history, so an old request drops out of
+    // the feed. Replacing a session's rows wholesale used to discard what Mori
+    // had already observed; upserting keeps it.
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const written = new Map<string, string>();
+
+    run(store, [session("/s/a.jsonl", [ask("a1", "old ask"), midTurn("a2", "x")])], written);
+    expect(store.listSessionRows("/s/a.jsonl")).toHaveLength(1);
+
+    // A later poll whose window no longer reaches the first request.
+    run(store, [session("/s/a.jsonl", [ask("a3", "new ask"), midTurn("a4", "y")])], written);
+
+    const titles = store.listSessionRows("/s/a.jsonl").map((row) => row.title);
+    expect(titles).toContain("old ask");
+    expect(titles).toContain("new ask");
+  });
+
+  it("overwrites a row in place when the same request is re-observed", () => {
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const written = new Map<string, string>();
+
+    run(store, [session("/s/a.jsonl", [ask("a1", "ask"), midTurn("a2", "one step")])], written);
+    run(
+      store,
+      [session("/s/a.jsonl", [ask("a1", "ask"), midTurn("a2", "one step"), midTurn("a3", "two")])],
+      written,
+    );
+
+    const rows = store.listSessionRows("/s/a.jsonl");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].stepCount).toBe(2);
+  });
+});
+
 describe("persistObservedRows · conflicts", () => {
   it("raises a conflict when two sessions change the same file", () => {
     const store = new IntakeBrowserStore(new MemoryKeyValueStorage());

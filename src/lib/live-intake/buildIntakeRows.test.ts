@@ -310,6 +310,25 @@ describe("buildIntakeRows", () => {
     expect(rowsFor([session("/s/a.jsonl", [])])).toEqual([]);
   });
 
+  it("scans only recent history when the caller asks for a bounded build", () => {
+    // The feed is rebuilt from scratch every poll, so its cost tracks
+    // accumulated history rather than what arrived. Bounding is safe because
+    // intake upserts by row id, so a request outside the window keeps its row.
+    const many = Array.from({ length: 2000 }, (_, i) =>
+      message({ id: `m${i}`, content: `ask ${i}`, createdAt: at(2000 - i) }),
+    );
+    const sessions = [session("/s/a.jsonl", many)];
+
+    // A high limit, so the output cap does not mask what the scan bound did.
+    const full = buildLiveFeed(sessions, { now: NOW, limit: 5000 });
+    const bounded = buildLiveFeed(sessions, { now: NOW, limit: 5000, bounded: true });
+
+    expect(full.length).toBe(2000);
+    expect(bounded.length).toBeLessThan(full.length);
+    // What it keeps is the recent end, which is what a live surface shows.
+    expect(bounded[0].requestTitle).toBe(full[0].requestTitle);
+  });
+
   it("survives a session read with no usable name, rather than blanking the app", () => {
     // Every meta field comes off disk. Labelling is cosmetic, so a missing one
     // degrades to a placeholder instead of throwing through the shell.
