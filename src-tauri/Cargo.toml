@@ -23,10 +23,6 @@ tauri-plugin-notification = "2"
 # The global shortcut is the ONLY trigger for language capture: Mori never reads
 # a selection in the background, so an explicit user chord is the entry point.
 tauri-plugin-global-shortcut = "2"
-# One Mori per machine. Several instances would each run their own live follower
-# over the same agent files and each write the same intake rows, so the ledger
-# would double-count work that happened once.
-tauri-plugin-single-instance = "2"
 # Native HTTP for local-LLM calls, so Ollama / OpenAI-compatible requests bypass
 # the webview CORS preflight that otherwise surfaces as "Failed to fetch".
 # rustls avoids a system OpenSSL dependency on Windows.

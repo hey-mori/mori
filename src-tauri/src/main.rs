@@ -104,42 +104,9 @@ fn install_language_shortcut(app: &tauri::App) {
     }
 }
 
-/// Bring the window that already exists to the front.
-///
-/// Called when a second launch is refused. Silently swallowing the launch would
-/// read as the app being broken, so the running instance surfaces instead: the
-/// user asked for Mori and gets Mori.
-#[cfg(desktop)]
-fn focus_running_instance(app: &tauri::AppHandle) {
-    use tauri::Manager as _;
-    let Some(window) = app.webview_windows().values().next().cloned() else {
-        return;
-    };
-    let _ = window.unminimize();
-    let _ = window.show();
-    let _ = window.set_focus();
-}
-
 fn main() {
     install_panic_log_hook();
-    let builder = tauri::Builder::default();
-
-    // Registered before every other plugin, which the plugin requires, and
-    // deliberately first in this function so a later insertion does not slip
-    // above it.
-    //
-    // Mori is single-instance by nature, not by convenience. Two instances each
-    // run their own live follower over the same agent session files and each
-    // write the intake buffer, so one piece of work would be observed twice and
-    // the project overview would count it twice. Sharing one localStorage
-    // origin between two writers is a data problem, not a window-management
-    // preference.
-    #[cfg(desktop)]
-    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-        focus_running_instance(app);
-    }));
-
-    builder
+    tauri::Builder::default()
         .setup(|app| {
             #[cfg(desktop)]
             install_language_shortcut(app);
