@@ -77,13 +77,27 @@ function assertReviewDraft(jsonl: string, expectedConnectorId: string): void {
   }
 }
 
-// Spawns bash/python subprocesses; generous timeout avoids flaky timeouts on
-// Windows (git-bash) under parallel load.
+// Spawns bash/python subprocesses, which are slow on Windows (git-bash). This
+// budget is ample when the file runs as intended: measured worst case is ~10s.
+// It was being blown only because every smoke file raced the rest of the suite,
+// which `vite.config.ts` now prevents by running this group serially. Raising
+// the number further would have hidden that, not fixed it.
 const SMOKE_TIMEOUT = 60_000;
 
+/**
+ * Whether a POSIX runtime is usable, decided without a login shell.
+ *
+ * This used `bash -lc`. The `-l` sources the full profile, which costs ~2.3s
+ * against ~0.1s for `bash -c` on this platform, a 20x difference for a check
+ * that only needs to answer "is python3 on PATH". Profile sourcing is also
+ * heavily file-bound, so it degrades worst under exactly the disk contention
+ * that made the suite flake. `bash -c` resolves both `python3` and `git` here,
+ * because the interpreter is on the inherited PATH rather than something the
+ * profile adds.
+ */
 function hasUsablePosixRuntime(): boolean {
   try {
-    execFileSync("bash", ["-lc", "command -v python3 >/dev/null && python3 --version >/dev/null"], {
+    execFileSync("bash", ["-c", "command -v python3 >/dev/null && python3 --version >/dev/null"], {
       stdio: "ignore",
     });
     return true;
