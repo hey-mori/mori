@@ -5,28 +5,37 @@
 # locally, so there is exactly one definition of "verified" and local and CI
 # cannot drift apart.
 #
-# TRIGGER STATE: manual only, on purpose.
+# TRIGGER STATE: automatic, restored 2026-08-07.
 #
-# The repository is private, and Actions on a private repo is metered. Runs were
-# being rejected before they started ("recent account payments have failed or
-# your spending limit needs to be increased"), which put a red X on every commit
-# and taught us to ignore the signal. A permanently failing check is worse than
-# an honestly disabled one, because it hides the real failures among the noise.
+# It was manual only from 2026-07-24, because runs were being rejected before
+# they started ("recent account payments have failed or your spending limit needs
+# to be increased"), which put a red X on every commit and taught us to ignore the
+# signal. A permanently failing check is worse than an honestly disabled one.
 #
-# So the automatic triggers are commented out rather than deleted, and the real
-# gate is `scripts/check.sh`, recorded in each pull request under "How it was
-# verified" (docs/git-workflow.md §9).
+# That block has cleared. The rejected run of 2026-07-24 failed with zero steps
+# executed; re-run on 2026-08-07 it succeeded with every step running, and other
+# private repositories in this organization are running CI on push and
+# pull_request again.
 #
-# TO RESTORE: once billing is configured, or the repository becomes public and
-# standard runners are free, uncomment the `push` and `pull_request` triggers
-# below. Nothing else needs to change.
+# `scripts/check.sh` is still what a contributor runs before pushing. What changed
+# is that it is no longer the only thing that runs it: docs/git-workflow.md §3
+# already required a green CI before merge, and until now nothing could enforce
+# that.
+#
+# Turning these on was held until the gate could pass. It could not: the ubuntu
+# job ran cargo where wry has no gtk/webkit, and macOS did not compile at all
+# (#67, #70, #71). All three are fixed, and this is switched on against a green
+# main rather than in the hope of one.
+#
+# If runs are ever rejected again, say so here with the date and comment the
+# triggers out; do not leave a red check standing.
 name: ci
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [main]
-  # pull_request:
+  push:
+    branches: [main]
+  pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}
