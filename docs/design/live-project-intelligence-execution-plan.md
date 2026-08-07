@@ -1,7 +1,8 @@
 # Live Project Intelligence · execution plan
 
-Status: **proposal, 2026-08-06.** Planning only. No product code was written
-for this document.
+Status: **stages S1 to S5 built, 2026-08-07.** Written as a proposal on
+2026-08-06 with no product code; the plan below is preserved as written, and §9
+records what actually landed and where reality corrected it.
 
 This is the execution layer for [`../live-project-intelligence.md`](../live-project-intelligence.md),
 which has carried the status `Draft` since it was written. That document's
@@ -43,6 +44,11 @@ That is why a project overview cannot stay current, and why
 
 ## 2. Code-verified status of the MVP
 
+> **As built, 2026-08-07.** Stages S1 to S5 have landed. The table below is the
+> audit that started this work and is kept as written, because the shape of the
+> gap it found is the reason the stages were ordered the way they were. Current
+> status is in §9, at the end, next to what the building changed about the plan.
+
 Against the MVP list in [`../live-project-intelligence.md`](../live-project-intelligence.md)
 § MVP Scope, verified 2026-08-06.
 
@@ -64,6 +70,12 @@ provisional state (4), candidates (6), and the producers that would drive the
 policy (7). This is the middle described in §1.
 
 ## 3. Doc drift found while auditing
+
+> **All four were corrected in the same change that added this plan.** Kept here
+> because the pattern is the point: every one of them was a doc describing an
+> earlier decision that the code had already moved past, and the cost of leaving
+> them was that a later reader would plan against a repository that no longer
+> existed. §9 exists for the same reason.
 
 Four conflicts between the doc set and the code. Each needs a correction; none
 changes the product direction.
@@ -549,3 +561,73 @@ if `src-tauri/` changes.
 - It does not delete a surface. `ProjectView` is retired in place per D7, and
   `ProjectTimelineSection` is re-homed or retired, never removed.
 - It does not decide whether a background tier ships (D10).
+
+## 9. As built · what landed, and what the building changed
+
+Written 2026-08-07, after S1 to S5 shipped. Kept next to the plan rather than
+replacing it, so the difference between what was designed and what was learned
+stays legible.
+
+### 9.1 MVP status now
+
+| # | MVP item | Then | Now |
+| --- | --- | --- | --- |
+| 1 | Associate events with a project | Shipped (pure layer) | Shipped, and used: T1 rows carry the reader's full `projectPath` |
+| 2 | Session status | Partial (3 presentation states) | **Shipped**, all five, persisted per request |
+| 3 | Live Intake Buffer | Missing | **Shipped** (`src/lib/live-intake/`) |
+| 4 | Provisional live events with trust labels | Missing | Still missing, and now unnecessary in this form: observation auto-applies (D3), so there is nothing provisional to label |
+| 5 | Project current-state strip | Partial, `basis` hard-wired | **Shipped** on 프로젝트, with freshness and a real `basis` union |
+| 6 | Deterministic insight candidates | Missing | **Shipped** for conflicts; decisions / issues / risks remain for S6 |
+| 7 | Promote notification classes | Built but unwired | **Wired**: completion, blocked, long-run, conflict all reach the policy |
+| 8 | Link signals to supporting events | Partial | Conflict notices link both sessions; row signals carry the session |
+
+The contiguous missing band described in §1 is closed. What remains is
+interpretation (S6), not plumbing.
+
+### 9.2 Five things the building changed
+
+Each of these was a plan statement that met reality and lost:
+
+1. **`blocked` was over-firing at 33%.** The first rule marked a request blocked
+   if *any* step hit a tool error. A real store showed 4 of 12 requests blocked,
+   because tool errors are ordinary mid-request. It now means the request
+   **ended** on a failure. Caught by looking at a real distribution, not by a
+   test.
+2. **T1 could not be folded by project.** Rows carried only the session label,
+   which is a trailing path segment, and `projectConnection.ts` explicitly
+   forbids auto-grouping on those. S1's row gained `projectPath` before S2 could
+   work at all.
+3. **The long-run signal could never have fired.** It compared "how long had it
+   been running last time" against the *current* clock, making both sides equal
+   and the crossing undetectable. Now measured against the previous
+   observation's own timestamp.
+4. **Volume was estimated an order of magnitude low.** The plan said a long
+   session holds "dozens" of requests; a real store holds 89 to 713, with 4,834
+   across 18 projects. That corrected §4.3 and removed the eviction cap from S1.
+5. **Effort metrics were excluded too broadly.** "No tool or step counts" was
+   right for accumulated totals and wrong for the request running now, whose
+   elapsed time and step count are exactly what `longRunningNoProgress` needs.
+
+### 9.3 One decision made after the plan
+
+**Observation is app-wide, opt-in, off by default.** The plan left the poller
+inside 세션, which meant Mori only noticed work while the user watched it happen
+· the inverse of the point. Observation now runs in the shell whenever the
+opt-in is on, with an always-visible state and a one-tap off in the sidebar,
+because rail B permits this only when scope, review-gate and transparency all
+hold (`../mori-project-goal.md` §6).
+
+Hoisting introduced a hazard worth recording: with the opt-in on, opening 세션
+would have started a second follower over the same files, double-counting work.
+The shell now owns the single poller and 세션 reads its snapshot. This is the
+same class of bug as running two app instances, one level down.
+
+### 9.4 Still open
+
+- **S6 · interpretation.** Local-LLM enrichment under D5's contention gate.
+  Everything below it is deterministic and works without a model.
+- **D10 · a background tier.** Untouched. Ambient observation runs only while
+  the app is open; a tray-resident reader remains a separate decision.
+- **Visual confirmation.** None of the surfaces built here have been driven by
+  hand. The data layers are verified against a real agent store, and each pull
+  request says so plainly rather than claiming otherwise.
