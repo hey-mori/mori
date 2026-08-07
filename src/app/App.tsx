@@ -161,11 +161,17 @@ export default function App() {
   // user's last real surface.
   return (
     <BaseTooltipProvider>
-      <AmbientObservationProvider
-        sessionViewOpen={currentView === "sessions"}
-        available={isClaudeBridgeAvailable()}
-      >
-        <AppShell>
+      {/* The observation provider wraps the shell because the sidebar shows the
+          watching state, so it sits above the route boundary below. That means a
+          fault here would blank the whole window with nothing to catch it, which
+          is exactly what happened once. It gets its own boundary; the hook is
+          also defensive in its own right. */}
+      <ErrorBoundary resetKey="shell">
+        <AmbientObservationProvider
+          sessionViewOpen={currentView === "sessions"}
+          available={isClaudeBridgeAvailable()}
+        >
+          <AppShell>
         <ErrorBoundary resetKey={currentView}>
           <Suspense fallback={<RouteFallback />}>
             {currentView === "home" ? <HomeView /> : null}
@@ -200,10 +206,11 @@ export default function App() {
             {currentView === "ledger" ? <LedgerWorkspace /> : null}
             {currentView === "calendar" ? <CalendarView /> : null}
             {currentView === "contexts" ? <ContextView /> : null}
-          </Suspense>
-        </ErrorBoundary>
+            </Suspense>
+          </ErrorBoundary>
         </AppShell>
-      </AmbientObservationProvider>
+        </AmbientObservationProvider>
+      </ErrorBoundary>
       {/* First-run guide: a full-bleed overlay above the shell that shows only
           on a truly empty first launch or when reopened. It renders null
           otherwise, so it costs nothing on a returning user. */}

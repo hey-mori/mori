@@ -309,4 +309,17 @@ describe("buildIntakeRows", () => {
   it("returns nothing for a session with no requests rather than inventing one", () => {
     expect(rowsFor([session("/s/a.jsonl", [])])).toEqual([]);
   });
+
+  it("survives a session read with no usable name, rather than blanking the app", () => {
+    // Every meta field comes off disk. Labelling is cosmetic, so a missing one
+    // degrades to a placeholder instead of throwing through the shell.
+    const bare = session("/s/a.jsonl", [message({ id: "m1", content: "ask" })]);
+    const stripped = {
+      ...bare,
+      meta: { ...bare.meta, projectName: "", projectPath: "", sessionId: undefined },
+    } as unknown as FollowedSession;
+
+    expect(() => rowsFor([stripped])).not.toThrow();
+    expect(rowsFor([stripped])[0]?.sessionLabel).toBe("세션");
+  });
 });

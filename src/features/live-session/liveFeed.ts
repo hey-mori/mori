@@ -287,9 +287,16 @@ function toDomainTouch(touch: ClaudeFileTouch): FileTouch {
 /** Short session label: the project path's last segment ("C:/dev/mori" -> "mori"). */
 export function sessionShortLabel(meta: ClaudeCodeSessionMeta): string {
   const raw = (meta.projectName || meta.projectPath || "").trim();
-  if (!raw) return meta.sessionId.slice(0, 8);
-  const parts = raw.split(/[\\/]/).filter(Boolean);
-  return parts[parts.length - 1] || raw;
+  if (raw) {
+    const parts = raw.split(/[\\/]/).filter(Boolean);
+    return parts[parts.length - 1] || raw;
+  }
+  // Every field here comes off disk, so none of them is guaranteed. This used
+  // to call `.slice` on `sessionId` directly, which throws on a session read
+  // without one. That was survivable while the feed was built inside 세션, where
+  // a route boundary caught it; once observation moved to the shell the same
+  // throw blanked the entire window. A label is cosmetic, so it degrades.
+  return (meta.sessionId ?? "").slice(0, 8) || "세션";
 }
 
 /**
