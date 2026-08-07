@@ -1,10 +1,12 @@
 # Live Project Intelligence
 
-Planning status: **Thesis approved; execution planned separately.**
+Planning status: **Thesis approved; MVP built 2026-08-07, apart from
+interpretation.**
 
 This document defines how Mori should evolve from explicit session import into
 an opt-in, near-real-time project intelligence layer. It is a planning and
-review document, not proof that the feature is fully implemented.
+review document; for what is actually implemented, read the execution plan's
+§9 rather than inferring status from the sections below.
 
 The product thesis, event taxonomy, notification policy, and local-LLM
 guardrails below remain canonical. The **execution layer** lives in
@@ -601,7 +603,10 @@ Suggested AI review prompts:
   first planning slice. **Amended 2026-08-06:** the shipped foreground follow is
   multi-session (`useLiveSessions` discovers and follows the active set), which
   is still foreground-only and still limited to connected sources. See the
-  execution plan §3.2.
+  execution plan §3.2. **Amended again 2026-08-07:** observation now runs for
+  the whole app rather than only the 세션 screen, behind an opt-in that ships
+  off, with an always-visible watching state and a one-tap off. Still bounded to
+  a running app; still only connected sources. See the execution plan §9.3.
 - Keep project-level live summaries derived from followed/refreshed sessions,
   not from a global background watcher.
 
