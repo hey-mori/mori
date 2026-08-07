@@ -9,9 +9,7 @@ import {
   Info,
   Link2,
   ListChecks,
-  Pause,
   PenLine,
-  Play,
   Radio,
   Search,
   Sparkles,
@@ -29,9 +27,6 @@ import type { EventActor, FileTouch } from "../../domain/types";
 import { sessionShortLabel, type LiveFeedItem, type LiveFeedRequest } from "./liveFeed";
 import { useObservedSessions } from "./useAmbientObservation";
 import { useObservationStore } from "../../app/observationStore";
-
-/** Stable empty feed, so pausing does not churn a new array each render. */
-const EMPTY_FEED: LiveFeedRequest[] = [];
 
 /** A finished request folds into the past-work disclosure once it has been quiet
  *  this long, so the live feed stays about the present. */
@@ -110,11 +105,6 @@ export function LiveSessionView() {
   const available = isClaudeBridgeAvailable();
   const navigate = useAppStore((state) => state.navigate);
   const openConnections = () => navigate("connections");
-  // Held in the shared store, not locally: the shell reads it so pausing
-  // actually stops observing on this screen's account rather than only blanking
-  // the feed here.
-  const watching = !useObservationStore((state) => state.viewPaused);
-  const setViewPaused = useObservationStore((state) => state.setViewPaused);
   const [diagOpen, setDiagOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   // When set, the feed is narrowed to one session (a filePath key). Picked from a
@@ -126,7 +116,7 @@ export function LiveSessionView() {
   // the same files. This screen reads; it no longer observes.
   const observation = useObservedSessions();
   const snapshot = observation.snapshot;
-  const fullFeed = watching ? observation.feed : EMPTY_FEED;
+  const fullFeed = observation.feed;
   const ambient = useObservationStore((state) => state.ambient);
   const setAmbient = useObservationStore((state) => state.setAmbient);
 
@@ -222,14 +212,10 @@ export function LiveSessionView() {
         onClick={() => setSessionsOpen((o) => !o)}
         aria-expanded={sessionsOpen}
       >
-        <span className={`lsv-dot is-${watching ? snapshot.status : "idle"}`} aria-hidden="true" />
+        <span className={`lsv-dot is-${snapshot.status}`} aria-hidden="true" />
         <span className="lsv-status-text">
-          {watching
-            ? snapshot.activeCount > 0
-              ? `${snapshot.activeCount}개 세션 실시간`
-              : "세션을 찾는 중"
-            : "일시정지됨"}
-          {snapshot.lastPolledAt && watching ? (
+          {snapshot.activeCount > 0 ? `${snapshot.activeCount}개 세션 실시간` : "세션을 찾는 중"}
+          {snapshot.lastPolledAt ? (
             <span className="lsv-poll"> · {formatClaudeRelativeKo(snapshot.lastPolledAt)}</span>
           ) : null}
         </span>
@@ -301,24 +287,6 @@ export function LiveSessionView() {
         }
       >
         <Radio size={15} aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        className="lsv-ctl-icon"
-        onClick={() => setViewPaused(watching)}
-        // Honest about reach: with the ambient opt-in on, observation continues
-        // regardless, and this only freezes the feed on screen. Saying
-        // "일시정지" flat would overpromise in that case.
-        aria-label={watching ? (ambient ? "이 화면 멈춤" : "관측 일시정지") : "재개"}
-        title={
-          watching
-            ? ambient
-              ? "이 화면만 멈춥니다 · 관측은 계속됩니다"
-              : "관측을 멈춥니다"
-            : "재개"
-        }
-      >
-        {watching ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
       </button>
       <div className="lsv-pop-anchor">
         <button
@@ -398,7 +366,7 @@ export function LiveSessionView() {
 
         {feed.length === 0 ? (
           <LiveLanding
-            mode={watching ? "waiting" : "paused"}
+            mode="waiting"
             activeCount={snapshot.activeCount}
             onConnect={openConnections}
           />
@@ -423,7 +391,7 @@ function LiveLanding({
   activeCount,
   onConnect,
 }: {
-  mode: "browser" | "waiting" | "paused";
+  mode: "browser" | "waiting";
   activeCount: number;
   onConnect?: () => void;
 }) {
@@ -435,10 +403,6 @@ function LiveLanding({
     waiting: {
       title: "라이브 세션 대기 중",
       sub: "실행 중인 세션의 요청과 작업이 여기에 실시간으로 흐릅니다.",
-    },
-    paused: {
-      title: "일시정지됨",
-      sub: "재개하면 다시 실행 중인 세션을 따라갑니다.",
     },
   }[mode];
   return (
@@ -453,7 +417,7 @@ function LiveLanding({
           {activeCount > 0 ? `${activeCount}개 세션 실시간` : "세션을 찾는 중"}
         </span>
       ) : null}
-      {onConnect && mode !== "paused" ? (
+      {onConnect ? (
         <button type="button" className="lsv-landing-connect" onClick={onConnect}>
           <Link2 size={14} aria-hidden="true" />
           연동 설정
