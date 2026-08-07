@@ -449,16 +449,21 @@ label). Ordered by the question a returning user asks first.
 | --- | --- | --- |
 | Identity | `projectPath`, `label` | The fold key, per D8 |
 | Freshness | `observedAt`, `freshness` | D11; without it nothing below may be read as present tense |
-| Now | `runningCount`, `waitingCount`, `blockedCount` | "무엇이 지금 돌아가고 있나 / 나를 기다리나 / 막혀 있나" |
+| Now | `runningCount`, `waitingCount`, `blockedCount`, and for each running request its `elapsedMs` and `stepCount` | "무엇이 지금 돌아가고 있나 / 나를 기다리나 / 막혀 있나", and "잘 가고 있나" |
 | Lately | `recentRequests[]` (title, status, endedAt, capped) | "무슨 작업을 했나", the question the ledger cannot answer for live work |
 | Touched | `topFiles[]` (path, additions, deletions) | "무엇이 바뀌었나", already rolled up per row in S1 |
 | Since | `changedSince(seenAt)` as a derivation, not a stored field | "내가 안 본 사이 뭐가 바뀌었나" |
 
 Deliberately **not** in the projection:
 
-- **No counts of tools, steps, or tokens.** They measure effort, not state. The
-  same instinct put a contribution heatmap on the project page (D7), and it
-  answered nothing.
+- **No *aggregate* effort totals** (tools used this week, steps this month,
+  tokens spent). Summed over time they measure effort rather than state, which
+  is the same thing the contribution heatmap did on the project page (D7).
+  **The effort of the thing running right now is different and does belong
+  above**: "71스텝째, 30분째" answers whether a request is going well or is
+  stuck, which is state, and is precisely what the notification policy's
+  `longRunningNoProgress` reason needs. The line is *current* versus
+  *accumulated*, not effort versus state.
 - **No LLM-derived summary.** S2 is deterministic. Interpretation enters at S6
   and stays labelled `inferred`, per D3.
 - **No risk or conflict field yet.** Those are S5, and they need cross-session
@@ -466,6 +471,21 @@ Deliberately **not** in the projection:
 - **No `lastSeenAt` stored on the record.** When the user last looked is a
   property of the viewer, not of the project, and storing it inside a shared
   aggregate would mean a revision every time someone opened a page.
+
+Accumulated effort is **excluded from this surface, not from the product.** T1
+already persists `stepCount`, `tools`, and per-file `+N / -M` on every row, so
+the data exists and nothing needs re-capturing to use it. It has two honest
+homes, both later stages:
+
+- **대시보드**, which is where cross-project aggregate reads already belong.
+- A folded 작업량 disclosure on the project page, per the CLAUDE.md convention
+  that secondary items sit behind a `<details>` rather than competing as peer
+  cards with the actionable ones.
+
+Tokens are the one piece not yet captured: `ClaudeMessage` carries no usage
+field today, though the raw JSONL has it and the `agent-session` kernel schema
+already declares a `tokenCount` property. Adding it is a reader change, not a
+projection change, and is out of scope until something asks for it.
 
 ### D13 · `basis` reports what actually contributed, and stops being a constant
 
