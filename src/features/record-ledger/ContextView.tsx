@@ -29,6 +29,8 @@ import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
 import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
 import { ProjectCreateModal } from "./ProjectCreateModal";
+import { ProjectLiveSection } from "./ProjectLiveSection";
+import { useProjectLive } from "./useProjectLive";
 import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 
@@ -213,6 +215,10 @@ export function ContextView() {
   );
 
   const title = activeContext?.name ?? activeGroup?.name ?? "";
+  // Matched by the project's display leaf, the same key a saved session resolves
+  // by, and refused when two observed projects share it (see
+  // `selectProjectionForLabel`).
+  const live = useProjectLive(title || null);
   const count = activeGroup ? activeGroup.sessions.length + activeGroup.records.length : 0;
   const isEmpty = !loading && tree.length === 0 && linkedFolders.length === 0;
 
@@ -402,6 +408,7 @@ export function ContextView() {
             />
           ) : (
             <div className="ctx-pane-inner">
+              <ProjectLiveSection projection={live} />
               {children.length > 0 ? (
                 <section className="ctx-section">
                   <p className="ctx-section-label">하위 프로젝트</p>

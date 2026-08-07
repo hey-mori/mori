@@ -1,6 +1,7 @@
 export { buildIntakeRows } from "./buildIntakeRows";
 export {
   buildProjectProjections,
+  selectProjectionForLabel,
   type BuildProjectProjectionOptions,
   type ProjectFreshness,
   type ProjectProjection,
