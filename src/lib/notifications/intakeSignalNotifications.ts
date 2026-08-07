@@ -56,7 +56,11 @@ export function buildConflictNotification(finding: ConflictFinding): CompanionNo
     linkedItemIds: finding.sessions.map((session) => session.requestId),
     evidenceRefs: finding.sessions.map((session) => session.sessionKey),
     actionLabel: "라이브 열기",
-    actionTarget: { kind: "view", view: "liveSession" },
+    // 세션, the nav destination, not the bare `liveSession` route. That route
+    // renders the feed without the session index beside it, so arriving there
+    // from a notification drops the user somewhere they cannot navigate from.
+    // Matches what `sessionSyncNotifications` already does.
+    actionTarget: { kind: "view", view: "sessions" },
     createdAt: finding.at,
     source: {
       projectLabel: finding.sessions[0]?.sessionLabel,
@@ -88,7 +92,11 @@ export function buildIntakeSignalNotification(
     linkedItemIds: [],
     evidenceRefs: [],
     actionLabel: "라이브 열기",
-    actionTarget: { kind: "view", view: "liveSession" },
+    // 세션, the nav destination, not the bare `liveSession` route. That route
+    // renders the feed without the session index beside it, so arriving there
+    // from a notification drops the user somewhere they cannot navigate from.
+    // Matches what `sessionSyncNotifications` already does.
+    actionTarget: { kind: "view", view: "sessions" },
     createdAt: row.endedAt || row.observedAt,
     source: {
       projectLabel: row.sessionLabel,
