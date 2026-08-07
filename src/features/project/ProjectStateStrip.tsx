@@ -18,6 +18,13 @@ import type {
  * It stays honest about its reach: the InfoHint says the summary is computed
  * from saved sessions, not a live tracker, and the component renders nothing
  * for a quiet project so a calm workspace shows no band at all.
+ *
+ * The summary can now also carry a live slice (`summary.live`), but nothing here
+ * renders it yet and this screen's caller passes no projection, so the hint
+ * remains accurate for what this component actually shows. The live surface is
+ * built on 프로젝트 (`ContextView`) in stage S4, per the execution plan's D7;
+ * this strip is on the retire-in-place path and should not grow a second
+ * implementation of it.
  */
 
 type StatusMeta = {
