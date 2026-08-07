@@ -108,7 +108,10 @@ export function useAmbientObservation(opts: {
       // one view. Observation is an addition to Mori; it must never be able to
       // take the product down with it.
       try {
-        return buildLiveFeed(snapshot.sessions, { now: Date.now() });
+        // Bounded: this rebuild runs on every poll for the whole app, and its
+        // unbounded cost is a function of accumulated history rather than of
+        // what arrived.
+        return buildLiveFeed(snapshot.sessions, { now: Date.now(), bounded: true });
       } catch (error) {
         console.error("[live-intake] failed to build the live feed", error);
         return [];

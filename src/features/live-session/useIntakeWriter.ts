@@ -92,7 +92,16 @@ export function persistObservedRows(
         if (notification) notifications.push(notification);
       }
 
-      store.saveSessionRows(sessionKey, sessionRows);
+      // Merge, do not replace.
+      //
+      // The original rationale for replacing was that the follower re-derives
+      // every request each poll, making the newest write the whole truth. That
+      // stopped being true the moment the follower started trimming its own
+      // message history (`MAX_ACCUMULATED`): once old messages fall out of
+      // memory their requests vanish from the feed, and a whole-file rewrite
+      // then silently dropped rows Mori had already observed. Upserting by id is
+      // idempotent, so re-observation still overwrites a row in place.
+      store.saveSessionRows(sessionKey, mergeRows(before, sessionRows));
       written.set(sessionKey, fingerprint);
       writtenSessions += 1;
     }
@@ -162,6 +171,24 @@ export function useIntakeWriter(
       console.error("[live-intake] failed to persist observed rows", failure);
     }
   }, [enabled, store, sessions, requests, onNotify]);
+}
+
+/**
+ * Stored rows plus this poll's rows, newest observation of each id winning.
+ *
+ * Ordered newest-first by start, so the cap the readers apply keeps the recent
+ * work rather than whatever happened to be stored first.
+ */
+function mergeRows(
+  stored: readonly IntakeRequestRow[],
+  fresh: readonly IntakeRequestRow[],
+): IntakeRequestRow[] {
+  const byId = new Map<string, IntakeRequestRow>();
+  for (const row of stored) byId.set(row.id, row);
+  for (const row of fresh) byId.set(row.id, row);
+  return [...byId.values()].sort(
+    (a, b) => (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0),
+  );
 }
 
 /** One id per conflicting file, so an ongoing clash stays one signal. */
