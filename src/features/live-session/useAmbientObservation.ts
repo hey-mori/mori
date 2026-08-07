@@ -97,18 +97,13 @@ export function useAmbientObservation(opts: {
   available: boolean;
 }): AmbientObservation {
   const ambient = useObservationStore((state) => state.ambient);
-  // The live screen's pause. It cannot stop ambient observation, which the user
-  // enabled separately, but it does stop observing that runs only because that
-  // screen is open, which is what the control meant before the poller moved
-  // into the shell.
-  const viewPaused = useObservationStore((state) => state.viewPaused);
   const pushLiveNotification = useSessionStore((state) => state.pushLiveNotification);
 
   const reason: AmbientObservation["reason"] = !opts.available
     ? "off"
     : ambient
       ? "ambient"
-      : opts.sessionViewOpen && !viewPaused
+      : opts.sessionViewOpen
         ? "sessionView"
         : "off";
 
