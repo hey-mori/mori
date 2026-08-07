@@ -2646,6 +2646,65 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 최근 작업 · folded by default, so the section leads with what is happening
+   and the history is available without competing for the eye. */
+.ctx-live-more {
+  margin-top: 10px;
+}
+
+.ctx-live-more-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 0;
+  color: var(--muted-2);
+  font-size: var(--base-font-size-2xs);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.ctx-live-more-head::-webkit-details-marker {
+  display: none;
+}
+
+.ctx-live-more-head::before {
+  content: "▸";
+  font-size: 9px;
+}
+
+.ctx-live-more[open] .ctx-live-more-head::before {
+  content: "▾";
+}
+
+.ctx-live-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ctx-live-list + .ctx-live-list {
+  margin-top: 8px;
+}
+
+.ctx-live-files .ctx-live-row-meta {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.ctx-live-files .is-add {
+  color: var(--ok, #16a34a);
+  font-weight: 500;
+}
+
+.ctx-live-files .is-del {
+  color: var(--danger, #dc2626);
+  font-weight: 500;
+}
+
 .ctx-children {
   display: flex;
   flex-wrap: wrap;

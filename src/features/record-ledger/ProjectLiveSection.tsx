@@ -109,6 +109,89 @@ export function ProjectLiveSection({
           ) : null}
         </>
       )}
+
+      <RecentWork projection={projection} now={now} />
     </section>
   );
+}
+
+/**
+ * 무슨 작업을 했고 무엇이 바뀌었는가, folded away by default.
+ *
+ * The projection has carried this since it was written and nothing rendered it,
+ * so the page could say how many runs were going but never what they were. It
+ * sits behind a `<details>` rather than as a peer block because the house rule
+ * is that secondary items disclose instead of competing with the actionable
+ * ones, and because 현재 상황 is answered by the counts above it.
+ *
+ * Shown even when the observation is stale: unlike the counts, a finished
+ * request and a changed file are facts about the past, and the past does not
+ * decay. The projection has already downgraded any status it can no longer
+ * vouch for.
+ */
+function RecentWork({
+  projection,
+  now,
+}: {
+  projection: ProjectProjection;
+  now: number;
+}) {
+  const requests = projection.recentRequests;
+  const files = projection.topFiles;
+  if (requests.length === 0 && files.length === 0) return null;
+
+  return (
+    <details className="ctx-live-more">
+      <summary className="ctx-live-more-head">
+        최근 작업 {requests.length}
+        {files.length > 0 ? ` · 파일 ${files.length}` : ""}
+      </summary>
+
+      {requests.length > 0 ? (
+        <ul className="ctx-live-list">
+          {requests.map((request) => (
+            <li key={request.id} className="ctx-live-row">
+              <span className="ctx-live-row-title">{request.title}</span>
+              <span className="ctx-live-row-meta">
+                {STATUS_LABEL[request.status] ?? ""}
+                {request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {files.length > 0 ? (
+        <ul className="ctx-live-list ctx-live-files">
+          {files.map((file) => (
+            <li key={file.path} className="ctx-live-row">
+              <span className="ctx-live-row-title" title={file.path}>
+                {basename(file.path)}
+              </span>
+              <span className="ctx-live-row-meta">
+                {file.additions > 0 ? <b className="is-add">+{file.additions}</b> : null}
+                {file.deletions > 0 ? <b className="is-del">-{file.deletions}</b> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </details>
+  );
+}
+
+/** Plain language, not the engine's status vocabulary. */
+const STATUS_LABEL: Record<string, string> = {
+  running: "진행 중",
+  waitingForUser: "내 확인 대기",
+  blocked: "막힘",
+  completed: "완료",
+  // `unknown` deliberately renders as nothing: Mori stopped watching and saying
+  // "알 수 없음" would be noise where silence is the honest answer.
+  unknown: "",
+};
+
+function basename(path: string): string {
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] ?? path;
 }
