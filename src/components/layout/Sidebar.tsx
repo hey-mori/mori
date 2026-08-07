@@ -20,6 +20,7 @@ import { getProfileInitials } from "../../lib/profile/localProfile";
 import { viewIcon } from "../brand/moriIcons";
 import type { LucideIcon } from "lucide-react";
 import type { ViewKey } from "../../domain/types";
+import { ObservationIndicator } from "./ObservationIndicator";
 
 /**
  * Primary sidebar · a slim icon rail (56–64px) running full height.
@@ -169,6 +170,8 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-nav-spacer" />
+
+      <ObservationIndicator />
 
       <div className="sidebar-foot">
         <button

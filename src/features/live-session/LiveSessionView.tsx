@@ -22,18 +22,16 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
-import { useSessionStore } from "../../app/sessionStore";
+
 import { useAppStore } from "../../app/store";
 import { isClaudeBridgeAvailable, formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { EventActor, FileTouch } from "../../domain/types";
-import {
-  buildLiveFeed,
-  sessionShortLabel,
-  type LiveFeedItem,
-  type LiveFeedRequest,
-} from "./liveFeed";
-import { useLiveSessions } from "./useLiveSessions";
-import { useIntakeWriter } from "./useIntakeWriter";
+import { sessionShortLabel, type LiveFeedItem, type LiveFeedRequest } from "./liveFeed";
+import { useObservedSessions } from "./useAmbientObservation";
+import { useObservationStore } from "../../app/observationStore";
+
+/** Stable empty feed, so pausing does not churn a new array each render. */
+const EMPTY_FEED: LiveFeedRequest[] = [];
 
 /** A finished request folds into the past-work disclosure once it has been quiet
  *  this long, so the live feed stays about the present. */
@@ -115,23 +113,14 @@ export function LiveSessionView() {
   // session row in the popover or a project badge on a card, so several
   // concurrent sessions can be read one at a time without losing the merged view.
   const [focusKey, setFocusKey] = useState<string | null>(null);
-  const snapshot = useLiveSessions(watching && available);
-  const fullFeed = useMemo(
-    () => buildLiveFeed(snapshot.sessions, { now: Date.now() }),
-    // Recompute each poll (lastPolledAt bumps) so live status stays fresh.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [snapshot.sessions, snapshot.lastPolledAt],
-  );
-
-  // Persist what was observed, and raise signals from what changed. Writes the
-  // UNFILTERED feed on purpose: a focus filter is a reading preference, and
-  // letting it decide what becomes durable would make the record depend on where
-  // the user happened to be looking.
-  const pushLiveNotification = useSessionStore((state) => state.pushLiveNotification);
-  useIntakeWriter(snapshot.sessions, fullFeed, {
-    enabled: watching && available,
-    onNotify: pushLiveNotification,
-  });
+  // The shell owns the single poller and the intake write, so opening this
+  // screen while the ambient opt-in is on cannot start a second follower over
+  // the same files. This screen reads; it no longer observes.
+  const observation = useObservedSessions();
+  const snapshot = observation.snapshot;
+  const fullFeed = watching ? observation.feed : EMPTY_FEED;
+  const ambient = useObservationStore((state) => state.ambient);
+  const setAmbient = useObservationStore((state) => state.setAmbient);
 
   // Drop a focus that no longer maps to a live session (it ended or aged out), so
   // the filter never strands the feed empty with no way back but the clear button.
@@ -286,6 +275,25 @@ export function LiveSessionView() {
 
   const controls = (
     <>
+      {/* The ambient opt-in lives here, on the screen about observation, rather
+          than buried in settings. Turning it on is what lets Mori keep noticing
+          while the user is elsewhere; the sidebar then carries the standing
+          "보는 중" disclosure and the one-tap off that rail B requires. */}
+      <button
+        type="button"
+        className={`lsv-ctl-icon${ambient ? " is-on" : ""}`}
+        onClick={() => setAmbient(!ambient)}
+        aria-label={
+          ambient ? "다른 화면에서도 계속 보기 끄기" : "다른 화면에서도 계속 보기"
+        }
+        title={
+          ambient
+            ? "다른 화면에서도 계속 봅니다 · 눌러서 끄기"
+            : "이 화면에서만 봅니다 · 눌러서 계속 보기"
+        }
+      >
+        <Radio size={15} aria-hidden="true" />
+      </button>
       <button
         type="button"
         className="lsv-ctl-icon"
