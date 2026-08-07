@@ -19,7 +19,19 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 FULL=0
-[[ "${1:-}" == "--full" ]] && FULL=1
+NO_RUST=0
+for arg in "$@"; do
+  case "$arg" in
+    --full) FULL=1 ;;
+    # For CI only, where the macOS job owns the Rust pass: ubuntu carries no
+    # gtk/webkit for wry to build against, so asking it to run cargo fails on a
+    # missing system package rather than on anything about the change. A working
+    # clone has one toolchain and no jobs to divide work between, so a local
+    # `--full` still runs everything.
+    --no-rust) NO_RUST=1 ;;
+    *) echo "unknown option: $arg" >&2; exit 2 ;;
+  esac
+done
 
 # Which files does this run cover? The union of what the branch has committed
 # and what is still uncommitted in the working tree: locally the point of the
@@ -88,7 +100,13 @@ fi
 
 if [[ "$FULL" -eq 1 ]] && touches_rust; then
   step "cargo check · test"
-  ( cd src-tauri && cargo check --locked && cargo test --locked )
+  if [[ "$NO_RUST" -eq 1 ]]; then
+    # Said out loud rather than skipped quietly: a pass that vanishes without a
+    # line of output is indistinguishable from one that never existed.
+    echo "· left to the macOS job, which is where wry can build"
+  else
+    ( cd src-tauri && cargo check --locked && cargo test --locked )
+  fi
 elif touches_rust; then
   echo ""
   echo "· src-tauri changed: run scripts/check.sh --full before opening a PR"

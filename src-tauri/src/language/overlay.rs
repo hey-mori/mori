@@ -143,7 +143,9 @@ fn ensure_window(app: &AppHandle) -> tauri::Result<tauri::WebviewWindow> {
     .inner_size(OVERLAY_WIDTH, OVERLAY_HEIGHT)
     .min_inner_size(OVERLAY_MIN_WIDTH, OVERLAY_MIN_HEIGHT)
     .decorations(false)
-    .transparent(false)
+    // No `.transparent(false)`: it is the default, and on macOS the method only
+    // exists behind tauri's `macos-private-api` feature, so calling it made the
+    // first shipping target the one platform that would not compile.
     .always_on_top(true)
     .skip_taskbar(true)
     // Resizable: a long paragraph and a single word want very different heights,
