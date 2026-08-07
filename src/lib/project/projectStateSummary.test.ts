@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ProjectProjection } from "../live-intake";
 import type { ProjectSessionRow } from "./projectOverview";
 import { buildProjectStateSummary } from "./projectStateSummary";
 
@@ -10,6 +11,24 @@ function row(overrides: Partial<ProjectSessionRow> & { sessionId: string }): Pro
     title: `세션 ${overrides.sessionId}`,
     timestamp: new Date(NOW).toISOString(),
     status: "complete",
+    ...overrides,
+  };
+}
+
+function projection(overrides: Partial<ProjectProjection> = {}): ProjectProjection {
+  return {
+    projectPath: "C:\\dev\\mori",
+    label: "mori",
+    observedAt: new Date(NOW - 60_000).toISOString(),
+    freshness: "live",
+    runningCount: 0,
+    waitingCount: 0,
+    blockedCount: 0,
+    running: [],
+    recentRequests: [],
+    topFiles: [],
+    lastActivityAt: new Date(NOW - 60_000).toISOString(),
+    rowCount: 1,
     ...overrides,
   };
 }
@@ -120,11 +139,110 @@ describe("buildProjectStateSummary", () => {
     expect(summary.signalStatus).toBe("quiet");
   });
 
-  it("always reports a savedSessions basis", () => {
-    const summary = buildProjectStateSummary({
-      now: NOW,
-      rows: [row({ sessionId: "a", reviewCount: 1 })],
+  describe("basis", () => {
+    it("reports savedOnly for a project Mori has never watched run", () => {
+      const summary = buildProjectStateSummary({
+        now: NOW,
+        rows: [row({ sessionId: "a", reviewCount: 1 })],
+      });
+
+      // Not a degraded state: it is every project imported before live
+      // observation existed, and it can only ever be retrospective.
+      expect(summary.basis).toBe("savedOnly");
+      expect(summary.live).toBeNull();
     });
-    expect(summary.basis).toBe("savedSessions");
+
+    it("reports liveOnly when observation is the only evidence", () => {
+      const summary = buildProjectStateSummary({ now: NOW, rows: [], projection: projection() });
+
+      expect(summary.basis).toBe("liveOnly");
+    });
+
+    it("reports liveAndSaved when both contributed", () => {
+      const summary = buildProjectStateSummary({
+        now: NOW,
+        rows: [row({ sessionId: "a" })],
+        projection: projection(),
+      });
+
+      expect(summary.basis).toBe("liveAndSaved");
+    });
+
+    it("reports none when there is nothing to say", () => {
+      expect(buildProjectStateSummary({ now: NOW, rows: [] }).basis).toBe("none");
+    });
   });
+
+  describe("live state", () => {
+    it("carries the present tense the projection reported", () => {
+      const summary = buildProjectStateSummary({
+        now: NOW,
+        rows: [],
+        projection: projection({ runningCount: 2, waitingCount: 1, freshness: "live" }),
+      });
+
+      expect(summary.live).toMatchObject({
+        runningCount: 2,
+        waitingCount: 1,
+        freshness: "live",
+      });
+    });
+
+    it("raises blocked, which saved rows alone could never produce", () => {
+      const summary = buildProjectStateSummary({
+        now: NOW,
+        rows: [],
+        projection: projection({ blockedCount: 1 }),
+      });
+
+      expect(summary.signalStatus).toBe("blocked");
+    });
+
+    it("puts a blocked run ahead of a review queue", () => {
+      // A stopped run is time-sensitive in a way a queue of review items is not.
+      const summary = buildProjectStateSummary({
+        now: NOW,
+        rows: [row({ sessionId: "a", reviewCount: 5 })],
+        projection: projection({ blockedCount: 1 }),
+      });
+
+      expect(summary.signalStatus).toBe("blocked");
+    });
+
+    it("reads a running project as active even when nothing needs review", () => {
+      const summary = buildProjectStateSummary({
+        now: NOW,
+        rows: [
+          row({
+            sessionId: "a",
+            timestamp: new Date(NOW - 5 * 24 * HOUR).toISOString(),
+            reviewCount: 0,
+          }),
+        ],
+        projection: projection({ runningCount: 1 }),
+      });
+
+      expect(summary.signalStatus).toBe("active");
+      expect(summary.hasContent).toBe(true);
+    });
+
+    it("claims no liveness from a stale projection", () => {
+      // The projection zeroes its own counts once stale, so the summary cannot
+      // resurrect a present tense the projection already withdrew.
+      const summary = buildProjectStateSummary({
+        now: NOW,
+        rows: [],
+        projection: projection({
+          freshness: "stale",
+          runningCount: 0,
+          waitingCount: 0,
+          blockedCount: 0,
+        }),
+      });
+
+      expect(summary.signalStatus).toBe("quiet");
+      expect(summary.live?.freshness).toBe("stale");
+    });
+  });
+
 });

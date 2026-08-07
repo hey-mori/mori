@@ -1,4 +1,5 @@
 import type { ProjectSessionRow } from "./projectOverview";
+import type { ProjectProjection } from "../live-intake";
 
 /**
  * Project current-state summary — the pure derivation behind the project
@@ -10,21 +11,50 @@ import type { ProjectSessionRow } from "./projectOverview";
  * sessions are waiting for the user, how much is recently active, and the single
  * latest meaningful update.
  *
- * It is deliberately honest about its data basis. Today the only evidence is the
- * project's already-saved sessions, so every field is derived from saved session
- * rows and `basis` is always `"savedSessions"`. Deterministic rules decide the
- * signal status; no LLM and no background watcher is involved. `riskDetected`
- * and `blocked` are reserved for later live slices and are never produced from
- * saved data, so the strip cannot overclaim a liveness it does not have.
+ * It is deliberately honest about its data basis. There are two independent
+ * inputs and a project may have either, both, or neither: already-saved sessions
+ * (retrospective) and the live intake projection (present tense, when Mori was
+ * recently watching). `basis` reports which actually contributed, so the strip
+ * never implies a reach it lacks. `savedOnly` is the ordinary case for work
+ * imported before Mori ever observed it, and it can only ever be retrospective.
+ *
+ * Deterministic rules decide the signal status; no LLM and no background watcher
+ * is involved. `blocked` became derivable once the projection landed. Present
+ * tense is bounded by the projection's own freshness rule: it zeroes its live
+ * counts once its newest observation goes stale, so a summary built from an
+ * aged projection reports no liveness rather than a false one. `riskDetected`
+ * stays reserved for the cross-session risk slice.
  */
 
 export type ProjectSignalStatus =
   | "quiet"
   | "active"
   | "needsAttention"
-  // Reserved for later live / risk slices — not derivable from saved sessions.
-  | "riskDetected"
-  | "blocked";
+  /** Derived from the live projection: an observed run stopped on a failure. */
+  | "blocked"
+  // Reserved for the cross-session risk slice; not derivable yet.
+  | "riskDetected";
+
+/**
+ * Which evidence actually backed this summary.
+ *
+ * `savedOnly` is not a degraded state, it is the honest description of a project
+ * Mori has never watched run. Naming it is what keeps the surface from looking
+ * broken on work that predates live observation.
+ */
+export type ProjectStateBasis = "liveAndSaved" | "liveOnly" | "savedOnly" | "none";
+
+/** The present-tense slice, absent when no live observation contributed. */
+export type ProjectStateLive = {
+  /** How current the backing observation is; the projection owns this rule. */
+  freshness: ProjectProjection["freshness"];
+  observedAt: string;
+  runningCount: number;
+  waitingCount: number;
+  blockedCount: number;
+  /** In-flight requests, longest-running first. */
+  running: ProjectProjection["running"];
+};
 
 export type ProjectStateAttentionRow = {
   sessionId: string;
@@ -53,14 +83,22 @@ export type ProjectStateSummary = {
   latest: ProjectStateLatest | null;
   /** Sessions needing review, ranked by review weight then recency, capped. */
   attention: ProjectStateAttentionRow[];
-  /** Honest data basis: derived only from saved sessions, no live follow. */
-  basis: "savedSessions";
+  /** Present-tense state, or null when no live observation contributed. */
+  live: ProjectStateLive | null;
+  /** Which evidence actually backed this summary. */
+  basis: ProjectStateBasis;
   /** Whether the strip has something worth showing (hidden when quiet). */
   hasContent: boolean;
 };
 
 export type BuildProjectStateSummaryInput = {
   rows: ReadonlyArray<ProjectSessionRow>;
+  /**
+   * This project's live projection, when Mori has observed it. The caller is
+   * responsible for passing the projection that belongs to the same project as
+   * `rows`; this helper does not re-check the identity.
+   */
+  projection?: ProjectProjection | null;
   /** Reference time for the recency window. Defaults to `Date.now()`. */
   now?: number;
   /** Recency window in ms; a session newer than this counts as active. */
@@ -123,12 +161,40 @@ export function buildProjectStateSummary(
       }
     : null;
 
+  const projection = input.projection ?? null;
+  // The projection already zeroes its counts once its observation is stale, so
+  // reading them here cannot resurrect a present tense it withdrew.
+  const live: ProjectStateLive | null = projection
+    ? {
+        freshness: projection.freshness,
+        observedAt: projection.observedAt,
+        runningCount: projection.runningCount,
+        waitingCount: projection.waitingCount,
+        blockedCount: projection.blockedCount,
+        running: projection.running,
+      }
+    : null;
+
+  // Blocked outranks review: a stopped run is time-sensitive in a way a queue of
+  // review items is not, and it is the one thing here the user may need now.
   const signalStatus: ProjectSignalStatus =
-    needsReviewSessions > 0
-      ? "needsAttention"
-      : recentlyActiveSessions > 0
-        ? "active"
-        : "quiet";
+    live && live.blockedCount > 0
+      ? "blocked"
+      : needsReviewSessions > 0
+        ? "needsAttention"
+        : (live && (live.runningCount > 0 || live.waitingCount > 0)) ||
+            recentlyActiveSessions > 0
+          ? "active"
+          : "quiet";
+
+  const basis: ProjectStateBasis =
+    live && rows.length > 0
+      ? "liveAndSaved"
+      : live
+        ? "liveOnly"
+        : rows.length > 0
+          ? "savedOnly"
+          : "none";
 
   return {
     signalStatus,
@@ -138,7 +204,8 @@ export function buildProjectStateSummary(
     totalSessions: rows.length,
     latest,
     attention,
-    basis: "savedSessions",
+    live,
+    basis,
     hasContent: signalStatus !== "quiet",
   };
 }
