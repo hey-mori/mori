@@ -18,8 +18,8 @@ A green typecheck is not evidence that a user-facing change works. Say what you
 actually drove, and where. Delete rows that do not apply.
 -->
 
-- [ ] `scripts/check.sh` (or `--full`) · paste the outcome. CI runs the same
-      script on a clean checkout; this is what you saw before pushing
+- [ ] `scripts/check.sh` (or `--full`) · paste the outcome. This runs whatever
+      CI is doing, and CI runs the same script when it is available
 - [ ] Exercised the real flow in the app · describe it below
 
 <!-- Describe the walkthrough, or attach a screenshot, for anything user-facing. -->

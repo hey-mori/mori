@@ -192,18 +192,22 @@ The script widens its own scope automatically: a change to a lockfile, a build
 config, `scripts/`, or a workflow forces the full pass, because those files can
 break an area the diff never mentions.
 
-**CI runs on every pull request and every push to `main`** (restored
-2026-08-07). It was manual-only from 2026-07-24, because runs were being rejected
-before they started ("recent account payments have failed or your spending limit
-needs to be increased") and a permanently failing check hides real failures worse
-than an honestly disabled one does. That block has cleared: the rejected run
-failed with zero steps executed, and re-run it succeeds with every step running.
+**The remote CI is manual-only, and that is a platform constraint rather than a
+preference.** Runs get rejected before they start — jobs fail in about two seconds
+with zero steps executed — when this account's Actions allowance is spent. It
+happened from 2026-07-24, cleared, and returned on 2026-08-07 after a day of heavy
+use. Automatic triggers under that condition put a red X on every commit, which
+hides real failures inside noise.
 
-Run `scripts/check.sh` locally before pushing regardless, and record the outcome
-in the pull request. The two are not the same evidence — the local run uses your
-working tree, which already holds whatever earlier work left in it, and CI runs a
-clean checkout. Section 3 has always required a green CI before merge; until now
-nothing could enforce that.
+So the gate is `scripts/check.sh`, run locally and recorded in the pull request
+under "How it was verified". A hand-started run (`workflow_dispatch`) works
+whenever the allowance does, and is worth asking for when a change touches
+dependencies, the toolchain, or the order stages run in — those are the things a
+local run structurally cannot see, because it uses a working tree that already
+holds whatever earlier work left in it.
+
+Section 3 asks for a green CI before merge. Read that as: green where CI is
+available, and an honest local record where it is not.
 
 The `rust` job stays behind `workflow_dispatch`. macOS bills at a 10x multiplier
 and the Rust side is not touched by most changes, so it is asked for rather than
