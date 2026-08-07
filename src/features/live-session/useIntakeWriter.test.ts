@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { IntakeBrowserStore } from "../../lib/live-intake";
 import { MemoryKeyValueStorage } from "../../lib/storage/memoryStorage";
 import type { KeyValueStorage } from "../../lib/storage/storageTypes";
-import type { ClaudeCodeSessionMeta, ClaudeMessage } from "../../lib/claude/types";
+import type { ClaudeCodeSessionMeta, ClaudeFileTouch, ClaudeMessage } from "../../lib/claude/types";
 import { initialAgentStoreFollowState } from "../../lib/live-follow";
 import { buildLiveFeed, type FollowedSession } from "./liveFeed";
 import { persistObservedRows } from "./useIntakeWriter";
@@ -15,7 +15,28 @@ import { persistObservedRows } from "./useIntakeWriter";
 
 const NOW = Date.parse("2026-08-06T12:00:00.000Z");
 
-function session(filePath: string, messages: ClaudeMessage[]): FollowedSession {
+/**
+ * A file the agent edited. `messageId` matters: touches are attributed to the
+ * message that made them, so a touch tagged with another session's message id
+ * silently attaches to nothing.
+ */
+function fileTouch(path: string, messageId: string): ClaudeFileTouch {
+  return {
+    path,
+    tool: "Edit",
+    changeKind: "edited",
+    at: new Date(NOW - 60_000).toISOString(),
+    additions: 3,
+    deletions: 1,
+    messageId,
+  } as ClaudeFileTouch;
+}
+
+function session(
+  filePath: string,
+  messages: ClaudeMessage[],
+  fileTouches: ClaudeFileTouch[] = [],
+): FollowedSession {
   const meta: ClaudeCodeSessionMeta = {
     sessionId: filePath.replace(/\W/g, ""),
     projectPath: "/dev/mori",
@@ -28,7 +49,7 @@ function session(filePath: string, messages: ClaudeMessage[]): FollowedSession {
   };
   return {
     meta,
-    follow: { ...initialAgentStoreFollowState(0), messages, fileTouches: [] },
+    follow: { ...initialAgentStoreFollowState(0), messages, fileTouches },
   };
 }
 
@@ -66,6 +87,69 @@ function run(store: IntakeBrowserStore, sessions: FollowedSession[], written = n
   const requests = buildLiveFeed(sessions, { now: NOW });
   return { result: persistObservedRows(store, sessions, requests, written, () => NOW), written };
 }
+
+describe("persistObservedRows · conflicts", () => {
+  it("raises a conflict when two sessions change the same file", () => {
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const written = new Map<string, string>();
+
+    // The touch rides on the agent's step, not on the human request that opened
+    // it: the opener becomes the request itself and is never a step.
+    run(
+      store,
+      [
+        session(
+          "/s/a.jsonl",
+          [ask("a1", "ask a"), midTurn("a2", "editing")],
+          [fileTouch("src/app.ts", "a2")],
+        ),
+      ],
+      written,
+    );
+    const { result } = run(
+      store,
+      [
+        session(
+          "/s/b.jsonl",
+          [ask("b1", "ask b"), midTurn("b2", "editing too")],
+          [fileTouch("src/app.ts", "b2")],
+        ),
+      ],
+      written,
+    );
+
+    const conflict = result.notifications.find((n) => n.id.startsWith("intake:conflict:"));
+    expect(conflict?.title).toContain("같은 파일");
+    // The point of the notice is that the user opens both traces, so both are
+    // linked rather than summarised.
+    expect(conflict?.evidenceRefs).toHaveLength(2);
+  });
+
+  it("raises no conflict when only one session is involved", () => {
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const written = new Map<string, string>();
+    const touches = [fileTouch("src/app.ts", "a2"), fileTouch("src/app.ts", "a4")];
+
+    run(
+      store,
+      [session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "editing")], touches)],
+      written,
+    );
+    const { result } = run(
+      store,
+      [
+        session(
+          "/s/a.jsonl",
+          [ask("a1", "ask a"), midTurn("a2", "editing"), ask("a3", "again"), midTurn("a4", "more")],
+          touches,
+        ),
+      ],
+      written,
+    );
+
+    expect(result.notifications.filter((n) => n.id.startsWith("intake:conflict:"))).toEqual([]);
+  });
+});
 
 describe("persistObservedRows · signals", () => {
   it("raises nothing the first time it sees a session", () => {

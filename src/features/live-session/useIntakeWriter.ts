@@ -16,10 +16,15 @@ import { useEffect, useMemo, useRef } from "react";
 import {
   buildIntakeRows,
   buildIntakeSignals,
+  findCrossSessionConflicts,
   IntakeBrowserStore,
+  type ConflictFinding,
   type IntakeRequestRow,
 } from "../../lib/live-intake";
-import { buildIntakeSignalNotification } from "../../lib/notifications/intakeSignalNotifications";
+import {
+  buildConflictNotification,
+  buildIntakeSignalNotification,
+} from "../../lib/notifications/intakeSignalNotifications";
 import type { CompanionNotification } from "../../lib/notifications/notification";
 import { promoteNotificationSignals } from "../../lib/notifications/signalPolicy";
 import { isStorageQuotaError } from "../../lib/storage/storageQuota";
@@ -91,6 +96,26 @@ export function persistObservedRows(
       written.set(sessionKey, fingerprint);
       writtenSessions += 1;
     }
+
+    // Conflicts are the one finding that cannot be seen from inside a single
+    // session, so they are derived across every session at once, after the
+    // writes. Each agent's transcript looks perfectly reasonable alone.
+    if (writtenSessions > 0) {
+      const findings = findCrossSessionConflicts({ rows: store.listAllRows(), now: at });
+      const byId = new Map(findings.map((finding) => [conflictId(finding), finding]));
+      for (const signal of promoteNotificationSignals(
+        findings.map((finding) => ({
+          id: conflictId(finding),
+          reason: "conflictDetected" as const,
+          hasObservedEvidence: true,
+          occurredAt: finding.at,
+        })),
+      )) {
+        if (signal.delivery !== "inApp" && signal.delivery !== "system") continue;
+        const finding = byId.get(signal.id);
+        if (finding) notifications.push(buildConflictNotification(finding));
+      }
+    }
   } catch (error) {
     return { writtenSessions, notifications, failure: error };
   }
@@ -130,6 +155,11 @@ export function useIntakeWriter(
       console.error("[live-intake] failed to persist observed rows", failure);
     }
   }, [enabled, store, sessions, requests, onNotify]);
+}
+
+/** One id per conflicting file, so an ongoing clash stays one signal. */
+function conflictId(finding: ConflictFinding): string {
+  return `intake:conflict:${finding.projectPath} ${finding.path}`;
 }
 
 /**
