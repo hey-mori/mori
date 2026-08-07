@@ -168,7 +168,11 @@ export default function App() {
           also defensive in its own right. */}
       <ErrorBoundary resetKey="shell">
         <AmbientObservationProvider
-          sessionViewOpen={currentView === "sessions"}
+          // Both routes that put the live feed on screen. `LiveSessionView`
+          // renders inside 세션 AND standalone at `liveSession`, so checking
+          // only the first would poll at the slow background cadence while the
+          // user sits watching the feed on the second.
+          sessionViewOpen={currentView === "sessions" || currentView === "liveSession"}
           available={isClaudeBridgeAvailable()}
         >
           <AppShell>
