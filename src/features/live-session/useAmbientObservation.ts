@@ -94,7 +94,13 @@ export function useAmbientObservation(opts: {
         ? "sessionView"
         : "off";
 
-  const snapshot = useLiveSessions(reason !== "off");
+  // Poll briskly only when the live screen is actually being read. Ambient
+  // observation exists so work is not missed, which the byte-offset tail
+  // guarantees at any cadence; it does not need per-nine-second freshness for a
+  // screen nobody has open.
+  const snapshot = useLiveSessions(reason !== "off", {
+    background: !opts.sessionViewOpen,
+  });
   const feed = useMemo(
     () => {
       // This now runs for the whole shell rather than for one screen, so a
