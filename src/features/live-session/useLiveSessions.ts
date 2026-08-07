@@ -1,13 +1,17 @@
 /**
- * 라이브 세션 foreground driver.
+ * The agent-store poll loop. Driven by the shell, not by a screen.
  *
  * Polls every currently-active Claude Code session at once (not one picked
- * session) and accumulates each into its own `AgentStoreFollowState`, so the
- * view can merge them into one newest-first feed. "Active" = modified within a
+ * session) and accumulates each into its own `AgentStoreFollowState`, so a
+ * caller can merge them into one newest-first feed. "Active" = modified within a
  * recent window; the set is re-discovered periodically so a session you just
- * started appears on its own. Foreground only: pauses while the tab is hidden,
- * backs off on error, and tears down on unmount. It never writes memory or
- * drives an agent; it reads the session logs the user already connected.
+ * started appears on its own.
+ *
+ * It runs while the app is open, on whatever screen, whenever
+ * `useAmbientObservation` says observation is on. It still pauses while the
+ * window is hidden, backs off on error, and tears down on unmount, and it never
+ * runs with the app closed. It never writes memory or drives an agent; it reads
+ * the session logs the user already connected.
  *
  * Reuses the tested pure pieces (`getClaudeCodeSessionDelta`, `appendDelta`,
  * `decideFollowCadence`); the timer and per-session offset map live here.

@@ -94,19 +94,27 @@ function SessionBadge({
 }
 
 /**
- * 라이브 세션: a mission-control view that tails every currently-active Claude
- * Code session at once and streams their work as one feed. Requests are ordered
- * by latest activity; a request is "working" only while its session is truly
+ * 라이브 세션: a mission-control view over every currently-active Claude Code
+ * session at once, streaming their work as one feed. Requests are ordered by
+ * latest activity; a request is "working" only while its session is truly
  * mid-turn (from the last message's stop_reason, not a time guess), so a
  * finished answer stops pulsing at once. Working requests stay open at the top
  * and push older ones to a folded line. Every step keeps its full text.
- * Reads only already-connected session logs, foreground-only, never writes.
+ *
+ * This screen **reads**; it does not observe. The shell owns the single poller
+ * and the intake write (`useAmbientObservation`), so that observation continues
+ * on other screens and so that opening this one cannot start a second follower
+ * over the same files. Its pause control pauses this view, not the shell.
  */
 export function LiveSessionView() {
   const available = isClaudeBridgeAvailable();
   const navigate = useAppStore((state) => state.navigate);
   const openConnections = () => navigate("connections");
-  const [watching, setWatching] = useState(true);
+  // Held in the shared store, not locally: the shell reads it so pausing
+  // actually stops observing on this screen's account rather than only blanking
+  // the feed here.
+  const watching = !useObservationStore((state) => state.viewPaused);
+  const setViewPaused = useObservationStore((state) => state.setViewPaused);
   const [diagOpen, setDiagOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
   // When set, the feed is narrowed to one session (a filePath key). Picked from a
@@ -297,9 +305,18 @@ export function LiveSessionView() {
       <button
         type="button"
         className="lsv-ctl-icon"
-        onClick={() => setWatching((on) => !on)}
-        aria-label={watching ? "일시정지" : "재개"}
-        title={watching ? "일시정지" : "재개"}
+        onClick={() => setViewPaused(watching)}
+        // Honest about reach: with the ambient opt-in on, observation continues
+        // regardless, and this only freezes the feed on screen. Saying
+        // "일시정지" flat would overpromise in that case.
+        aria-label={watching ? (ambient ? "이 화면 멈춤" : "관측 일시정지") : "재개"}
+        title={
+          watching
+            ? ambient
+              ? "이 화면만 멈춥니다 · 관측은 계속됩니다"
+              : "관측을 멈춥니다"
+            : "재개"
+        }
       >
         {watching ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
       </button>

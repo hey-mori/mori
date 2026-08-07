@@ -17,6 +17,20 @@ type ObservationState = {
   ambient: boolean;
   setAmbient: (ambient: boolean) => void;
   toggleAmbient: () => void;
+  /**
+   * The 라이브 세션 screen's pause, held here rather than in the screen.
+   *
+   * Before observation moved into the shell, that pause fed the poller directly
+   * and genuinely stopped it. Afterwards it only blanked the view while the
+   * shell kept observing, which made it a control that did not do what it said.
+   * The shell reads it so the original meaning holds: pausing stops observing on
+   * the view's account. It cannot stop ambient observation, which the user
+   * turned on separately and turns off in the sidebar.
+   *
+   * Not persisted: a pause is about this sitting, not a standing preference.
+   */
+  viewPaused: boolean;
+  setViewPaused: (paused: boolean) => void;
 };
 
 export const useObservationStore = create<ObservationState>((set, get) => ({
@@ -27,4 +41,6 @@ export const useObservationStore = create<ObservationState>((set, get) => ({
     saveObservationSettings({ ambient });
   },
   toggleAmbient: () => get().setAmbient(!get().ambient),
+  viewPaused: false,
+  setViewPaused: (viewPaused) => set({ viewPaused }),
 }));
