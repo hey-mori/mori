@@ -192,17 +192,22 @@ The script widens its own scope automatically: a change to a lockfile, a build
 config, `scripts/`, or a workflow forces the full pass, because those files can
 break an area the diff never mentions.
 
-**The remote CI is currently manual-only, and that is deliberate.** The
-repository is private and Actions is metered; runs were being rejected before
-they started ("recent account payments have failed or your spending limit needs
-to be increased"), putting a red X on every commit. A permanently failing check
-is worse than an honestly disabled one, because real failures hide inside the
-noise and everyone learns to ignore the signal.
+**CI runs on every pull request and every push to `main`** (restored
+2026-08-07). It was manual-only from 2026-07-24, because runs were being rejected
+before they started ("recent account payments have failed or your spending limit
+needs to be increased") and a permanently failing check hides real failures worse
+than an honestly disabled one does. That block has cleared: the rejected run
+failed with zero steps executed, and re-run it succeeds with every step running.
 
-So today the real gate is `scripts/check.sh`, run locally and recorded in the
-pull request under "How it was verified". The automatic triggers are commented
-out in [`ci.yml`](../.github/workflows/ci.yml), not deleted, and restoring them
-is a one-line change once billing is configured or the repository is public.
+Run `scripts/check.sh` locally before pushing regardless, and record the outcome
+in the pull request. The two are not the same evidence — the local run uses your
+working tree, which already holds whatever earlier work left in it, and CI runs a
+clean checkout. Section 3 has always required a green CI before merge; until now
+nothing could enforce that.
+
+The `rust` job stays behind `workflow_dispatch`. macOS bills at a 10x multiplier
+and the Rust side is not touched by most changes, so it is asked for rather than
+paid for on every push.
 
 Stating a rule the tooling cannot enforce would make this document decorative.
 This section says what is actually true.

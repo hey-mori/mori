@@ -18,8 +18,8 @@ A green typecheck is not evidence that a user-facing change works. Say what you
 actually drove, and where. Delete rows that do not apply.
 -->
 
-- [ ] `scripts/check.sh` (or `--full`) · paste the outcome, since remote CI is
-      manual-only today and this is the actual gate
+- [ ] `scripts/check.sh` (or `--full`) · paste the outcome. CI runs the same
+      script on a clean checkout; this is what you saw before pushing
 - [ ] Exercised the real flow in the app · describe it below
 
 <!-- Describe the walkthrough, or attach a screenshot, for anything user-facing. -->
