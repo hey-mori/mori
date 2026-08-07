@@ -2541,6 +2541,111 @@
   color: var(--muted);
 }
 
+/* 프로젝트 · 현재 상황 (execution plan S4). Calm by construction: counts read as
+   text rather than tiles, and the only colour is on 막힘, which is the one state
+   that may need acting on. No left-border accent, per the house rule. */
+.ctx-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok, #16a34a);
+  animation: ctx-live-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes ctx-live-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ctx-live-dot {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+
+.ctx-live-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.ctx-live-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted);
+}
+
+.ctx-live-count b {
+  font-size: var(--base-font-size-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ctx-live-count.is-blocked b {
+  color: var(--danger, #dc2626);
+}
+
+.ctx-live-asof,
+.ctx-live-quiet {
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+}
+
+.ctx-live-quiet {
+  margin: 0;
+}
+
+.ctx-live-running {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ctx-live-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--gray-50);
+}
+
+.ctx-live-row-icon {
+  flex: none;
+  color: var(--muted-2);
+}
+
+.ctx-live-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--base-font-size-xs);
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ctx-live-row-meta {
+  flex: none;
+  font-size: var(--base-font-size-2xs);
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
 .ctx-children {
   display: flex;
   flex-wrap: wrap;

@@ -229,6 +229,27 @@ function rollUpFiles(rows: readonly IntakeRequestRow[], limit: number): ProjectT
     .slice(0, limit);
 }
 
+/**
+ * Find the projection for a project the UI is showing, by its display leaf.
+ *
+ * A leaf is all the surface can offer: `ProjectGroup` keys on one, because a
+ * saved session knows only a filesystem leaf. So this mirrors the resolution
+ * rule `buildProjectGroups` already uses for sessions, including its refusal:
+ * when two observed projects share a trailing name (`C:\work\api` and
+ * `C:\play\api`), the leaf cannot say which is meant, and returning either would
+ * attach one project's live state to another's page. Ambiguity returns null and
+ * the section simply does not render.
+ */
+export function selectProjectionForLabel(
+  projections: readonly ProjectProjection[],
+  label: string,
+): ProjectProjection | null {
+  const wanted = label.trim().toLowerCase();
+  if (!wanted) return null;
+  const matches = projections.filter((p) => p.label.trim().toLowerCase() === wanted);
+  return matches.length === 1 ? matches[0] : null;
+}
+
 function labelOf(projectPath: string): string {
   const parts = projectPath.split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] ?? projectPath;
