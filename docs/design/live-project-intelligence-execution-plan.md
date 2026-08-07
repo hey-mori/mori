@@ -227,7 +227,7 @@ summaryOnly` with a re-derivable origin, not `retained`.
 | Tier | Contents | Lifetime | Persisted |
 | --- | --- | --- | --- |
 | T0 · raw window | full message text, per message, as `liveFeed` builds today | minutes, current view only | no |
-| T1 · request records | one row per request block: title, actor, start / end, step count, tools used, files touched with `+N / -M`, error flag, terminal status, source locator | bounded per project | yes |
+| T1 · request records | one row per request block: title, actor, start / end, step count, tools used, files touched with `+N / -M`, error flag, terminal status, source locator | bounded per project | yes, **upserted by id** (see §9.5) |
 | T2 · project projection | one mutable row per project, folded from T1 | until superseded | yes |
 
 T0 is what exists. T1 is the Live Intake Buffer (MVP 3). T2 is the object that
@@ -628,6 +628,54 @@ same class of bug as running two app instances, one level down.
   Everything below it is deterministic and works without a model.
 - **D10 · a background tier.** Untouched. Ambient observation runs only while
   the app is open; a tray-resident reader remains a separate decision.
-- **Visual confirmation.** None of the surfaces built here have been driven by
-  hand. The data layers are verified against a real agent store, and each pull
-  request says so plainly rather than claiming otherwise.
+- **Visual confirmation.** Still owed. The app now starts and is no longer
+  stalling on every poll, but nobody has yet confirmed that the current-state
+  section, the sidebar watching indicator, or any signal actually looks right.
+  See §9.5 for what the first run alone found.
+- **Single instance.** Reverted after it hung startup; see §9.5. The double
+  observation it prevented is now partly self-correcting, but not fully.
+
+### 9.5 What running the app changed, 2026-08-07 afternoon
+
+The surfaces above were built without anyone looking at them, which every pull
+request said outright. Then the app was opened. Four things came out of that,
+none of which a green suite could have found.
+
+**The desktop app would not start.** Two separate causes, in order:
+
+1. `sessionShortLabel` called `.slice` on a `sessionId` a session read off disk
+   may not have. That throw was survivable while the feed was built inside 세션,
+   under the route boundary; once observation moved to the shell it blanked the
+   window. Fixed, and the provider now has its own boundary so the next fault
+   degrades instead of erasing the app.
+2. The single-instance plugin hung the main thread at startup: zero CPU, no
+   panic, unresponsive window. **Reverted.** Its problem is real (two instances
+   each observe the same files), so it should return, guarded so that signalling
+   an existing window cannot block startup, and tested against a deliberately
+   stale instance.
+
+**It felt slow, and the cause was not where I expected.** Measured at the
+follower's ceiling (8 sessions x 4,000 messages), the per-poll feed rebuild cost
+~90ms and the dedup pass ~5ms. So the rebuild was ~95% of it, and moving
+observation into the shell had turned that from one screen's cost into every
+screen's. Two changes: a slower cadence when the live screen is closed, and a
+bounded scan (~30ms). An idle background tick now publishes nothing at all.
+
+**A data-loss bug that predated all of this.** D2 said intake rewrites a
+session's rows whole, on the reasoning that the follower re-derives every request
+each poll so the newest write is the whole truth. That stopped being true when
+the follower began trimming its own message history: once old messages age out,
+their requests leave the feed, and the rewrite discarded rows Mori had already
+observed. **Rows are now upserted by id.** That correction stands on its own,
+independently of the bounded scan that surfaced it.
+
+It also quietly weakens the case the reverted plugin was making: two instances
+observing the same session produce the same row ids, so upserts converge rather
+than double-count. Duplicate *notifications* and duplicate file reads remain.
+
+**The pattern worth keeping.** Every real defect today came from real data, a
+real run, or a real measurement: a status rule that fired on a third of a live
+store, a signal whose clock comparison made it unfireable, a volume estimate an
+order of magnitude low, a crash only the desktop path took, a hang with no stack,
+and a cost that was 95% in the one place not suspected. The suite was green
+throughout, before and after each.
