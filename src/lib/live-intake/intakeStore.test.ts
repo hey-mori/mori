@@ -38,11 +38,12 @@ describe("IntakeBrowserStore", () => {
     expect(store.listSessionRows("/s/a.jsonl").map((r) => r.id)).toEqual(["r1", "r2"]);
   });
 
-  it("replaces a session's rows instead of accumulating them", () => {
+  it("writes what it is given, whole, leaving merging to the caller", () => {
     const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
     store.saveSessionRows("/s/a.jsonl", [row({ id: "r1" })]);
-    // The follower re-derives every request each poll, so the newest write is
-    // the whole truth for that session. Merging would double-count.
+    // Deliberately a primitive with no view on what belongs in a session.
+    // `persistObservedRows` is what upserts by id; keeping that decision out of
+    // here is why the store did not have to change when it moved to merging.
     store.saveSessionRows("/s/a.jsonl", [row({ id: "r1" }), row({ id: "r2" })]);
 
     expect(store.listSessionRows("/s/a.jsonl").map((r) => r.id)).toEqual(["r1", "r2"]);

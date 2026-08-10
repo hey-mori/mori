@@ -8,10 +8,16 @@
  *
  * Keyed **by session, not by row.** A real store holds thousands of requests
  * across hundreds of sessions, and a key per row would turn one poll into
- * thousands of writes. A session's rows rewrite together, which is also what
- * makes re-observation idempotent: the follower re-derives a session's requests
- * from its accumulated messages every poll, so the newest write is always the
- * complete truth for that session and merging is neither needed nor correct.
+ * thousands of writes.
+ *
+ * `saveSessionRows` writes what it is given, whole. It is a primitive and takes
+ * no view on what belongs in a session; **merging is the caller's job**, and
+ * `persistObservedRows` does it by upserting on row id. An earlier version of
+ * this note argued the opposite, that the follower re-derives every request each
+ * poll so the newest write is always complete and merging would double-count.
+ * That stopped being true once the follower began trimming its own message
+ * history: requests age out of the feed, and writing whole then discarded rows
+ * already observed. Ids are stable, so upserting cannot double-count.
  *
  * Quota failures are NOT swallowed. Intake is derived data and is re-derivable
  * from the locator, but a save that silently did nothing would let the overview
