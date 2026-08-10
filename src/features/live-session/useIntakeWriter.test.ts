@@ -8,9 +8,9 @@ import { buildLiveFeed, type FollowedSession } from "./liveFeed";
 import { persistObservedRows } from "./useIntakeWriter";
 
 /**
- * The hook itself is a two-line React effect; what is locked down here is the
- * contract it calls, and above all the failure contract: intake must never be
- * able to take down the live view it is observing from.
+ * The hook is a thin React effect; what is locked down here is the function it
+ * calls. Above all the failure contract: intake runs in the shell now, on every
+ * screen, so a fault in it must never be able to take down the app around it.
  */
 
 const NOW = Date.parse("2026-08-06T12:00:00.000Z");
