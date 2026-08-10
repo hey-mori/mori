@@ -29,11 +29,27 @@ import type {
 } from "../claude/types";
 import type { FollowReaction } from "./followController";
 
-/** Keep only the most recent N messages / touches per followed session. A live
- *  dashboard is left open for hours, so unbounded accumulation would grow memory
- *  and make every poll's dedup and feed rebuild slower over time. This is far
- *  more than the recent requests a surface shows, and the byte offset (not this
- *  list) is what resumes the tail, so trimming old entries is safe. */
+/**
+ * Keep only the most recent N messages / touches per followed session. A live
+ * dashboard is left open for hours, so unbounded accumulation would grow memory
+ * and make every poll's dedup and feed rebuild slower over time. The byte offset
+ * (not this list) is what resumes the tail, so nothing stops being *readable*
+ * when an entry is dropped.
+ *
+ * That used to be the whole argument for trimming being harmless, and it was
+ * incomplete. Once the live feed began feeding a durable buffer, a request that
+ * aged out of this list vanished from the feed, and the buffer's whole-session
+ * rewrite then erased rows already observed. Trimming is safe **because
+ * `persistObservedRows` upserts by row id**, not because the offset can re-read
+ * the file. Anything else that derives durable state from this list has to hold
+ * to the same rule.
+ *
+ * Note the ceiling is now well above what anyone reads: the feed builds from at
+ * most `BOUNDED_SCAN_MESSAGES` (1200) per session. Lowering this would cut
+ * memory, and is deliberately not done here, because the dedup set is built from
+ * this list and a shorter window could re-admit an old message after a rotation
+ * re-baseline. Worth deciding on purpose rather than by drift.
+ */
 const MAX_ACCUMULATED = 4000;
 
 export type AgentStoreFollowStats = {
