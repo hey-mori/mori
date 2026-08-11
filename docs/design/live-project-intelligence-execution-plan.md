@@ -633,7 +633,35 @@ same class of bug as running two app instances, one level down.
   section, the sidebar watching indicator, or any signal actually looks right.
   See §9.5 for what the first run alone found.
 - **Single instance.** Reverted after it hung startup; see §9.5. The double
-  observation it prevented is now partly self-correcting, but not fully.
+  observation it prevented is now partly self-correcting, but not fully. A safe
+  retry should not signal an existing window synchronously; an observation lease
+  would avoid touching process startup at all.
+- **Project-level handoff is built and dormant.** Investigated while looking for
+  what still answers "지금 뭘 하고 있는지 어떻게 설명할 수 있고", the part of the
+  goal this program serves least. There are three resume-prompt paths:
+
+  | implementation | scope | wired |
+  | --- | --- | --- |
+  | `lib/report/resume-prompt.ts` | session | yes |
+  | `deterministicQuickPassProvider` | session, post-analysis | yes |
+  | `lib/project-memory/projectMemoryResumePrompt.ts` | **project** | **no** |
+
+  The first two document their relationship (the second supersedes the first once
+  a Quick Pass runs). The third states no relationship to either, has no
+  production caller, and the panel that would render it
+  (`features/memory/ProjectMemorySummaryPanel.tsx`) has none either.
+
+  A `liveState` section was written for it and then **reverted unbuilt**: adding
+  to a module nothing calls is the same mistake as `signalPolicy` sitting
+  complete and unreachable, which S3 fixed by making it reachable rather than by
+  extending it further.
+
+  The real question is not "wire it" but whether handoff should be
+  project-scoped at all, and how that relates to the two session-scoped paths.
+  That is a product decision, not a wiring task.
+
+  Context: `npm run unused` reports 58 unused files, and both orphans above are
+  among them. This is an instance of a tracked condition, not a new discovery.
 
 ### 9.5 What running the app changed, 2026-08-07 afternoon
 
