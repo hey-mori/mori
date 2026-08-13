@@ -1,4 +1,10 @@
 export { buildIntakeRows } from "./buildIntakeRows";
+export {
+  evictIntakeRows,
+  MAX_ROWS_PER_SESSION,
+  MAX_ROW_AGE_MS,
+  type EvictionResult,
+} from "./evictIntakeRows";
 export { buildIntakeSignals, type BuildIntakeSignalsInput } from "./buildIntakeSignals";
 export {
   buildConflictSignals,

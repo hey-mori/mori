@@ -124,6 +124,61 @@ describe("persistObservedRows · retention", () => {
   });
 });
 
+describe("persistObservedRows · bounds", () => {
+  it("reports nothing dropped for an ordinary session", () => {
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const { result } = run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
+
+    expect(result.evicted).toBe(0);
+  });
+
+  it("drops an observation too old to be about now, and says so", () => {
+    // Merging keeps rows the follower forgot; without a bound that set only ever
+    // grows, in a localStorage budget issue #12 already reports as exhausted.
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const written = new Map<string, string>();
+    const ancient = new Date(NOW - 90 * 24 * 60 * 60 * 1000).toISOString();
+    store.saveSessionRows("/s/a.jsonl", [
+      {
+        schemaVersion: 2,
+        id: "/s/a.jsonl::old",
+        sessionKey: "/s/a.jsonl",
+        projectPath: "/dev/mori",
+        sessionLabel: "mori",
+        title: "석 달 전 요청",
+        titleTruncated: false,
+        startedAt: ancient,
+        endedAt: ancient,
+        stepCount: 1,
+        tools: [],
+        files: [],
+        hasError: false,
+        status: "completed",
+        locator: { path: "/s/a.jsonl", offset: 0 },
+        observedAt: ancient,
+      },
+    ]);
+
+    const { result } = run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])], written);
+
+    expect(result.evicted).toBe(1);
+    expect(store.listSessionRows("/s/a.jsonl").map((r) => r.title)).not.toContain("석 달 전 요청");
+  });
+
+  it("still keeps a recent row the follower has forgotten", () => {
+    // The bound must not undo what merging is for.
+    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const written = new Map<string, string>();
+
+    run(store, [session("/s/a.jsonl", [ask("a1", "old ask"), midTurn("a2", "x")])], written);
+    run(store, [session("/s/a.jsonl", [ask("a3", "new ask"), midTurn("a4", "y")])], written);
+
+    const titles = store.listSessionRows("/s/a.jsonl").map((r) => r.title);
+    expect(titles).toContain("old ask");
+    expect(titles).toContain("new ask");
+  });
+});
+
 describe("persistObservedRows · conflicts", () => {
   it("raises a conflict when two sessions change the same file", () => {
     const store = new IntakeBrowserStore(new MemoryKeyValueStorage());

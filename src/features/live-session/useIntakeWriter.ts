@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef } from "react";
 import {
   buildIntakeRows,
   buildIntakeSignals,
+  evictIntakeRows,
   findCrossSessionConflicts,
   IntakeBrowserStore,
   type ConflictFinding,
@@ -35,6 +36,12 @@ export type IntakeWriteResult = {
   writtenSessions: number;
   /** Signals that survived the policy, ready to push into the feed. */
   notifications: CompanionNotification[];
+  /**
+   * Observations dropped to keep the buffer bounded. Reported rather than
+   * silent: a history that shrinks on its own should be visible, especially
+   * while intake still shares a storage budget that issue #12 reports as full.
+   */
+  evicted: number;
   /** What went wrong, if anything. Never thrown: see the note below. */
   failure: unknown | null;
 };
@@ -57,6 +64,7 @@ export function persistObservedRows(
   now: () => number = Date.now,
 ): IntakeWriteResult {
   let writtenSessions = 0;
+  let evicted = 0;
   const notifications: CompanionNotification[] = [];
   try {
     const at = now();
@@ -92,16 +100,21 @@ export function persistObservedRows(
         if (notification) notifications.push(notification);
       }
 
-      // Merge, do not replace.
+      // Merge, then bound. Two rules that only make sense together:
       //
-      // The original rationale for replacing was that the follower re-derives
-      // every request each poll, making the newest write the whole truth. That
-      // stopped being true the moment the follower started trimming its own
-      // message history (`MAX_ACCUMULATED`): once old messages fall out of
-      // memory their requests vanish from the feed, and a whole-file rewrite
-      // then silently dropped rows Mori had already observed. Upserting by id is
-      // idempotent, so re-observation still overwrites a row in place.
-      store.saveSessionRows(sessionKey, mergeRows(before, sessionRows));
+      // Merging is what stops a trimmed feed from erasing observed rows. The
+      // follower drops old messages (`MAX_ACCUMULATED`), so their requests leave
+      // the feed, and a whole-file rewrite used to discard rows Mori had already
+      // seen. Upserting by id is idempotent, so re-observation still overwrites
+      // in place.
+      //
+      // Bounding is what stops the merged set from growing forever. Replace used
+      // to cap a session implicitly; upsert does not, and intake shares a
+      // localStorage budget that issue #12 already reports as exhausted.
+      const merged = mergeRows(before, sessionRows);
+      const { kept, dropped } = evictIntakeRows(merged, at);
+      evicted += dropped;
+      store.saveSessionRows(sessionKey, kept);
       written.set(sessionKey, fingerprint);
       writtenSessions += 1;
     }
@@ -133,9 +146,9 @@ export function persistObservedRows(
       }
     }
   } catch (error) {
-    return { writtenSessions, notifications, failure: error };
+    return { writtenSessions, notifications, evicted, failure: error };
   }
-  return { writtenSessions, notifications, failure: null };
+  return { writtenSessions, notifications, evicted, failure: null };
 }
 
 export function useIntakeWriter(
@@ -158,13 +171,18 @@ export function useIntakeWriter(
 
   useEffect(() => {
     if (!enabled || !store || sessions.length === 0) return;
-    const { failure, notifications } = persistObservedRows(
+    const { failure, notifications, evicted } = persistObservedRows(
       store,
       sessions,
       requests,
       written.current,
     );
     for (const notification of notifications) onNotify?.(notification);
+    if (evicted > 0) {
+      // Visible in diagnostics rather than silent. When #12 moves durable data
+      // to SQLite this bound, and this line, should go away.
+      console.info(`[live-intake] dropped ${evicted} observed row(s) to stay within storage bounds`);
+    }
     // A quota failure already reached the shared health observer through the
     // store, so it needs no second report. Anything else is a bug worth seeing.
     if (failure && !isStorageQuotaError(failure)) {
