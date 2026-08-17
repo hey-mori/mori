@@ -51,6 +51,18 @@ export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   initialized: false,
   settings: { ...DEFAULT_REPOSITORY_SETTINGS },
   verifyingId: null,
+  /**
+   * Load persisted repository settings.
+   *
+   * **Not called at startup any more.** `App` used to hydrate this on mount, but
+   * the feature has no way in: `RepositoriesCard` and `ImportPanel` are both
+   * orphaned, so no user can add, verify, rename or remove a repository. Paying
+   * a read on every launch for a surface nobody can reach is pure cost (#10).
+   *
+   * The store is kept rather than deleted, per the retire-don't-delete rule. If
+   * the feature is given an entry point again, whatever renders it owns calling
+   * this first; the card itself is presentational and holds no store.
+   */
   hydrate: () => {
     const store = getRepository();
     const settings = store.loadRepositorySettings();

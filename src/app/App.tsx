@@ -3,7 +3,6 @@ import { AppShell } from "../components/layout/AppShell";
 import { ErrorBoundary } from "../components/layout/ErrorBoundary";
 import { useAppStore } from "./store";
 import { useSessionStore } from "./sessionStore";
-import { useRepositoryStore } from "./repositoryStore";
 import { useProfileStore } from "./profileStore";
 import { useThemeStore } from "./themeStore";
 import { useOnboardingStore } from "./onboardingStore";
@@ -109,8 +108,6 @@ export default function App() {
   const currentView = useAppStore((state) => state.currentView);
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
-  const hydrateRepositories = useRepositoryStore((state) => state.hydrate);
-  const repositoriesInitialized = useRepositoryStore((state) => state.initialized);
   const hydrateProfile = useProfileStore((state) => state.hydrate);
   const profileInitialized = useProfileStore((state) => state.initialized);
   const hydrateTheme = useThemeStore((state) => state.hydrate);
@@ -138,9 +135,6 @@ export default function App() {
     }
   }, [currentView, pendingNewSession, abandonPendingNewSessionIfEmpty]);
 
-  useEffect(() => {
-    if (!repositoriesInitialized) hydrateRepositories();
-  }, [repositoriesInitialized, hydrateRepositories]);
 
   useEffect(() => {
     if (!profileInitialized) hydrateProfile();
