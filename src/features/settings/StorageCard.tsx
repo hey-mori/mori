@@ -3,6 +3,7 @@ import { FileDown, FolderCog, FolderInput } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useSqliteStore } from "../../app/sqliteStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
+import { getDocumentMirrorHealth } from "../../lib/storage/desktopDocumentMirror";
 import {
   buildDiagnosticsReport,
   readDiagnosticsEntries,
@@ -160,6 +161,7 @@ function exportDiagnosticsReport(): void {
     userAgent: navigator.userAgent,
     platform: isTauriRuntime() ? "desktop" : "browser",
     storage: describeRestingStorage(),
+    mirror: describeMirror(),
   });
   const blob = new Blob([JSON.stringify(report, null, 2)], {
     type: "application/json",
@@ -170,6 +172,17 @@ function exportDiagnosticsReport(): void {
   anchor.download = `mori-diagnostics-${report.exportedAt.slice(0, 10)}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+/** How far the SQLite copy is behind, while dual-write is on. */
+function describeMirror() {
+  const health = getDocumentMirrorHealth();
+  if (!health) return undefined;
+  return {
+    written: health.written,
+    failed: health.failed,
+    ...(health.lastFailure ? { lastFailureReason: health.lastFailure.reason } : {}),
+  };
 }
 
 /**

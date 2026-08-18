@@ -131,6 +131,8 @@ import { syncLlmAllowedEndpoints } from "../lib/desktop/llmEndpointRegistry";
 import { prewarmLanguageModel, resetPrewarmState } from "../lib/language/prewarm";
 import { getSessionImportRepository } from "../lib/storage/sessionImportRepository";
 import { persistMemoryBodyFromAnalysis } from "./sessionMemoryPersistence";
+import { createDesktopDocumentMirror } from "../lib/storage/desktopDocumentMirror";
+import { createMirroringDraftRepository } from "../lib/storage/mirroringDraftRepository";
 
 export type SessionMode = "demo" | "draft";
 
@@ -582,7 +584,12 @@ let lazyPersistenceService: SessionPersistenceService | null = null;
 
 function getRepository(): DraftRepository {
   if (!lazyRepository) {
-    lazyRepository = createBrowserDraftRepository();
+    // Dual-write (R2). On desktop the durable classes are mirrored into
+    // SQLite as they are written; reads stay on localStorage until R6 flips
+    // them. Browser mode gets the bare repository, unchanged.
+    const base = createBrowserDraftRepository();
+    const mirror = createDesktopDocumentMirror();
+    lazyRepository = mirror ? createMirroringDraftRepository(base, mirror) : base;
   }
   return lazyRepository;
 }
