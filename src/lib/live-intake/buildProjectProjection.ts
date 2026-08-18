@@ -250,6 +250,24 @@ export function selectProjectionForLabel(
   return matches.length === 1 ? matches[0] : null;
 }
 
+/**
+ * Resolve a display label to the one project path it can only mean.
+ *
+ * The same rule as `selectProjectionForLabel`, applied one step earlier: a
+ * label is the leaf of a path, so two projects whose folders share a leaf are
+ * ambiguous and neither is shown. Doing it on paths rather than projections is
+ * what lets the desktop backend read one project's rows instead of every row.
+ */
+export function selectProjectPathForLabel(
+  projectPaths: readonly string[],
+  label: string,
+): string | null {
+  const wanted = label.trim().toLowerCase();
+  if (!wanted) return null;
+  const matches = projectPaths.filter((path) => labelOf(path).trim().toLowerCase() === wanted);
+  return matches.length === 1 ? matches[0] : null;
+}
+
 function labelOf(projectPath: string): string {
   const parts = projectPath.split(/[\\/]/).filter(Boolean);
   return parts[parts.length - 1] ?? projectPath;

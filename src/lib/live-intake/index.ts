@@ -15,6 +15,7 @@ export {
 export {
   buildProjectProjections,
   selectProjectionForLabel,
+  selectProjectPathForLabel,
   type BuildProjectProjectionOptions,
   type ProjectFreshness,
   type ProjectProjection,
@@ -30,3 +31,12 @@ export {
   type IntakeLocator,
   type IntakeRequestRow,
 } from "./intakeTypes";
+export {
+  createBrowserIntakeStore,
+  createSqliteIntakeStore,
+  getIntakeStore,
+  mergeIntakeRows,
+  resetIntakeStore,
+} from "./intakeStoreBackends";
+export type { IntakeCommands } from "./intakeStoreBackends";
+export type { IntakeSaveResult, IntakeStore } from "./intakeStoreTypes";
