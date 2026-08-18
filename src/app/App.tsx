@@ -11,6 +11,7 @@ import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
 import { isImportFlowView } from "../lib/session/importFlowView";
 import { isClaudeBridgeAvailable } from "../lib/claude/claudeTauri";
 import { AmbientObservationProvider } from "../features/live-session/useAmbientObservation";
+import { useDurableDocumentAdoption } from "./useDurableDocumentAdoption";
 // HomeView is the landing surface — stay eager so first paint never waits
 // on a chunk fetch. Every other surface is loaded on demand; Vite emits a
 // separate chunk per dynamic import, shrinking the entry bundle.
@@ -147,6 +148,10 @@ export default function App() {
   useEffect(() => {
     if (!onboardingInitialized) hydrateOnboarding();
   }, [onboardingInitialized, hydrateOnboarding]);
+
+  // Copies durable documents that predate dual-write into SQLite, once per
+  // device. Desktop-only, and nothing on screen waits for it.
+  useDurableDocumentAdoption();
 
   // Settings + profile no longer have a standing route — they live behind the
   // top-bar user button as a sheet (`SettingsSheet`, rendered inside AppShell).
