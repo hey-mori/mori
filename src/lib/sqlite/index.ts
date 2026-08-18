@@ -60,3 +60,11 @@ export type {
   SqliteSessionListEntry,
 } from "./repositoryContracts";
 export type { SqliteSnapshotValidationResult } from "./snapshotValidation";
+export {
+  APP_SCOPED_OWNER,
+  fromDurableDocumentRow,
+  toDurableDocumentRow,
+  type DurableDocumentKind,
+  type SqliteDurableDocumentRow,
+  type SqliteDurableDocumentWriteResult,
+} from "./durableDocumentRows";

@@ -67,6 +67,12 @@ pub const MIGRATIONS: &[MigrationManifestEntry] = &[
         name: "record_kernel",
         sql: include_str!("../../migrations/V008__record_kernel.sql"),
     },
+    MigrationManifestEntry {
+        version: "009",
+        filename: "V009__durable_documents.sql",
+        name: "durable_documents",
+        sql: include_str!("../../migrations/V009__durable_documents.sql"),
+    },
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -243,13 +249,14 @@ mod tests {
                 "005".to_string(),
                 "006".to_string(),
                 "007".to_string(),
-                "008".to_string()
+                "008".to_string(),
+                "009".to_string()
             ]
         );
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 8);
+        assert_eq!(applied.len(), 9);
         assert_eq!(applied[0].version, "001");
         assert_eq!(applied[1].version, "002");
         assert_eq!(applied[2].version, "003");
@@ -258,6 +265,7 @@ mod tests {
         assert_eq!(applied[5].version, "006");
         assert_eq!(applied[6].version, "007");
         assert_eq!(applied[7].version, "008");
+        assert_eq!(applied[8].version, "009");
         for record in &applied {
             assert!(!record.checksum.is_empty());
         }
@@ -279,9 +287,41 @@ mod tests {
                 "005".to_string(),
                 "006".to_string(),
                 "007".to_string(),
-                "008".to_string()
+                "008".to_string(),
+                "009".to_string()
             ]
         );
+    }
+
+    /// The real upgrade path, which "apply twice" does not cover: a database
+    /// that already carries earlier migrations gets only the new one, and the
+    /// table it adds is usable afterwards. Simulated by removing the newest
+    /// migration's table and ledger row, which is what a pre-V009 database
+    /// looks like.
+    #[test]
+    fn applies_only_the_new_migration_to_an_existing_database() {
+        let mut conn = open_in_memory().expect("open in-memory db");
+        apply_migrations(&mut conn).expect("bring fully up to date");
+
+        conn.execute("DROP TABLE durable_documents", [])
+            .expect("drop the newest table");
+        conn.execute(
+            &format!("DELETE FROM {MIGRATION_TABLE_NAME} WHERE version = '009'"),
+            [],
+        )
+        .expect("forget the newest migration");
+
+        let outcome = apply_migrations(&mut conn).expect("upgrade");
+
+        assert_eq!(outcome.applied, vec!["009".to_string()]);
+        assert_eq!(outcome.already_applied.len(), 8);
+        // Usable, not merely recorded: a migration that registers without
+        // creating its table would pass the assertion above.
+        conn.execute(
+            "INSERT INTO durable_documents (kind, owner_id, schema_version, body_json, updated_at)              VALUES ('memory_body', 'sess-1', 1, '{}', '2026-08-18T00:00:00Z')",
+            [],
+        )
+        .expect("write into the new table");
     }
 
     #[test]

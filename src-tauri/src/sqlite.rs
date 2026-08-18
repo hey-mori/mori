@@ -10,13 +10,15 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::db::{
     append_kernel_revisions, append_memory_review_actions, apply_migrations, applied_migrations,
-    clear_all_data, database_path, delete_kernel_object, delete_kernel_record, get_kernel_record,
+    clear_all_data, database_path, delete_durable_document, delete_kernel_object,
+    delete_kernel_record, get_durable_document, get_kernel_record,
     list_accepted_memories, list_all_accepted_memories, list_all_session_imports,
-    list_kernel_objects, list_kernel_records, list_kernel_revisions, list_memory_review_actions,
+    list_durable_documents, list_kernel_objects, list_kernel_records, list_kernel_revisions, list_memory_review_actions,
     list_session_imports, list_sessions, load_session_snapshot, open_database,
-    save_accepted_memories, save_kernel_objects, save_kernel_records, save_session_imports,
-    save_session_snapshot, search_kernel_records, AcceptedMemoryRow, AcceptedMemoryWriteResult,
-    ClearAllDataResult, DatabaseStatus, KernelObjectRow, KernelRecordRow, KernelRevisionRow,
+    save_accepted_memories, save_durable_documents, save_kernel_objects, save_kernel_records,
+    save_session_imports, save_session_snapshot, search_kernel_records, AcceptedMemoryRow,
+    AcceptedMemoryWriteResult, ClearAllDataResult, DatabaseStatus, DurableDocumentRow,
+    DurableDocumentWriteResult, KernelObjectRow, KernelRecordRow, KernelRevisionRow,
     KernelWriteResult, MemoryReviewActionRow, MemoryReviewActionWriteResult, SessionImportRow,
     SessionImportWriteResult, MIGRATIONS, MIGRATION_TABLE_NAME,
 };
@@ -316,6 +318,57 @@ pub fn list_kernel_revision_rows(
     with_connection(&state, |conn, _| {
         ensure_migrated(conn)?;
         list_kernel_revisions(conn, &record_id)
+    })
+}
+
+/// Durable document commands.
+///
+/// R1 of `docs/design/sqlite-source-of-truth-promotion.md` section 7: the
+/// bridge exists and is tested, but nothing calls it yet. Adoption is R2
+/// onward, so landing these changes no behaviour and can be verified alone.
+#[tauri::command]
+pub fn save_durable_document_rows(
+    state: tauri::State<'_, SqliteState>,
+    documents: Vec<DurableDocumentRow>,
+) -> Result<DurableDocumentWriteResult, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        save_durable_documents(conn, &documents)
+    })
+}
+
+#[tauri::command]
+pub fn get_durable_document_row(
+    state: tauri::State<'_, SqliteState>,
+    kind: String,
+    owner_id: String,
+) -> Result<Option<DurableDocumentRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        get_durable_document(conn, &kind, &owner_id)
+    })
+}
+
+#[tauri::command]
+pub fn list_durable_document_rows(
+    state: tauri::State<'_, SqliteState>,
+    kind: String,
+) -> Result<Vec<DurableDocumentRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_durable_documents(conn, &kind)
+    })
+}
+
+#[tauri::command]
+pub fn delete_durable_document_row(
+    state: tauri::State<'_, SqliteState>,
+    kind: String,
+    owner_id: String,
+) -> Result<usize, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        delete_durable_document(conn, &kind, &owner_id)
     })
 }
 
