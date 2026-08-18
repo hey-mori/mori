@@ -69,7 +69,20 @@ const ADOPTED: ReadonlyArray<{ prefix: string; kind: DurableDocumentKind }> = [
   { prefix: "mori.sessionMemory.", kind: "memory_body" },
   { prefix: "mori.sessionAnalysisHistory.", kind: "analysis_history" },
   { prefix: "mori.sessionAnalysis.", kind: "analysis" },
+  { prefix: "mori.sessionDraft.", kind: "session_draft" },
+  { prefix: "mori.sessionPendingReview.", kind: "pending_review" },
+  { prefix: "mori.packageDraft.", kind: "package_draft" },
 ];
+
+/**
+ * Keys that look adopted and are not, asserted rather than assumed.
+ *
+ * `mori.currentSessionDraft` is the pointer to the open session. It holds a
+ * byte-identical copy of a per-session draft, so adopting it would store the
+ * same session twice under an owner id that is not a session id. It is
+ * excluded by the shape of the prefixes above rather than by a rule, which is
+ * exactly the kind of correctness that goes quiet, so a test names it.
+ */
 
 /** Documents per SQLite transaction. Bounded so one write is not the whole store. */
 const CHUNK = 50;

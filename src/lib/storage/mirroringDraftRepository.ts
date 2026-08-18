@@ -1,9 +1,19 @@
 /**
  * Wraps a draft repository so its durable writes are mirrored into SQLite.
  *
- * R2 of `docs/design/sqlite-source-of-truth-promotion.md` §7, covering the two
- * heavy classes that have no SQLite path at all today: session memory bodies,
- * and analysis results with their run history.
+ * R2 and R3 of `docs/design/sqlite-source-of-truth-promotion.md` §7: session
+ * memory bodies, analysis results with their run history, the per-session
+ * drafts that hold the sessions themselves, and `.mori` package drafts.
+ *
+ * ## What is deliberately not mirrored
+ *
+ * `mori.currentSessionDraft`, the pointer to the open session. The adapter
+ * writes the identical body to it and to the per-session key, so the only
+ * thing unique to it is *which* session is open, and that is a device-local
+ * selection: a preference by the §0.3 classification, not durable content.
+ * Mirroring it would copy the same session twice and make one desktop's choice
+ * of open tab into stored data. `setCurrentSession` is left unwrapped for the
+ * same reason, since it writes only that pointer.
  *
  * A decorator rather than an edit inside `BrowserDraftRepository`, for two
  * reasons. The browser adapter is also the browser product's whole storage
@@ -29,12 +39,24 @@
  */
 import type { AnalysisResult } from "../analysis";
 import type { DocumentMirror } from "./documentMirror";
-import type { DraftRepository, StoredSessionAnalysis, StoredSessionMemoryBody } from "./storageTypes";
+import type { ImportReviewDraft, ReviewDraftMeta } from "../review";
+import type {
+  DraftRepository,
+  StoredMoriPackageDraft,
+  StoredPendingReview,
+  StoredSessionAnalysis,
+  StoredSessionDraft,
+  StoredSessionMemoryBody,
+} from "./storageTypes";
+import type { MoriPackageV0 } from "../mori-package";
 
 /** Body schema versions, mirrored from the stored records they wrap. */
 const MEMORY_BODY_VERSION = 1;
 const ANALYSIS_VERSION = 1;
 const ANALYSIS_HISTORY_VERSION = 1;
+const SESSION_DRAFT_VERSION = 1;
+const PACKAGE_DRAFT_VERSION = 1;
+const PENDING_REVIEW_VERSION = 1;
 
 export function createMirroringDraftRepository(
   inner: DraftRepository,
@@ -81,6 +103,67 @@ export function createMirroringDraftRepository(
       return stored;
     },
 
+    saveCurrentSessionDraft(
+      draft: Omit<StoredSessionDraft, "savedAt" | "adapter">,
+    ): StoredSessionDraft {
+      const stored = inner.saveCurrentSessionDraft(draft);
+      // The per-session record only. The current-session pointer the adapter
+      // also writes is a selection, not content, and its body is this same
+      // draft.
+      mirrorDraft(stored);
+      return stored;
+    },
+
+    saveStoredSessionMetadata(
+      sessionId: string,
+      draft: StoredSessionDraft,
+    ): StoredSessionDraft | null {
+      const stored = inner.saveStoredSessionMetadata(sessionId, draft);
+      // Null means no such session, so there is nothing to mirror. A rename of
+      // a session that does not exist must not create one in SQLite.
+      if (stored) mirrorDraft(stored);
+      return stored;
+    },
+
+    putStoredSessionDraft(draft: StoredSessionDraft): StoredSessionDraft {
+      const stored = inner.putStoredSessionDraft(draft);
+      mirrorDraft(stored);
+      return stored;
+    },
+
+    saveMoriPackageDraft(pkg: MoriPackageV0): StoredMoriPackageDraft {
+      const stored = inner.saveMoriPackageDraft(pkg);
+      mirror.write({
+        kind: "package_draft",
+        ownerId: stored.package.manifest.packageId,
+        schemaVersion: PACKAGE_DRAFT_VERSION,
+        body: stored,
+        updatedAt: stored.savedAt,
+      });
+      return stored;
+    },
+
+    savePendingReview(
+      sessionId: string,
+      draft: ImportReviewDraft,
+      meta?: ReviewDraftMeta,
+    ): StoredPendingReview {
+      const stored = inner.savePendingReview(sessionId, draft, meta);
+      mirror.write({
+        kind: "pending_review",
+        ownerId: sessionId,
+        schemaVersion: PENDING_REVIEW_VERSION,
+        body: stored,
+        updatedAt: stored.savedAt,
+      });
+      return stored;
+    },
+
+    clearPendingReview(sessionId: string): void {
+      inner.clearPendingReview(sessionId);
+      mirror.remove("pending_review", sessionId);
+    },
+
     clearSessionMemoryBody(sessionId: string): void {
       inner.clearSessionMemoryBody(sessionId);
       mirror.remove("memory_body", sessionId);
@@ -100,8 +183,20 @@ export function createMirroringDraftRepository(
       mirror.remove("memory_body", sessionId);
       mirror.remove("analysis", sessionId);
       mirror.remove("analysis_history", sessionId);
+      mirror.remove("session_draft", sessionId);
+      mirror.remove("pending_review", sessionId);
     },
   };
+
+  function mirrorDraft(stored: StoredSessionDraft): void {
+    mirror.write({
+      kind: "session_draft",
+      ownerId: stored.session.id,
+      schemaVersion: SESSION_DRAFT_VERSION,
+      body: stored,
+      updatedAt: stored.savedAt,
+    });
+  }
 
   return new Proxy(inner, {
     get(inner_, property, receiver) {

@@ -75,6 +75,7 @@ describe("adoptDurableDocuments", () => {
     const storage = storageWith({
       "mori.themePreference": "dark",
       "mori.liveIntake.session.abc": { rows: [] },
+      "mori.sessionImports.sess-1": { imports: [] },
       "mori.sessionMemory.sess-1": { savedAt: "2026-08-01T00:00:00.000Z" },
     });
     const { mirrorTarget, saved } = target();
@@ -82,9 +83,44 @@ describe("adoptDurableDocuments", () => {
     const report = await adoptDurableDocuments({ storage, target: mirrorTarget, now });
 
     // Live intake is a derived index and moves in R5 with its own shape;
-    // preferences stay in localStorage by classification.
+    // session imports already have their own table since V004; preferences
+    // stay in localStorage by classification.
     expect(report.scanned).toBe(1);
     expect(saved).toHaveLength(1);
+  });
+
+  // Excluded by the shape of the prefixes rather than by a rule, which is
+  // exactly the kind of correctness that goes quiet. It holds a byte-identical
+  // copy of a per-session draft, so adopting it would store the same session
+  // twice under an owner id that is not a session id.
+  it("does not adopt the current-session pointer as a session draft", async () => {
+    const storage = storageWith({
+      "mori.currentSessionDraft": { session: { id: "sess-1" }, savedAt: "2026-08-01T00:00:00.000Z" },
+      "mori.sessionDraft.sess-1": { session: { id: "sess-1" }, savedAt: "2026-08-01T00:00:00.000Z" },
+    });
+    const { mirrorTarget, saved } = target();
+
+    const report = await adoptDurableDocuments({ storage, target: mirrorTarget, now });
+
+    expect(report.scanned).toBe(1);
+    expect(saved.map((row) => `${row.kind} ${row.ownerId}`)).toEqual(["session_draft sess-1"]);
+  });
+
+  it("adopts every draft class R3 promotes", async () => {
+    const storage = storageWith({
+      "mori.sessionDraft.sess-1": { savedAt: "2026-08-01T00:00:00.000Z" },
+      "mori.sessionPendingReview.sess-1": { savedAt: "2026-08-01T00:00:00.000Z" },
+      "mori.packageDraft.pkg-1": { savedAt: "2026-08-01T00:00:00.000Z" },
+    });
+    const { mirrorTarget, saved } = target();
+
+    await adoptDurableDocuments({ storage, target: mirrorTarget, now });
+
+    expect(saved.map((row) => `${row.kind} ${row.ownerId}`).sort()).toEqual([
+      "package_draft pkg-1",
+      "pending_review sess-1",
+      "session_draft sess-1",
+    ]);
   });
 
   it("skips an unparseable value without failing the pass", async () => {
