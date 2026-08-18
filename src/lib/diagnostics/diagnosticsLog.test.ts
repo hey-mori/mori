@@ -114,3 +114,34 @@ describe("diagnosticsLog", () => {
     expect(describeThrown({ a: 1 }).message).toBe('{"a":1}');
   });
 });
+
+describe("buildDiagnosticsReport storage field", () => {
+  const base = {
+    entries: [],
+    exportedAt: "2026-08-18T09:00:00.000Z",
+    appVersion: "0.1.0",
+    userAgent: "test",
+    platform: "desktop",
+  };
+
+  it("omits the storage field entirely when the device is resting normally", () => {
+    const report = buildDiagnosticsReport(base);
+    // Absent means normal, so a reader must not have to distinguish "fine"
+    // from "not measured".
+    expect("storage" in report).toBe(false);
+  });
+
+  it("records where the data actually went when it fell back", () => {
+    const report = buildDiagnosticsReport({
+      ...base,
+      storage: {
+        fellBackTo: "browser-local-storage",
+        scope: "kernel",
+        reason: "database is locked",
+        at: "2026-08-18T08:59:00.000Z",
+      },
+    });
+    expect(report.storage?.fellBackTo).toBe("browser-local-storage");
+    expect(report.storage?.reason).toBe("database is locked");
+  });
+});

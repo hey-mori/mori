@@ -149,10 +149,15 @@ export function useNotifications(): {
   // Eighth producer: storage health — the most recent quota failure, i.e.
   // "your last save did not complete". Risk-severity, state-grounded,
   // routes to Settings where the storage surface lives.
+  // Two moments of one problem, both surfaced: the fallback says writes are
+  // going into the small app store, the quota failure says they have stopped
+  // fitting. Reporting only the second would tell the user their store is
+  // full without telling them why it filled.
   const lastQuotaFailure = useStorageHealthStore((state) => state.lastQuotaFailure);
+  const lastFallback = useStorageHealthStore((state) => state.lastFallback);
   const storageHealthNotifications = useMemo<CompanionNotification[]>(
-    () => buildStorageHealthNotifications(lastQuotaFailure),
-    [lastQuotaFailure],
+    () => buildStorageHealthNotifications(lastQuotaFailure, lastFallback),
+    [lastQuotaFailure, lastFallback],
   );
 
   // Compose order = compose-time dedupe priority (a notification raised by two

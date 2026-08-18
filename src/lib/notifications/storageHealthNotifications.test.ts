@@ -28,6 +28,48 @@ describe("buildStorageHealthNotifications", () => {
     expect(notice.message).toContain("디스크");
   });
 
+  it("builds the fallback notice on its own, with no quota failure", () => {
+    const feed = buildStorageHealthNotifications(null, {
+      scope: "kernel",
+      reason: "database is locked",
+      at: "2026-08-18T09:00:00.000Z",
+    });
+
+    expect(feed).toHaveLength(1);
+    const notice = feed[0];
+    expect(notice.id).toBe("storage-fallback");
+    expect(notice.severity).toBe("risk");
+    expect(notice.createdAt).toBe("2026-08-18T09:00:00.000Z");
+    // The user is told where their records went, not which engine failed.
+    expect(notice.message).not.toContain("SQLite");
+  });
+
+  it("surfaces both notices at once, since they are different moments", () => {
+    const feed = buildStorageHealthNotifications(
+      { key: "mori.kernel.record.abc", at: "2026-08-18T09:05:00.000Z" },
+      { scope: "kernel", reason: "database is locked", at: "2026-08-18T09:00:00.000Z" },
+    );
+
+    // Reporting only the full store would say the store filled without saying
+    // why it filled, which is the thing the user can act on.
+    expect(feed.map((notice) => notice.id).sort()).toEqual(["storage-fallback", "storage-quota"]);
+  });
+
+  it("keeps a stable id across fallbacks, so a broken path is one notice", () => {
+    const a = buildStorageHealthNotifications(null, {
+      scope: "kernel",
+      reason: "database is locked",
+      at: "2026-08-18T09:00:00.000Z",
+    })[0];
+    const b = buildStorageHealthNotifications(null, {
+      scope: "kernel",
+      reason: "disk I/O error",
+      at: "2026-08-18T09:00:01.000Z",
+    })[0];
+    // Every call falls back on a broken device; one notice, not thousands.
+    expect(a.id).toBe(b.id);
+  });
+
   it("keeps a stable id across different failure timestamps", () => {
     const a = buildStorageHealthNotifications({ key: "k", at: "2026-07-12T08:00:00.000Z" })[0];
     const b = buildStorageHealthNotifications({ key: "k", at: "2026-07-12T08:05:00.000Z" })[0];

@@ -86,6 +86,13 @@ export type DiagnosticsReport = {
   runtime: { userAgent: string; platform: string };
   entryCount: number;
   entries: DiagnosticsEntry[];
+  /**
+   * Where durable data is actually resting, when that is not where it should
+   * be. Present only on a device whose SQLite path failed, so its absence
+   * means the normal case rather than "not measured". Optional so the `v1`
+   * schema stays readable by anything that already parses it.
+   */
+  storage?: { fellBackTo: "browser-local-storage"; scope: string; reason: string; at: string };
 };
 
 /** Assemble the export payload. Pure: all environment facts come in as args. */
@@ -95,6 +102,7 @@ export function buildDiagnosticsReport(input: {
   appVersion: string;
   userAgent: string;
   platform: string;
+  storage?: DiagnosticsReport["storage"];
 }): DiagnosticsReport {
   return {
     schema: "mori.diagnostics.report.v1",
@@ -103,6 +111,7 @@ export function buildDiagnosticsReport(input: {
     runtime: { userAgent: input.userAgent, platform: input.platform },
     entryCount: input.entries.length,
     entries: input.entries,
+    ...(input.storage ? { storage: input.storage } : {}),
   };
 }
 

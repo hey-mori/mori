@@ -4,8 +4,8 @@
  * Routes kernel reads and writes to the right backend so nothing above it
  * branches on runtime:
  *
- *   - **Browser mode** — `KernelBrowserStore` (localStorage).
- *   - **Tauri desktop mode** — the `kernel_*` SQLite tables behind the
+ *   - **Browser mode**: `KernelBrowserStore` (localStorage).
+ *   - **Tauri desktop mode**: the `kernel_*` SQLite tables behind the
  *     `*_kernel_*` Tauri commands (with FTS search).
  *
  * Desktop mode prefers SQLite; when a SQLite call fails the operation falls
@@ -16,6 +16,7 @@
  * search need actually appears.
  */
 import { isTauriRuntime, tauriCommands } from "../desktop";
+import { notifyStorageFallback } from "../storage/storageFallback";
 import {
   fromSqliteKernelObjectRow,
   fromSqliteKernelRecordRow,
@@ -440,12 +441,20 @@ function desktopResult<T>(data: T): KernelResult<T> {
   return { data, source: "desktop-sqlite", fellBack: false };
 }
 
+/**
+ * Only reached on the desktop path, after a SQLite call threw: the browser
+ * path returns `browserResult` before the try. So reporting here needs no
+ * runtime check, and it covers every operation at once, including the ten
+ * ledger writes that never read the returned flag.
+ */
 function fallbackResult<T>(data: T, error: unknown): KernelResult<T> {
+  const reason = error instanceof Error ? error.message : String(error);
+  notifyStorageFallback({ scope: "kernel", reason, at: new Date().toISOString() });
   return {
     data,
     source: "browser-local-storage",
     fellBack: true,
-    fallbackReason: error instanceof Error ? error.message : String(error),
+    fallbackReason: reason,
   };
 }
 

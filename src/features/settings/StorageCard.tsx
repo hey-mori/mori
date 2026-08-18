@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FileDown, FolderCog, FolderInput } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useSqliteStore } from "../../app/sqliteStore";
+import { useStorageHealthStore } from "../../app/storageHealthStore";
 import {
   buildDiagnosticsReport,
   readDiagnosticsEntries,
@@ -32,6 +33,11 @@ export function StorageCard() {
   }
   const refreshSqlite = useSqliteStore((state) => state.refresh);
   const isDesktop = isTauriRuntime();
+  // Persistent, not transient: a device whose store failed to open keeps
+  // falling back on every write, so this is a standing condition of the
+  // machine rather than an event. The notification tells the user once; this
+  // is where they come to check.
+  const lastFallback = useStorageHealthStore((state) => state.lastFallback);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -113,6 +119,12 @@ export function StorageCard() {
           }
         />
         {notice ? <p className="settings-storage-notice">{notice}</p> : null}
+        {lastFallback ? (
+          <p className="settings-storage-error" role="alert">
+            저장소를 열지 못해 기록을 앱 내부 저장소에 임시로 담고 있습니다. 용량이 작아
+            공간이 곧 부족해질 수 있습니다. 원인: {lastFallback.reason}
+          </p>
+        ) : null}
         {storagePath.status === "error" ? (
           <p className="settings-storage-error" role="alert">
             저장 위치를 확인하지 못했습니다. 예상 경로를 표시합니다: {storagePath.message}
@@ -147,6 +159,7 @@ function exportDiagnosticsReport(): void {
     appVersion: "0.1.0",
     userAgent: navigator.userAgent,
     platform: isTauriRuntime() ? "desktop" : "browser",
+    storage: describeRestingStorage(),
   });
   const blob = new Blob([JSON.stringify(report, null, 2)], {
     type: "application/json",
@@ -157,6 +170,22 @@ function exportDiagnosticsReport(): void {
   anchor.download = `mori-diagnostics-${report.exportedAt.slice(0, 10)}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * The one storage fact a diagnostics reader cannot get from the log: whether
+ * this device is resting on its real store. Undefined when it is, so a report
+ * without this field means the normal case.
+ */
+function describeRestingStorage() {
+  const fallback = useStorageHealthStore.getState().lastFallback;
+  if (!fallback) return undefined;
+  return {
+    fellBackTo: "browser-local-storage" as const,
+    scope: fallback.scope,
+    reason: fallback.reason,
+    at: fallback.at,
+  };
 }
 
 function getExpectedAppDataPath(): string {
