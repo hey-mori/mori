@@ -123,7 +123,9 @@ content, not an index.
 | --- | --- | --- |
 | Session memory bodies | **kernel record** | Reviewed content, not reproducible by re-analysis. Never evictable. |
 | Session analysis results + history | **kernel record** (evidence) | The audit trail of what an engine claimed and when. Re-running replaces rather than restores it. Retention decided in §0.8. |
-| Current session draft | **durable draft** | Not promoted content, but losing it loses the user's typing. Survives a crash; not a kernel record until applied. |
+| Session drafts | **durable draft** | The sessions themselves. Not promoted content, but losing one loses the user's work. |
+| Pending import reviews | **durable draft** | Parsed and awaiting 반영. Re-derivable in principle by re-importing, but not without the user doing it again. |
+| Current session pointer | **preference** | Which session is open. Its body is a byte-identical copy of a per-session draft, so the only thing unique to it is the selection, and a selection is device-local. |
 | `.mori` package drafts | **durable draft** | Same rule. |
 | Live intake rows | **derived index** | D8, already decided and built. Evictable, locator-backed. |
 | Project connections, user projects | **kernel record** | A user-authored mapping. Light, but its loss silently rewires every projection. |
@@ -305,8 +307,13 @@ this slice changes no behaviour and can be verified in isolation.
 history.** These are the two the store cannot hold and the ones with no
 SQLite path at all today (§0.2). Dual-write, read from localStorage.
 
-**R3 · Adopt the drafts**: current session draft and `.mori` package
-drafts.
+**R3 · Adopt the drafts**: session drafts, pending import reviews, and
+`.mori` package drafts. Not the current-session pointer, which §0.6
+classifies as a preference.
+
+The first version of §0.2 listed only `mori.currentSessionDraft` here and
+missed `mori.sessionDraft.*`, which is the heavier of the two and holds
+the sessions themselves. Corrected above.
 
 **R4 · Adopt the authored mappings**: project connections and user
 projects. Light in bytes, heavy in consequence, since losing them

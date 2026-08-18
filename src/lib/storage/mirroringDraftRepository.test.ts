@@ -98,6 +98,66 @@ describe("createMirroringDraftRepository", () => {
     ]);
   });
 
+  it("mirrors a session draft under the session id, not the pointer", async () => {
+    const { repository, mirror, saved } = setup();
+
+    const stored = repository.saveCurrentSessionDraft({
+      session: { id: "sess-1", title: "세션", createdAt: "2026-08-18T09:00:00.000Z" },
+    } as never);
+    await mirror.drain();
+
+    // The adapter writes the same body to the per-session key and to the
+    // current-session pointer. Only the first is content; the second is a
+    // device-local selection.
+    expect(saved.map((row) => `${row.kind} ${row.ownerId}`)).toEqual(["session_draft sess-1"]);
+    expect(stored.session.id).toBe("sess-1");
+  });
+
+  it("mirrors a background upsert without touching the pointer", async () => {
+    const { repository, mirror, saved } = setup();
+
+    repository.putStoredSessionDraft({
+      session: { id: "sess-2", title: "배경", createdAt: "2026-08-18T09:00:00.000Z" },
+      savedAt: "2026-08-18T09:00:00.000Z",
+      adapter: "browser-local-storage",
+    } as never);
+    await mirror.drain();
+
+    expect(saved.map((row) => row.ownerId)).toEqual(["sess-2"]);
+  });
+
+  // Renaming a session that does not exist returns null. Mirroring anyway
+  // would create in SQLite a session localStorage does not have, which is the
+  // wrong direction for a copy.
+  it("does not mirror a metadata edit that found no session", async () => {
+    const { repository, mirror, saved } = setup();
+
+    const result = repository.saveStoredSessionMetadata("missing", {
+      session: { id: "missing", title: "없음", createdAt: "2026-08-18T09:00:00.000Z" },
+      savedAt: "2026-08-18T09:00:00.000Z",
+      adapter: "browser-local-storage",
+    } as never);
+    await mirror.drain();
+
+    expect(result).toBeNull();
+    expect(saved).toEqual([]);
+  });
+
+  it("drops the session draft and its pending review when the session is cleared", async () => {
+    const { repository, mirror, removed } = setup();
+
+    repository.clearStoredSession("sess-1");
+    await mirror.drain();
+
+    expect(removed.map((entry) => entry.kind).sort()).toEqual([
+      "analysis",
+      "analysis_history",
+      "memory_body",
+      "pending_review",
+      "session_draft",
+    ]);
+  });
+
   it("leaves every unwrapped method reaching the inner repository", () => {
     const { repository, inner } = setup();
 
