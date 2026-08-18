@@ -68,3 +68,9 @@ export {
   type SqliteDurableDocumentRow,
   type SqliteDurableDocumentWriteResult,
 } from "./durableDocumentRows";
+export {
+  fromSqliteIntakeRow,
+  toSqliteIntakeRow,
+  type SqliteIntakeRequestRow,
+  type SqliteIntakeWriteResult,
+} from "./intakeRequestRows";

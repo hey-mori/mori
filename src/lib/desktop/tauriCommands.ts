@@ -20,6 +20,10 @@ import type {
   SqliteSessionImportWriteResult,
 } from "../sqlite/sessionImportRows";
 import type {
+  SqliteIntakeRequestRow,
+  SqliteIntakeWriteResult,
+} from "../sqlite/intakeRequestRows";
+import type {
   DurableDocumentKind,
   SqliteDurableDocumentRow,
   SqliteDurableDocumentWriteResult,
@@ -81,6 +85,11 @@ export type TauriCommandName =
   | "list_memory_review_action_rows"
   | "persist_session_imports"
   | "list_session_import_rows"
+  | "save_intake_request_rows"
+  | "list_intake_request_rows_for_session"
+  | "list_intake_request_rows_for_project"
+  | "list_all_intake_request_rows"
+  | "delete_intake_request_rows_for_session"
   | "save_durable_document_rows"
   | "get_durable_document_row"
   | "list_durable_document_rows"
@@ -276,6 +285,23 @@ export type TauriCommandMap = {
   list_all_session_import_rows: {
     input: undefined;
     output: SqliteSessionImportRow[];
+  };
+  save_intake_request_rows: {
+    input: { rows: SqliteIntakeRequestRow[] };
+    output: SqliteIntakeWriteResult;
+  };
+  list_intake_request_rows_for_session: {
+    input: { sessionKey: string };
+    output: SqliteIntakeRequestRow[];
+  };
+  list_intake_request_rows_for_project: {
+    input: { projectPath: string };
+    output: SqliteIntakeRequestRow[];
+  };
+  list_all_intake_request_rows: { input: undefined; output: SqliteIntakeRequestRow[] };
+  delete_intake_request_rows_for_session: {
+    input: { sessionKey: string };
+    output: number;
   };
   save_durable_document_rows: {
     input: { documents: SqliteDurableDocumentRow[] };
@@ -504,6 +530,23 @@ export const tauriCommands = {
   },
   listMemoryReviewActionRows(projectId: string): Promise<SqliteMemoryReviewActionRow[]> {
     return invokeTauriCommand("list_memory_review_action_rows", { projectId });
+  },
+  // Live intake index (V010). Present and tested; nothing reads it until the
+  // rest of R5, so these are unreferenced by design rather than by omission.
+  saveIntakeRequestRows(rows: SqliteIntakeRequestRow[]): Promise<SqliteIntakeWriteResult> {
+    return invokeTauriCommand("save_intake_request_rows", { rows });
+  },
+  listIntakeRequestRowsForSession(sessionKey: string): Promise<SqliteIntakeRequestRow[]> {
+    return invokeTauriCommand("list_intake_request_rows_for_session", { sessionKey });
+  },
+  listIntakeRequestRowsForProject(projectPath: string): Promise<SqliteIntakeRequestRow[]> {
+    return invokeTauriCommand("list_intake_request_rows_for_project", { projectPath });
+  },
+  listAllIntakeRequestRows(): Promise<SqliteIntakeRequestRow[]> {
+    return invokeTauriCommand("list_all_intake_request_rows", undefined);
+  },
+  deleteIntakeRequestRowsForSession(sessionKey: string): Promise<number> {
+    return invokeTauriCommand("delete_intake_request_rows_for_session", { sessionKey });
   },
   // Durable documents (V009). Present and tested; nothing adopts them until
   // R2, so these are unreferenced by design rather than by omission.

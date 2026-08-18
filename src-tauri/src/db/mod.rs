@@ -2,6 +2,7 @@ pub mod accepted_memory;
 pub mod backup;
 pub mod connection;
 pub mod documents;
+pub mod intake;
 pub mod kernel;
 pub mod migrations;
 pub mod records;
@@ -22,6 +23,11 @@ pub use kernel::{
 pub use session_imports::{
     list_all_session_imports, list_session_imports, save_session_imports, SessionImportRow,
     SessionImportWriteResult,
+};
+pub use intake::{
+    delete_intake_requests_for_session, list_all_intake_requests,
+    list_intake_requests_for_project, list_intake_requests_for_session, save_intake_requests,
+    IntakeRequestRow, IntakeWriteResult,
 };
 pub use documents::{
     delete_durable_document, get_durable_document, list_durable_documents,

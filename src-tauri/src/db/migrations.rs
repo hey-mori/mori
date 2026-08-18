@@ -73,6 +73,12 @@ pub const MIGRATIONS: &[MigrationManifestEntry] = &[
         name: "durable_documents",
         sql: include_str!("../../migrations/V009__durable_documents.sql"),
     },
+    MigrationManifestEntry {
+        version: "010",
+        filename: "V010__intake_requests.sql",
+        name: "intake_requests",
+        sql: include_str!("../../migrations/V010__intake_requests.sql"),
+    },
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -250,13 +256,14 @@ mod tests {
                 "006".to_string(),
                 "007".to_string(),
                 "008".to_string(),
-                "009".to_string()
+                "009".to_string(),
+                "010".to_string()
             ]
         );
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 9);
+        assert_eq!(applied.len(), 10);
         assert_eq!(applied[0].version, "001");
         assert_eq!(applied[1].version, "002");
         assert_eq!(applied[2].version, "003");
@@ -266,6 +273,7 @@ mod tests {
         assert_eq!(applied[6].version, "007");
         assert_eq!(applied[7].version, "008");
         assert_eq!(applied[8].version, "009");
+        assert_eq!(applied[9].version, "010");
         for record in &applied {
             assert!(!record.checksum.is_empty());
         }
@@ -288,7 +296,8 @@ mod tests {
                 "006".to_string(),
                 "007".to_string(),
                 "008".to_string(),
-                "009".to_string()
+                "009".to_string(),
+                "010".to_string()
             ]
         );
     }
@@ -303,22 +312,22 @@ mod tests {
         let mut conn = open_in_memory().expect("open in-memory db");
         apply_migrations(&mut conn).expect("bring fully up to date");
 
-        conn.execute("DROP TABLE durable_documents", [])
+        conn.execute("DROP TABLE intake_requests", [])
             .expect("drop the newest table");
         conn.execute(
-            &format!("DELETE FROM {MIGRATION_TABLE_NAME} WHERE version = '009'"),
+            &format!("DELETE FROM {MIGRATION_TABLE_NAME} WHERE version = '010'"),
             [],
         )
         .expect("forget the newest migration");
 
         let outcome = apply_migrations(&mut conn).expect("upgrade");
 
-        assert_eq!(outcome.applied, vec!["009".to_string()]);
-        assert_eq!(outcome.already_applied.len(), 8);
+        assert_eq!(outcome.applied, vec!["010".to_string()]);
+        assert_eq!(outcome.already_applied.len(), 9);
         // Usable, not merely recorded: a migration that registers without
         // creating its table would pass the assertion above.
         conn.execute(
-            "INSERT INTO durable_documents (kind, owner_id, schema_version, body_json, updated_at)              VALUES ('memory_body', 'sess-1', 1, '{}', '2026-08-18T00:00:00Z')",
+            "INSERT INTO intake_requests (id, session_key, project_path, started_at, row_json)              VALUES ('req-1', 'sess-1', 'C:/dev/mori', '2026-08-18T00:00:00Z', '{}')",
             [],
         )
         .expect("write into the new table");
