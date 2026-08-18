@@ -1,13 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type {
-  CreateSessionInput,
-  ImportSourceInput,
-  MarkdownReportInput,
-  MarkdownReportOutput,
-  QuickPassInput,
-  QuickPassOutput,
-} from "../../domain/backend-contracts";
-import type { MockSession, Session, SourceRef } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import type {
   ClearAllSqliteDataResult,
   DatabaseStatus,
@@ -108,9 +100,6 @@ export type TauriCommandName =
   | "reset_sqlite_database"
   | "list_sqlite_backups"
   | "restore_sqlite_backup"
-  | "create_session"
-  | "import_ai_conversation"
-  | "import_git_diff"
   | "run_git_diff"
   | "pick_repository_directory"
   | "verify_repository_path"
@@ -148,9 +137,7 @@ export type TauriCommandName =
   | "discover_cline_sessions"
   | "get_cline_session"
   | "discover_cursor_sessions"
-  | "get_cursor_session"
-  | "analyze_session_quick_pass"
-  | "generate_report";
+  | "get_cursor_session";
 
 export type AppInfo = {
   name: string;
@@ -310,9 +297,6 @@ export type TauriCommandMap = {
   reset_sqlite_database: { input: undefined; output: null };
   list_sqlite_backups: { input: undefined; output: SqliteBackupInfo[] };
   restore_sqlite_backup: { input: { backupPath: string }; output: null };
-  create_session: { input: CreateSessionInput; output: Session };
-  import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
-  import_git_diff: { input: ImportSourceInput; output: SourceRef };
   run_git_diff: { input: { request: GitDiffCaptureRequest }; output: GitDiffCaptureResult };
   pick_repository_directory: {
     input: { input?: { initialDirectory?: string; title?: string } };
@@ -417,8 +401,6 @@ export type TauriCommandMap = {
     input: { sessionPath: string };
     output: CursorSessionDetail;
   };
-  analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
-  generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };
 };
 
 export type ConnectorInboxListing = {
@@ -594,21 +576,6 @@ export const tauriCommands = {
   },
   restoreSqliteBackup(backupPath: string): Promise<null> {
     return invokeTauriCommand("restore_sqlite_backup", { backupPath });
-  },
-  createSession(input: CreateSessionInput): Promise<Session> {
-    return invokeTauriCommand("create_session", input);
-  },
-  importAiConversation(input: ImportSourceInput): Promise<SourceRef> {
-    return invokeTauriCommand("import_ai_conversation", input);
-  },
-  importGitDiff(input: ImportSourceInput): Promise<SourceRef> {
-    return invokeTauriCommand("import_git_diff", input);
-  },
-  analyzeSessionQuickPass(input: QuickPassInput): Promise<QuickPassOutput> {
-    return invokeTauriCommand("analyze_session_quick_pass", input);
-  },
-  generateReport(input: MarkdownReportInput): Promise<MarkdownReportOutput> {
-    return invokeTauriCommand("generate_report", input);
   },
 };
 
