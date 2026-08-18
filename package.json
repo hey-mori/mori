@@ -17,6 +17,7 @@
     "format:check": "prettier eslint.config.js stylelint.config.js knip.json .prettierrc.json vite.config.ts --check",
     "format": "prettier eslint.config.js stylelint.config.js knip.json .prettierrc.json vite.config.ts --write",
     "style:check": "stylelint \"src/**/*.css\"",
+    "check:prose": "node scripts/check-em-dash.mjs",
     "unused": "knip --no-exit-code",
     "analyze": "vite build --mode analyze",
     "check:quick": "npm run check:types && npm run test:changed",
