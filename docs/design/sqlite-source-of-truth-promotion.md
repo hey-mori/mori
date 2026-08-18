@@ -319,11 +319,14 @@ the sessions themselves. Corrected above.
 projects. Light in bytes, heavy in consequence, since losing them
 silently rewires every projection.
 
-**R5 · Move live intake to a derived-index table** and delete
-`evictIntakeRows` with the bound it enforces. Intake is evictable by
-class (D8), so it may be rebuilt rather than copied. Its stop-gap exists
-only because it shares the 5 MB budget; once it does not, the bound is
-the wrong shape for the problem.
+**R5 · Move live intake to a derived-index table** (`V010`). Intake is
+evictable by class (D8), so it may be rebuilt rather than copied.
+
+Corrected while building it: this said to *delete* `evictIntakeRows`.
+That is right for desktop and wrong for browser, where localStorage is
+still the store and still capped. The bound is not deleted, it **moves**
+to the backend whose constraint it answers, and the store reports what it
+dropped so no caller has to ask which backend it holds.
 
 **R6 · Flip the read preference.** SQLite becomes authoritative for every
 promoted class. A fallback now reports a degraded state through R0's

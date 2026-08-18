@@ -16,11 +16,11 @@ import { useEffect, useMemo, useRef } from "react";
 import {
   buildIntakeRows,
   buildIntakeSignals,
-  evictIntakeRows,
   findCrossSessionConflicts,
-  IntakeBrowserStore,
+  getIntakeStore,
   type ConflictFinding,
   type IntakeRequestRow,
+  type IntakeStore,
 } from "../../lib/live-intake";
 import {
   buildConflictNotification,
@@ -56,13 +56,13 @@ export type IntakeWriteResult = {
  * own work". The rows re-derive from the locator (D1) on the next poll either
  * way, which is what makes swallowing safe rather than lossy.
  */
-export function persistObservedRows(
-  store: IntakeBrowserStore,
+export async function persistObservedRows(
+  store: IntakeStore,
   sessions: readonly FollowedSession[],
   requests: readonly LiveFeedRequest[],
   written: Map<string, string>,
   now: () => number = Date.now,
-): IntakeWriteResult {
+): Promise<IntakeWriteResult> {
   let writtenSessions = 0;
   let evicted = 0;
   const notifications: CompanionNotification[] = [];
@@ -89,7 +89,7 @@ export function persistObservedRows(
       // component is the point: a transition observed a moment before the user
       // navigates away is still a transition, and used to be lost with the
       // component that held it.
-      const before = store.listSessionRows(sessionKey);
+      const before = await store.listSessionRows(sessionKey);
       for (const signal of promoteNotificationSignals(
         buildIntakeSignals({ previous: before, next: sessionRows, now: at }),
         { allowSystem: true },
@@ -100,21 +100,14 @@ export function persistObservedRows(
         if (notification) notifications.push(notification);
       }
 
-      // Merge, then bound. Two rules that only make sense together:
-      //
-      // Merging is what stops a trimmed feed from erasing observed rows. The
-      // follower drops old messages (`MAX_ACCUMULATED`), so their requests leave
-      // the feed, and a whole-file rewrite used to discard rows Mori had already
-      // seen. Upserting by id is idempotent, so re-observation still overwrites
-      // in place.
-      //
-      // Bounding is what stops the merged set from growing forever. Replace used
-      // to cap a session implicitly; upsert does not, and intake shares a
-      // localStorage budget that issue #12 already reports as exhausted.
-      const merged = mergeRows(before, sessionRows);
-      const { kept, dropped } = evictIntakeRows(merged, at);
+      // Merging and bounding both live in the store now. Merging is the same
+      // rule on either backend, because the follower trims its history and a
+      // whole-session rewrite would otherwise discard rows Mori has already
+      // observed. Bounding is not: it answers localStorage's cap, and the
+      // SQLite backend has none, so the store reports what it dropped rather
+      // than this deciding.
+      const { dropped } = await store.saveSessionRows(sessionKey, sessionRows);
       evicted += dropped;
-      store.saveSessionRows(sessionKey, kept);
       written.set(sessionKey, fingerprint);
       writtenSessions += 1;
     }
@@ -130,7 +123,7 @@ export function persistObservedRows(
     // case; the store is small (tens of KB), so the read is not the cost it
     // looked like.
     if (writtenSessions > 0) {
-      const findings = findCrossSessionConflicts({ rows: store.listAllRows(), now: at });
+      const findings = findCrossSessionConflicts({ rows: await store.listAllRows(), now: at });
       const byId = new Map(findings.map((finding) => [conflictId(finding), finding]));
       for (const signal of promoteNotificationSignals(
         findings.map((finding) => ({
@@ -156,14 +149,14 @@ export function useIntakeWriter(
   requests: readonly LiveFeedRequest[],
   opts: {
     enabled: boolean;
-    store?: IntakeBrowserStore;
+    store?: IntakeStore;
     /** Where a promoted signal goes. Omitted in tests and in browser mode. */
     onNotify?: (notification: CompanionNotification) => void;
   },
 ): void {
   const { enabled, onNotify } = opts;
   const store = useMemo(
-    () => opts.store ?? (typeof window === "undefined" ? null : new IntakeBrowserStore()),
+    () => opts.store ?? (typeof window === "undefined" ? null : getIntakeStore()),
     [opts.store],
   );
   // Last written fingerprint per session, so an unchanged session is not rewritten.
@@ -171,42 +164,35 @@ export function useIntakeWriter(
 
   useEffect(() => {
     if (!enabled || !store || sessions.length === 0) return;
-    const { failure, notifications, evicted } = persistObservedRows(
-      store,
-      sessions,
-      requests,
-      written.current,
-    );
-    for (const notification of notifications) onNotify?.(notification);
-    if (evicted > 0) {
+    let cancelled = false;
+    void (async () => {
+      const { failure, notifications, evicted } = await persistObservedRows(
+        store,
+        sessions,
+        requests,
+        written.current,
+      );
+      // A poll that resolves after the effect was torn down must not push
+      // notifications into a feed that has moved on.
+      if (cancelled) return;
+      for (const notification of notifications) onNotify?.(notification);
+      if (evicted > 0) {
       // Visible in diagnostics rather than silent. When #12 moves durable data
       // to SQLite this bound, and this line, should go away.
-      console.info(`[live-intake] dropped ${evicted} observed row(s) to stay within storage bounds`);
-    }
-    // A quota failure already reached the shared health observer through the
-    // store, so it needs no second report. Anything else is a bug worth seeing.
-    if (failure && !isStorageQuotaError(failure)) {
-      console.error("[live-intake] failed to persist observed rows", failure);
-    }
+        console.info(
+          `[live-intake] dropped ${evicted} observed row(s) to stay within storage bounds`,
+        );
+      }
+      // A quota failure already reached the shared health observer through the
+      // store, so it needs no second report. Anything else is a bug worth seeing.
+      if (failure && !isStorageQuotaError(failure)) {
+        console.error("[live-intake] failed to persist observed rows", failure);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [enabled, store, sessions, requests, onNotify]);
-}
-
-/**
- * Stored rows plus this poll's rows, newest observation of each id winning.
- *
- * Ordered newest-first by start, so the cap the readers apply keeps the recent
- * work rather than whatever happened to be stored first.
- */
-function mergeRows(
-  stored: readonly IntakeRequestRow[],
-  fresh: readonly IntakeRequestRow[],
-): IntakeRequestRow[] {
-  const byId = new Map<string, IntakeRequestRow>();
-  for (const row of stored) byId.set(row.id, row);
-  for (const row of fresh) byId.set(row.id, row);
-  return [...byId.values()].sort(
-    (a, b) => (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0),
-  );
 }
 
 /** One id per conflicting file, so an ongoing clash stays one signal. */

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { IntakeBrowserStore } from "../../lib/live-intake";
+import {
+  createBrowserIntakeStore,
+  IntakeBrowserStore,
+  type IntakeStore,
+} from "../../lib/live-intake";
 import { MemoryKeyValueStorage } from "../../lib/storage/memoryStorage";
 import type { KeyValueStorage } from "../../lib/storage/storageTypes";
 import type { ClaudeCodeSessionMeta, ClaudeFileTouch, ClaudeMessage } from "../../lib/claude/types";
@@ -83,62 +87,69 @@ function endedTurn(id: string, content: string): ClaudeMessage {
   } as ClaudeMessage;
 }
 
-function run(store: IntakeBrowserStore, sessions: FollowedSession[], written = new Map()) {
+async function run(store: IntakeStore, sessions: FollowedSession[], written = new Map()) {
   const requests = buildLiveFeed(sessions, { now: NOW });
-  return { result: persistObservedRows(store, sessions, requests, written, () => NOW), written };
+  return {
+    result: await persistObservedRows(store, sessions, requests, written, () => NOW),
+    written,
+  };
 }
 
 describe("persistObservedRows · retention", () => {
-  it("keeps rows the follower has since forgotten", () => {
+  it("keeps rows the follower has since forgotten", async () => {
     // The follower trims its own message history, so an old request drops out of
     // the feed. Replacing a session's rows wholesale used to discard what Mori
     // had already observed; upserting keeps it.
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
 
-    run(store, [session("/s/a.jsonl", [ask("a1", "old ask"), midTurn("a2", "x")])], written);
-    expect(store.listSessionRows("/s/a.jsonl")).toHaveLength(1);
+    await run(store, [session("/s/a.jsonl", [ask("a1", "old ask"), midTurn("a2", "x")])], written);
+    expect((await store.listSessionRows("/s/a.jsonl"))).toHaveLength(1);
 
     // A later poll whose window no longer reaches the first request.
-    run(store, [session("/s/a.jsonl", [ask("a3", "new ask"), midTurn("a4", "y")])], written);
+    await run(store, [session("/s/a.jsonl", [ask("a3", "new ask"), midTurn("a4", "y")])], written);
 
-    const titles = store.listSessionRows("/s/a.jsonl").map((row) => row.title);
+    const titles = (await store.listSessionRows("/s/a.jsonl")).map((row) => row.title);
     expect(titles).toContain("old ask");
     expect(titles).toContain("new ask");
   });
 
-  it("overwrites a row in place when the same request is re-observed", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+  it("overwrites a row in place when the same request is re-observed", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
 
-    run(store, [session("/s/a.jsonl", [ask("a1", "ask"), midTurn("a2", "one step")])], written);
-    run(
+    await run(store, [session("/s/a.jsonl", [ask("a1", "ask"), midTurn("a2", "one step")])], written);
+    await run(
       store,
       [session("/s/a.jsonl", [ask("a1", "ask"), midTurn("a2", "one step"), midTurn("a3", "two")])],
       written,
     );
 
-    const rows = store.listSessionRows("/s/a.jsonl");
+    const rows = (await store.listSessionRows("/s/a.jsonl"));
     expect(rows).toHaveLength(1);
     expect(rows[0].stepCount).toBe(2);
   });
 });
 
 describe("persistObservedRows · bounds", () => {
-  it("reports nothing dropped for an ordinary session", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
-    const { result } = run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
+  it("reports nothing dropped for an ordinary session", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const { result } = await run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
 
     expect(result.evicted).toBe(0);
   });
 
-  it("drops an observation too old to be about now, and says so", () => {
+  it("drops an observation too old to be about now, and says so", async () => {
     // Merging keeps rows the follower forgot; without a bound that set only ever
     // grows, in a localStorage budget issue #12 already reports as exhausted.
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    // Seeded through the inner store, which does not bound, because these
+    // stand for rows an older build already wrote to disk. Going through the
+    // bounded seam would drop them before the case under test began.
+    const inner = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const store = createBrowserIntakeStore(inner);
     const written = new Map<string, string>();
     const ancient = new Date(NOW - 90 * 24 * 60 * 60 * 1000).toISOString();
-    store.saveSessionRows("/s/a.jsonl", [
+    inner.saveSessionRows("/s/a.jsonl", [
       {
         schemaVersion: 2,
         id: "/s/a.jsonl::old",
@@ -159,34 +170,34 @@ describe("persistObservedRows · bounds", () => {
       },
     ]);
 
-    const { result } = run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])], written);
+    const { result } = await run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])], written);
 
     expect(result.evicted).toBe(1);
-    expect(store.listSessionRows("/s/a.jsonl").map((r) => r.title)).not.toContain("석 달 전 요청");
+    expect((await store.listSessionRows("/s/a.jsonl")).map((r) => r.title)).not.toContain("석 달 전 요청");
   });
 
-  it("still keeps a recent row the follower has forgotten", () => {
+  it("still keeps a recent row the follower has forgotten", async () => {
     // The bound must not undo what merging is for.
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
 
-    run(store, [session("/s/a.jsonl", [ask("a1", "old ask"), midTurn("a2", "x")])], written);
-    run(store, [session("/s/a.jsonl", [ask("a3", "new ask"), midTurn("a4", "y")])], written);
+    await run(store, [session("/s/a.jsonl", [ask("a1", "old ask"), midTurn("a2", "x")])], written);
+    await run(store, [session("/s/a.jsonl", [ask("a3", "new ask"), midTurn("a4", "y")])], written);
 
-    const titles = store.listSessionRows("/s/a.jsonl").map((r) => r.title);
+    const titles = (await store.listSessionRows("/s/a.jsonl")).map((r) => r.title);
     expect(titles).toContain("old ask");
     expect(titles).toContain("new ask");
   });
 });
 
 describe("persistObservedRows · conflicts", () => {
-  it("raises a conflict when two sessions change the same file", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+  it("raises a conflict when two sessions change the same file", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
 
     // The touch rides on the agent's step, not on the human request that opened
     // it: the opener becomes the request itself and is never a step.
-    run(
+    await run(
       store,
       [
         session(
@@ -197,7 +208,7 @@ describe("persistObservedRows · conflicts", () => {
       ],
       written,
     );
-    const { result } = run(
+    const { result } = await run(
       store,
       [
         session(
@@ -216,17 +227,17 @@ describe("persistObservedRows · conflicts", () => {
     expect(conflict?.evidenceRefs).toHaveLength(2);
   });
 
-  it("raises no conflict when only one session is involved", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+  it("raises no conflict when only one session is involved", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
     const touches = [fileTouch("src/app.ts", "a2"), fileTouch("src/app.ts", "a4")];
 
-    run(
+    await run(
       store,
       [session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "editing")], touches)],
       written,
     );
-    const { result } = run(
+    const { result } = await run(
       store,
       [
         session(
@@ -243,74 +254,74 @@ describe("persistObservedRows · conflicts", () => {
 });
 
 describe("persistObservedRows · signals", () => {
-  it("raises nothing the first time it sees a session", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
-    const { result } = run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
+  it("raises nothing the first time it sees a session", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const { result } = await run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
 
     expect(result.notifications).toEqual([]);
   });
 
-  it("raises a completion from the change between two observations", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+  it("raises a completion from the change between two observations", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
     const working = [
       session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "still going")]),
     ];
-    run(store, working, written);
+    await run(store, working, written);
 
     // The agent finished. The transition is read from what was stored, not from
     // a component's memory, which is the whole point of moving it here.
     const done = [session("/s/a.jsonl", [ask("a1", "ask a"), endedTurn("a2", "done")])];
-    const { result } = run(store, done, written);
+    const { result } = await run(store, done, written);
 
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0].title).toContain("마쳤습니다");
     expect(result.notifications[0].source?.sessionId).toBe("/s/a.jsonl");
   });
 
-  it("does not raise the same completion twice", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+  it("does not raise the same completion twice", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
-    run(store, [session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "going")])], written);
+    await run(store, [session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "going")])], written);
     const done = [session("/s/a.jsonl", [ask("a1", "ask a"), endedTurn("a2", "done")])];
-    run(store, done, written);
+    await run(store, done, written);
 
-    expect(run(store, done, written).result.notifications).toEqual([]);
+    expect((await run(store, done, written)).result.notifications).toEqual([]);
   });
 });
 
 describe("persistObservedRows", () => {
-  it("writes each observed session once", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
-    const { result } = run(store, [
+  it("writes each observed session once", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const { result } = await run(store, [
       session("/s/a.jsonl", [ask("a1", "ask a")]),
       session("/s/b.jsonl", [ask("b1", "ask b")]),
     ]);
 
     expect(result.failure).toBeNull();
     expect(result.writtenSessions).toBe(2);
-    expect(store.listAllRows()).toHaveLength(2);
+    expect((await store.listAllRows())).toHaveLength(2);
   });
 
-  it("skips a session whose rows did not change", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+  it("skips a session whose rows did not change", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const sessions = [session("/s/a.jsonl", [ask("a1", "ask a")])];
-    const { written } = run(store, sessions);
+    const { written } = await run(store, sessions);
 
     // An idle poll costs no storage traffic, even though observedAt moved.
-    expect(run(store, sessions, written).result.writtenSessions).toBe(0);
+    expect((await run(store, sessions, written)).result.writtenSessions).toBe(0);
   });
 
-  it("rewrites a session once its work advances", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
-    const { written } = run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
+  it("rewrites a session once its work advances", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const { written } = await run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
 
     const advanced = [session("/s/a.jsonl", [ask("a1", "ask a"), ask("a2", "ask again")])];
-    expect(run(store, advanced, written).result.writtenSessions).toBe(1);
-    expect(store.listAllRows()).toHaveLength(2);
+    expect((await run(store, advanced, written)).result.writtenSessions).toBe(1);
+    expect((await store.listAllRows())).toHaveLength(2);
   });
 
-  it("returns a storage failure instead of throwing it at the view", () => {
+  it("returns a storage failure instead of throwing it at the view", async () => {
     const exploding: KeyValueStorage = {
       length: 0,
       getItem: () => null,
@@ -321,7 +332,7 @@ describe("persistObservedRows", () => {
       },
     };
 
-    const { result } = run(new IntakeBrowserStore(exploding), [
+    const { result } = await run(createBrowserIntakeStore(new IntakeBrowserStore(exploding)), [
       session("/s/a.jsonl", [ask("a1", "ask a")]),
     ]);
 
@@ -329,18 +340,18 @@ describe("persistObservedRows", () => {
     expect(result.writtenSessions).toBe(0);
   });
 
-  it("returns a derivation failure too, not only a storage one", () => {
-    const store = new IntakeBrowserStore(new MemoryKeyValueStorage());
+  it("returns a derivation failure too, not only a storage one", async () => {
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     // A malformed session is exactly as fatal to the view as a failed save, so
     // the guard has to cover building rows and not just writing them.
     const broken = { meta: undefined, follow: undefined } as unknown as FollowedSession;
 
-    const result = persistObservedRows(store, [broken], [], new Map(), () => NOW);
+    const result = await persistObservedRows(store, [broken], [], new Map(), () => NOW);
 
     expect(result.failure).toBeTruthy();
   });
 
-  it("does not mark a session written when its save failed", () => {
+  it("does not mark a session written when its save failed", async () => {
     let fail = true;
     const flaky: KeyValueStorage = {
       length: 0,
@@ -351,15 +362,15 @@ describe("persistObservedRows", () => {
         if (fail) throw new Error("transient");
       },
     };
-    const store = new IntakeBrowserStore(flaky);
+    const store = createBrowserIntakeStore(new IntakeBrowserStore(flaky));
     const sessions = [session("/s/a.jsonl", [ask("a1", "ask a")])];
     const written = new Map<string, string>();
 
-    run(store, sessions, written);
+    await run(store, sessions, written);
     expect(written.size).toBe(0);
 
     // The retry must not be skipped by a fingerprint the failed pass recorded.
     fail = false;
-    expect(run(store, sessions, written).result.writtenSessions).toBe(1);
+    expect((await run(store, sessions, written)).result.writtenSessions).toBe(1);
   });
 });

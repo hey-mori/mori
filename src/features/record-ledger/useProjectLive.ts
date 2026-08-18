@@ -17,15 +17,24 @@
  *    already in memory, so re-deriving on a slow tick costs nothing and is what
  *    makes the honesty rule hold on screen rather than only in the model.
  *
- * Neither of these is polling the filesystem: this reads localStorage and
+ * Neither of these is polling the filesystem: this reads the intake store and
  * recomputes a pure derivation. The observation itself has its own opt-in and
  * its own visible state.
+ *
+ * ## Why it resolves the path before reading rows
+ *
+ * A label is the leaf of a project path, so the page knows a name and the store
+ * is keyed by a path. Resolving first, against the distinct paths alone, means
+ * the desktop backend reads **one project's** rows through its index instead of
+ * every row it holds. The ambiguity rule is unchanged: two projects whose
+ * folders share a leaf resolve to nothing, and the section stays hidden rather
+ * than showing one project's work under another's name.
  */
 import { useEffect, useMemo, useState } from "react";
 import {
   buildProjectProjections,
-  IntakeBrowserStore,
-  selectProjectionForLabel,
+  getIntakeStore,
+  selectProjectPathForLabel,
   type IntakeRequestRow,
   type ProjectProjection,
 } from "../../lib/live-intake";
@@ -48,15 +57,24 @@ export function useProjectLive(label: string | null): ProjectProjection | null {
       setRows([]);
       return;
     }
-    try {
-      setRows(new IntakeBrowserStore().listAllRows());
-    } catch (error) {
-      // Same contract as the writer: intake must never break a surface. A
-      // project page without its live section is a smaller loss than a project
-      // page that does not render.
-      console.error("[live-intake] failed to read observed rows", error);
-      setRows([]);
-    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const store = getIntakeStore();
+        const path = selectProjectPathForLabel(await store.listProjectPaths(), label);
+        const next = path ? await store.listProjectRows(path) : [];
+        if (!cancelled) setRows(next);
+      } catch (error) {
+        // Same contract as the writer: intake must never break a surface. A
+        // project page without its live section is a smaller loss than a project
+        // page that does not render.
+        console.error("[live-intake] failed to read observed rows", error);
+        if (!cancelled) setRows([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [label, publishedAt]);
 
   useEffect(() => {
@@ -67,8 +85,11 @@ export function useProjectLive(label: string | null): ProjectProjection | null {
 
   return useMemo(() => {
     if (!label || rows.length === 0) return null;
+    // The rows are already one project's, because the label was resolved to a
+    // path before they were read. So there is exactly one projection here, and
+    // re-filtering it by label would be a check that cannot fail.
     const projections = buildProjectProjections(rows, { now: Date.now() });
-    return selectProjectionForLabel(projections, label);
+    return projections[0] ?? null;
     // `tick` is the point: it is what lets freshness age without new rows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, label, tick]);
