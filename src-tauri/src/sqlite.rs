@@ -10,15 +10,19 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::db::{
     append_kernel_revisions, append_memory_review_actions, apply_migrations, applied_migrations,
-    clear_all_data, database_path, delete_durable_document, delete_kernel_object,
+    clear_all_data, database_path, delete_durable_document, delete_intake_requests_for_session,
+    delete_kernel_object,
     delete_kernel_record, get_durable_document, get_kernel_record,
-    list_accepted_memories, list_all_accepted_memories, list_all_session_imports,
-    list_durable_documents, list_kernel_objects, list_kernel_records, list_kernel_revisions, list_memory_review_actions,
+    list_accepted_memories, list_all_accepted_memories, list_all_intake_requests,
+    list_all_session_imports, list_durable_documents, list_intake_requests_for_project,
+    list_intake_requests_for_session, list_kernel_objects, list_kernel_records, list_kernel_revisions, list_memory_review_actions,
     list_session_imports, list_sessions, load_session_snapshot, open_database,
-    save_accepted_memories, save_durable_documents, save_kernel_objects, save_kernel_records,
+    save_accepted_memories, save_durable_documents, save_intake_requests, save_kernel_objects,
+    save_kernel_records,
     save_session_imports, save_session_snapshot, search_kernel_records, AcceptedMemoryRow,
     AcceptedMemoryWriteResult, ClearAllDataResult, DatabaseStatus, DurableDocumentRow,
-    DurableDocumentWriteResult, KernelObjectRow, KernelRecordRow, KernelRevisionRow,
+    DurableDocumentWriteResult, IntakeRequestRow, IntakeWriteResult, KernelObjectRow,
+    KernelRecordRow, KernelRevisionRow,
     KernelWriteResult, MemoryReviewActionRow, MemoryReviewActionWriteResult, SessionImportRow,
     SessionImportWriteResult, MIGRATIONS, MIGRATION_TABLE_NAME,
 };
@@ -318,6 +322,64 @@ pub fn list_kernel_revision_rows(
     with_connection(&state, |conn, _| {
         ensure_migrated(conn)?;
         list_kernel_revisions(conn, &record_id)
+    })
+}
+
+/// Live intake index commands (V010).
+///
+/// R5 of `docs/design/sqlite-source-of-truth-promotion.md` §7. The table and
+/// bridge land first and nothing reads them yet, mirroring R1.
+#[tauri::command]
+pub fn save_intake_request_rows(
+    state: tauri::State<'_, SqliteState>,
+    rows: Vec<IntakeRequestRow>,
+) -> Result<IntakeWriteResult, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        save_intake_requests(conn, &rows)
+    })
+}
+
+#[tauri::command]
+pub fn list_intake_request_rows_for_session(
+    state: tauri::State<'_, SqliteState>,
+    session_key: String,
+) -> Result<Vec<IntakeRequestRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_intake_requests_for_session(conn, &session_key)
+    })
+}
+
+#[tauri::command]
+pub fn list_intake_request_rows_for_project(
+    state: tauri::State<'_, SqliteState>,
+    project_path: String,
+) -> Result<Vec<IntakeRequestRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_intake_requests_for_project(conn, &project_path)
+    })
+}
+
+#[tauri::command]
+pub fn list_all_intake_request_rows(
+    state: tauri::State<'_, SqliteState>,
+) -> Result<Vec<IntakeRequestRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_all_intake_requests(conn)
+    })
+}
+
+#[tauri::command]
+pub fn delete_intake_request_rows_for_session(
+    state: tauri::State<'_, SqliteState>,
+    session_key: String,
+) -> Result<usize, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        delete_intake_requests_for_session(conn, &session_key)
     })
 }
 
