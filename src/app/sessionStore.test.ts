@@ -347,6 +347,8 @@ describe("useSessionStore desktop persistence", () => {
             projectsDeleted: 1,
             sessionImportsDeleted: 0,
             consolidatedMemoriesDeleted: 0,
+        kernelRecordsDeleted: 0,
+        durableDocumentsDeleted: 0,
           };
         },
       },

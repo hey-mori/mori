@@ -62,6 +62,14 @@ export type ClearAllSqliteDataResult = {
   projectsDeleted: number;
   sessionImportsDeleted: number;
   consolidatedMemoriesDeleted: number;
+  /**
+   * Records authored in the 기록 workspace, and the durable documents. Both
+   * were added to the database after the reset was written and neither was
+   * added to it, so a reset used to leave them behind and the kernel, which
+   * prefers SQLite, brought them straight back.
+   */
+  kernelRecordsDeleted: number;
+  durableDocumentsDeleted: number;
 };
 
 /** One automatic pre-migration backup file, as returned by list_sqlite_backups. */

@@ -50,6 +50,8 @@ function stubDesktopCommands(overrides: Partial<SqliteDesktopCommands> = {}): Sq
       projectsDeleted: 0,
       sessionImportsDeleted: 0,
       consolidatedMemoriesDeleted: 0,
+        kernelRecordsDeleted: 0,
+        durableDocumentsDeleted: 0,
     }),
     listSqliteSessions: async () => ({
       sessions: [

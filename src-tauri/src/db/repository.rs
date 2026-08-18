@@ -128,12 +128,31 @@ pub fn clear_all_data(conn: &mut Connection) -> Result<ClearAllDataResult, Strin
     tx.execute("DELETE FROM consolidated_memory_audit", [])
         .map_err(|error| error.to_string())?;
 
+    // The record kernel (V008) and the durable documents (V009). Both were
+    // added after this function was written and neither was added to it, so a
+    // reset left every record the user had authored in the 기록 workspace, and
+    // the kernel repository prefers SQLite, so they came back. Deleting from
+    // `kernel_records` is enough for its FTS index, which is external-content
+    // with an AFTER DELETE trigger.
+    let kernel_records_deleted = tx
+        .execute("DELETE FROM kernel_records", [])
+        .map_err(|error| error.to_string())? as u64;
+    tx.execute("DELETE FROM kernel_revisions", [])
+        .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM kernel_objects", [])
+        .map_err(|error| error.to_string())?;
+    let durable_documents_deleted = tx
+        .execute("DELETE FROM durable_documents", [])
+        .map_err(|error| error.to_string())? as u64;
+
     tx.commit().map_err(|error| error.to_string())?;
 
     Ok(ClearAllDataResult {
         sessions_deleted,
         projects_deleted,
         session_imports_deleted,
+        kernel_records_deleted,
+        durable_documents_deleted,
         consolidated_memories_deleted,
     })
 }
@@ -770,7 +789,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{apply_migrations, open_in_memory};
+    use crate::db::{apply_migrations, open_in_memory, MIGRATION_TABLE_NAME};
 
     fn fixture_snapshot() -> SessionSnapshot {
         SessionSnapshot {
@@ -930,29 +949,76 @@ mod tests {
         let mut conn = open_in_memory().expect("open db");
         apply_migrations(&mut conn).expect("apply migrations");
         save_session_snapshot(&mut conn, &fixture_snapshot()).expect("save");
+        seed_every_later_table(&conn);
 
         let result = clear_all_data(&mut conn).expect("clear");
         assert_eq!(result.sessions_deleted, 1);
         assert_eq!(result.projects_deleted, 1);
+        assert_eq!(result.kernel_records_deleted, 1);
+        assert_eq!(result.durable_documents_deleted, 1);
 
         assert!(list_sessions(&conn).expect("list").is_empty());
-        for table in [
-            "sessions",
-            "projects",
-            "sources",
-            "events",
-            "issues",
-            "decisions",
-            "relationships",
-            "artifacts",
-            "next_actions",
-            "summaries",
-        ] {
+
+        // Discovered from the schema rather than listed. The listed version of
+        // this test passed for the whole life of V008 and V009 while the reset
+        // left every kernel record in place: the name claimed "every work
+        // table" and the body checked the tables that existed when it was
+        // written. A migration that adds a table now fails here until the
+        // reset knows about it.
+        for table in user_data_tables(&conn) {
             let count: i64 = conn
                 .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
                 .expect("count");
             assert_eq!(count, 0, "table {table} should be empty after clear");
         }
+    }
+
+    /// One row in each table the fixture snapshot does not reach, so the sweep
+    /// below is checking emptiness it actually caused.
+    fn seed_every_later_table(conn: &Connection) {
+        conn.execute(
+            "INSERT INTO kernel_records                (id, schema_id, title, body, captured_at, time_basis, status, origin, created_at, updated_at)              VALUES ('rec-1', 'note', '제목', '본문', '2026-08-18T00:00:00Z', 'explicit', 'active', 'user',                      '2026-08-18T00:00:00Z', '2026-08-18T00:00:00Z')",
+            [],
+        )
+        .expect("seed kernel record");
+        conn.execute(
+            "INSERT INTO durable_documents (kind, owner_id, schema_version, body_json, updated_at)              VALUES ('memory_body', 'sess-1', 1, '{}', '2026-08-18T00:00:00Z')",
+            [],
+        )
+        .expect("seed durable document");
+    }
+
+    /// Every table holding user data: the schema, minus SQLite's own, minus the
+    /// migration ledger (which must survive a reset), minus the FTS indexes and
+    /// their shadow tables.
+    ///
+    /// The FTS names are discovered rather than listed, for the same reason
+    /// this whole helper exists: a hardcoded prefix would go stale the next
+    /// time an index is added. An index is emptied by deleting from the table
+    /// it indexes, and its shadow tables keep configuration rows regardless, so
+    /// asserting emptiness on them would be asserting the wrong thing.
+    fn user_data_tables(conn: &Connection) -> Vec<String> {
+        let mut fts = conn
+            .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND sql LIKE '%fts5%'")
+            .expect("read fts tables");
+        let fts_names: Vec<String> = fts
+            .query_map([], |row| row.get::<_, String>(0))
+            .expect("query fts tables")
+            .filter_map(|name| name.ok())
+            .collect();
+
+        let mut stmt = conn
+            .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+            .expect("read schema");
+        stmt.query_map([], |row| row.get::<_, String>(0))
+            .expect("query schema")
+            .filter_map(|name| name.ok())
+            .filter(|name| {
+                !name.starts_with("sqlite_")
+                    && name != MIGRATION_TABLE_NAME
+                    && !fts_names.iter().any(|fts| name.starts_with(fts.as_str()))
+            })
+            .collect()
     }
 
     #[test]

@@ -38,6 +38,10 @@ pub struct ClearAllDataResult {
     pub projects_deleted: u64,
     pub session_imports_deleted: u64,
     pub consolidated_memories_deleted: u64,
+    /// Records authored in the 기록 workspace. Reported because a reset that
+    /// silently left them was the bug this field was added with.
+    pub kernel_records_deleted: u64,
+    pub durable_documents_deleted: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
