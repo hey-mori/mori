@@ -30,6 +30,8 @@
  * auto-merged, because it is exactly the kind of guess that must ride a
  * user-confirmed connection mapping before it changes durable grouping.
  */
+import { mirrorAppScopedDocument } from "../storage/desktopDocumentMirror";
+import { isQuotaExceededError, notifyQuotaFailure } from "../storage/storageQuota";
 
 export type ProjectIdentity = {
   /**
@@ -307,11 +309,21 @@ export function saveConnectedProjects(
   connections: ReadonlyArray<ConnectedProject>,
 ): void {
   if (typeof localStorage === "undefined") return;
+  const savedAt = new Date().toISOString();
   try {
     localStorage.setItem(CONNECTIONS_STORAGE_KEY, JSON.stringify(connections));
-  } catch {
-    // Quota / disabled storage — keep the in-memory list, drop persistence.
+  } catch (error) {
+    // Reported rather than swallowed. This is a user-authored mapping, and
+    // losing it silently rewires every projection built on it, so a failure
+    // that only costs the in-memory list its persistence still has to reach
+    // the health surface. The in-memory list is kept either way.
+    if (isQuotaExceededError(error)) {
+      notifyQuotaFailure({ key: CONNECTIONS_STORAGE_KEY, at: savedAt });
+    }
+    return;
   }
+  // Dual-write (R4). A no-op in browser mode.
+  mirrorAppScopedDocument("project_connections", connections, savedAt);
 }
 
 function isConnectedProject(value: unknown): value is ConnectedProject {

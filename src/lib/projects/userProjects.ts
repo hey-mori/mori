@@ -16,6 +16,8 @@
  * The `key` is the canonical grouping value; display falls back to the trailing
  * path segment when no explicit name is set.
  */
+import { mirrorAppScopedDocument } from "../storage/desktopDocumentMirror";
+import { isQuotaExceededError, notifyQuotaFailure } from "../storage/storageQuota";
 
 export type UserProject = {
   /** Canonical grouping key — the `sourceLabel` sessions in this project share. */
@@ -160,11 +162,21 @@ export function loadUserProjects(): UserProject[] {
 
 export function saveUserProjects(projects: ReadonlyArray<UserProject>): void {
   if (typeof localStorage === "undefined") return;
+  const savedAt = new Date().toISOString();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-  } catch {
-    // Quota / disabled storage — keep the in-memory list, drop persistence.
+  } catch (error) {
+    // Reported rather than swallowed. This is a user-authored mapping, and
+    // losing it silently rewires every projection built on it, so a failure
+    // that only costs the in-memory list its persistence still has to reach
+    // the health surface. The in-memory list is kept either way.
+    if (isQuotaExceededError(error)) {
+      notifyQuotaFailure({ key: STORAGE_KEY, at: savedAt });
+    }
+    return;
   }
+  // Dual-write (R4). A no-op in browser mode.
+  mirrorAppScopedDocument("user_projects", projects, savedAt);
 }
 
 function isUserProject(value: unknown): value is UserProject {
