@@ -57,11 +57,17 @@ the product promises rather than how it keeps the promise.
 merging a pull request. Releases, signing keys, distribution. Pricing and
 licensing. Destructive operations on real user data.
 
+That grant can be standing rather than per-action: "push and merge as you
+go" covers the session it was given in, not the next one. Releases and
+anything touching real user data are the exception and stay per-action.
+
 Two rules that make the grades work:
 
 - **Approve a program, not each step inside it.** Once a design is agreed,
   work through it autonomously and report at milestones. A milestone report
   says what shipped, what was verified and how, and what is still owed.
+  Splitting out the part of a program that needs no approval, so it can ship
+  while the rest waits, is grade one.
 - **Report broken premises, loudly.** The most common real defect here is
   reasoning that was true when written and stopped being true in a later
   change that never touched it. Types, tests and lint cannot see those.
