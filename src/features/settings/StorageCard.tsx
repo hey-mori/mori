@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { useSqliteStore } from "../../app/sqliteStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { getDocumentMirrorHealth } from "../../lib/storage/desktopDocumentMirror";
+import { getLastAdoptionReport } from "../../app/useDurableDocumentAdoption";
 import {
   buildDiagnosticsReport,
   readDiagnosticsEntries,
@@ -162,6 +163,7 @@ function exportDiagnosticsReport(): void {
     platform: isTauriRuntime() ? "desktop" : "browser",
     storage: describeRestingStorage(),
     mirror: describeMirror(),
+    adoption: getLastAdoptionReport() ?? undefined,
   });
   const blob = new Blob([JSON.stringify(report, null, 2)], {
     type: "application/json",

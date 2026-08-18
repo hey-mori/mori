@@ -99,6 +99,18 @@ export type DiagnosticsReport = {
    * non-zero `failed` is the condition the R6 read flip must refuse.
    */
   mirror?: { written: number; failed: number; lastFailureReason?: string };
+  /**
+   * What the one-time adoption pass moved, when it has run this launch.
+   * Absent means it had already been done on a previous launch, or that this
+   * is browser mode.
+   */
+  adoption?: {
+    scanned: number;
+    written: number;
+    unreadable: number;
+    skippedFresher: number;
+    stoppedBecause: string | null;
+  };
 };
 
 /** Assemble the export payload. Pure: all environment facts come in as args. */
@@ -110,6 +122,7 @@ export function buildDiagnosticsReport(input: {
   platform: string;
   storage?: DiagnosticsReport["storage"];
   mirror?: DiagnosticsReport["mirror"];
+  adoption?: DiagnosticsReport["adoption"];
 }): DiagnosticsReport {
   return {
     schema: "mori.diagnostics.report.v1",
@@ -120,6 +133,7 @@ export function buildDiagnosticsReport(input: {
     entries: input.entries,
     ...(input.storage ? { storage: input.storage } : {}),
     ...(input.mirror ? { mirror: input.mirror } : {}),
+    ...(input.adoption ? { adoption: input.adoption } : {}),
   };
 }
 
