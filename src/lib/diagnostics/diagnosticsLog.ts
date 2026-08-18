@@ -104,6 +104,11 @@ export type DiagnosticsReport = {
    * Absent means it had already been done on a previous launch, or that this
    * is browser mode.
    */
+  /**
+   * Where durable reads came from this launch, and why, when the flip was held
+   * back. Absent in browser mode, where there is nothing to decide.
+   */
+  durableReads?: { source: string; heldBackReason?: string; missingKeys?: number };
   adoption?: {
     scanned: number;
     written: number;
@@ -123,6 +128,7 @@ export function buildDiagnosticsReport(input: {
   storage?: DiagnosticsReport["storage"];
   mirror?: DiagnosticsReport["mirror"];
   adoption?: DiagnosticsReport["adoption"];
+  durableReads?: DiagnosticsReport["durableReads"];
 }): DiagnosticsReport {
   return {
     schema: "mori.diagnostics.report.v1",
@@ -134,6 +140,7 @@ export function buildDiagnosticsReport(input: {
     ...(input.storage ? { storage: input.storage } : {}),
     ...(input.mirror ? { mirror: input.mirror } : {}),
     ...(input.adoption ? { adoption: input.adoption } : {}),
+    ...(input.durableReads ? { durableReads: input.durableReads } : {}),
   };
 }
 
