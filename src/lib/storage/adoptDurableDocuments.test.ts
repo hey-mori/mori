@@ -272,6 +272,34 @@ describe("adoptDurableDocuments", () => {
     expect(hasAdopted(storage)).toBe(false);
   });
 
+  it("adopts the app-scoped mappings under the reserved owner", async () => {
+    const storage = storageWith({
+      "mori.projectConnections.v1": [{ key: "mori" }],
+      "mori.userProjects.v1": [{ key: "mori", created: true }],
+    });
+    const { mirrorTarget, saved } = target();
+
+    await adoptDurableDocuments({ storage, target: mirrorTarget, now });
+
+    // An owner derived from the suffix of an exact key would be the empty
+    // string, which would collide with any document written from an unset id.
+    expect(saved.map((row) => `${row.kind} ${row.ownerId}`).sort()).toEqual([
+      "project_connections @app",
+      "user_projects @app",
+    ]);
+  });
+
+  it("stamps an app-scoped mapping with the clock, having no savedAt of its own", async () => {
+    const storage = storageWith({ "mori.userProjects.v1": [{ key: "mori" }] });
+    const { mirrorTarget, saved } = target();
+
+    await adoptDurableDocuments({ storage, target: mirrorTarget, now });
+
+    // The mappings are stored as bare arrays with no envelope, so there is no
+    // savedAt to carry and the pass time is the honest answer.
+    expect(saved[0].updatedAt).toBe("2026-08-18T10:00:00.000Z");
+  });
+
   it("treats a body with no schema version as the first version", async () => {
     const storage = storageWith({ "mori.sessionMemory.old": { issues: [] } });
     const { mirrorTarget, saved } = target();
