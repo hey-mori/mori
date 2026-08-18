@@ -35,6 +35,45 @@ record. That doc also states the deliberate direct-to-`main` exception
 (the autonomous loop, and tiny `docs:`/`chore:` changes), so `main` is
 protected by convention and CI rather than a hard rule.
 
+## Autonomy grades
+
+Not every decision needs the same permission. Asking about all of them is
+slow; asking about none of them is unsafe. Three grades, by what a wrong
+call costs and whether it can be taken back.
+
+**Proceed without asking.** Bug fixes. Tests. Performance work that does not
+change behaviour. Correcting documentation or comments that a later change
+made untrue. Removing provably dead code, subject to the retire-don't-delete
+rule below. Refactoring inside an already-approved design. Local branches,
+commits, and running the full validation set.
+
+**Get the design approved first.** Database schema and migrations. What
+storage owns which data. Navigation and information architecture. Capture
+defaults, including when and what Mori reads. Privacy, retention and
+deletion policy. The Mori and Mori Lens boundary. Anything that changes what
+the product promises rather than how it keeps the promise.
+
+**Wait for the owner to act or say so explicitly.** Pushing, opening or
+merging a pull request. Releases, signing keys, distribution. Pricing and
+licensing. Destructive operations on real user data.
+
+That grant can be standing rather than per-action: "push and merge as you
+go" covers the session it was given in, not the next one. Releases and
+anything touching real user data are the exception and stay per-action.
+
+Two rules that make the grades work:
+
+- **Approve a program, not each step inside it.** Once a design is agreed,
+  work through it autonomously and report at milestones. A milestone report
+  says what shipped, what was verified and how, and what is still owed.
+  Splitting out the part of a program that needs no approval, so it can ship
+  while the rest waits, is grade one.
+- **Report broken premises, loudly.** The most common real defect here is
+  reasoning that was true when written and stopped being true in a later
+  change that never touched it. Types, tests and lint cannot see those.
+  Finding one is a result worth reporting, not a detour, and correcting it
+  is grade one.
+
 ## Commit messages — non-negotiable
 
 Every commit MUST follow [`docs/commit-format.md`](docs/commit-format.md).
