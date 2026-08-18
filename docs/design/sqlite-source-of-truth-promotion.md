@@ -122,7 +122,7 @@ content, not an index.
 | Data | Class | Consequence |
 | --- | --- | --- |
 | Session memory bodies | **kernel record** | Reviewed content, not reproducible by re-analysis. Never evictable. |
-| Session analysis results + history | **kernel record** (evidence) | The audit trail of what an engine claimed and when. Re-running replaces rather than restores it. |
+| Session analysis results + history | **kernel record** (evidence) | The audit trail of what an engine claimed and when. Re-running replaces rather than restores it. Retention decided in §0.8. |
 | Current session draft | **durable draft** | Not promoted content, but losing it loses the user's typing. Survives a crash; not a kernel record until applied. |
 | `.mori` package drafts | **durable draft** | Same rule. |
 | Live intake rows | **derived index** | D8, already decided and built. Evictable, locator-backed. |
@@ -152,6 +152,34 @@ believing they are on SQLite. Second, and more important for sequencing,
 **every class moved into SQLite adds another silent-fallback path**, so
 moving more data before the signal is visible multiplies the failure
 rather than fixing it. That is why the revised §7 leads with it.
+
+### 0.8 Analysis history: unbounded, with one invariant
+
+Decided 2026-08-18, resolving §9's fourth question.
+
+**No retention rule.** The reasoning that made a cap look necessary is that
+the history shares a 5 MB budget, and R2 is what removes that. Adding a cap
+now would solve a problem the same program deletes, at the price of a
+one-way loss: engine output is not re-derivable (§0.6), so an evicted run
+is gone rather than rebuildable.
+
+Verified while deciding, because it changes what a cap would have to
+respect:
+
+- `analysisRunHistory.runs` holds a **full `AnalysisResult` per run**,
+  appended, with no cap today.
+- The user's corrections are **not** in the runs. `persistMemoryBodyFromAnalysis`
+  snapshots the reviewed fields into the memory body, so a run is unedited
+  engine output and the reviewed understanding is a separate durable class.
+- `selectAnalysisRun` sets `currentRunId` to any run, so **the adopted run
+  can be an older one**.
+
+That last point is the invariant worth recording now, because it is cheap
+here and expensive to rediscover:
+
+> **If a cap is ever added, it must never evict the run named by
+> `currentRunId`.** A plain "keep the newest N" would delete the adopted
+> understanding of any session where the user chose an earlier run.
 
 ## 1. Why (and why before launch)
 
@@ -331,7 +359,6 @@ Open questions to confirm at approval time:
    exist only in localStorage (recommended: yes, same pass)?
 3. Any objection to the document-per-row shape for `V009` (vs columnar
    decomposition)?
-4. §0.6 classifies analysis history as durable evidence rather than a
-   rebuildable cache, which means it is never evicted and grows without
-   bound. Is an explicit retention rule wanted for it, or is unbounded
-   correct for an audit trail?
+4. ~~Retention for analysis history.~~ **Decided in §0.8:** unbounded,
+   with a recorded invariant that any future cap must not evict the
+   adopted run.
