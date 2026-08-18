@@ -28,6 +28,11 @@ import type {
   SqliteSessionImportWriteResult,
 } from "../sqlite/sessionImportRows";
 import type {
+  DurableDocumentKind,
+  SqliteDurableDocumentRow,
+  SqliteDurableDocumentWriteResult,
+} from "../sqlite/durableDocumentRows";
+import type {
   SqliteKernelObjectRow,
   SqliteKernelRecordRow,
   SqliteKernelRevisionRow,
@@ -84,6 +89,10 @@ export type TauriCommandName =
   | "list_memory_review_action_rows"
   | "persist_session_imports"
   | "list_session_import_rows"
+  | "save_durable_document_rows"
+  | "get_durable_document_row"
+  | "list_durable_document_rows"
+  | "delete_durable_document_row"
   | "list_all_session_import_rows"
   | "save_kernel_record_rows"
   | "list_kernel_record_rows"
@@ -280,6 +289,22 @@ export type TauriCommandMap = {
   list_all_session_import_rows: {
     input: undefined;
     output: SqliteSessionImportRow[];
+  };
+  save_durable_document_rows: {
+    input: { documents: SqliteDurableDocumentRow[] };
+    output: SqliteDurableDocumentWriteResult;
+  };
+  get_durable_document_row: {
+    input: { kind: DurableDocumentKind; ownerId: string };
+    output: SqliteDurableDocumentRow | null;
+  };
+  list_durable_document_rows: {
+    input: { kind: DurableDocumentKind };
+    output: SqliteDurableDocumentRow[];
+  };
+  delete_durable_document_row: {
+    input: { kind: DurableDocumentKind; ownerId: string };
+    output: number;
   };
   clear_all_sqlite_data: { input: undefined; output: ClearAllSqliteDataResult };
   reset_sqlite_database: { input: undefined; output: null };
@@ -497,6 +522,25 @@ export const tauriCommands = {
   },
   listMemoryReviewActionRows(projectId: string): Promise<SqliteMemoryReviewActionRow[]> {
     return invokeTauriCommand("list_memory_review_action_rows", { projectId });
+  },
+  // Durable documents (V009). Present and tested; nothing adopts them until
+  // R2, so these are unreferenced by design rather than by omission.
+  saveDurableDocumentRows(
+    documents: SqliteDurableDocumentRow[],
+  ): Promise<SqliteDurableDocumentWriteResult> {
+    return invokeTauriCommand("save_durable_document_rows", { documents });
+  },
+  getDurableDocumentRow(
+    kind: DurableDocumentKind,
+    ownerId: string,
+  ): Promise<SqliteDurableDocumentRow | null> {
+    return invokeTauriCommand("get_durable_document_row", { kind, ownerId });
+  },
+  listDurableDocumentRows(kind: DurableDocumentKind): Promise<SqliteDurableDocumentRow[]> {
+    return invokeTauriCommand("list_durable_document_rows", { kind });
+  },
+  deleteDurableDocumentRow(kind: DurableDocumentKind, ownerId: string): Promise<number> {
+    return invokeTauriCommand("delete_durable_document_row", { kind, ownerId });
   },
   saveKernelRecordRows(records: SqliteKernelRecordRow[]): Promise<SqliteKernelWriteResult> {
     return invokeTauriCommand("save_kernel_record_rows", { records });

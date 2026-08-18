@@ -1,6 +1,7 @@
 pub mod accepted_memory;
 pub mod backup;
 pub mod connection;
+pub mod documents;
 pub mod kernel;
 pub mod migrations;
 pub mod records;
@@ -21,6 +22,10 @@ pub use kernel::{
 pub use session_imports::{
     list_all_session_imports, list_session_imports, save_session_imports, SessionImportRow,
     SessionImportWriteResult,
+};
+pub use documents::{
+    delete_durable_document, get_durable_document, list_durable_documents,
+    save_durable_documents, DurableDocumentRow, DurableDocumentWriteResult,
 };
 pub use connection::{database_path, open_database};
 pub use migrations::{apply_migrations, applied_migrations, MIGRATIONS, MIGRATION_TABLE_NAME};
