@@ -5,8 +5,9 @@ W5: promoting desktop SQLite from a mirror of the browser store to the
 authoritative store for all durable data, and demoting localStorage to
 the browser-mode fallback plus a UI-preference cache.
 
-**Status: direction approved, design re-baselined 2026-08-13. Still
-awaiting approval of the revised plan below before any build starts.**
+**Status: direction approved, design re-baselined 2026-08-13, revised
+plan written 2026-08-18. Awaiting approval of §7 before any build
+starts.**
 Written 2026-07-12 against the repo at that date; §0 records what has
 changed under it since, and supersedes the schema numbering and scope in
 §4 and §7.
@@ -103,6 +104,54 @@ Live intake now bounds its own growth by age and count
 (`lib/live-intake/evictIntakeRows.ts`), reporting what it drops. That is
 a stop-gap to stop one new writer filling the shared budget, not a
 substitute for this work, and it should be removed when intake moves.
+
+### 0.6 The classification, decided
+
+§0.3 asks for a three-way call per kind. Making it surfaced a sharper
+test than "is the origin preserved".
+
+**Re-derivable means the derivation is deterministic, not merely that an
+origin still exists.** Live intake qualifies: it is a parse of a
+structured log, so re-running it on the same bytes yields the same rows,
+which is what makes the locator (D1) worth anything. LLM analysis does
+not qualify. Re-running it on the same transcript yields different
+output, and any review or edit the user applied is gone. A preserved
+origin does not make that content reconstructable, so it is durable
+content, not an index.
+
+| Data | Class | Consequence |
+| --- | --- | --- |
+| Session memory bodies | **kernel record** | Reviewed content, not reproducible by re-analysis. Never evictable. |
+| Session analysis results + history | **kernel record** (evidence) | The audit trail of what an engine claimed and when. Re-running replaces rather than restores it. |
+| Current session draft | **durable draft** | Not promoted content, but losing it loses the user's typing. Survives a crash; not a kernel record until applied. |
+| `.mori` package drafts | **durable draft** | Same rule. |
+| Live intake rows | **derived index** | D8, already decided and built. Evictable, locator-backed. |
+| Project connections, user projects | **kernel record** | A user-authored mapping. Light, but its loss silently rewires every projection. |
+| Diagnostics log | **file** | Append-only, disposable, and unfit for a row store. |
+| Theme, sidebar, onboarding, notification prefs, observation opt-in, engine presets, language consent | **preference** | Device-local. Stays in localStorage, must never be read as a source of truth. |
+
+### 0.7 Verified: the fallback is invisible where it matters most
+
+Constraint §0.4.3 says a fallback must not become a resting state. It
+already is one, in the surface that writes the most.
+
+Every kernel operation catches a SQLite failure, writes to localStorage,
+and returns `fellBack: true` with a reason. That contract is right. What
+is missing is a reader:
+
+- `record-ledger/useRecordLedger.ts` calls `saveRecord` in ten places and
+  reads `fellBack` in **none**. The 기록 workspace is where the user
+  authors records, so on desktop a broken SQLite write path sends every
+  record to localStorage and says nothing.
+- The signal is surfaced only by record search in the command palette and
+  by the memory views, which read accepted memory rather than write it.
+
+Two consequences for this plan. First, it is a plausible contributor to
+issue #12 itself: a desktop user can be filling the 5 MB store while
+believing they are on SQLite. Second, and more important for sequencing,
+**every class moved into SQLite adds another silent-fallback path**, so
+moving more data before the signal is visible multiplies the failure
+rather than fixing it. That is why the revised §7 leads with it.
 
 ## 1. Why (and why before launch)
 
@@ -204,22 +253,62 @@ a pre-promotion copy of everything it ever had.
   `browser-draft` / `desktop-sqlite`; promoted classes adopt the same
   labeling so degraded states are visible in Settings.
 
-## 7. Slices (each one commit, program order)
+## 7. Slices, revised 2026-08-18
 
-1. **S1 · V008 `app_settings`** + route Quick Pass / repository
-   settings through a runtime-aware settings repository.
-2. **S2 · V009 typed tables** + Rust repository + Tauri commands +
-   TS bridges (mirrors the V004 `session_imports` pattern).
-3. **S3 · Adoption + dual-write** for memory bodies and analyses.
-4. **S4 · Adoption + dual-write** for pending reviews and package
-   drafts.
-5. **S5 · Read-preference flip** (SQLite authoritative for all
-   promoted classes) + degraded-state notifications.
-6. **S6 · Dual-write retirement** after a clean cycle.
+Replaces the original list, which numbered its first migration `V008`
+and so would collide with the record kernel. Program order, one commit
+each. The ordering rule is that **honesty precedes migration**: nothing
+moves into SQLite until a failed write is something the user can see,
+because each moved class otherwise adds another silent-fallback path.
 
-Each slice: colocated TS tests, `cargo test` for Rust repositories,
-`check:full` + build, and a browser-mode regression check (browser
-behaviour must be byte-identical throughout).
+**R0 · Surface the fallback.** No schema change, so this is buildable
+before the rest is approved. Make `fellBack` reach the user in the
+surfaces that write: the 기록 workspace first (§0.7), then any other
+writer that discards it. One calm, persistent indication that this
+device is not on SQLite and why, not a per-write toast. Add a diagnostics
+line reporting the current resting storage per class.
+
+**R1 · `V009` durable content.** Schema, Rust repository, Tauri commands,
+TS bridge, mirroring the `V004` `session_imports` pattern, which is the
+in-repo precedent. Document-per-row, as §9.3 asks. No adoption yet, so
+this slice changes no behaviour and can be verified in isolation.
+
+**R2 · Adopt the heavy classes: session memory bodies and analysis
+history.** These are the two the store cannot hold and the ones with no
+SQLite path at all today (§0.2). Dual-write, read from localStorage.
+
+**R3 · Adopt the drafts**: current session draft and `.mori` package
+drafts.
+
+**R4 · Adopt the authored mappings**: project connections and user
+projects. Light in bytes, heavy in consequence, since losing them
+silently rewires every projection.
+
+**R5 · Move live intake to a derived-index table** and delete
+`evictIntakeRows` with the bound it enforces. Intake is evictable by
+class (D8), so it may be rebuilt rather than copied. Its stop-gap exists
+only because it shares the 5 MB budget; once it does not, the bound is
+the wrong shape for the problem.
+
+**R6 · Flip the read preference.** SQLite becomes authoritative for every
+promoted class. A fallback now reports a degraded state through R0's
+surface rather than passing as normal operation.
+
+**R7 · Retire dual-write** after one clean cycle.
+
+### 7.1 What each adoption slice owes
+
+R2 through R5 each carry the same gate, from §0.4:
+
+- A backup taken before the one-time pass, and a diagnostics report that
+  can say what moved.
+- Interruption tested as behaviour, not by inspection: partial, killed
+  mid-way, re-run, run twice, and run against a full disk.
+- **No deletion.** A derived index may be rebuilt instead of copied,
+  which is not deletion, provided its origin is preserved.
+- Colocated TS tests, `cargo test` for the Rust repository,
+  `check:full` plus build, and a browser-mode check. Browser behaviour
+  stays byte-identical throughout.
 
 ## 8. Out of scope
 
@@ -230,12 +319,19 @@ behaviour must be byte-identical throughout).
 
 ## 9. Approval
 
-Build starts when the user approves this design. Open questions to
-confirm at approval time:
+R0 needs no approval: it changes no schema and moves no data, it only
+stops an existing failure from being silent. R1 onward starts when the
+user approves §7.
 
-1. Is the one-release dual-write window acceptable, or should S5 wait
+Open questions to confirm at approval time:
+
+1. Is the one-release dual-write window acceptable, or should R6 wait
    for two cycles?
 2. Should the one-time adoption also import **saved sessions** that
    exist only in localStorage (recommended: yes, same pass)?
-3. Any objection to the document-per-row shape for V009 (vs columnar
+3. Any objection to the document-per-row shape for `V009` (vs columnar
    decomposition)?
+4. §0.6 classifies analysis history as durable evidence rather than a
+   rebuildable cache, which means it is never evicted and grows without
+   bound. Is an explicit retention rule wanted for it, or is unbounded
+   correct for an audit trail?
