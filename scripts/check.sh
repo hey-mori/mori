@@ -90,6 +90,9 @@ npm test
 step "stylelint"
 npm run style:check
 
+step "prose"
+npm run check:prose
+
 if [[ "$FULL" -eq 1 ]]; then
   step "production build"
   npm run build

@@ -98,14 +98,14 @@ prompt loop with a realistic sample input, follow
 [docs/e2e-smoke-flow.md](docs/e2e-smoke-flow.md) using the fixture at
 [docs/fixtures/connector-sample-mori-session.jsonl](docs/fixtures/connector-sample-mori-session.jsonl).
 
-The walkthrough is local-only — no cloud sync, no background watching,
+The walkthrough is local-only: no cloud sync, no background watching,
 no external accounts.
 
 ## Validate
 
 ```bash
-npm run check:full     # typecheck + full test suite — run before every commit
-npm run check:release  # adds `npm run build` — run before push / milestone handoff
+npm run check:full     # typecheck + full test suite, run before every commit
+npm run check:release  # adds `npm run build`, run before push / milestone handoff
 ```
 
 Faster paths during iteration:

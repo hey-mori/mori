@@ -74,7 +74,7 @@ Two rules that make the grades work:
   Finding one is a result worth reporting, not a detour, and correcting it
   is grade one.
 
-## Commit messages — non-negotiable
+## Commit messages · non-negotiable
 
 Every commit MUST follow [`docs/commit-format.md`](docs/commit-format.md).
 That file is the authoritative spec. The short form:
@@ -100,7 +100,7 @@ Before running `git commit`, re-check the message against the spec.
 If `src-tauri/` changed, also run `cargo check` and `cargo test` in that
 directory.
 
-## Writing style — non-negotiable
+## Writing style · non-negotiable
 
 - Never use the em dash `—` anywhere: not in UI strings, not in code
   comments, not in docs or commit messages. Use `,` or `·` instead, or

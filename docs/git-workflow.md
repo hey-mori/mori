@@ -193,8 +193,8 @@ config, `scripts/`, or a workflow forces the full pass, because those files can
 break an area the diff never mentions.
 
 **The remote CI is manual-only, and that is a platform constraint rather than a
-preference.** Runs get rejected before they start — jobs fail in about two seconds
-with zero steps executed — when this account's Actions allowance is spent. It
+preference.** Runs get rejected before they start, jobs failing in about two seconds
+with zero steps executed, when this account's Actions allowance is spent. It
 happened from 2026-07-24, cleared, and returned on 2026-08-07 after a day of heavy
 use. Automatic triggers under that condition put a red X on every commit, which
 hides real failures inside noise.
@@ -202,7 +202,7 @@ hides real failures inside noise.
 So the gate is `scripts/check.sh`, run locally and recorded in the pull request
 under "How it was verified". A hand-started run (`workflow_dispatch`) works
 whenever the allowance does, and is worth asking for when a change touches
-dependencies, the toolchain, or the order stages run in — those are the things a
+dependencies, the toolchain, or the order stages run in. Those are the things a
 local run structurally cannot see, because it uses a working tree that already
 holds whatever earlier work left in it.
 
