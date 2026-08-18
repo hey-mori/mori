@@ -132,6 +132,7 @@ import { prewarmLanguageModel, resetPrewarmState } from "../lib/language/prewarm
 import { getSessionImportRepository } from "../lib/storage/sessionImportRepository";
 import { persistMemoryBodyFromAnalysis } from "./sessionMemoryPersistence";
 import { createDesktopDocumentMirror } from "../lib/storage/desktopDocumentMirror";
+import { getDurableStorage, prepareDurableReads } from "./durableReads";
 import { createMirroringDraftRepository } from "../lib/storage/mirroringDraftRepository";
 
 export type SessionMode = "demo" | "draft";
@@ -584,10 +585,11 @@ let lazyPersistenceService: SessionPersistenceService | null = null;
 
 function getRepository(): DraftRepository {
   if (!lazyRepository) {
-    // Dual-write (R2). On desktop the durable classes are mirrored into
-    // SQLite as they are written; reads stay on localStorage until R6 flips
-    // them. Browser mode gets the bare repository, unchanged.
-    const base = createBrowserDraftRepository();
+    // Dual-write (R2) plus the read flip (R6). Reads come through the storage
+    // `prepareDurableReads` resolved, which is SQLite-backed only when SQLite
+    // provably holds everything localStorage does; otherwise it is null and
+    // this is exactly the repository it always was.
+    const base = createBrowserDraftRepository(getDurableStorage() ?? undefined);
     const mirror = createDesktopDocumentMirror();
     lazyRepository = mirror ? createMirroringDraftRepository(base, mirror) : base;
   }
@@ -644,6 +646,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   dataSource: createStaticMockDataSource(demoView),
   subscribeToDataSource: (onUpdate) => get().dataSource.subscribe(onUpdate),
   hydrate: async () => {
+    // Before anything is read: hydration is what pulls the sessions into
+    // memory, so a source decided after it would change nothing this launch.
+    await prepareDurableReads();
     const repository = getRepository();
     const service = getPersistenceService();
     const analysisSettings = repository.loadQuickPassSettings();

@@ -5,6 +5,7 @@ import { useSqliteStore } from "../../app/sqliteStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { getDocumentMirrorHealth } from "../../lib/storage/desktopDocumentMirror";
 import { getLastAdoptionReport } from "../../app/useDurableDocumentAdoption";
+import { getDurableReadSource } from "../../app/durableReads";
 import {
   buildDiagnosticsReport,
   readDiagnosticsEntries,
@@ -164,6 +165,7 @@ function exportDiagnosticsReport(): void {
     storage: describeRestingStorage(),
     mirror: describeMirror(),
     adoption: getLastAdoptionReport() ?? undefined,
+    durableReads: describeDurableReads(),
   });
   const blob = new Blob([JSON.stringify(report, null, 2)], {
     type: "application/json",
@@ -174,6 +176,18 @@ function exportDiagnosticsReport(): void {
   anchor.download = `mori-diagnostics-${report.exportedAt.slice(0, 10)}.json`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+/** Where durable reads came from this launch, and why, when held back. */
+function describeDurableReads() {
+  const resolved = getDurableReadSource();
+  if (!resolved) return undefined;
+  return {
+    source: resolved.source,
+    ...(resolved.heldBack
+      ? { heldBackReason: resolved.heldBack.reason, missingKeys: resolved.heldBack.missingKeys }
+      : {}),
+  };
 }
 
 /** How far the SQLite copy is behind, while dual-write is on. */

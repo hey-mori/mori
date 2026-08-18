@@ -51,43 +51,11 @@
 import type { KeyValueStorage } from "./storageTypes";
 import type { DocumentMirrorTarget } from "./documentMirror";
 import {
-  APP_SCOPED_OWNER,
   toDurableDocumentRow,
   type DurableDocumentKind,
   type SqliteDurableDocumentRow,
 } from "../sqlite/durableDocumentRows";
-
-/**
- * Which localStorage prefix becomes which document kind.
- *
- * Order matters less than the exactness of the prefixes. `mori.sessionAnalysis.`
- * and `mori.sessionAnalysisHistory.` look like one is a prefix of the other and
- * are not: the twenty-first character is `.` in one and `H` in the other, so a
- * history key never matches the analysis prefix. That is load-bearing and quiet,
- * so there is a test for it.
- */
-const ADOPTED: ReadonlyArray<{ prefix: string; kind: DurableDocumentKind }> = [
-  { prefix: "mori.sessionMemory.", kind: "memory_body" },
-  { prefix: "mori.sessionAnalysisHistory.", kind: "analysis_history" },
-  { prefix: "mori.sessionAnalysis.", kind: "analysis" },
-  { prefix: "mori.sessionDraft.", kind: "session_draft" },
-  { prefix: "mori.sessionPendingReview.", kind: "pending_review" },
-  { prefix: "mori.packageDraft.", kind: "package_draft" },
-];
-
-/**
- * The app-scoped classes: one document for the whole install, stored under an
- * exact key rather than a prefix.
- *
- * Kept separate from the prefix table because deriving an owner id from the
- * suffix of an exact key gives an empty string, which would collide with any
- * other document written from an unset id. They take the reserved owner
- * instead.
- */
-const ADOPTED_SINGLETONS: ReadonlyArray<{ key: string; kind: DurableDocumentKind }> = [
-  { key: "mori.projectConnections.v1", kind: "project_connections" },
-  { key: "mori.userProjects.v1", kind: "user_projects" },
-];
+import { durableKeyToDocument, durableKinds } from "./durableKeyMap";
 
 /**
  * Keys that look adopted and are not, asserted rather than assumed.
@@ -152,11 +120,7 @@ export async function adoptDurableDocuments(input: {
   // fresher and left alone rather than compared against a stale snapshot.
   const existing = new Map<string, string>();
   if (listExisting) {
-    const kinds = [
-      ...ADOPTED.map((entry) => entry.kind),
-      ...ADOPTED_SINGLETONS.map((entry) => entry.kind),
-    ];
-    for (const kind of kinds) {
+    for (const kind of durableKinds()) {
       try {
         for (const row of await listExisting(kind)) {
           existing.set(`${row.kind} ${row.ownerId}`, row.updatedAt);
@@ -174,10 +138,9 @@ export async function adoptDurableDocuments(input: {
   for (let index = 0; index < storage.length; index += 1) {
     const key = storage.key(index);
     if (!key) continue;
-    const singleton = ADOPTED_SINGLETONS.find((entry) => entry.key === key);
-    const match = singleton
-      ? { prefix: key, kind: singleton.kind, ownerId: APP_SCOPED_OWNER }
-      : matchPrefix(key);
+    // One shared mapping with the read flip, so the two directions cannot
+    // disagree about what a key holds.
+    const match = durableKeyToDocument(key);
     if (!match) continue;
     report.scanned += 1;
 
@@ -196,7 +159,7 @@ export async function adoptDurableDocuments(input: {
       continue;
     }
 
-    const ownerId = match.ownerId ?? key.slice(match.prefix.length);
+    const ownerId = match.ownerId;
     const updatedAt = readSavedAt(body) ?? now();
     const held = existing.get(`${match.kind} ${ownerId}`);
     if (held !== undefined && held >= updatedAt) {
@@ -239,12 +202,6 @@ export async function adoptDurableDocuments(input: {
  * are exactly the old data this pass is for, so a missing version is treated as
  * the first version rather than as a reason to skip.
  */
-function matchPrefix(
-  key: string,
-): { prefix: string; kind: DurableDocumentKind; ownerId?: string } | undefined {
-  return ADOPTED.find((entry) => key.startsWith(entry.prefix));
-}
-
 function readSchemaVersion(body: unknown): number {
   const value = (body as { schemaVersion?: unknown } | null)?.schemaVersion;
   return typeof value === "number" ? value : 1;
