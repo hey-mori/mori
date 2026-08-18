@@ -144,6 +144,11 @@ pub fn clear_all_data(conn: &mut Connection) -> Result<ClearAllDataResult, Strin
     let durable_documents_deleted = tx
         .execute("DELETE FROM durable_documents", [])
         .map_err(|error| error.to_string())? as u64;
+    // The live intake index (V010). Re-derivable, but it is still observed
+    // data about the user's work, and leaving it would have the project
+    // projection keep reporting activity after a confirmed wipe.
+    tx.execute("DELETE FROM intake_requests", [])
+        .map_err(|error| error.to_string())?;
 
     tx.commit().map_err(|error| error.to_string())?;
 
@@ -951,6 +956,16 @@ mod tests {
         save_session_snapshot(&mut conn, &fixture_snapshot()).expect("save");
         seed_every_later_table(&conn);
 
+        // A table nobody seeded is empty either way, so the sweep below would
+        // pass without the reset ever touching it. Adding a table therefore has
+        // to add a seed, and that is what makes the sweep mean anything.
+        for table in user_data_tables(&conn) {
+            let count: i64 = conn
+                .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
+                .expect("count");
+            assert!(count > 0, "table {table} is not seeded, so clearing it proves nothing");
+        }
+
         let result = clear_all_data(&mut conn).expect("clear");
         assert_eq!(result.sessions_deleted, 1);
         assert_eq!(result.projects_deleted, 1);
@@ -975,6 +990,11 @@ mod tests {
 
     /// One row in each table the fixture snapshot does not reach, so the sweep
     /// below is checking emptiness it actually caused.
+    ///
+    /// Every table must be reached by this or by the fixture. The sweep asserts
+    /// that before it clears, because a table nobody seeds is empty either way
+    /// and would pass the emptiness check without the reset ever touching it.
+    /// That is exactly how `V010` slipped past the first version of this guard.
     fn seed_every_later_table(conn: &Connection) {
         conn.execute(
             "INSERT INTO kernel_records                (id, schema_id, title, body, captured_at, time_basis, status, origin, created_at, updated_at)              VALUES ('rec-1', 'note', '제목', '본문', '2026-08-18T00:00:00Z', 'explicit', 'active', 'user',                      '2026-08-18T00:00:00Z', '2026-08-18T00:00:00Z')",
@@ -986,6 +1006,69 @@ mod tests {
             [],
         )
         .expect("seed durable document");
+        conn.execute(
+            "INSERT INTO intake_requests (id, session_key, project_path, started_at, row_json)              VALUES ('req-1', 'sess-1', 'C:/dev/mori', '2026-08-18T00:00:00Z', '{}')",
+            [],
+        )
+        .expect("seed intake request");
+        conn.execute(
+            "INSERT INTO kernel_objects (collection, id, payload_json, saved_at)              VALUES ('context', 'ctx-1', '{}', '2026-08-18T00:00:00Z')",
+            [],
+        )
+        .expect("seed kernel object");
+        conn.execute(
+            "INSERT INTO kernel_revisions (id, record_id, actor, operation, created_at)              VALUES ('rev-1', 'rec-1', 'user', 'create', '2026-08-18T00:00:00Z')",
+            [],
+        )
+        .expect("seed kernel revision");
+        conn.execute(
+            "INSERT INTO session_imports (id, session_id, source_json, events_json, saved_at)              VALUES ('imp-1', 'sess-1', '{}', '[]', '2026-08-18T00:00:00Z')",
+            [],
+        )
+        .expect("seed session import");
+        conn.execute(
+            "INSERT INTO consolidated_memories                (id, project_id, kind, title, summary, status, importance, confidence_label,                 evidence_refs_json, source_session_ids_json, origin_proposal_ids_json,                 related_issue_ids_json, related_decision_ids_json, proposed_action, sensitivity,                 resume_eligible, report_eligibility, created_at, updated_at, accepted_at,                 accepted_by, review_action_ids_json, schema_version)              VALUES ('mem-1', 'proj-1', 'decision', '제목', '요약', 'active', 'high', 'high',                      '[]', '[]', '[]', '[]', '[]', 'none', 'normal', 1, 'eligible',                      '2026-08-18T00:00:00Z', '2026-08-18T00:00:00Z', '2026-08-18T00:00:00Z',                      'user', '[]', 1)",
+            [],
+        )
+        .expect("seed consolidated memory");
+        conn.execute(
+            "INSERT INTO consolidated_memory_audit                (id, project_id, action_type, actor, timestamp, target_memory_ids_json,                 reversible, schema_version)              VALUES ('audit-1', 'proj-1', 'accept', 'user', '2026-08-18T00:00:00Z', '[]', 1, 1)",
+            [],
+        )
+        .expect("seed memory audit");
+        // The collections `fixture_snapshot` leaves empty. Seeded here as raw
+        // rows rather than by enriching the fixture, which other tests assert
+        // counts against.
+        conn.execute(
+            "INSERT INTO issues (id, project_id, session_id, title, description, status, priority,                source_event_ids_json, related_decision_ids_json, related_file_ids_json,                suggested_next_action, created_at, updated_at, confidence, trust_level)              VALUES ('iss-1', 'proj-1', 'sess-1', '제목', '설명', 'open', 'high', '[]', '[]', '[]',                      '없음', '2026-08-18T00:00:00Z', '2026-08-18T00:00:00Z', 0.5, 'observed')",
+            [],
+        )
+        .expect("seed issue");
+        conn.execute(
+            "INSERT INTO decisions (id, project_id, session_id, title, decision, rationale,                rejected_options_json, impact_json, source_event_ids_json, related_issue_ids_json,                related_source_ids_json, created_at, importance, trust_level, confirmed)              VALUES ('dec-1', 'proj-1', 'sess-1', '제목', '결정', '근거', '[]', '{}', '[]', '[]',                      '[]', '2026-08-18T00:00:00Z', 'high', 'observed', 1)",
+            [],
+        )
+        .expect("seed decision");
+        conn.execute(
+            "INSERT INTO relationships (id, from_id, from_type, to_id, to_type, \"type\",                confidence, reason)              VALUES ('rel-1', 'iss-1', 'issue', 'dec-1', 'decision', 'resolves', 0.5, '이유')",
+            [],
+        )
+        .expect("seed relationship");
+        conn.execute(
+            "INSERT INTO artifacts (id, project_id, session_id, title, kind,                source_event_ids_json, created_at)              VALUES ('art-1', 'proj-1', 'sess-1', '제목', 'file', '[]', '2026-08-18T00:00:00Z')",
+            [],
+        )
+        .expect("seed artifact");
+        conn.execute(
+            "INSERT INTO next_actions (id, session_id, title, priority, related_issue_ids_json,                related_event_ids_json)              VALUES ('na-1', 'sess-1', '제목', 'high', '[]', '[]')",
+            [],
+        )
+        .expect("seed next action");
+        conn.execute(
+            "INSERT INTO summaries (id, session_id, session_summary, resume_prompt,                report_markdown, next_action_ids_json, generated_at)              VALUES ('sum-1', 'sess-1', '요약', '이어가기', '# 리포트', '[]',                      '2026-08-18T00:00:00Z')",
+            [],
+        )
+        .expect("seed summary");
     }
 
     /// Every table holding user data: the schema, minus SQLite's own, minus the
