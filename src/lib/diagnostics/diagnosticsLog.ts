@@ -93,6 +93,12 @@ export type DiagnosticsReport = {
    * schema stays readable by anything that already parses it.
    */
   storage?: { fellBackTo: "browser-local-storage"; scope: string; reason: string; at: string };
+  /**
+   * How far the SQLite mirror is behind localStorage while dual-write is on
+   * (R2). Absent in browser mode, where the question does not apply. A
+   * non-zero `failed` is the condition the R6 read flip must refuse.
+   */
+  mirror?: { written: number; failed: number; lastFailureReason?: string };
 };
 
 /** Assemble the export payload. Pure: all environment facts come in as args. */
@@ -103,6 +109,7 @@ export function buildDiagnosticsReport(input: {
   userAgent: string;
   platform: string;
   storage?: DiagnosticsReport["storage"];
+  mirror?: DiagnosticsReport["mirror"];
 }): DiagnosticsReport {
   return {
     schema: "mori.diagnostics.report.v1",
@@ -112,6 +119,7 @@ export function buildDiagnosticsReport(input: {
     entryCount: input.entries.length,
     entries: input.entries,
     ...(input.storage ? { storage: input.storage } : {}),
+    ...(input.mirror ? { mirror: input.mirror } : {}),
   };
 }
 
