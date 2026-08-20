@@ -1,75 +1,20 @@
-/* ── Mori General Modal — Premium Centered Popups ────────────────────────── */
-.base-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(20, 18, 40, 0.32);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  z-index: 20000;
-}
+/*
+ * `.base-modal` and `.base-modal-body` used to live in this file and were
+ * removed: no component referenced either, and they shipped inside the global
+ * stylesheet on every launch.
+ *
+ * Issue #17 lists `.base-modal` as "a dead primitive that one view duplicates
+ * verbatim". The duplicate, `.consolidation-edit-modal`, is not verbatim, and
+ * the live copy is the better one: it paints `var(--panel)` where this painted
+ * `#ffffff`, so converging onto this primitive would have broken that dialog in
+ * dark mode. It also carried `z-index: 20000` on a page whose next highest
+ * overlay is 120.
+ *
+ * So the convergence #17 asks for has to be built from the live overlays. The
+ * one below is a worked example of that already happening.
+ */
 
-.base-modal-body {
-  display: grid;
-  gap: 14px;
-  width: min(540px, 100%);
-  padding: 22px 22px 18px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid #e6e3f1;
-  box-shadow: 0 20px 50px rgba(24, 28, 42, 0.15);
-}
-
-.base-modal-body header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-
-.base-modal-body header h3 {
-  margin: 0;
-  font-size: var(--base-font-size-2xl);
-  font-weight: 700;
-  color: var(--text);
-}
-
-.base-modal-body label {
-  display: grid;
-  gap: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #4b4470;
-}
-
-.base-modal-body input,
-.base-modal-body textarea {
-  padding: 10px 12px;
-  border: 1px solid #d9d0ff;
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 13.5px;
-  color: #2c2549;
-  background: #fdfcff;
-  transition: border-color 0.12s ease;
-}
-
-.base-modal-body input:focus,
-.base-modal-body textarea:focus {
-  outline: none;
-  border-color: var(--purple);
-}
-
-.base-modal-body footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-/* Project create / edit modal — a compact card that reuses the settings sheet's
+/* Project create / edit modal · a compact card that reuses the settings sheet's
    scrim + headed bar (.settings-sheet-layer / -scrim / -head / -close) so it
    matches that surface, with its own body + divided footer. */
 .project-modal {
@@ -85,26 +30,22 @@
   outline: none;
   overflow: hidden;
 }
-
 .project-modal .settings-sheet-head {
   /* The shared header padding is tuned for the wide settings sheet; align it
      to this modal's body padding so the title's left edge and the close
      button's right edge line up with the form fields. */
   padding: 12px 20px;
 }
-
 .project-modal-body {
   display: grid;
   gap: 16px;
   padding: 18px 20px;
   overflow: auto;
 }
-
 .project-modal-field {
   display: grid;
   gap: 6px;
 }
-
 .project-modal-field > span {
   display: inline-flex;
   align-items: center;
@@ -113,7 +54,6 @@
   font-weight: 700;
   color: var(--text);
 }
-
 .project-modal-field > span em {
   font-style: normal;
   font-size: var(--base-font-size-2xs);
@@ -122,17 +62,14 @@
   padding: 1px 6px;
   border-radius: 999px;
 }
-
 .project-modal-field > span em.is-required {
   color: var(--purple);
   background: var(--purple-50);
 }
-
 .project-modal-field > span em.is-optional {
   color: var(--muted);
   background: var(--gray-50);
 }
-
 .project-modal-field input,
 .project-modal-field textarea {
   width: 100%;
@@ -148,19 +85,16 @@
   resize: vertical;
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
-
 .project-modal-field input:focus,
 .project-modal-field textarea:focus {
   outline: none;
   border-color: var(--purple);
   box-shadow: 0 0 0 3px var(--purple-50);
 }
-
 .project-modal-field input::placeholder,
 .project-modal-field textarea::placeholder {
   color: var(--muted-2);
 }
-
 /* The theme gives every bare select a surface via html[data-base-theme] :where(select),
    which is (0,1,1) and outranks a lone class, so the parent has to win here. */
 .project-modal .project-modal-field select {
@@ -174,13 +108,11 @@
   color: var(--text);
   background: white;
 }
-
 .project-modal .project-modal-field select:focus {
   outline: none;
   border-color: var(--purple);
   box-shadow: 0 0 0 3px var(--purple-50);
 }
-
 /* The hint sits INSIDE the label, so it is matched by `.project-modal-field >
    span` (0,1,1) which styles the label bold and dark. A lone class is (0,1,0)
    and loses, which rendered the hint as a second label. */
@@ -189,7 +121,6 @@
   font-weight: 500;
   color: var(--muted-2);
 }
-
 /* The preview is what makes 상위 프로젝트 and a typed path read as ONE thing
    rather than two rules competing to place the project. */
 .project-modal-preview {
@@ -203,12 +134,10 @@
   background: var(--panel-soft, #fafbfd);
   font-size: var(--base-font-size-sm);
 }
-
 .project-modal-preview > span {
   flex-shrink: 0;
   color: var(--muted-2);
 }
-
 .project-modal-preview > strong {
   min-width: 0;
   overflow: hidden;
@@ -216,14 +145,12 @@
   white-space: nowrap;
   color: var(--text);
 }
-
 .project-modal-error {
   margin: 0;
   font-size: var(--base-font-size-sm);
   font-weight: 600;
   color: var(--red, #d43a3a);
 }
-
 .project-modal-foot {
   display: flex;
   align-items: center;
@@ -233,7 +160,6 @@
   border-top: 1px solid var(--line);
   background: var(--panel-soft, #fafbfd);
 }
-
 /* Agent connect modal: detect agents and wire the Claude hook in one click.
    Reuses the settings-sheet scrim + head, with its own row list body. */
 .connector-install-modal {
@@ -249,18 +175,15 @@
   outline: none;
   overflow: hidden;
 }
-
 .connector-install-modal .settings-sheet-head {
   padding: 12px 20px;
 }
-
 .connector-install-modal-body {
   display: grid;
   gap: 0;
   padding: 6px 20px 16px;
   overflow: auto;
 }
-
 .connector-install-row {
   display: flex;
   align-items: center;
@@ -268,11 +191,9 @@
   padding: 11px 0;
   border-top: 1px solid var(--line);
 }
-
 .connector-install-row:first-child {
   border-top: 0;
 }
-
 .connector-install-icon {
   display: inline-flex;
   align-items: center;
@@ -284,14 +205,12 @@
   background: var(--purple-50);
   color: var(--purple);
 }
-
 .connector-install-text {
   min-width: 0;
   flex: 1 1 auto;
   display: grid;
   gap: 2px;
 }
-
 .connector-install-name {
   display: inline-flex;
   align-items: center;
@@ -300,31 +219,26 @@
   font-weight: 650;
   color: var(--text);
 }
-
 .connector-install-detail {
   font-size: 11.5px;
   line-height: 1.4;
   color: var(--muted);
 }
-
 .connector-install-action {
   flex: none;
 }
-
 .connector-install-auto {
   flex: none;
   font-size: var(--base-font-size-xs);
   font-weight: 600;
   color: var(--muted-2);
 }
-
 .connector-install-note {
   margin: 10px 0 0;
   font-size: 11.5px;
   line-height: 1.5;
   color: var(--muted);
 }
-
 .connector-install-error {
   margin: 10px 0 0;
   font-size: 11.5px;
