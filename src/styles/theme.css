@@ -215,6 +215,11 @@
 /**
  * Spacing tokens. The Mori product surfaces use only these step values so a
  * future visual refresh can adjust density in one place.
+ *
+ * The one scale. `tokens.css` used to define `--base-space-1..10` with
+ * different values and a comment telling new code to use them; this file is
+ * imported after it, so those never resolved and the comment was wrong by up
+ * to 6px a step. `tokenLayer.test.ts` now fails if a token is defined twice.
  */
 :root {
   --base-space-0: 0;
