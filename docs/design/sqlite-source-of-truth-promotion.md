@@ -332,7 +332,47 @@ dropped so no caller has to ask which backend it holds.
 promoted class. A fallback now reports a degraded state through R0's
 surface rather than passing as normal operation.
 
-**R7 · Retire dual-write** after one clean cycle.
+**R7 · Retire dual-write.** Recommended **deferred**, not because it is
+unsafe but because its case weakened while the earlier slices ran. See
+§7.2.
+
+### 7.2 Why R7 is recommended deferred
+
+Measured 2026-08-19 on the reference device, 380 sessions across 18
+projects:
+
+| | |
+| --- | --- |
+| Browser store, total on disk | **438 KB** |
+| Budget it competes for | 5 to 10 MB |
+| Live intake still in it | **none**, moved out by R5 |
+
+R7 buys back that 438 KB. It costs the second copy of the user's
+sessions, which is the only thing that makes a broken database a
+recoverable state rather than a loss.
+
+That trade looked worthwhile when this plan was written, because intake
+was the writer that grew: unbounded at first, then bounded, and it wrote
+on every poll. R5 removed it from the browser store entirely. What is
+left is one document per session, written when the session is saved, and
+it has stopped growing in the way that made #12 urgent.
+
+So the honest reading is that **R5, not R7, was the slice that relieved
+the pressure**, and R7 is now a modest space win against a real
+durability cost.
+
+Conditions that would make it worth doing after all:
+
+1. The browser store approaches its cap again on a real device.
+2. A second copy stops being worth its cost, for example once the
+   database has automatic backups the user can restore without help.
+3. The stale-snapshot behaviour is replaced rather than only surfaced:
+   after R7 a held-back read flip serves data frozen at the moment
+   writing stopped, which is now visible but is still the wrong thing to
+   show.
+
+Until then dual-write costs one extra write per save and keeps a full
+second copy, which is a good trade at this size.
 
 ### 7.1 What each adoption slice owes
 
