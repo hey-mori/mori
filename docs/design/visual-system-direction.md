@@ -46,8 +46,13 @@ rather than literals.
   a saturated fill).
 - **Radius:** `--radius-sm` 6px, `--radius-md` 8px (pills use the existing
   `999px` convention).
-- **Spacing:** `--base-space-1..10` (4px to 40px). New layout uses the scale;
-  no stray pixel values.
+- **Spacing:** `--base-space-0..10` plus `--base-space-12`, defined in
+  `theme.css` (0, 4, 6, 8, 10, 12, 14, 16, 20, 24, 32, then 40px). There is no
+  step 11. New layout uses the scale; no stray pixel values.
+
+  This line used to read `1..10 (4px to 40px)`, which described a second copy
+  of the scale in `tokens.css` that never resolved, because `theme.css` is
+  imported after it. `--base-space-4` is 10px, not 16px.
 
 Gap worth closing: there is no token for a *very soft* large radius or for
 motion timing. If those recur, promote them to tokens rather than scattering
