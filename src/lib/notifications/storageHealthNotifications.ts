@@ -20,9 +20,11 @@ import type { CompanionNotification } from "./notification";
 export function buildStorageHealthNotifications(
   failure: StorageQuotaFailure | null,
   fallback: StorageFallbackEvent | null = null,
+  readFlipHeldBack: { reason: string; missingKeys: number; at: string } | null = null,
 ): CompanionNotification[] {
   const notices: CompanionNotification[] = [];
   if (fallback) notices.push(buildFallbackNotice(fallback));
+  if (readFlipHeldBack) notices.push(buildReadFlipNotice(readFlipHeldBack));
   if (!failure) return notices;
   return [
     ...notices,
@@ -74,5 +76,39 @@ function buildFallbackNotice(fallback: StorageFallbackEvent): CompanionNotificat
     actionLabel: "설정 열기",
     actionTarget: { kind: "view", view: "settings" },
     createdAt: fallback.at,
+  };
+}
+
+/**
+ * Build the notice for a durable read flip that declined to engage.
+ *
+ * Review severity, not risk: nothing is lost and nothing is in the wrong place,
+ * because reads stayed exactly where they already were. What it means is that
+ * the SQLite copy is missing something, and that is worth seeing while it is
+ * still harmless rather than after the second copy stops being written.
+ *
+ * The copy says what the user can act on, which is that some of their work has
+ * not been copied over yet. Which engine, and which keys, belong in diagnostics.
+ */
+function buildReadFlipNotice(held: {
+  reason: string;
+  missingKeys: number;
+  at: string;
+}): CompanionNotification {
+  return {
+    id: "storage-read-flip-held-back",
+    kind: "storage_write_failure",
+    severity: "review",
+    title: "일부 기록이 아직 옮겨지지 않았습니다",
+    message:
+      held.missingKeys > 0
+        ? `${held.missingKeys}개 항목이 새 저장소에 아직 없습니다. 지금은 이전 저장소에서 그대로 읽고 있어 사용에는 문제가 없습니다.`
+        : "새 저장소를 확인하지 못해 이전 저장소에서 그대로 읽고 있습니다. 사용에는 문제가 없습니다.",
+    basis: "state",
+    linkedItemIds: [],
+    evidenceRefs: [],
+    actionLabel: "설정 열기",
+    actionTarget: { kind: "view", view: "settings" },
+    createdAt: held.at,
   };
 }

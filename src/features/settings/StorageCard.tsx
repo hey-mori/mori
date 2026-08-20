@@ -41,6 +41,9 @@ export function StorageCard() {
   // machine rather than an event. The notification tells the user once; this
   // is where they come to check.
   const lastFallback = useStorageHealthStore((state) => state.lastFallback);
+  // Standing, like the fallback line: a copy that is behind stays behind until
+  // something is done about it.
+  const readFlipHeldBack = useStorageHealthStore((state) => state.readFlipHeldBack);
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -126,6 +129,14 @@ export function StorageCard() {
           <p className="settings-storage-error" role="alert">
             저장소를 열지 못해 기록을 앱 내부 저장소에 임시로 담고 있습니다. 용량이 작아
             공간이 곧 부족해질 수 있습니다. 원인: {lastFallback.reason}
+          </p>
+        ) : null}
+        {readFlipHeldBack ? (
+          <p className="settings-storage-notice">
+            일부 기록이 새 저장소에 아직 옮겨지지 않아 이전 저장소에서 읽고 있습니다.
+            {readFlipHeldBack.missingKeys > 0
+              ? ` 남은 항목 ${readFlipHeldBack.missingKeys}개.`
+              : ` 원인: ${readFlipHeldBack.reason}`}
           </p>
         ) : null}
         {storagePath.status === "error" ? (
