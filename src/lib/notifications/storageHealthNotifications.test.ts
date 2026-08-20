@@ -70,6 +70,50 @@ describe("buildStorageHealthNotifications", () => {
     expect(a.id).toBe(b.id);
   });
 
+  it("builds a review notice when the read flip was held back", () => {
+    const feed = buildStorageHealthNotifications(null, null, {
+      reason: "SQLite is missing documents localStorage holds",
+      missingKeys: 3,
+      at: "2026-08-18T11:00:00.000Z",
+    });
+
+    expect(feed).toHaveLength(1);
+    const notice = feed[0];
+    expect(notice.id).toBe("storage-read-flip-held-back");
+    // Review, not risk: nothing is lost and reads stayed where they were. It
+    // matters because R7 must not ship on top of a gap, not because the user is
+    // in trouble today.
+    expect(notice.severity).toBe("review");
+    expect(notice.message).toContain("3");
+    expect(notice.message).not.toContain("SQLite");
+  });
+
+  it("says something honest when it could not read the new store at all", () => {
+    const feed = buildStorageHealthNotifications(null, null, {
+      reason: "database is locked",
+      missingKeys: 0,
+      at: "2026-08-18T11:00:00.000Z",
+    });
+
+    // Zero missing is not "nothing to do": it means the count is unknown
+    // because the store could not be read, so the copy must not claim a number.
+    expect(feed[0].message).not.toContain("0개");
+  });
+
+  it("surfaces all three storage notices at once", () => {
+    const feed = buildStorageHealthNotifications(
+      { key: "k", at: "2026-08-18T11:02:00.000Z" },
+      { scope: "kernel", reason: "locked", at: "2026-08-18T11:01:00.000Z" },
+      { reason: "missing", missingKeys: 1, at: "2026-08-18T11:00:00.000Z" },
+    );
+
+    expect(feed.map((notice) => notice.id).sort()).toEqual([
+      "storage-fallback",
+      "storage-quota",
+      "storage-read-flip-held-back",
+    ]);
+  });
+
   it("keeps a stable id across different failure timestamps", () => {
     const a = buildStorageHealthNotifications({ key: "k", at: "2026-07-12T08:00:00.000Z" })[0];
     const b = buildStorageHealthNotifications({ key: "k", at: "2026-07-12T08:05:00.000Z" })[0];

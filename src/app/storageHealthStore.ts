@@ -31,19 +31,32 @@ export type StorageHealthState = {
    * other is "and now they have stopped fitting".
    */
   lastFallback: StorageFallbackEvent | null;
+  /**
+   * Set when the durable read flip (R6) declined to engage, meaning SQLite is
+   * missing documents localStorage holds.
+   *
+   * Harmless today, because reads simply stay where they already were. It stops
+   * being harmless at R7, when localStorage stops being written and what it
+   * holds starts going stale, so this has to be visible before then rather than
+   * only in a diagnostics export.
+   */
+  readFlipHeldBack: { reason: string; missingKeys: number; at: string } | null;
   reportQuotaFailure: (failure: StorageQuotaFailure) => void;
   clearQuotaFailure: () => void;
   reportFallback: (event: StorageFallbackEvent) => void;
   clearFallback: () => void;
+  reportReadFlipHeldBack: (held: { reason: string; missingKeys: number; at: string }) => void;
 };
 
 export const useStorageHealthStore = create<StorageHealthState>((set) => ({
   lastQuotaFailure: null,
   lastFallback: null,
+  readFlipHeldBack: null,
   reportQuotaFailure: (failure) => set({ lastQuotaFailure: failure }),
   clearQuotaFailure: () => set({ lastQuotaFailure: null }),
   reportFallback: (event) => set({ lastFallback: event }),
   clearFallback: () => set({ lastFallback: null }),
+  reportReadFlipHeldBack: (held) => set({ readFlipHeldBack: held }),
 }));
 
 // Register the process-wide observer once at module load. The observer seam

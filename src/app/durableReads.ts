@@ -18,6 +18,7 @@ import {
   type DurableReadSource,
 } from "../lib/storage/durableReadSource";
 import type { KeyValueStorage } from "../lib/storage/storageTypes";
+import { useStorageHealthStore } from "./storageHealthStore";
 
 let resolved: DurableReadSource | null = null;
 let storage: KeyValueStorage | null = null;
@@ -47,6 +48,13 @@ export function prepareDurableReads(): Promise<void> {
       resolved = { source: outcome.source, heldBack: outcome.heldBack };
       storage = outcome.storage;
       if (outcome.heldBack) {
+        // Visible, not only logged. A gap here is what R7 must not ship on top
+        // of, and the person who can act on it is the one using the app.
+        useStorageHealthStore.getState().reportReadFlipHeldBack({
+          reason: outcome.heldBack.reason,
+          missingKeys: outcome.heldBack.missingKeys,
+          at: new Date().toISOString(),
+        });
         console.info(
           `[durable-reads] staying on localStorage: ${outcome.heldBack.reason}` +
             ` (${outcome.heldBack.missingKeys} key(s), e.g. ${outcome.heldBack.example ?? "none"})`,

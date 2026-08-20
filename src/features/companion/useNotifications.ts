@@ -155,9 +155,10 @@ export function useNotifications(): {
   // full without telling them why it filled.
   const lastQuotaFailure = useStorageHealthStore((state) => state.lastQuotaFailure);
   const lastFallback = useStorageHealthStore((state) => state.lastFallback);
+  const readFlipHeldBack = useStorageHealthStore((state) => state.readFlipHeldBack);
   const storageHealthNotifications = useMemo<CompanionNotification[]>(
-    () => buildStorageHealthNotifications(lastQuotaFailure, lastFallback),
-    [lastQuotaFailure, lastFallback],
+    () => buildStorageHealthNotifications(lastQuotaFailure, lastFallback, readFlipHeldBack),
+    [lastQuotaFailure, lastFallback, readFlipHeldBack],
   );
 
   // Compose order = compose-time dedupe priority (a notification raised by two
