@@ -237,16 +237,17 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "appShell.endSession", label: "End session", status: "implemented", description: "Finalise the active session and mark it ended; report export stays an explicit step on the Reports surface." },
   { id: "appShell.sidebarCollapse", label: "Collapse sidebar", status: "implemented", description: "Hide the sidebar to widen the workspace." },
   // ─────────────────────────── Evidence ──────────────────────────
-  // Every add-source path below routes through `requestEvidenceImport`, whose
-  // `evidenceImportRequest` has no consumer, and the form that used to read it
-  // (features/import/ImportPanel.tsx) is orphaned. Pressing an import button
-  // lands the user on a tab with no import UI. See issue #2 / #9.
-  { id: "evidence.addSource.manualNote", label: "Manual note import", status: "unavailable", description: "Paste arbitrary text as a verified source.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다.", userFacingStatus: "사용 불가 · 입력 화면이 연결돼 있지 않습니다." },
-  { id: "evidence.addSource.urlImport", label: "URL import", status: "unavailable", description: "Add a URL with optional excerpt.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다.", userFacingStatus: "사용 불가 · 입력 화면이 연결돼 있지 않습니다." },
-  { id: "evidence.addSource.aiTranscriptPaste", label: "AI transcript paste", status: "unavailable", description: "Paste a Claude / Codex / ChatGPT transcript.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다. 대화 수집은 자동 수집이 대신합니다.", userFacingStatus: "사용 불가 · 자동 수집이 대신합니다." },
-  { id: "evidence.addSource.gitDiffPaste", label: "Git diff paste", status: "unavailable", description: "Paste a unified git diff as a source.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다.", userFacingStatus: "사용 불가 · 입력 화면이 연결돼 있지 않습니다." },
-  { id: "evidence.addSource.tauriGitDiff", label: "Tauri Git diff capture", status: "unavailable", description: "Capture git diff against a saved repo path.", disabledReason: "저장소를 등록하는 화면이 없어 실행할 수 없습니다.", userFacingStatus: "사용 불가 · 저장소를 등록할 화면이 없습니다." },
-  { id: "evidence.addSource.connectorJsonl", label: "Connector JSONL import", status: "unavailable", description: "Import the JSONL produced by the Claude Code hook, Codex CLI wrapper, terminal, or git connector tools via paste in Evidence Hub.", disabledReason: "가져오기 입력 화면이 연결돼 있지 않습니다.", userFacingStatus: "사용 불가 · 입력 화면이 연결돼 있지 않습니다." },
+  // Every add-source path routes through `requestEvidenceImport`, and the
+  // request now has a consumer again: `components/layout/ImportSheet.tsx`
+  // opens `ImportPanel` over whatever surface the button was pressed on. It
+  // had none, which is what made all six unavailable while the form for them
+  // sat complete and unreferenced. See issue #2 / #9.
+  { id: "evidence.addSource.manualNote", label: "Manual note import", status: "implemented", description: "Paste arbitrary text as a verified source." },
+  { id: "evidence.addSource.urlImport", label: "URL import", status: "implemented", description: "Add a URL with optional excerpt." },
+  { id: "evidence.addSource.aiTranscriptPaste", label: "AI transcript paste", status: "implemented", description: "Paste a Claude / Codex / ChatGPT transcript." },
+  { id: "evidence.addSource.gitDiffPaste", label: "Git diff paste", status: "implemented", description: "Paste a unified git diff as a source." },
+  { id: "evidence.addSource.tauriGitDiff", label: "Tauri Git diff capture", status: "implemented", description: "Capture git diff against a saved repo path." },
+  { id: "evidence.addSource.connectorJsonl", label: "Connector JSONL import", status: "implemented", description: "Import the JSONL produced by the Claude Code hook, Codex CLI wrapper, terminal, or git connector tools via paste in Evidence Hub." },
   { id: "evidence.removeImport", label: "Remove import", status: "implemented", description: "Delete an imported source from the session." },
   { id: "evidence.runQuickPass", label: "Run Analysis", status: "implemented", description: "Run analysis against imported sources." },
   // ─────────────────────────── Review ────────────────────────────

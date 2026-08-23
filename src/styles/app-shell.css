@@ -1031,6 +1031,22 @@
   background: var(--bg);
 }
 
+/* The import sheet borrows the settings sheet's layer, scrim and head rather
+   than adding a seventh overlay (issue #17). It has no rail, so its body is a
+   single scrolling column, and it is narrower because the form is a column of
+   fields rather than a two-pane workspace. */
+.import-sheet {
+  width: min(720px, calc(100vw - 52px));
+  height: min(680px, calc(100vh - 52px));
+}
+
+.import-sheet-body {
+  display: block;
+  grid-template-columns: none;
+  overflow: auto;
+  padding: 18px;
+}
+
 .settings-sheet-content {
   min-width: 0;
   min-height: 0;

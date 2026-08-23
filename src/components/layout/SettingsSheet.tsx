@@ -1,10 +1,10 @@
 import { UserRound, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAppStore, type SettingsTab } from "../../app/store";
 import { SETTINGS_TAB_DEFS, SettingsView } from "../../features/settings/SettingsView";
 import { AccountProfileView } from "../../features/account/AccountProfileView";
 import { SettingsRail, type SettingsRailItem } from "../../features/settings/SettingsPrimitives";
-import { focusFirstElement, trapTabKey } from "../ui/focusTrap";
+import { useOverlayShell } from "../ui/useOverlayShell";
 
 const RAIL_ITEMS: SettingsRailItem[] = [
   { id: "profile", label: "프로필", icon: UserRound },
@@ -20,8 +20,9 @@ export function SettingsSheet() {
   const close = useAppStore((state) => state.closeSettingsSheet);
   const activeTab = useAppStore((state) => state.settingsTab);
   const setActiveTab = useAppStore((state) => state.setSettingsTab);
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
+  // Escape, focus trap, scroll lock and focus restoration, shared with the
+  // import sheet rather than written twice.
+  const { ref: sheetRef } = useOverlayShell({ open, onClose: close });
 
   // Retired tabs (privacy / repositories) may still be the persisted choice.
   // Fall back to a live tab so the pane never renders blank.
@@ -31,29 +32,6 @@ export function SettingsSheet() {
       setActiveTab("localAi");
     }
   }, [open, activeTab, setActiveTab]);
-
-  useEffect(() => {
-    if (!open) return;
-    previousFocusRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        close();
-        return;
-      }
-      trapTabKey(event, sheetRef.current);
-    };
-    document.addEventListener("keydown", onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.requestAnimationFrame(() => focusFirstElement(sheetRef.current));
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previousOverflow;
-      previousFocusRef.current?.focus();
-    };
-  }, [open, close]);
 
   if (!open) return null;
 

@@ -109,6 +109,16 @@ export function ImportPanel(props: ImportPanelProps = {}) {
   const [fetching, setFetching] = useState(false);
   const [picking, setPicking] = useState(false);
   const repositorySettings = useRepositoryStore((state) => state.settings);
+  const repositoriesInitialized = useRepositoryStore((state) => state.initialized);
+  const hydrateRepositories = useRepositoryStore((state) => state.hydrate);
+
+  // The contract left on `repositoryStore.hydrate` when the startup call was
+  // removed (#10): the surface that gives the feature a way in owns hydrating
+  // it. This panel lists saved repository paths for the Git diff tab, so
+  // without this that list is empty however many the user has saved.
+  useEffect(() => {
+    if (!repositoriesInitialized) hydrateRepositories();
+  }, [repositoriesInitialized, hydrateRepositories]);
   const selectRepository = useRepositoryStore((state) => state.selectRepository);
   const markRepositoryUsed = useRepositoryStore((state) => state.markRepositoryUsed);
   const refreshRepositoryMetadataAfterCapture = useRepositoryStore(

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   FEATURE_REGISTRY,
@@ -151,23 +153,47 @@ describe("honesty contract", () => {
   });
 
   it("keeps the capabilities audited as unreachable out of the implemented set", () => {
-    // Verified by grep at the time of writing: split/merge have zero callers,
-    // the add-source paths route to a consumer that does not exist, and the
-    // memory hub has no navigation producer.
+    // Verified by grep: split/merge have zero callers, and the memory hub has
+    // no navigation producer.
+    //
+    // The six `evidence.addSource.*` paths used to be on this list and are not
+    // any more. They were unreachable because `evidenceImportRequest` had no
+    // consumer, so pressing an import button set state nobody read.
+    // `components/layout/ImportSheet.tsx` is that consumer, mounted in the
+    // shell, so the buttons now open the form they always pointed at.
     const unreachable = [
       "timeline.inspector.split",
       "timeline.inspector.merge",
-      "evidence.addSource.manualNote",
-      "evidence.addSource.urlImport",
-      "evidence.addSource.aiTranscriptPaste",
-      "evidence.addSource.gitDiffPaste",
-      "evidence.addSource.tauriGitDiff",
-      "evidence.addSource.connectorJsonl",
       "memory.globalHub",
     ] as const;
 
     for (const id of unreachable) {
       expect(FEATURE_REGISTRY[id].status, `${id} claims to be reachable`).not.toBe("implemented");
     }
+  });
+
+  it("keeps the add-source paths reachable, which means keeping their consumer", () => {
+    // The reverse of the check above, and the one that matters now: these
+    // report themselves implemented, and that is only true while something
+    // reads `evidenceImportRequest`. If the sheet is ever unmounted again,
+    // this fails rather than the app quietly going back to buttons that do
+    // nothing.
+    const restored = [
+      "evidence.addSource.manualNote",
+      "evidence.addSource.urlImport",
+      "evidence.addSource.aiTranscriptPaste",
+      "evidence.addSource.gitDiffPaste",
+      "evidence.addSource.tauriGitDiff",
+      "evidence.addSource.connectorJsonl",
+    ] as const;
+
+    for (const id of restored) {
+      expect(FEATURE_REGISTRY[id].status, `${id} claims to be unreachable`).toBe("implemented");
+    }
+
+    const shell = readFileSync(join(__dirname, "..", "components", "layout", "AppShell.tsx"), "utf8");
+    expect(shell, "the import sheet is not mounted, so the buttons lead nowhere").toContain(
+      "ImportSheet",
+    );
   });
 });
