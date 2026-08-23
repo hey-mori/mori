@@ -8,6 +8,11 @@ import {
 } from "../../lib/sidebar/collapsePreference";
 import type { ViewKey } from "../../domain/types";
 
+// The import form brings its own weight (connector history, review preview), so
+// it loads when a request opens it rather than sitting in the shell chunk.
+const ImportSheet = lazy(() =>
+  import("./ImportSheet").then((module) => ({ default: module.ImportSheet })),
+);
 const SettingsSheet = lazy(() =>
   import("./SettingsSheet").then((module) => ({ default: module.SettingsSheet })),
 );
@@ -52,6 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     (state) => state.toggleCommandPalette,
   );
   const settingsSheetOpen = useAppStore((state) => state.settingsSheetOpen);
+  const evidenceImportOpen = useAppStore((state) => state.evidenceImportRequest !== null);
   const commandPaletteOpen = useAppStore((state) => state.commandPaletteOpen);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Desktop-only "narrow" mode — independent from the mobile off-canvas
@@ -126,6 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="workspace">{children}</main>
       <Suspense fallback={null}>
         {settingsSheetOpen ? <SettingsSheet /> : null}
+        {evidenceImportOpen ? <ImportSheet /> : null}
         {commandPaletteOpen ? (
           <CommandPalette
             onToggleSidebarCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
