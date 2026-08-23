@@ -10,13 +10,23 @@
  * output that is honestly empty for most documents (v7 §0). The document is the
  * product; the reading sits above it and folds.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { History, Link2 as LinkIcon, Trash2 } from "lucide-react";
 import { BaseOverflowMenu, type BaseMenuItemSpec } from "../../components/ui/BaseActionMenu";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordLedger } from "./useRecordLedger";
 import { deriveNoteTitle } from "./noteWorkspace";
-import { NoteMarkdownEditor } from "./NoteMarkdownEditor";
+/**
+ * The markdown editor loads on demand.
+ *
+ * It brings CodeMirror with it, which is the bulk of the 기록 workspace chunk.
+ * Imported eagerly, every visit to the workspace parsed the whole editor before
+ * the explorer and the timeline could paint, even when the user was only
+ * reading. Split out, that cost is paid when an editor actually renders.
+ */
+const NoteMarkdownEditor = lazy(() =>
+  import("./NoteMarkdownEditor").then((m) => ({ default: m.NoteMarkdownEditor })),
+);
 import { noteBacklinks, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
 import { ContextPicker } from "./ContextPicker";
 import { RecordHistory } from "./recordEditing";
@@ -453,6 +463,7 @@ export function NoteEditorPane({
               onConfirmItem={onConfirmReadingItem}
               onRevealSpan={revealSpan}
             />
+            <Suspense fallback={<div className="note-editor-loading" aria-hidden="true" />}>
             <NoteMarkdownEditor
               value={body}
               docId={note?.id ?? null}
@@ -462,6 +473,7 @@ export function NoteEditorPane({
               onOpenLink={handleOpenLink}
               revealSpan={pendingSpan}
             />
+            </Suspense>
 
             {/* What this note already put in the ledger, and what points back at
                 it. Both belong under the document (Obsidian's linked-mentions

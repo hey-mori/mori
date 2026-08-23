@@ -3743,6 +3743,14 @@
   height: 100%;
 }
 
+/* Holds the editor's place while its chunk loads. Same flex and min-height as
+   the editor itself, so the pane does not resize when it arrives, and no
+   spinner: the wait is a chunk fetch off local disk. */
+.note-editor-loading {
+  flex: 1;
+  min-height: 340px;
+}
+
 .note-pane-status {
   margin-left: auto;
   font-size: var(--base-font-size-xs);
