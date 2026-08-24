@@ -23,7 +23,7 @@
   max-height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
-  background: white;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 0 26px 70px rgba(20, 25, 45, 0.26);
@@ -81,7 +81,7 @@
   font-size: var(--base-font-size-md);
   line-height: 1.5;
   color: var(--text);
-  background: white;
+  background: var(--panel);
   resize: vertical;
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
@@ -106,7 +106,7 @@
   font-family: inherit;
   font-size: var(--base-font-size-md);
   color: var(--text);
-  background: white;
+  background: var(--panel);
 }
 .project-modal .project-modal-field select:focus {
   outline: none;
@@ -168,7 +168,7 @@
   max-height: calc(100vh - 52px);
   display: flex;
   flex-direction: column;
-  background: white;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 0 26px 70px rgba(20, 25, 45, 0.26);

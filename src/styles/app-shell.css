@@ -324,7 +324,7 @@
 
 .sidebar-search:focus-within {
   border-color: var(--purple);
-  background: white;
+  background: var(--panel);
   box-shadow: 0 0 0 3px var(--purple-50);
 }
 
@@ -499,7 +499,7 @@
 }
 
 .sidebar-folder.is-current > .sidebar-folder-head .sidebar-folder-count {
-  background: white;
+  background: var(--panel);
 }
 
 .sidebar-folder-body {
@@ -947,7 +947,7 @@
   height: min(780px, calc(100vh - 52px));
   display: flex;
   flex-direction: column;
-  background: white;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 0 26px 70px rgba(20, 25, 45, 0.26);
