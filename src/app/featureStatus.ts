@@ -273,7 +273,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   // Routed in App.tsx but absent from PRIMARY_NAV and NAVIGATE_COMMANDS, with
   // no navigate() call targeting it. MoriCommandSpaceHome records that the
   // retirement was deliberate; only the route was left behind. See issue #4.
-  { id: "memory.globalHub", label: "Global memory hub", status: "unavailable", description: "The memory surface: search across every project scope, lifecycle segments, scope chips, and a provenance inspector.", disabledReason: "이 화면으로 가는 경로가 없습니다. 인용된 기억은 검색으로 엽니다.", userFacingStatus: "사용 불가 · 여는 경로가 없습니다." },
+  { id: "memory.globalHub", label: "Global memory hub", status: "implemented", description: "The memory surface: search across every project scope, lifecycle segments, scope chips, and a provenance inspector." },
   { id: "memory.autoOrganize", label: "Auto-organize (provisional memory)", status: "partial", description: "Confirmed decisions auto-organize into provisional memory under the governance policy; other kinds go to review. Real-desktop-data validation pending; mode is default-auto, not yet user-settable.", userFacingStatus: "부분 구현 · 확정 결정만 자동 정리; 실제 데이터 검증·정책 설정 예정." },
   { id: "memory.provisional", label: "Provisional memory status", status: "implemented", description: "Auto-created, marked (잠정), recallable, reversible, audited; never resume- or report-eligible, so it does not cross an external boundary until confirmed.", userFacingStatus: "구현 완료 · 잠정 기억은 회상 가능하지만 외부 출력에는 미포함." },
   // ─────────────────────────── Language Loop ─────────────────────

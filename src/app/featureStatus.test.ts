@@ -153,8 +153,12 @@ describe("honesty contract", () => {
   });
 
   it("keeps the capabilities audited as unreachable out of the implemented set", () => {
-    // Verified by grep: split/merge have zero callers, and the memory hub has
-    // no navigation producer.
+    // Verified by grep: split and merge have zero callers.
+    //
+    // `memory.globalHub` was on this list and is not any more. It was routed
+    // and rendered with no way in at all, which is neither retired nor live;
+    // it is now in the command palette, which is what the retire rule asks for.
+    // `viewReachability.test.ts` fails if it is orphaned again.
     //
     // The six `evidence.addSource.*` paths used to be on this list and are not
     // any more. They were unreachable because `evidenceImportRequest` had no
@@ -164,7 +168,6 @@ describe("honesty contract", () => {
     const unreachable = [
       "timeline.inspector.split",
       "timeline.inspector.merge",
-      "memory.globalHub",
     ] as const;
 
     for (const id of unreachable) {
