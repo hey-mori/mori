@@ -8,7 +8,7 @@
   flex-direction: column;
   min-width: 0;
   height: 100%;
-  background: white;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: var(--shadow-soft);
@@ -25,7 +25,7 @@
   padding: 12px var(--base-space-6) 11px;
   padding-right: 40px;
   border-bottom: 1px solid var(--line);
-  background: white;
+  background: var(--panel);
 }
 
 .base-inspector-panel-close {
@@ -290,7 +290,7 @@
 .ins-row {
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: white;
+  background: var(--panel);
   transition: border-color 120ms ease, background 120ms ease;
 }
 
