@@ -61,6 +61,15 @@ const NAVIGATE_COMMANDS: ReadonlyArray<{ id: string; label: string; view: ViewKe
   { id: "nav-ask", label: "Mori에게 묻기", view: "ask", keywords: ["ask", "질문", "질의", "묻기", "메모리 검색"] },
   { id: "nav-connections", label: "연동 열기", view: "connections", keywords: ["import", "connectors", "연동", "연결", "수집", "소스"] },
   { id: "nav-start", label: "새 세션 시작", view: "start", keywords: ["new"] },
+  // Retired from the rail, not removed. The project rule is to unwire a surface
+  // from navigation and keep it reachable, and this was left routed with no way
+  // in at all, which is neither retired nor live (#4).
+  {
+    id: "nav-memory-hub",
+    label: "메모리 허브 열기",
+    view: "memoryHub",
+    keywords: ["memory", "메모리", "허브", "hub", "기억", "누적"],
+  },
 ];
 
 const SETTINGS_COMMANDS: ReadonlyArray<{
