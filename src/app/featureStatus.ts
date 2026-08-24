@@ -270,9 +270,10 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "memory.savedSessions", label: "Saved sessions list", status: "partial", description: "List sessions saved to browser draft or SQLite.", userFacingStatus: "부분 구현 — 목록만; 페이로드는 세션 단위." },
   { id: "memory.recurringIssues", label: "Recurring issues", status: "partial", description: "Surface issues that recur across more than one session; single-session issues are no longer promoted as recurring.", userFacingStatus: "부분 구현 · 세션 간 반복 이슈만; 제목 매칭 품질은 개선 여지." },
   { id: "memory.followUpPrompt", label: "Follow-up session prompt", status: "implemented", description: "Generate a follow-up prompt from the current memory." },
-  // Routed in App.tsx but absent from PRIMARY_NAV and NAVIGATE_COMMANDS, with
-  // no navigate() call targeting it. MoriCommandSpaceHome records that the
-  // retirement was deliberate; only the route was left behind. See issue #4.
+  // Deliberately absent from PRIMARY_NAV, which MoriCommandSpaceHome records,
+  // and reachable from the command palette, which is what the retire rule asks
+  // a retirement to leave behind. It was routed with no way in at all until
+  // then; `viewReachability.test.ts` fails if that happens again (#4).
   { id: "memory.globalHub", label: "Global memory hub", status: "implemented", description: "The memory surface: search across every project scope, lifecycle segments, scope chips, and a provenance inspector." },
   { id: "memory.autoOrganize", label: "Auto-organize (provisional memory)", status: "partial", description: "Confirmed decisions auto-organize into provisional memory under the governance policy; other kinds go to review. Real-desktop-data validation pending; mode is default-auto, not yet user-settable.", userFacingStatus: "부분 구현 · 확정 결정만 자동 정리; 실제 데이터 검증·정책 설정 예정." },
   { id: "memory.provisional", label: "Provisional memory status", status: "implemented", description: "Auto-created, marked (잠정), recallable, reversible, audited; never resume- or report-eligible, so it does not cross an external boundary until confirmed.", userFacingStatus: "구현 완료 · 잠정 기억은 회상 가능하지만 외부 출력에는 미포함." },
