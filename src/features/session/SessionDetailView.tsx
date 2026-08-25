@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo } from "react";
 import {
   ChevronRight,
   FolderGit2,
@@ -17,12 +17,34 @@ import {
 import { buildWorkContext } from "../../lib/session/workContext";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
-import { TimelineView } from "../timeline/TimelineView";
-import { EvidenceView } from "../evidence/EvidenceView";
-import { ReviewView } from "../review/ReviewView";
-import { ReportsView } from "../reports/ReportsView";
+/**
+ * The tabs load on demand.
+ *
+ * Only one renders at a time, and imported eagerly all six travelled together:
+ * opening any session parsed the timeline, evidence, review, report, overview
+ * and analysis surfaces, whichever tab the user was actually on. The timeline
+ * alone is the largest of them.
+ *
+ * Overview stays eager because it is the tab a session opens on, so making it
+ * dynamic would put a chunk fetch in front of the first thing the user sees.
+ */
 import { OverviewView } from "./OverviewView";
-import { AnalysisView } from "./AnalysisView";
+
+const TimelineView = lazy(() =>
+  import("../timeline/TimelineView").then((m) => ({ default: m.TimelineView })),
+);
+const EvidenceView = lazy(() =>
+  import("../evidence/EvidenceView").then((m) => ({ default: m.EvidenceView })),
+);
+const ReviewView = lazy(() =>
+  import("../review/ReviewView").then((m) => ({ default: m.ReviewView })),
+);
+const ReportsView = lazy(() =>
+  import("../reports/ReportsView").then((m) => ({ default: m.ReportsView })),
+);
+const AnalysisView = lazy(() =>
+  import("./AnalysisView").then((m) => ({ default: m.AnalysisView })),
+);
 
 /**
  * Session Detail — the unified, tabbed workspace for one session.
@@ -62,7 +84,9 @@ export function SessionDetailView() {
         <SessionTitleInline />
         <SessionTabBar activeTab={sessionTab} onChange={setSessionTab} />
       </div>
-      <SessionTabContent tab={sessionTab} />
+      <Suspense fallback={<div className="session-tab-loading" role="status" aria-live="polite" />}>
+        <SessionTabContent tab={sessionTab} />
+      </Suspense>
     </PageShell>
   );
 }

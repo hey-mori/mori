@@ -834,6 +834,13 @@
 
 /* Calm placeholder shown while a lazy route chunk is in flight. Sized to
  * the workspace bounds so the surrounding shell never jumps. */
+/* Holds a session tab's place while its chunk loads. Full height like the tab
+   it replaces, and empty: the wait is a chunk fetch off local disk, so a
+   spinner would flash more often than it would inform. */
+.session-tab-loading {
+  height: 100%;
+}
+
 .route-fallback {
   display: flex;
   align-items: center;
