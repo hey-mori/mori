@@ -48,6 +48,7 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     setAllPendingReviewStatus: () => undefined,
     editPendingReviewEvent: () => undefined,
     applyPendingReview: () => ({ ok: false, reason: "" }),
+    applyLensTransferReview: async () => ({ ok: false, reason: "" }),
     cancelPendingReview: () => undefined,
     clearLastApplied: () => undefined,
     resetToDemo: () => undefined,

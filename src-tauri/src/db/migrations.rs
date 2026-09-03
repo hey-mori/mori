@@ -79,6 +79,12 @@ pub const MIGRATIONS: &[MigrationManifestEntry] = &[
         name: "intake_requests",
         sql: include_str!("../../migrations/V010__intake_requests.sql"),
     },
+    MigrationManifestEntry {
+        version: "011",
+        filename: "V011__lens_transfers.sql",
+        name: "lens_transfers",
+        sql: include_str!("../../migrations/V011__lens_transfers.sql"),
+    },
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -257,13 +263,14 @@ mod tests {
                 "007".to_string(),
                 "008".to_string(),
                 "009".to_string(),
-                "010".to_string()
+                "010".to_string(),
+                "011".to_string()
             ]
         );
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 10);
+        assert_eq!(applied.len(), 11);
         assert_eq!(applied[0].version, "001");
         assert_eq!(applied[1].version, "002");
         assert_eq!(applied[2].version, "003");
@@ -274,6 +281,7 @@ mod tests {
         assert_eq!(applied[7].version, "008");
         assert_eq!(applied[8].version, "009");
         assert_eq!(applied[9].version, "010");
+        assert_eq!(applied[10].version, "011");
         for record in &applied {
             assert!(!record.checksum.is_empty());
         }
@@ -297,7 +305,8 @@ mod tests {
                 "007".to_string(),
                 "008".to_string(),
                 "009".to_string(),
-                "010".to_string()
+                "010".to_string(),
+                "011".to_string()
             ]
         );
     }
@@ -305,29 +314,30 @@ mod tests {
     /// The real upgrade path, which "apply twice" does not cover: a database
     /// that already carries earlier migrations gets only the new one, and the
     /// table it adds is usable afterwards. Simulated by removing the newest
-    /// migration's table and ledger row, which is what a pre-V009 database
+    /// migration's table and ledger row, which is what a pre-V011 database
     /// looks like.
     #[test]
     fn applies_only_the_new_migration_to_an_existing_database() {
         let mut conn = open_in_memory().expect("open in-memory db");
         apply_migrations(&mut conn).expect("bring fully up to date");
 
-        conn.execute("DROP TABLE intake_requests", [])
+        conn.execute("DROP TABLE lens_transfers", [])
             .expect("drop the newest table");
         conn.execute(
-            &format!("DELETE FROM {MIGRATION_TABLE_NAME} WHERE version = '010'"),
+            &format!("DELETE FROM {MIGRATION_TABLE_NAME} WHERE version = '011'"),
             [],
         )
         .expect("forget the newest migration");
 
         let outcome = apply_migrations(&mut conn).expect("upgrade");
 
-        assert_eq!(outcome.applied, vec!["010".to_string()]);
-        assert_eq!(outcome.already_applied.len(), 9);
+        assert_eq!(outcome.applied, vec!["011".to_string()]);
+        assert_eq!(outcome.already_applied.len(), 10);
         // Usable, not merely recorded: a migration that registers without
         // creating its table would pass the assertion above.
         conn.execute(
-            "INSERT INTO intake_requests (id, session_key, project_path, started_at, row_json)              VALUES ('req-1', 'sess-1', 'C:/dev/mori', '2026-08-18T00:00:00Z', '{}')",
+            "INSERT INTO lens_transfers (transfer_id, record_id, imported_at) \
+             VALUES ('abc-123', 'lens-abc-123', '2026-09-03T00:00:00Z')",
             [],
         )
         .expect("write into the new table");

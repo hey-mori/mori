@@ -8,6 +8,8 @@ import { useThemeStore } from "./themeStore";
 import { useOnboardingStore } from "./onboardingStore";
 import { FirstRunGuide } from "../features/onboarding/FirstRunGuide";
 import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
+import { isTauriRuntime } from "../lib/desktop";
+import { writeLensCapability } from "../lib/connectors/lensConnector";
 import { isImportFlowView } from "../lib/session/importFlowView";
 import { isClaudeBridgeAvailable } from "../lib/claude/claudeTauri";
 import { AmbientObservationProvider } from "../features/live-session/useAmbientObservation";
@@ -148,6 +150,15 @@ export default function App() {
   useEffect(() => {
     if (!onboardingInitialized) hydrateOnboarding();
   }, [onboardingInitialized, hydrateOnboarding]);
+
+  // Write (or refresh) the Lens connector capability marker on startup.
+  // This tells Mori Lens that Mori is running and which schema versions
+  // are supported. Fire-and-forget: failure does not block the app.
+  useEffect(() => {
+    if (isTauriRuntime()) {
+      writeLensCapability().catch(() => {});
+    }
+  }, []);
 
   // Copies durable documents that predate dual-write into SQLite, once per
   // device. Desktop-only, and nothing on screen waits for it.

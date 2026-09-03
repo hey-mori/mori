@@ -57,6 +57,12 @@ import { useAppStore } from "../../app/store";
 import { selectActiveRepository, useRepositoryStore } from "../../app/repositoryStore";
 import type { ReviewOrigin } from "../../lib/review";
 import { isTauriRuntime, pickRepositoryDirectory, runGitDiff } from "../../lib/desktop";
+import {
+  listLensTransfers,
+  normalizeLensTransfer,
+  type LensInboxListing,
+  type LensPendingTransfer,
+} from "../../lib/connectors/lensConnector";
 
 type ImportKind = "note" | "url" | "ai" | "git" | "connector";
 
@@ -141,6 +147,10 @@ export function ImportPanel(props: ImportPanelProps = {}) {
   const [connectorInboxStatus, setConnectorInboxStatus] = useState<
     { tone: "info" | "error"; message: string } | null
   >(null);
+
+  // Lens transfer inbox state
+  const [lensInbox, setLensInbox] = useState<LensInboxListing | null>(null);
+  const [lensInboxBusy, setLensInboxBusy] = useState(false);
   const connectorInboxAvailable = useMemo(() => isConnectorInboxAvailable(), []);
 
   const canImport = useMemo(() => Boolean(draft), [draft]);
@@ -170,6 +180,24 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       lastInitial.current.platform = initialAiPlatform;
     }
   }, [initialKind, initialAiPlatform]);
+
+  // Auto-load the Lens transfer inbox when the connector tab is active in
+  // desktop mode. The listing is cheap (a directory read + JSON parse) so
+  // refreshing on tab enter is fine; the user can also hit the refresh
+  // button if they drop a new file while the panel is open.
+  useEffect(() => {
+    if (kind !== "connector" || !isTauriRuntime()) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const listing = await listLensTransfers();
+        if (!cancelled) setLensInbox(listing);
+      } catch {
+        if (!cancelled) setLensInbox(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [kind]);
 
   if (!draft) {
     return (
@@ -530,6 +558,34 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     }
   }
 
+  async function handleRefreshLensInbox() {
+    if (!isTauriRuntime()) return;
+    setLensInboxBusy(true);
+    try {
+      const listing = await listLensTransfers();
+      setLensInbox(listing);
+    } catch {
+      setLensInbox(null);
+    } finally {
+      setLensInboxBusy(false);
+    }
+  }
+
+  function handleLensTransferReview(transfer: LensPendingTransfer) {
+    if (!draft) {
+      setStatus({ tone: "error", message: "활성 세션이 없습니다." });
+      return;
+    }
+    const candidate = normalizeLensTransfer(
+      transfer.payload,
+      transfer.fileName,
+      draft.session.id,
+      activeRepository?.id ?? "local",
+    );
+    beginPendingReview(candidate, "lens-transfer");
+    setStatus({ tone: "ok", message: "Lens transfer 검토 준비 완료" });
+  }
+
   async function handleConnectorJsonlImportToReview() {
     if (!draft) {
       setStatus({ tone: "error", message: "활성 세션이 없습니다. 소스에서 가져오거나 새 세션을 만드세요." });
@@ -781,6 +837,14 @@ export function ImportPanel(props: ImportPanelProps = {}) {
             status={connectorInboxStatus}
             onRefresh={() => handleRefreshConnectorInbox()}
             onLoadFile={(file) => handleLoadConnectorInboxFile(file)}
+          />
+        ) : null}
+        {kind === "connector" ? (
+          <LensInboxSection
+            listing={lensInbox}
+            busy={lensInboxBusy}
+            onRefresh={() => handleRefreshLensInbox()}
+            onReview={(transfer) => handleLensTransferReview(transfer)}
           />
         ) : null}
         {kind === "connector" ? (
@@ -1332,4 +1396,90 @@ function ConnectorJsonlActions({
       </Button>
     </>
   );
+}
+
+function LensInboxSection({
+  listing,
+  busy,
+  onRefresh,
+  onReview,
+}: {
+  listing: LensInboxListing | null;
+  busy: boolean;
+  onRefresh: () => void;
+  onReview: (transfer: LensPendingTransfer) => void;
+}) {
+  const pending = listing?.pending.filter((t) => !t.alreadyImported) ?? [];
+  const imported = listing?.pending.filter((t) => t.alreadyImported) ?? [];
+
+  return (
+    <div className="connector-jsonl-inbox" role="region" aria-label="Lens transfer 수신함">
+      <header>
+        <strong>Lens Transfer Inbox</strong>
+        <span>Mori Lens가 전송한 학습 항목이 여기에 표시됩니다.</span>
+        <Button onClick={onRefresh} disabled={busy}>
+          {busy ? "새로고침 중..." : "Inbox 새로고침"}
+        </Button>
+      </header>
+      {listing === null ? (
+        <p className="connector-jsonl-inbox-empty">
+          Lens inbox를 불러올 수 없습니다. ~/.mori/connectors/lens/ 디렉터리를 확인하세요.
+        </p>
+      ) : listing.pending.length === 0 ? (
+        <p className="connector-jsonl-inbox-empty">
+          Lens에서 전송된 항목이 없습니다. Lens 앱에서 Mori로 보내기를 시도하면 여기에 표시됩니다.
+        </p>
+      ) : (
+        <>
+          {pending.length > 0 ? (
+            <ul className="connector-jsonl-inbox-list">
+              {pending.map((transfer: LensPendingTransfer) => (
+                <li key={transfer.fileName}>
+                  <div className="connector-jsonl-inbox-row">
+                    <div className="connector-jsonl-inbox-row-main">
+                      <Badge tone="cyan">{transfer.payload.kind}</Badge>
+                      <strong>{truncateForDisplay(transfer.payload.answer, 60)}</strong>
+                    </div>
+                    <div className="connector-jsonl-inbox-row-meta">
+                      <span>{transfer.payload.sourceLanguage} → {transfer.payload.targetLanguage}</span>
+                      <small>{transfer.fileName}</small>
+                    </div>
+                    <Button variant="primary" onClick={() => onReview(transfer)}>
+                      Review
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {imported.length > 0 ? (
+            <details className="connector-jsonl-inbox-imported">
+              <summary>이미 가져온 항목 {imported.length}개</summary>
+              <ul className="connector-jsonl-inbox-list">
+                {imported.map((transfer: LensPendingTransfer) => (
+                  <li key={transfer.fileName}>
+                    <div className="connector-jsonl-inbox-row is-imported">
+                      <div className="connector-jsonl-inbox-row-main">
+                        <Badge tone="gray">{transfer.payload.kind}</Badge>
+                        <strong>{truncateForDisplay(transfer.payload.answer, 60)}</strong>
+                      </div>
+                      <div className="connector-jsonl-inbox-row-meta">
+                        <small>{transfer.fileName}</small>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+function truncateForDisplay(text: string, maxChars: number): string {
+  const chars = Array.from(text);
+  if (chars.length <= maxChars) return text;
+  return chars.slice(0, maxChars).join("") + "...";
 }

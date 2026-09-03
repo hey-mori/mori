@@ -149,6 +149,11 @@ pub fn clear_all_data(conn: &mut Connection) -> Result<ClearAllDataResult, Strin
     // projection keep reporting activity after a confirmed wipe.
     tx.execute("DELETE FROM intake_requests", [])
         .map_err(|error| error.to_string())?;
+    // Lens connector transfer ledger (V011). Idempotency index; re-derivable
+    // from the kernel records it produced, but leaving it would have the
+    // dedup overlay keep reporting items as already-imported after a wipe.
+    tx.execute("DELETE FROM lens_transfers", [])
+        .map_err(|error| error.to_string())?;
 
     tx.commit().map_err(|error| error.to_string())?;
 
@@ -1011,6 +1016,11 @@ mod tests {
             [],
         )
         .expect("seed intake request");
+        conn.execute(
+            "INSERT INTO lens_transfers (transfer_id, record_id, imported_at)              VALUES ('xfer-1', 'lens-xfer-1', '2026-09-03T00:00:00Z')",
+            [],
+        )
+        .expect("seed lens transfer");
         conn.execute(
             "INSERT INTO kernel_objects (collection, id, payload_json, saved_at)              VALUES ('context', 'ctx-1', '{}', '2026-08-18T00:00:00Z')",
             [],

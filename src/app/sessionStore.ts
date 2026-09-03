@@ -369,7 +369,16 @@ export type SessionState = {
    * set. A pending import-created session becomes real (its cleanup bookkeeping
    * is dropped). Returns a failure result when nothing is applyable.
    */
-  applyPendingReview: () => ApplyPendingReviewResult;
+  applyPendingReview: () => ApplyPendingReviewResult | Promise<ApplyPendingReviewResult>;
+  /**
+   * Internal: apply a Lens transfer review. Called by applyPendingReview
+   * when the origin is "lens-transfer". Routes through the Rust import
+   * path for kernel record persistence and idempotency.
+   */
+  applyLensTransferReview: (
+    candidate: NormalizedImportCandidate,
+    reviewDraft: ImportReviewDraft,
+  ) => Promise<ApplyPendingReviewResult>;
   /**
    * Discard the active session's pending review without applying. If this was a
    * freshly-created import session that never received an applied import, the
@@ -1025,6 +1034,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!candidate) {
       return { ok: false, reason: "수락된 이벤트로 자료를 만들 수 없습니다." };
     }
+
+    // Lens transfers go through the Rust import path (kernel records +
+    // idempotency table), not the session import path.
+    if (reviewDraft.origin === "lens-transfer") {
+      return get().applyLensTransferReview(candidate, reviewDraft);
+    }
+
     const repository = getRepository();
     const summary = pendingReview.meta?.sourceImportSummary;
     const stored = repository.addSessionImport(
@@ -1049,6 +1065,39 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       ok: true,
       appliedCount: candidate.events.length,
       firstEventId: stored.events[0]?.id ?? null,
+    };
+  },
+  applyLensTransferReview: async (candidate, _reviewDraft) => {
+    // Extract file name from the source URI (set by normalizeLensTransfer).
+    const fileName = candidate.source.uri;
+    if (!fileName) {
+      return { ok: false, reason: "Lens transfer file name is missing." };
+    }
+    try {
+      const { importLensTransfer } = await import("../lib/connectors/lensConnector");
+      await importLensTransfer(fileName);
+    } catch (e) {
+      return { ok: false, reason: `Lens import failed: ${e}` };
+    }
+
+    const repository = getRepository();
+    const session = get().draft;
+    if (session) {
+      repository.clearPendingReview(session.session.id);
+    }
+    set({
+      pendingReview: null,
+      lastApplied: {
+        sourceId: candidate.source.id,
+        appliedCount: candidate.events.length,
+        appliedAt: new Date().toISOString(),
+      },
+    });
+    if (get().pendingNewSession) set({ pendingNewSession: null });
+    return {
+      ok: true,
+      appliedCount: candidate.events.length,
+      firstEventId: candidate.events[0]?.id ?? null,
     };
   },
   cancelPendingReview: () => {
