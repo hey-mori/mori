@@ -90,11 +90,11 @@ export function ImportReviewView({ embedded = false }: { embedded?: boolean } = 
   const allDiscarded =
     draft.events.length > 0 && draft.events.every((item) => item.status === "discarded");
 
-  function handleApply() {
+  async function handleApply() {
     // The store owns the apply path: accepted events become a persisted import,
     // the pending review is cleared, and a pending import-created session is
     // promoted to real. We only reflect the first applied event in the inspector.
-    const outcome = applyPendingReview();
+    const outcome = await applyPendingReview();
     if (!outcome.ok) return;
     if (outcome.firstEventId) setSelectedEventId(outcome.firstEventId);
   }

@@ -85,6 +85,44 @@ struct CapabilityFile {
     capability: &'static str,
 }
 
+// ─── Safe path ──────────────────────────────────────────────────────────────
+
+/// Resolve a user-supplied file name to a safe path inside the Lens inbox.
+///
+/// Rejects names containing path separators, starting with `.`, or
+/// escaping the inbox via symlinks. Reuses the canonicalize + starts_with
+/// pattern from `inbox.rs`.
+fn safe_lens_path(file_name: &str) -> Result<PathBuf, String> {
+    // Reject path separators and hidden files.
+    if file_name.is_empty()
+        || file_name.contains('/')
+        || file_name.contains('\\')
+        || file_name.starts_with('.')
+    {
+        return Err(format!("Invalid transfer file name: {file_name}"));
+    }
+
+    let root = lens_connector_dir()
+        .ok_or_else(|| "Lens connector directory does not exist".to_string())?;
+
+    let candidate = root.join(file_name);
+
+    // Canonicalize both sides to defeat symlinks and `..` tricks.
+    let canonical_root = fs::canonicalize(&root)
+        .map_err(|e| format!("Failed to resolve inbox root: {e}"))?;
+    let canonical_target = fs::canonicalize(&candidate)
+        .map_err(|e| format!("Failed to resolve transfer path: {e}"))?;
+
+    if !canonical_target.starts_with(&canonical_root) {
+        return Err("Refused: transfer path is outside the Lens inbox".to_string());
+    }
+    if canonical_target == canonical_root {
+        return Err("Refused: transfer path points at the inbox directory itself".to_string());
+    }
+
+    Ok(candidate)
+}
+
 // ─── Directory resolution ──────────────────────────────────────────────────
 
 /// `~/.mori/connectors/lens/`. Returns `None` when the parent
@@ -150,7 +188,12 @@ pub fn list_lens_transfers(conn: &rusqlite::Connection) -> Result<LensInboxListi
             Err(_) => continue,
         };
         let path = entry.path();
-        if !path.is_file() || path.extension().and_then(|e| e.to_str()) != Some("json") {
+        // Skip directories, non-json files, and dotfiles (e.g. .capability.json).
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+        if !path.is_file()
+            || path.extension().and_then(|e| e.to_str()) != Some("json")
+            || name.starts_with('.')
+        {
             continue;
         }
         let meta = match entry.metadata() {
@@ -194,11 +237,14 @@ pub fn list_lens_transfers(conn: &rusqlite::Connection) -> Result<LensInboxListi
 
 // ─── Read ──────────────────────────────────────────────────────────────────
 
-/// Read and parse a single transfer file.
-pub fn read_lens_transfer(file_path: &str) -> Result<LensTransferPayload, String> {
-    let path = PathBuf::from(file_path);
+/// Read and parse a single transfer file by name.
+///
+/// The file name is confined to `~/.mori/connectors/lens/` via
+/// `safe_lens_path`. Arbitrary paths are rejected.
+pub fn read_lens_transfer(file_name: &str) -> Result<LensTransferPayload, String> {
+    let path = safe_lens_path(file_name)?;
     if !path.is_file() {
-        return Err(format!("File not found: {file_path}"));
+        return Err(format!("File not found: {file_name}"));
     }
     let meta = fs::metadata(&path).map_err(|e| e.to_string())?;
     if meta.len() > MAX_TRANSFER_BYTES {
@@ -209,7 +255,49 @@ pub fn read_lens_transfer(file_path: &str) -> Result<LensTransferPayload, String
         ));
     }
     let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&text).map_err(|e| format!("Failed to parse transfer JSON: {e}"))
+    let payload: LensTransferPayload =
+        serde_json::from_str(&text).map_err(|e| format!("Failed to parse transfer JSON: {e}"))?;
+    validate_payload(&payload)?;
+    Ok(payload)
+}
+
+/// Semantic validation beyond serde deserialization.
+///
+/// Ensures the payload carries meaningful data before it enters the
+/// import pipeline. Invalid payloads are not imported and the source
+/// file remains on disk.
+fn validate_payload(payload: &LensTransferPayload) -> Result<(), String> {
+    if !SUPPORTED_SCHEMA_VERSIONS.contains(&payload.schema_version) {
+        return Err(format!(
+            "Unsupported schema version {}. Supported: {:?}",
+            payload.schema_version, SUPPORTED_SCHEMA_VERSIONS
+        ));
+    }
+    if payload.transfer_id.trim().is_empty() {
+        return Err("transferId is empty".to_string());
+    }
+    // Basic UUID shape: 36 chars with hyphens at positions 8-4-4-4-12.
+    if payload.transfer_id.len() != 36
+        || payload.transfer_id.matches('-').count() != 4
+    {
+        return Err(format!(
+            "transferId is not a valid UUID: {}",
+            payload.transfer_id
+        ));
+    }
+    if payload.kind != "translation" && payload.kind != "analysis" {
+        return Err(format!("Invalid kind: {}", payload.kind));
+    }
+    if payload.original.trim().is_empty() {
+        return Err("original is empty".to_string());
+    }
+    if payload.answer.trim().is_empty() {
+        return Err("answer is empty".to_string());
+    }
+    if payload.created_at.trim().is_empty() {
+        return Err("createdAt is empty".to_string());
+    }
+    Ok(())
 }
 
 // ─── Import ────────────────────────────────────────────────────────────────
@@ -218,13 +306,38 @@ pub fn read_lens_transfer(file_path: &str) -> Result<LensTransferPayload, String
 ///
 /// Idempotent: a transfer ID that has already been imported returns the
 /// existing record ID without creating a duplicate. On success the
-/// source file is deleted.
+/// source file is moved to `processed/` inside the Lens inbox for audit.
+///
+/// Source file lifecycle:
+/// - Parse failure: source remains on disk
+/// - Validation failure: source remains on disk
+/// - DB failure: source remains on disk
+/// - Duplicate: source remains (deterministic return of existing record)
+/// - Success: source moved to `processed/`
 pub fn import_lens_transfer(
     conn: &mut rusqlite::Connection,
-    file_path: &str,
+    file_name: &str,
 ) -> Result<LensImportResult, String> {
-    let payload = read_lens_transfer(file_path)?;
+    let path = safe_lens_path(file_name)?;
+    if !path.is_file() {
+        return Err(format!("File not found: {file_name}"));
+    }
 
+    // Read and validate. On failure, source remains.
+    let meta = fs::metadata(&path).map_err(|e| e.to_string())?;
+    if meta.len() > MAX_TRANSFER_BYTES {
+        return Err(format!(
+            "Transfer file is too large ({} bytes > {} byte cap)",
+            meta.len(),
+            MAX_TRANSFER_BYTES
+        ));
+    }
+    let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let payload: LensTransferPayload =
+        serde_json::from_str(&text).map_err(|e| format!("Failed to parse transfer JSON: {e}"))?;
+    validate_payload(&payload)?;
+
+    // Duplicate check: deterministic, no file mutation.
     if is_transfer_imported(conn, &payload.transfer_id)? {
         let existing = find_record_for_transfer(conn, &payload.transfer_id)?;
         let record_id = existing.unwrap_or_else(|| format!("lens-{}", payload.transfer_id));
@@ -234,18 +347,19 @@ pub fn import_lens_transfer(
         });
     }
 
-    if !SUPPORTED_SCHEMA_VERSIONS.contains(&payload.schema_version) {
-        return Err(format!(
-            "Unsupported schema version {}. Supported: {:?}",
-            payload.schema_version, SUPPORTED_SCHEMA_VERSIONS
-        ));
-    }
-
+    // Persist to kernel records and lens_transfers. On failure, source remains.
     let record = transfer_to_record(&payload);
-    crate::db::kernel::save_kernel_records(conn, &[record.clone()])?;
+    crate::db::kernel::save_kernel_records(conn, std::slice::from_ref(&record))?;
     record_lens_transfer(conn, &payload.transfer_id, &record.id)?;
 
-    let _ = fs::remove_file(file_path);
+    // Success: move source to processed/ for audit trail.
+    let processed_dir = path.parent().unwrap().join("processed");
+    fs::create_dir_all(&processed_dir)
+        .map_err(|e| format!("Failed to create processed directory: {e}"))?;
+    let dest = processed_dir.join(file_name);
+    fs::rename(&path, &dest).map_err(|e| {
+        format!("Import succeeded but failed to move source to processed/: {e}")
+    })?;
 
     Ok(LensImportResult {
         record_id: record.id,
@@ -284,8 +398,10 @@ pub fn transfer_to_record(payload: &LensTransferPayload) -> KernelRecordRow {
     });
     let properties_json = serde_json::to_string(&properties).unwrap_or_else(|_| "{}".to_string());
 
-    let title = if payload.answer.len() > 200 {
-        format!("{}...", &payload.answer[..197])
+    // Char-safe truncation: byte slicing would panic on Korean/emoji.
+    let title = if payload.answer.chars().count() > 200 {
+        let truncated: String = payload.answer.chars().take(197).collect();
+        format!("{truncated}...")
     } else {
         payload.answer.clone()
     };
@@ -546,7 +662,7 @@ mod tests {
         let mut t = sample_transfer();
         t.answer = "a".repeat(300);
         let r = transfer_to_record(&t);
-        assert!(r.title.len() <= 203); // 200 chars + "..."
+        assert!(r.title.chars().count() <= 200); // 197 + "..."
         assert!(r.title.ends_with("..."));
     }
 
@@ -621,32 +737,161 @@ mod tests {
 
     #[test]
     fn read_rejects_missing_file() {
-        let err = read_lens_transfer("/nonexistent/path/file.json").unwrap_err();
-        assert!(err.contains("not found"), "error: {err}");
+        let err = read_lens_transfer("nonexistent-file.json").unwrap_err();
+        // Either "does not exist" (no inbox) or "not found" (inbox exists, file missing).
+        assert!(
+            err.contains("not found") || err.contains("does not exist"),
+            "error: {err}"
+        );
     }
 
     #[test]
-    fn read_rejects_oversized_file() {
-        let dir = tempfile::TempDir::new().unwrap();
-        let path = dir.path().join("big.json");
-        {
-            let mut f = std::fs::File::create(&path).unwrap();
-            let chunk = vec![b'x'; 64 * 1024];
-            for _ in 0..((MAX_TRANSFER_BYTES / chunk.len() as u64) + 1) {
-                f.write_all(&chunk).unwrap();
-            }
-        }
-        let err = read_lens_transfer(path.to_str().unwrap()).unwrap_err();
-        assert!(err.contains("too large"), "error: {err}");
+    fn read_rejects_parent_traversal() {
+        let err = safe_lens_path("../../../etc/passwd").unwrap_err();
+        assert!(err.contains("Invalid") || err.contains("Refused"), "error: {err}");
     }
 
     #[test]
-    fn read_parses_valid_transfer_file() {
-        let dir = tempfile::TempDir::new().unwrap();
-        let path = dir.path().join("test-transfer.json");
+    fn read_rejects_absolute_path_separator() {
+        let err = safe_lens_path("/etc/passwd").unwrap_err();
+        assert!(err.contains("Invalid"), "error: {err}");
+    }
+
+    #[test]
+    fn read_rejects_dotfile() {
+        let err = safe_lens_path(".capability.json").unwrap_err();
+        assert!(err.contains("Invalid"), "error: {err}");
+    }
+
+    #[test]
+    fn read_rejects_backslash_separator() {
+        let err = safe_lens_path(r"sub\file.json").unwrap_err();
+        assert!(err.contains("Invalid"), "error: {err}");
+    }
+
+    #[test]
+    fn read_rejects_empty_name() {
+        let err = safe_lens_path("").unwrap_err();
+        assert!(err.contains("Invalid"), "error: {err}");
+    }
+
+    #[test]
+    fn validate_rejects_empty_original() {
+        let mut t = sample_transfer();
+        t.original = String::new();
+        let err = validate_payload(&t).unwrap_err();
+        assert!(err.contains("original"), "error: {err}");
+    }
+
+    #[test]
+    fn validate_rejects_empty_answer() {
+        let mut t = sample_transfer();
+        t.answer = "   ".to_string();
+        let err = validate_payload(&t).unwrap_err();
+        assert!(err.contains("answer"), "error: {err}");
+    }
+
+    #[test]
+    fn validate_rejects_invalid_kind() {
+        let mut t = sample_transfer();
+        t.kind = "summary".to_string();
+        let err = validate_payload(&t).unwrap_err();
+        assert!(err.contains("kind"), "error: {err}");
+    }
+
+    #[test]
+    fn validate_rejects_unsupported_version() {
+        let mut t = sample_transfer();
+        t.schema_version = 99;
+        let err = validate_payload(&t).unwrap_err();
+        assert!(err.contains("schema version"), "error: {err}");
+    }
+
+    #[test]
+    fn validate_rejects_empty_transfer_id() {
+        let mut t = sample_transfer();
+        t.transfer_id = String::new();
+        let err = validate_payload(&t).unwrap_err();
+        assert!(err.contains("transferId"), "error: {err}");
+    }
+
+    #[test]
+    fn validate_rejects_non_uuid_transfer_id() {
+        let mut t = sample_transfer();
+        t.transfer_id = "not-a-uuid".to_string();
+        let err = validate_payload(&t).unwrap_err();
+        assert!(err.contains("UUID"), "error: {err}");
+    }
+
+    #[test]
+    fn validate_accepts_valid_payload() {
         let t = sample_transfer();
-        std::fs::write(&path, serde_json::to_string_pretty(&t).unwrap()).unwrap();
-        let parsed = read_lens_transfer(path.to_str().unwrap()).unwrap();
-        assert_eq!(parsed, t);
+        assert!(validate_payload(&t).is_ok());
+    }
+
+    #[test]
+    fn korean_answer_truncated_safely() {
+        let mut t = sample_transfer();
+        // 250 Korean characters, each 3 bytes in UTF-8.
+        t.answer = "가".repeat(250);
+        let r = transfer_to_record(&t);
+        assert!(r.title.chars().count() <= 200);
+        assert!(r.title.ends_with("..."));
+        // Must not panic; the truncated string is valid UTF-8.
+        assert!(r.title.is_ascii() || r.title.chars().all(|c| !c.is_control()));
+    }
+
+    #[test]
+    fn emoji_answer_truncated_safely() {
+        let mut t = sample_transfer();
+        // 250 emoji, each 4 bytes in UTF-8.
+        t.answer = "😀".repeat(250);
+        let r = transfer_to_record(&t);
+        assert!(r.title.chars().count() <= 200);
+        assert!(r.title.ends_with("..."));
+    }
+
+    #[test]
+    fn short_answer_not_truncated() {
+        let mut t = sample_transfer();
+        t.answer = "짧은 답변".to_string();
+        let r = transfer_to_record(&t);
+        assert_eq!(r.title, "짧은 답변");
+    }
+
+    #[test]
+    fn long_ascii_truncated_at_char_boundary() {
+        let mut t = sample_transfer();
+        t.answer = "x".repeat(300);
+        let r = transfer_to_record(&t);
+        assert_eq!(r.title.chars().count(), 200); // 197 + "..."
+        assert!(r.title.ends_with("..."));
+    }
+
+    #[test]
+    fn idempotency_survives_connection_reopen() {
+        // Simulate a restart: use the same DB file, close and reopen.
+        let dir = tempfile::TempDir::new().unwrap();
+        let db_path = dir.path().join("test.db");
+
+        // First "session": import the transfer.
+        {
+            let mut conn = rusqlite::Connection::open(&db_path).unwrap();
+            apply_migrations(&mut conn).unwrap();
+            let t = sample_transfer();
+            let r = transfer_to_record(&t);
+            crate::db::kernel::save_kernel_records(&mut conn, &[r.clone()]).unwrap();
+            record_lens_transfer(&mut conn, &t.transfer_id, &r.id).unwrap();
+        }
+
+        // Second "session": reopen, check idempotency.
+        {
+            let conn = rusqlite::Connection::open(&db_path).unwrap();
+            assert!(is_transfer_imported(&conn, &sample_transfer().transfer_id).unwrap());
+            let existing = find_record_for_transfer(&conn, &sample_transfer().transfer_id)
+                .unwrap()
+                .expect("record should exist");
+            assert_eq!(existing, format!("lens-{}", sample_transfer().transfer_id));
+        }
     }
 }

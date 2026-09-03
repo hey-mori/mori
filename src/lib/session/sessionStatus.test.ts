@@ -46,6 +46,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   setAllPendingReviewStatus: () => {},
   editPendingReviewEvent: () => {},
   applyPendingReview: () => ({ ok: false, reason: "" }),
+  applyLensTransferReview: async () => ({ ok: false, reason: "" }),
   cancelPendingReview: () => {},
   clearLastApplied: () => {},
   resetToDemo: () => {},

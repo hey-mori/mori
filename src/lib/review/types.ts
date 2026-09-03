@@ -89,6 +89,7 @@ export type ReviewOrigin =
   | "manual-note"
   | "url"
   | "connector-jsonl"
+  | "lens-transfer"
   | "other";
 
 export type ReviewCounts = {

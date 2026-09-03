@@ -114,6 +114,10 @@ export type TauriCommandName =
   | "verify_repository_path"
   | "list_connector_jsonl_inbox"
   | "read_connector_jsonl_file"
+  | "write_lens_capability"
+  | "list_lens_transfers"
+  | "read_lens_transfer"
+  | "import_lens_transfer"
   | "detect_connector_status"
   | "install_claude_hook"
   | "uninstall_claude_hook"
@@ -331,6 +335,10 @@ export type TauriCommandMap = {
   verify_repository_path: { input: { request: VerifyRepositoryRequest }; output: RepositoryVerificationResult };
   list_connector_jsonl_inbox: { input: undefined; output: ConnectorInboxListing };
   read_connector_jsonl_file: { input: { input: { path: string } }; output: ConnectorJsonlFile };
+  write_lens_capability: { input: undefined; output: string };
+  list_lens_transfers: { input: undefined; output: LensInboxListing };
+  read_lens_transfer: { input: { file_name: string }; output: LensTransferPayload };
+  import_lens_transfer: { input: { file_name: string }; output: LensImportResult };
   detect_connector_status: { input: undefined; output: ConnectorDetectionResult[] };
   install_claude_hook: {
     input: { scope: "global" | "project"; command: string; projectPath?: string };
@@ -449,6 +457,39 @@ export type ConnectorJsonlFile = {
   text: string;
   sizeBytes: number;
   modifiedAt: string;
+};
+
+export type LensTransferPayload = {
+  schemaVersion: number;
+  transferId: string;
+  original: string;
+  answer: string;
+  kind: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  note: string;
+  tags: string[];
+  createdAt: string;
+};
+
+export type LensPendingTransfer = {
+  filePath: string;
+  fileName: string;
+  sizeBytes: number;
+  modifiedAt: string;
+  payload: LensTransferPayload;
+  alreadyImported: boolean;
+};
+
+export type LensInboxListing = {
+  directory: string;
+  directoryExists: boolean;
+  pending: LensPendingTransfer[];
+};
+
+export type LensImportResult = {
+  recordId: string;
+  transferId: string;
 };
 
 export async function invokeTauriCommand<TCommand extends TauriCommandName>(

@@ -1399,7 +1399,7 @@ describe("useSessionStore pending import review", () => {
     expect(useSessionStore.getState().pendingReview).toBeNull();
   });
 
-  it("applyPendingReview converts the review into an applied import", () => {
+  it("applyPendingReview converts the review into an applied import", async () => {
     const store = useSessionStore.getState();
     const session = store.beginEmptySession({ title: "A", projectName: "P", now: fixedNow });
     const draft = buildReviewDraft(session.session.id, session.project.id);
@@ -1407,7 +1407,7 @@ describe("useSessionStore pending import review", () => {
     // Manual-note drafts land pending, so accept them before applying.
     useSessionStore.getState().setAllPendingReviewStatus("accepted");
 
-    const result = useSessionStore.getState().applyPendingReview();
+    const result = await useSessionStore.getState().applyPendingReview();
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.appliedCount).toBeGreaterThan(0);
 
@@ -1422,14 +1422,14 @@ describe("useSessionStore pending import review", () => {
     expect(useSessionStore.getState().pendingReview).toBeNull();
   });
 
-  it("applyPendingReview refuses when nothing is accepted", () => {
+  it("applyPendingReview refuses when nothing is accepted", async () => {
     const store = useSessionStore.getState();
     const session = store.beginEmptySession({ title: "A", projectName: "P", now: fixedNow });
     const draft = buildReviewDraft(session.session.id, session.project.id);
     useSessionStore.getState().savePendingReview(draft);
     useSessionStore.getState().setAllPendingReviewStatus("discarded");
 
-    const result = useSessionStore.getState().applyPendingReview();
+    const result = await useSessionStore.getState().applyPendingReview();
     expect(result.ok).toBe(false);
     expect(useSessionStore.getState().imports.length).toBe(0);
     expect(useSessionStore.getState().pendingReview).not.toBeNull();

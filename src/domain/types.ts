@@ -101,6 +101,7 @@ export type SourceKind =
   | "jira"
   | "buildLog"
   | "deployLog"
+  | "lensTransfer"
   | "automation";
 export type RelationshipType =
   | "ledTo"

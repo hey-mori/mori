@@ -724,22 +724,28 @@ pub fn list_lens_transfers(
 }
 
 /// Read and parse a single Lens transfer file without importing it.
+///
+/// Accepts a file name (not a full path). The name is confined to the
+/// Lens inbox via `safe_lens_path`.
 #[tauri::command]
 pub fn read_lens_transfer(
-    file_path: String,
+    file_name: String,
 ) -> Result<crate::connectors::lens::LensTransferPayload, String> {
-    crate::connectors::lens::read_lens_transfer(&file_path)
+    crate::connectors::lens::read_lens_transfer(&file_name)
 }
 
 /// Import a Lens transfer as a `knowledge` MoriRecord. Idempotent:
 /// sending the same transfer twice returns the same record ID.
+///
+/// Accepts a file name (not a full path). The name is confined to the
+/// Lens inbox via `safe_lens_path`.
 #[tauri::command]
 pub fn import_lens_transfer(
     state: tauri::State<'_, SqliteState>,
-    file_path: String,
+    file_name: String,
 ) -> Result<crate::connectors::lens::LensImportResult, String> {
     with_connection(&state, |conn, _path| {
-        crate::connectors::lens::import_lens_transfer(conn, &file_path)
+        crate::connectors::lens::import_lens_transfer(conn, &file_name)
     })
 }
 
