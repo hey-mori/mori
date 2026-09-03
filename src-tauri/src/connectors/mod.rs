@@ -7,7 +7,7 @@
 //!
 //! Underneath the inbox root, Mori only inspects a fixed set of known
 //! connector subfolders (`claude-code`, `codex-cli`, `opencode-cli`,
-//! `local-capture`, `mcp`, `terminal`, `git`, `other`). It never recurses into
+//! `local-capture`, `mcp`, `terminal`, `git`, `lens`, `other`). It never recurses into
 //! arbitrary user directories, and it
 //! does **not** watch the inbox for changes. Listing only happens when
 //! the user clicks Refresh in the Evidence Hub. Reading only happens when
@@ -32,4 +32,5 @@
 pub mod cli_setup;
 pub mod inbox;
 pub mod installer;
+pub mod lens;
 pub mod mcp_setup;

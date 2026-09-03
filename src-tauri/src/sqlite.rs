@@ -699,6 +699,50 @@ fn sidecar_path(db: &Path, suffix: &str) -> PathBuf {
     db.with_file_name(name)
 }
 
+// ─── Lens connector ────────────────────────────────────────────────────────
+
+/// Write the capability marker that signals to Lens that Mori supports
+/// the Lens transfer protocol. Creates `~/.mori/connectors/lens/` if
+/// needed. Safe to call on every startup.
+#[tauri::command]
+pub fn write_lens_capability(state: tauri::State<'_, SqliteState>) -> Result<String, String> {
+    with_connection(&state, |conn, _path| {
+        let path = crate::connectors::lens::write_capability_marker(conn)?;
+        Ok(path.to_string_lossy().to_string())
+    })
+}
+
+/// List pending Lens transfer files with parsed payloads and
+/// already-imported flags.
+#[tauri::command]
+pub fn list_lens_transfers(
+    state: tauri::State<'_, SqliteState>,
+) -> Result<crate::connectors::lens::LensInboxListing, String> {
+    with_connection(&state, |conn, _path| {
+        crate::connectors::lens::list_lens_transfers(conn)
+    })
+}
+
+/// Read and parse a single Lens transfer file without importing it.
+#[tauri::command]
+pub fn read_lens_transfer(
+    file_path: String,
+) -> Result<crate::connectors::lens::LensTransferPayload, String> {
+    crate::connectors::lens::read_lens_transfer(&file_path)
+}
+
+/// Import a Lens transfer as a `knowledge` MoriRecord. Idempotent:
+/// sending the same transfer twice returns the same record ID.
+#[tauri::command]
+pub fn import_lens_transfer(
+    state: tauri::State<'_, SqliteState>,
+    file_path: String,
+) -> Result<crate::connectors::lens::LensImportResult, String> {
+    with_connection(&state, |conn, _path| {
+        crate::connectors::lens::import_lens_transfer(conn, &file_path)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{list_schema_objects, move_sqlite_files, reset_connection, sidecar_path};

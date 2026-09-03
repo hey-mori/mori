@@ -22,13 +22,14 @@ const KNOWN_FAMILIES: &[&str] = &[
     "mcp",
     "terminal",
     "git",
+    "lens",
     "other",
 ];
 
 /// Allowed file extensions. We accept JSONL plus the two ambiguous-but-common
 /// extensions hook scripts tend to use. Anything else is rejected; users with
 /// a custom extension should rename the file or copy/paste the contents.
-const ALLOWED_EXTENSIONS: &[&str] = &["jsonl", "ndjson", "log", "txt"];
+const ALLOWED_EXTENSIONS: &[&str] = &["jsonl", "ndjson", "log", "txt", "json"];
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
