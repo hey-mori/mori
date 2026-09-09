@@ -81,7 +81,21 @@ jobs:
   # it is back rather than newly invented.
   rust-changed:
     name: rust · changed?
-    runs-on: ubuntu-latest
+    # Same self-hosted OCI arm64 runner as `verify`, 2026-09-09, and for a
+    # sharper reason than saving minutes: while the hosted allowance is
+    # rejecting jobs this filter fails before it runs a step, and a failed
+    # `needs` skips the macOS job no matter what its `if` says. So the gate
+    # that decides whether the Rust side is involved has not been deciding
+    # anything. Moving it to a runner that is not billed puts it back in
+    # service.
+    #
+    # Nothing here needs a toolchain: checkout, then git and grep, all of
+    # which the host provides. There is one runner, so this job and `verify`
+    # take it in turn rather than in parallel; this one is seconds long.
+    #
+    # TO REVERT: put `runs-on: ubuntu-latest` back.
+    runs-on: [self-hosted, Linux, ARM64, oci-a1, mori]
+    timeout-minutes: 10
     outputs:
       changed: ${{ steps.filter.outputs.changed }}
     steps:
