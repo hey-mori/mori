@@ -5,10 +5,10 @@ mod browser_relay_protocol;
 mod claude;
 mod cline;
 mod codex;
-mod cursor;
 mod commands;
-mod continue_agent;
 mod connectors;
+mod continue_agent;
+mod cursor;
 mod db;
 mod files;
 mod git;
@@ -73,10 +73,7 @@ const LANGUAGE_SHORTCUT: &str = "CmdOrCtrl+Shift+E";
 fn install_language_shortcut(app: &tauri::App) {
     use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
 
-    let shortcut = Shortcut::new(
-        Some(Modifiers::CONTROL | Modifiers::SHIFT),
-        Code::KeyE,
-    );
+    let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyE);
     let handle = app.handle().clone();
 
     let plugin = tauri_plugin_global_shortcut::Builder::new()
@@ -101,8 +98,8 @@ fn install_language_shortcut(app: &tauri::App) {
     // A chord another app already owns is a normal condition, not a crash. The
     // settings surface reads this back so the user is told rather than left
     // pressing a key that does nothing.
-    if let Err(error) = tauri_plugin_global_shortcut::GlobalShortcutExt::global_shortcut(app)
-        .register(shortcut)
+    if let Err(error) =
+        tauri_plugin_global_shortcut::GlobalShortcutExt::global_shortcut(app).register(shortcut)
     {
         eprintln!("could not register {LANGUAGE_SHORTCUT}: {error}");
     }
@@ -221,6 +218,7 @@ fn main() {
             cline::sessions::get_cline_session,
             cursor::sessions::discover_cursor_sessions,
             cursor::sessions::get_cursor_session,
+            browser_relay::claim_browser_observation_relay_requests,
             browser_relay::ack_browser_observation_relay,
             language::commands::capture_foreground_selection,
             language::commands::capture_selection_via_clipboard,

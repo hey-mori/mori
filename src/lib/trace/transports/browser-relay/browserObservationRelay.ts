@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Event } from "@tauri-apps/api/event";
 import { isTauriRuntime } from "../../../desktop/environment";
 import {
   ingestBrowserObservation,
@@ -7,6 +6,7 @@ import {
 } from "../../sources/browser";
 
 export const BROWSER_OBSERVATION_RELAY_EVENT = "browser-observation-relay://request";
+const BROWSER_OBSERVATION_RELAY_DRAIN_INTERVAL_MS = 250;
 
 export type BrowserObservationRelayRequest = {
   requestId: string;
@@ -72,21 +72,48 @@ export async function installBrowserObservationRelay(): Promise<() => void> {
   if (!isTauriRuntime()) return () => undefined;
 
   const { listen } = await import("@tauri-apps/api/event");
+  let disposed = false;
+  let draining = false;
+  const drain = async () => {
+    if (disposed || draining) return;
+    draining = true;
+    try {
+      const requests = await invoke<unknown[]>("claim_browser_observation_relay_requests");
+      for (const request of requests) {
+        await acknowledgeBrowserObservationRelayRequestPayload(request);
+      }
+    } catch (error) {
+      console.error("Browser observation relay drain failed.", error);
+    } finally {
+      draining = false;
+    }
+  };
+
   const unlisten = await listen<BrowserObservationRelayRequest>(
     BROWSER_OBSERVATION_RELAY_EVENT,
-    (event) => {
-      void acknowledgeBrowserObservationRelayEvent(event);
+    () => {
+      void drain();
     },
   );
-  return unlisten;
+  const interval = window.setInterval(() => {
+    void drain();
+  }, BROWSER_OBSERVATION_RELAY_DRAIN_INTERVAL_MS);
+  void drain();
+  return () => {
+    disposed = true;
+    window.clearInterval(interval);
+    unlisten();
+  };
 }
 
-async function acknowledgeBrowserObservationRelayEvent(
-  event: Event<BrowserObservationRelayRequest>,
-): Promise<void> {
-  const input = acknowledgeBrowserObservationRelayRequest(event.payload);
+async function acknowledgeBrowserObservationRelayRequestPayload(request: unknown): Promise<void> {
+  const input = acknowledgeBrowserObservationRelayRequest(request);
   if (!input.requestId) return;
-  await invoke("ack_browser_observation_relay", { input });
+  try {
+    await invoke("ack_browser_observation_relay", { input });
+  } catch (error) {
+    console.error("Browser observation relay acknowledgement failed.", error);
+  }
 }
 
 function isRelayRequest(value: unknown): value is BrowserObservationRelayRequest {
