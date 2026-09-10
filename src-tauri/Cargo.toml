@@ -8,6 +8,7 @@ authors = ["swarea"]
 license = ""
 repository = "https://github.com/swarea/mori"
 edition = "2021"
+default-run = "mori"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
