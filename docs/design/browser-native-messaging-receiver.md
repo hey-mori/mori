@@ -62,6 +62,47 @@ successful automated smoke used the Chrome DevTools Protocol
 `Extensions.loadUnpacked` command with `--remote-debugging-pipe` and
 `--enable-unsafe-extension-debugging`.
 
+## Reproducible Chrome Smoke Harness
+
+The follow-up reproducible development smoke is owned by
+`swarea/mori-browser-extension` rather than Mori. Mori owns the native helper,
+local IPC relay, and Browser observation ingress. The extension repository owns
+Google Chrome launch, unpacked extension loading, runtime extension id
+discovery, popup capture toggling, and browser event driving.
+
+The canonical development flow is:
+
+```text
+Start Mori Desktop from C:\dev\mori-browser-native-host-dev.
+Build src-tauri\target\debug\mori-browser-native-host.exe.
+Run npm run smoke:chrome-native from C:\dev\mori-browser-extension.
+```
+
+The smoke harness uses Chrome DevTools Protocol only as development test
+control. CDP loads the unpacked extension with `Extensions.loadUnpacked`,
+opens the extension popup page, drives tab/navigation actions, and reads
+extension storage for assertions. Product Browser capture still flows through
+real Manifest V3 extension APIs and real Native Messaging.
+
+The first reproducible smoke run against Chrome 152.0.7977.83 verified:
+
+```text
+context_snapshot -> route: context
+navigation_committed -> route: trace
+tab_activated -> route: trace
+capture OFF blocks later Browser evidence
+mori_unavailable is returned when the local Mori relay is unavailable
+host missing is surfaced when Chrome cannot discover the Native Messaging host
+URL credentials, query, and fragment remain stripped before transport
+```
+
+The host-missing scenario saves and restores the previous user-scope Chrome
+Native Messaging registration. Temporary Chrome profiles are used so the
+developer's normal Chrome profile is not touched. The smoke does not add
+offline spooling, retry policy, persistence, production installer behavior,
+Chrome Web Store identity, Edge Add-ons identity, Flow, Episode, Memory,
+Identity, Work, Sync, or Vision.
+
 ## Boundary
 
 ```text
