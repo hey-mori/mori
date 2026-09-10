@@ -6,6 +6,7 @@ import {
   applyThemePreferenceToDocument,
   loadThemePreference,
 } from "./lib/settings/themePreference";
+import { installBrowserObservationRelay } from "./lib/trace/transports/browser-relay/browserObservationRelay";
 import "./styles/globals.css";
 
 /**
@@ -45,6 +46,10 @@ const surface = selectedSurface();
 // The overlay window is borderless and sized to its content; the shell's
 // full-viewport layout would otherwise force a scrollbar inside a 400px window.
 document.documentElement.dataset.surface = surface;
+
+if (surface === "app") {
+  void installBrowserObservationRelay();
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

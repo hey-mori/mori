@@ -77,6 +77,29 @@ function assertReviewDraft(jsonl: string, expectedConnectorId: string): void {
   }
 }
 
+function bashPath(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  if (isWslBashRuntime()) {
+    const match = /^([A-Za-z]):\/(.*)$/.exec(normalized);
+    if (match) return `/mnt/${match[1].toLowerCase()}/${match[2]}`;
+  }
+  return normalized;
+}
+
+let cachedIsWslBashRuntime: boolean | null = null;
+
+function isWslBashRuntime(): boolean {
+  if (cachedIsWslBashRuntime !== null) return cachedIsWslBashRuntime;
+  try {
+    const release = execFileSync("bash", ["-c", "uname -r"], {
+      encoding: "utf8",
+    });
+    cachedIsWslBashRuntime = /microsoft|wsl/i.test(release);
+  } catch {
+    cachedIsWslBashRuntime = false;
+  }
+  return cachedIsWslBashRuntime;
+}
 
 /**
  * Whether a POSIX runtime is usable, decided without a login shell.
@@ -108,13 +131,13 @@ describeIfPosix("POSIX connector wrappers", () => {
     const outDir = join(root, "out");
     const stub = makeStub(root, "codex-stub");
     execFileSync("bash", [
-      CODEX_WRAPPER,
+      bashPath(CODEX_WRAPPER),
       "--out",
-      outDir,
+      bashPath(outDir),
       "--session",
       'codex-session-"한글"',
       "--",
-      stub,
+      bashPath(stub),
       "run",
       'Fix "quoted" 한국어 prompt',
     ]);
@@ -129,13 +152,13 @@ describeIfPosix("POSIX connector wrappers", () => {
     const outDir = join(root, "out");
     const stub = makeStub(root, "opencode-stub");
     execFileSync("bash", [
-      OPENCODE_WRAPPER,
+      bashPath(OPENCODE_WRAPPER),
       "--out",
-      outDir,
+      bashPath(outDir),
       "--session",
       'opencode-session-"한글"',
       "--",
-      stub,
+      bashPath(stub),
       "run",
       'Add retry for "업로드" flow',
     ]);
@@ -153,7 +176,7 @@ describeIfPosix("POSIX connector wrappers", () => {
       cwd: root,
       prompt: '요약해줘: "연동" 경계를 확인',
     });
-    execFileSync("bash", [CLAUDE_HOOK, "--out", outDir], {
+    execFileSync("bash", [bashPath(CLAUDE_HOOK), "--out", bashPath(outDir)], {
       input: payload,
       encoding: "utf8",
     });

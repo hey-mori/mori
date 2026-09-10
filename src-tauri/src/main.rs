@@ -1,5 +1,7 @@
 mod agent_paths;
 mod antigravity;
+mod browser_relay;
+mod browser_relay_protocol;
 mod claude;
 mod cline;
 mod codex;
@@ -19,6 +21,8 @@ mod package;
 mod repositories;
 mod session;
 mod sqlite;
+
+use tauri::Manager;
 
 /// Append Rust panics to `~/.mori/logs/panic.log` so a desktop crash leaves
 /// a local trace the user can attach to a bug report (local-first: no remote
@@ -110,6 +114,13 @@ fn main() {
         .setup(|app| {
             #[cfg(desktop)]
             install_language_shortcut(app);
+            #[cfg(desktop)]
+            browser_relay::start_browser_observation_relay(
+                app.handle().clone(),
+                app.state::<browser_relay::BrowserRelayState>()
+                    .inner()
+                    .clone(),
+            );
             Ok(())
         })
         .plugin(tauri_plugin_dialog::init())
@@ -118,6 +129,7 @@ fn main() {
         .manage(llm_endpoints::LlmEndpointState::default())
         .manage(language::overlay::OverlayPlacement::default())
         .manage(llm_stream::LlmStreamState::default())
+        .manage(browser_relay::BrowserRelayState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
             commands::host_platform,
@@ -209,6 +221,7 @@ fn main() {
             cline::sessions::get_cline_session,
             cursor::sessions::discover_cursor_sessions,
             cursor::sessions::get_cursor_session,
+            browser_relay::ack_browser_observation_relay,
             language::commands::capture_foreground_selection,
             language::commands::capture_selection_via_clipboard,
             language::commands::language_capture_supported,

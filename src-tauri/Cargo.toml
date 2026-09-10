@@ -8,6 +8,7 @@ authors = ["swarea"]
 license = ""
 repository = "https://github.com/swarea/mori"
 edition = "2021"
+default-run = "mori"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -31,6 +32,7 @@ tauri-plugin-global-shortcut = "2"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
 # Only for `StreamExt::next` over the response body.
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
+interprocess = "2.4.4"
 
 # Windows-only: UI Automation is how a selection is read out of another app.
 # Kept behind a target gate so the shared crate still builds on macOS and Linux,

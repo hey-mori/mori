@@ -106,6 +106,9 @@ fn safe_lens_path(file_name: &str) -> Result<PathBuf, String> {
         .ok_or_else(|| "Lens connector directory does not exist".to_string())?;
 
     let candidate = root.join(file_name);
+    if !candidate.exists() {
+        return Err(format!("Transfer file not found: {file_name}"));
+    }
 
     // Canonicalize both sides to defeat symlinks and `..` tricks.
     let canonical_root = fs::canonicalize(&root)
