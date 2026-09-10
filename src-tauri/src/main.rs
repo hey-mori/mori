@@ -221,6 +221,7 @@ fn main() {
             cline::sessions::get_cline_session,
             cursor::sessions::discover_cursor_sessions,
             cursor::sessions::get_cursor_session,
+            browser_relay::claim_browser_observation_relay_requests,
             browser_relay::ack_browser_observation_relay,
             language::commands::capture_foreground_selection,
             language::commands::capture_selection_via_clipboard,

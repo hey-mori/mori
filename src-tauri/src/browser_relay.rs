@@ -19,12 +19,17 @@ const ACK_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Default)]
 pub struct BrowserRelayState {
-    pending: Arc<Mutex<HashMap<String, mpsc::Sender<Value>>>>,
+    pending: Arc<Mutex<HashMap<String, PendingRelayRequest>>>,
+}
+
+struct PendingRelayRequest {
+    observation: Value,
+    sender: mpsc::Sender<Value>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct BrowserRelayEvent {
+pub struct BrowserRelayEvent {
     request_id: String,
     observation: Value,
 }
@@ -50,21 +55,70 @@ pub fn ack_browser_observation_relay(
     state: tauri::State<'_, BrowserRelayState>,
     input: BrowserRelayAckInput,
 ) -> Result<(), String> {
-    let sender = {
-        let mut pending = state
+    state.ack(input)
+}
+
+#[tauri::command]
+pub fn claim_browser_observation_relay_requests(
+    state: tauri::State<'_, BrowserRelayState>,
+) -> Result<Vec<BrowserRelayEvent>, String> {
+    state.claim_pending_requests()
+}
+
+impl BrowserRelayState {
+    fn insert_pending(
+        &self,
+        request_id: String,
+        observation: Value,
+        sender: mpsc::Sender<Value>,
+    ) -> Result<(), String> {
+        let mut pending = self
             .pending
             .lock()
             .map_err(|_| "browser relay pending map is poisoned".to_string())?;
-        pending.remove(&input.request_id)
-    };
+        pending.insert(
+            request_id,
+            PendingRelayRequest {
+                observation,
+                sender,
+            },
+        );
+        Ok(())
+    }
 
-    let Some(sender) = sender else {
-        return Err("browser relay request is no longer pending".to_string());
-    };
+    fn claim_pending_requests(&self) -> Result<Vec<BrowserRelayEvent>, String> {
+        let pending = self
+            .pending
+            .lock()
+            .map_err(|_| "browser relay pending map is poisoned".to_string())?;
+        Ok(pending
+            .iter()
+            .map(|(request_id, request)| BrowserRelayEvent {
+                request_id: request_id.clone(),
+                observation: request.observation.clone(),
+            })
+            .collect())
+    }
 
-    sender
-        .send(input.acknowledgement)
-        .map_err(|_| "browser relay acknowledgement receiver is gone".to_string())
+    fn ack(&self, input: BrowserRelayAckInput) -> Result<(), String> {
+        let sender = {
+            let mut pending = self
+                .pending
+                .lock()
+                .map_err(|_| "browser relay pending map is poisoned".to_string())?;
+            pending
+                .remove(&input.request_id)
+                .map(|request| request.sender)
+        };
+
+        let Some(sender) = sender else {
+            return Err("browser relay request is no longer pending".to_string());
+        };
+
+        sender
+            .send(input.acknowledgement)
+            .map_err(|_| "browser relay acknowledgement receiver is gone".to_string())
+    }
 }
 
 fn serve_browser_observation_relay(
@@ -105,14 +159,8 @@ fn forward_to_webview(
     let request_id = next_request_id();
     let (tx, rx) = mpsc::channel();
 
-    {
-        let Ok(mut pending) = state.pending.lock() else {
-            return BrowserRelayAck::error(
-                "relay_state_error",
-                "Browser relay state is unavailable.",
-            );
-        };
-        pending.insert(request_id.clone(), tx);
+    if let Err(error) = state.insert_pending(request_id.clone(), observation.clone(), tx) {
+        return BrowserRelayAck::error("relay_state_error", error);
     }
 
     let event = BrowserRelayEvent {
@@ -157,4 +205,39 @@ fn next_request_id() -> String {
         .map(|duration| duration.as_nanos())
         .unwrap_or_default();
     format!("browser-relay-{nanos}-{}", std::process::id())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn pending_requests_can_be_claimed_until_acknowledged() {
+        let state = BrowserRelayState::default();
+        let (tx, rx) = mpsc::channel();
+        state
+            .insert_pending(
+                "request-1".to_string(),
+                json!({ "kind": "context_snapshot" }),
+                tx,
+            )
+            .unwrap();
+
+        let claimed = state.claim_pending_requests().unwrap();
+        assert_eq!(claimed.len(), 1);
+        assert_eq!(claimed[0].request_id, "request-1");
+        assert_eq!(claimed[0].observation["kind"], "context_snapshot");
+
+        state
+            .ack(BrowserRelayAckInput {
+                request_id: "request-1".to_string(),
+                acknowledgement: json!({ "ok": true, "kind": "context_snapshot", "route": "context" }),
+            })
+            .unwrap();
+
+        assert_eq!(rx.recv().unwrap()["ok"], true);
+        assert!(state.claim_pending_requests().unwrap().is_empty());
+    }
 }
