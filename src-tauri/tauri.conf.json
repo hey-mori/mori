@@ -7,6 +7,7 @@
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "npm run build",
+    "beforeBundleCommand": "node scripts/prepare-browser-native-host.mjs",
     "frontendDist": "../dist"
   },
   "app": {
@@ -36,6 +37,9 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/mori-browser-native-host"
     ],
     "resources": {
       "../connectors/claude-code/mori-claude-hook.py": "connectors/claude-code/mori-claude-hook.py",

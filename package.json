@@ -26,7 +26,8 @@
     "generate:icons": "node scripts/generate-icons.cjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "node scripts/tauri-build.mjs",
+    "tauri:build:direct": "tauri build"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.1",

@@ -57,6 +57,36 @@ This confirms the process boundary. It does not yet prove Chrome Web Store or
 Edge Add-ons distribution ids, packaged installer registration, durable Trace
 persistence, reconnect policy, or offline spooling.
 
+## Production Packaging Update 2026-09-10
+
+The first Windows packaging pass makes the Mori desktop installer the owner of
+Chrome Native Messaging registration. This changes the production path, but not
+the Browser observation contract and not the helper protocol.
+
+- `npm run tauri:build` now runs a Mori wrapper around Tauri build.
+- The wrapper requires `MORI_BROWSER_CHROME_EXTENSION_ID`,
+  `MORI_BROWSER_EXTENSION_ID`, or `MORI_BROWSER_ALLOWED_ORIGINS` as explicit
+  build-time input.
+- The wrapper builds `mori-browser-native-host` in release mode and prepares
+  Tauri's target-triple `externalBin` file.
+- The wrapper generates a temporary NSIS hook and config override under
+  `src-tauri/target/mori-browser-native-host/`; generated extension ids are not
+  committed.
+- The Windows NSIS installer registers Chrome at current-user scope and writes
+  `%LOCALAPPDATA%\Mori\NativeMessagingHosts\com.swarea.mori.browser.json`.
+- The manifest path points at the installed helper,
+  `%LOCALAPPDATA%\Mori\mori-browser-native-host.exe`.
+- The Browser extension still knows only the host name
+  `com.swarea.mori.browser`.
+- Development PowerShell scripts remain diagnostics and smoke-test support.
+  They are not the production registration owner.
+
+Still deferred: Edge installer registration, per-machine installer scope,
+production extension publication, code signing, release tagging, macOS/Linux
+manifest installation, durable Browser Trace storage, history import, DOM
+capture, retry/spool behavior, Flow/Episode/Memory interpretation, Identity,
+Account, Workspace, Work, Sync, and Vision.
+
 Chrome 152 rejected command-line `--load-extension` in this environment. The
 successful automated smoke used the Chrome DevTools Protocol
 `Extensions.loadUnpacked` command with `--remote-debugging-pipe` and

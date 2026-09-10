@@ -5,6 +5,7 @@ dist/
 .env.*
 !.env.example
 src-tauri/target/
+src-tauri/binaries/
 src-tauri/gen/
 .claude/
 .omo/run-continuation/

@@ -1,11 +1,11 @@
 # Mori Browser Native Host
 
-This folder records the current Native Messaging install model for the Mori
-Browser receiver.
+This folder records the Native Messaging install model for the Mori Browser
+receiver.
 
-The production Browser extension still lives in `swarea/mori-browser-extension`.
-This folder does not connect the extension transport client yet, add reconnect
-behavior, offline queueing, or production persistence.
+The Browser extension lives in `swarea/mori-browser-extension`. Mori owns the
+native host executable, the installed host manifest, and the Windows registry
+lifecycle for the desktop package.
 
 ## Host
 
@@ -21,23 +21,16 @@ The host manifest follows the Chromium Native Messaging shape:
 {
   "name": "com.swarea.mori.browser",
   "description": "Mori Browser observation receiver",
-  "path": "C:\\Program Files\\Mori\\mori-browser-native-host.exe",
+  "path": "C:\\Users\\alice\\AppData\\Local\\Mori\\mori-browser-native-host.exe",
   "type": "stdio",
   "allowed_origins": ["chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/"]
 }
 ```
 
-`allowed_origins` is generated from explicit extension ids. Development,
-Chrome Web Store, and Edge Add-ons ids must be configured separately when they
-are known. Do not commit a temporary unpacked extension id as a permanent Mori
-identifier.
-
-During local development, build the helper with Cargo and point the manifest at
-the debug executable:
-
-```text
-src-tauri\target\debug\mori-browser-native-host.exe
-```
+`allowed_origins` is generated from explicit extension ids or explicit
+`chrome-extension://<id>/` origins. Development, Chrome Web Store, and Edge
+Add-ons ids must be configured separately when they are known. Do not commit a
+temporary unpacked extension id as a permanent Mori identifier.
 
 ## Runtime
 
@@ -58,21 +51,80 @@ The local relay is an implementation detail between Mori-owned processes. The
 Browser extension should keep using the Native Messaging protocol and should
 not depend on the relay format directly.
 
-## Windows Registration
+## Production Packaging
 
-The prototype scripts register the manifest at user scope, so administrator
-rights are not required for the development path.
+The Windows desktop installer owns production registration. Run the packaged
+build with an explicit build-time extension identity:
+
+```powershell
+$env:MORI_BROWSER_CHROME_EXTENSION_ID = "<chrome extension id>"
+npm run tauri:build -- --bundles nsis --ci
+```
+
+or:
+
+```powershell
+$env:MORI_BROWSER_ALLOWED_ORIGINS = "chrome-extension://<chrome extension id>/"
+npm run tauri:build -- --bundles nsis --ci
+```
+
+The build wrapper:
+
+1. builds `src-tauri`'s `mori-browser-native-host` release binary;
+2. copies it to Tauri's target-triple `externalBin` location;
+3. generates a temporary NSIS hook and config override under
+   `src-tauri/target/mori-browser-native-host/`;
+4. embeds the explicit allowed origins in the installer hook;
+5. lets the installer write the manifest and Chrome registry key at install
+   time.
+
+The generated installer uses current-user scope on Windows. It installs the app
+and helper under:
+
+```text
+%LOCALAPPDATA%\Mori
+```
+
+and writes the Native Messaging manifest under:
+
+```text
+%LOCALAPPDATA%\Mori\NativeMessagingHosts\com.swarea.mori.browser.json
+```
+
+The manifest points to the installed helper:
+
+```text
+%LOCALAPPDATA%\Mori\mori-browser-native-host.exe
+```
+
+No production manifest should point at a checkout, `C:\dev`, or
+`target\debug`.
+
+Uninstall removes the Chrome registry key and the installer-owned manifest only
+when the registry value still points at the installer-owned manifest path.
+
+## Development Diagnostics
+
+The PowerShell scripts in this folder are diagnostics for development and smoke
+tests. They are not the production registration owner.
+
+During local development, build the helper with Cargo and point the diagnostic
+manifest at the debug executable:
+
+```text
+src-tauri\target\debug\mori-browser-native-host.exe
+```
 
 Chrome:
 
 ```powershell
-.\install-native-host.ps1 -Browser chrome -HostPath "C:\Program Files\Mori\mori-browser-native-host.exe" -ExtensionId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+.\install-native-host.ps1 -Browser chrome -HostPath "C:\dev\mori\src-tauri\target\debug\mori-browser-native-host.exe" -ExtensionId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 ```
 
 Edge:
 
 ```powershell
-.\install-native-host.ps1 -Browser edge -HostPath "C:\Program Files\Mori\mori-browser-native-host.exe" -ExtensionId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+.\install-native-host.ps1 -Browser edge -HostPath "C:\dev\mori\src-tauri\target\debug\mori-browser-native-host.exe" -ExtensionId "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 ```
 
 Uninstall:
