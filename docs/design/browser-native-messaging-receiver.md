@@ -1,20 +1,21 @@
-# Browser Native Messaging Receiver Prototype
+# Browser Native Host Relay
 
-Status: prototype, 2026-09-09.
+Status: first process-boundary implementation, 2026-09-10.
 
-This note records the first Mori-side Native Messaging receiver boundary for
-Browser observations. It does not implement the production extension transport
-client, a packaged native helper executable, reconnect behavior, offline
-queueing, production persistence, Identity, Work, Sync, Flow, Episode, Memory,
-or Vision.
+This note records the first Mori-side Native Messaging process boundary for
+Browser observations. It does not connect the production extension transport
+client yet, add reconnect behavior, offline queueing, production persistence,
+Identity, Work, Sync, Flow, Episode, Memory, or Vision.
 
 ## Boundary
 
 ```text
-Native Messaging frame bytes
-  -> transport decoder
-  -> decoded JSON value
-  -> existing Browser observation ingress
+Browser extension, future
+  -> Native Messaging frame bytes over stdin/stdout
+  -> mori-browser-native-host helper process
+  -> local Mori Desktop relay
+  -> WebView acknowledgement bridge
+  -> existing TypeScript Browser observation ingress
   -> Browser Context or Browser Trace projection
   -> framed acknowledgement
 ```
@@ -24,24 +25,74 @@ wire contract. Browser Context and Browser Trace remain Mori source semantics.
 
 ## Desktop Runtime Decision
 
-Do not use the Tauri GUI executable as the Native Messaging host. The current
-desktop entry point starts the Mori window, plugins, global shortcut, SQLite
-state, LLM state, and Tauri command handlers. That process has GUI startup side
-effects and normal diagnostics, while Native Messaging requires stdout to stay
-reserved for framed protocol bytes.
+Do not use the Tauri GUI executable as the Native Messaging host. The desktop
+entry point starts the Mori window, plugins, global shortcut, SQLite state, LLM
+state, and Tauri command handlers. That process has GUI startup side effects
+and normal diagnostics, while Native Messaging requires stdout to stay reserved
+for framed protocol bytes.
 
-The production direction is a dedicated small host process, provisionally
-`mori-browser-native-host`. The current implementation keeps the receiver core
-in TypeScript so it can call the existing Browser observation ingress directly
-before a packaged helper executable is introduced.
+The dedicated helper process is `mori-browser-native-host`. It speaks the
+Chromium Native Messaging stdio protocol and then relays each decoded
+`BrowserObservationEnvelope` to the already-running Mori Desktop process over a
+local IPC channel.
+
+The previous same-process TypeScript receiver is kept as an architecture probe
+and test helper. Production ingestion now routes through:
+
+```text
+mori-browser-native-host
+  -> Browser relay IPC
+  -> Tauri event
+  -> BrowserObservationIngress
+```
+
+Mori Desktop is not launched by the host. If the desktop relay is unavailable,
+the helper returns a framed `mori_unavailable` acknowledgement instead of
+buffering observations.
+
+## Local Relay
+
+The local relay uses the `interprocess` crate. On Windows it resolves to a
+named pipe; on platforms without namespaced local sockets it falls back to a
+temporary filesystem socket path. The relay name is versioned and user-scoped
+by default, and can be overridden with:
+
+```text
+MORI_BROWSER_RELAY_NAME
+```
+
+The local relay payload is newline-delimited JSON:
+
+```json
+{
+  "version": 1,
+  "observation": {
+    "version": 1,
+    "source": "browser",
+    "kind": "tab_activated",
+    "observedAt": "2026-09-09T00:01:00.000Z",
+    "payload": {}
+  }
+}
+```
+
+The reply body mirrors the Native Messaging acknowledgement:
+
+```json
+{
+  "ok": true,
+  "kind": "tab_activated",
+  "route": "trace"
+}
+```
 
 ## Protocol Findings
 
 Chrome and Edge start native hosts as separate processes and communicate over
 stdin and stdout. Messages are UTF-8 JSON prefixed with a 32-bit length in
 native byte order. `runtime.connectNative()` keeps the host alive for the port
-lifetime, while `runtime.sendNativeMessage()` starts a host per request and uses
-the first host response. Chrome caps host-to-browser messages at 1 MB and
+lifetime, while `runtime.sendNativeMessage()` starts a host per request and
+uses the first host response. Chrome caps host-to-browser messages at 1 MB and
 browser-to-host messages at 64 MiB. Edge also documents the 1 MB
 host-to-browser cap and a larger browser-to-host limit.
 
@@ -57,7 +108,7 @@ References:
 
 ## Host Manifest
 
-Prototype host name:
+Host name:
 
 ```text
 com.swarea.mori.browser
@@ -79,6 +130,12 @@ The host manifest uses the standard keys:
 Chrome Web Store, and Edge Add-ons ids must be configured separately, and a
 temporary unpacked extension id must not become a committed production
 identifier.
+
+During local development, the debug helper built by Cargo is usually:
+
+```text
+src-tauri\target\debug\mori-browser-native-host.exe
+```
 
 ## Windows Registration
 
@@ -120,3 +177,8 @@ UTF-8, and invalid JSON. Browser ingress still validates `version`, `source`,
 `kind`, `observedAt`, payload shape, and URL privacy invariants. Transport
 metadata such as registry path, extension origin, native port, and parent
 window handle is not added to Browser observation v1.
+
+The relay is local process-to-process transport, not a semantic boundary.
+Browser-specific data remains inside the Browser observation envelope and
+Browser source model; Trace core must stay source-neutral so later Desktop,
+Dev, Terminal, and other sources do not inherit browser-only fields.

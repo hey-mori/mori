@@ -5,4 +5,5 @@ export type {
   TraceSourceKind,
   TraceSpan,
 } from "./core";
+export * from "./transports/browser-relay/browserObservationRelay";
 export * from "./transports/native-messaging";
