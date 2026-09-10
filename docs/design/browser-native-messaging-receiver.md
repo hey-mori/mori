@@ -7,6 +7,61 @@ Browser observations. It does not connect the production extension transport
 client yet, add reconnect behavior, offline queueing, production persistence,
 Identity, Work, Sync, Flow, Episode, Memory, or Vision.
 
+## First Chrome E2E Finding
+
+The first real Chrome smoke used Chrome 152.0.7977.83, the unpacked
+`swarea/mori-browser-extension`, and the debug helper at:
+
+```text
+C:\dev\mori-browser-native-host-dev\src-tauri\target\debug\mori-browser-native-host.exe
+```
+
+Chrome assigned this unpacked extension id for the local repository path:
+
+```text
+ebkcmfnikempiiafmehofoalnknfoblg
+```
+
+That id is development-local registration data and is not committed to source.
+The native host manifest was registered for Chrome at user scope with:
+
+```text
+chrome-extension://ebkcmfnikempiiafmehofoalnknfoblg/
+```
+
+The first successful end-to-end observation was `navigation_committed`.
+Chrome produced a sanitized Browser observation, launched
+`mori-browser-native-host`, the helper connected to Mori Desktop over local IPC,
+Mori routed the observation through `BrowserObservationIngress`, and the
+extension received:
+
+```json
+{
+  "ok": true,
+  "kind": "navigation_committed",
+  "route": "trace"
+}
+```
+
+With Mori Desktop stopped, the same path returned a framed failure
+acknowledgement to the extension:
+
+```json
+{
+  "ok": false,
+  "code": "mori_unavailable"
+}
+```
+
+This confirms the process boundary. It does not yet prove Chrome Web Store or
+Edge Add-ons distribution ids, packaged installer registration, durable Trace
+persistence, reconnect policy, or offline spooling.
+
+Chrome 152 rejected command-line `--load-extension` in this environment. The
+successful automated smoke used the Chrome DevTools Protocol
+`Extensions.loadUnpacked` command with `--remote-debugging-pipe` and
+`--enable-unsafe-extension-debugging`.
+
 ## Boundary
 
 ```text
