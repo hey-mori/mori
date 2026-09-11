@@ -2,6 +2,10 @@ param(
   [ValidateSet("chrome", "edge")]
   [string]$Browser = "chrome",
 
+  [string]$ManifestPath = "",
+
+  [string]$ExpectedManifestPath = "",
+
   [switch]$RemoveManifest
 )
 
@@ -16,14 +20,32 @@ if ($Browser -eq "edge") {
 }
 
 if (Test-Path -LiteralPath $registryPath) {
-  Remove-Item -LiteralPath $registryPath -Recurse -Force
-  Write-Host "Removed $registryPath"
+  $item = Get-Item -LiteralPath $registryPath
+  $currentManifestPath = [string]$item.GetValue("")
+  $shouldRemoveRegistry = $true
+  if (-not [string]::IsNullOrWhiteSpace($ExpectedManifestPath)) {
+    $shouldRemoveRegistry = [string]::Equals(
+      [System.IO.Path]::GetFullPath($currentManifestPath),
+      [System.IO.Path]::GetFullPath($ExpectedManifestPath),
+      [System.StringComparison]::OrdinalIgnoreCase
+    )
+  }
+
+  if ($shouldRemoveRegistry) {
+    Remove-Item -LiteralPath $registryPath -Recurse -Force
+    Write-Host "Removed $registryPath"
+  } else {
+    Write-Host "$registryPath points to $currentManifestPath, leaving it in place"
+  }
 } else {
   Write-Host "$registryPath was not registered"
 }
 
 if ($RemoveManifest) {
-  $manifestPath = Join-Path $env:LOCALAPPDATA "Mori\NativeMessagingHosts\$HostName.json"
+  $manifestPath = $ManifestPath
+  if ([string]::IsNullOrWhiteSpace($manifestPath)) {
+    $manifestPath = Join-Path $env:LOCALAPPDATA "Mori\NativeMessagingHosts\$HostName.json"
+  }
   if (Test-Path -LiteralPath $manifestPath) {
     Remove-Item -LiteralPath $manifestPath -Force
     Write-Host "Removed $manifestPath"

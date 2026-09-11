@@ -6,7 +6,6 @@ param(
   [string]$HostPath,
 
   [Parameter(Mandatory = $true)]
-  [ValidatePattern("^[a-pA-P]{32}$")]
   [string[]]$ExtensionId,
 
   [string]$ManifestPath = ""
@@ -29,8 +28,24 @@ if ([string]::IsNullOrWhiteSpace($ManifestPath)) {
 New-Item -ItemType Directory -Path $manifestDir -Force | Out-Null
 
 $allowedOrigins = @()
-foreach ($id in $ExtensionId) {
-  $allowedOrigins += "chrome-extension://$($id.ToLowerInvariant())/"
+foreach ($entry in $ExtensionId) {
+  foreach ($id in ($entry -split ",")) {
+    $normalizedId = $id.Trim().ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($normalizedId)) {
+      continue
+    }
+    if ($normalizedId -notmatch "^[a-p]{32}$") {
+      throw "Invalid Chromium extension id: $id"
+    }
+    $origin = "chrome-extension://$normalizedId/"
+    if ($allowedOrigins -notcontains $origin) {
+      $allowedOrigins += $origin
+    }
+  }
+}
+
+if ($allowedOrigins.Count -eq 0) {
+  throw "At least one Chromium extension id is required"
 }
 
 $manifest = [ordered]@{

@@ -6,6 +6,9 @@ dist/
 !.env.example
 src-tauri/target/
 src-tauri/gen/
+src-tauri/binaries/*
+!src-tauri/binaries/.gitkeep
+src-tauri/windows/nsis/browser-native-host.generated.nsh
 .claude/
 .omo/run-continuation/
 *.log
