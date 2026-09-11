@@ -1,6 +1,7 @@
 # Browser Native Host Relay
 
-Status: first process-boundary implementation, 2026-09-10.
+Status: process-boundary implementation plus Windows installer packaging,
+2026-09-11.
 
 This note records the first Mori-side Native Messaging process boundary for
 Browser observations. It does not connect the production extension transport
@@ -251,6 +252,73 @@ It writes the manifest to:
 and stores that manifest path as the registry default value. This avoids
 administrator rights for development. Production packaging may later choose
 system-level registration.
+
+## Windows Installer Packaging
+
+The Windows package keeps the desktop GUI and the Chromium Native Messaging
+host as separate executables:
+
+```text
+Mori.exe
+mori-browser-native-host.exe
+```
+
+The helper remains the executable Chrome launches. Mori Desktop does not start
+the helper as a Tauri sidecar at runtime.
+
+During `tauri build`, `scripts/prepare-browser-native-host-bundle.mjs` builds:
+
+```text
+src-tauri\target\release\mori-browser-native-host.exe
+```
+
+and stages the target-triple-specific sidecar file expected by Tauri:
+
+```text
+src-tauri\binaries\mori-browser-native-host-x86_64-pc-windows-msvc.exe
+```
+
+The Tauri bundle includes that sidecar as `mori-browser-native-host.exe` in the
+installed application directory. The installer also includes the Browser native
+host registration scripts under `connectors/browser-native` so NSIS can run
+them during install and uninstall.
+
+Windows registration is installer-owned only when an explicit extension id is
+provided at build time:
+
+```text
+MORI_BROWSER_CHROME_EXTENSION_ID=<32-character Chromium id>
+MORI_BROWSER_EDGE_EXTENSION_ID=<32-character Chromium id>
+```
+
+If neither value is provided, the helper is still packaged but the installer
+does not create a Native Messaging manifest or registry key. This is
+intentional until Mori has stable Chrome Web Store and Edge Add-ons extension
+identities. A development unpacked extension id is valid for local packaged
+smoke builds, but it is not committed as a production identity.
+
+The NSIS installer uses current-user install mode. Browser host registration
+therefore also uses HKCU and writes the shared manifest to:
+
+```text
+%LOCALAPPDATA%\Mori\NativeMessagingHosts\com.swarea.mori.browser.json
+```
+
+The manifest path points at the installed helper, not a development checkout:
+
+```text
+<install-dir>\mori-browser-native-host.exe
+```
+
+Uninstall removes the installer-owned Chrome and Edge registry entries only
+when they still point at the installer-owned manifest path, then removes that
+manifest. User Mori data, browser user data, unrelated Native Messaging hosts,
+and registrations pointing somewhere else are left alone.
+
+The update-safety invariant is that the manifest path uses the stable
+application install directory rather than a versioned build or checkout path.
+Reinstalling the same package rewrites the manifest idempotently to the current
+installed helper path.
 
 ## Edge, macOS, and Linux
 

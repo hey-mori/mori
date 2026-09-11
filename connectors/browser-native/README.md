@@ -95,6 +95,31 @@ HKCU\Software\Google\Chrome\NativeMessagingHosts\com.swarea.mori.browser
 HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.swarea.mori.browser
 ```
 
+## Windows Installer Registration
+
+The Mori Windows installer owns production-shaped registration. It packages the
+Rust helper executable with the desktop app and, when a build supplies an
+explicit extension id, runs these scripts from the installed resources during
+install and uninstall.
+
+Build-time inputs:
+
+```text
+MORI_BROWSER_CHROME_EXTENSION_ID=<32-character Chromium id>
+MORI_BROWSER_EDGE_EXTENSION_ID=<32-character Chromium id>
+```
+
+No extension id is invented in source. If the build does not provide one, the
+installer still carries `mori-browser-native-host.exe` but does not register a
+Native Messaging host. Local packaged smoke may provide the unpacked extension
+id for that temporary test build. A public release must use the stable store
+identity.
+
+Uninstall is ownership-aware for installer use: when `-ExpectedManifestPath` is
+provided, a browser registry key is removed only if it still points at that
+manifest path. This prevents Mori uninstall from deleting a different user or
+development Native Messaging registration.
+
 ## Runtime Invariant
 
 Native Messaging stdout is the framed protocol channel only. Diagnostics must

@@ -5,6 +5,7 @@
   "identifier": "app.mori.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
+    "beforeBundleCommand": "node scripts/prepare-browser-native-host-bundle.mjs",
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
@@ -25,7 +26,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
     "category": "Productivity",
     "copyright": "© 2026 swarea",
     "shortDescription": "Local-first AI work memory",
@@ -37,10 +38,19 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "externalBin": ["binaries/mori-browser-native-host"],
     "resources": {
       "../connectors/claude-code/mori-claude-hook.py": "connectors/claude-code/mori-claude-hook.py",
       "../connectors/claude-code/mori-claude-hook.sh": "connectors/claude-code/mori-claude-hook.sh",
-      "../connectors/claude-code/mori-claude-hook.ps1": "connectors/claude-code/mori-claude-hook.ps1"
+      "../connectors/claude-code/mori-claude-hook.ps1": "connectors/claude-code/mori-claude-hook.ps1",
+      "../connectors/browser-native/install-native-host.ps1": "connectors/browser-native/install-native-host.ps1",
+      "../connectors/browser-native/uninstall-native-host.ps1": "connectors/browser-native/uninstall-native-host.ps1"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "windows/nsis/browser-native-host.nsh"
+      }
     }
   }
 }

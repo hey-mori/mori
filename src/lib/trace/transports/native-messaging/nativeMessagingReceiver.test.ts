@@ -48,9 +48,7 @@ describe("Browser Native Messaging receiver", () => {
     const frame = frameFixture("tab-activated.v1.json");
     const result = receiveBrowserNativeMessagingInput(frame);
 
-    expect(result.acknowledgements).toEqual([
-      { ok: true, kind: "tab_activated", route: "trace" },
-    ]);
+    expect(result.acknowledgements).toEqual([{ ok: true, kind: "tab_activated", route: "trace" }]);
     expect(readAcks(result.output)).toEqual(result.acknowledgements);
   });
 
@@ -118,9 +116,9 @@ describe("Browser Native Messaging receiver", () => {
     const imports = importSpecifiers(receiverText);
 
     expect(imports).toContain("../../sources/browser");
-    expect(imports.some((specifier) => /record-kernel|project-memory|memory-api/.test(specifier))).toBe(
-      false,
-    );
+    expect(
+      imports.some((specifier) => /record-kernel|project-memory|memory-api/.test(specifier)),
+    ).toBe(false);
     expect(imports.some((specifier) => /storage|session|import|timeline-lab/.test(specifier))).toBe(
       false,
     );
@@ -152,6 +150,30 @@ describe("Browser Native Messaging host manifest", () => {
         allowedOrigins: ["chrome-extension://*/"],
       }),
     ).toThrow(/allowed origin/);
+  });
+});
+
+describe("Browser Native Messaging Windows package config", () => {
+  it("bundles the helper and installer-owned registration scripts", () => {
+    const config = JSON.parse(
+      readFileSync(join(process.cwd(), "src-tauri", "tauri.conf.json"), "utf8"),
+    );
+
+    expect(config.build.beforeBundleCommand).toBe(
+      "node scripts/prepare-browser-native-host-bundle.mjs",
+    );
+    expect(config.bundle.targets).toEqual(["nsis"]);
+    expect(config.bundle.externalBin).toContain("binaries/mori-browser-native-host");
+    expect(config.bundle.resources).toMatchObject({
+      "../connectors/browser-native/install-native-host.ps1":
+        "connectors/browser-native/install-native-host.ps1",
+      "../connectors/browser-native/uninstall-native-host.ps1":
+        "connectors/browser-native/uninstall-native-host.ps1",
+    });
+    expect(config.bundle.windows.nsis).toMatchObject({
+      installMode: "currentUser",
+      installerHooks: "windows/nsis/browser-native-host.nsh",
+    });
   });
 });
 
