@@ -131,11 +131,15 @@ describe("availability classification", () => {
     expect(findSurface(BROWSER_NO_SESSION, "githubPrImport").availability).toBe("planned");
   });
 
-  it("marks the browser extension prototype as partial but not importable", () => {
+  it("marks the browser live source as partial, desktop-only, and not importable", () => {
     const surface = findSurface(DESKTOP_WITH_SESSION, "browserExtension");
     expect(surface.availability).toBe("available");
     expect(surface.status).toBe("partial");
     expect(surface.action.kind).toBe("none");
+
+    const browserSurface = findSurface(BROWSER_WITH_SESSION, "browserExtension");
+    expect(browserSurface.availability).toBe("needsDesktopApp");
+    expect(browserSurface.action.enabled).toBe(false);
   });
 });
 

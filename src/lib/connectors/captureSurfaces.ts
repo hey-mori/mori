@@ -75,6 +75,7 @@ export type CaptureSurfaceCaptureMode =
   | "localHook"
   | "localCliWrapper"
   | "localDesktopCommand"
+  | "browserNativeMessaging"
   | "plannedExtension"
   | "plannedApi"
   | "plannedMcp"
@@ -586,24 +587,25 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     toolFamily: "browser",
     surface: "extension",
     status: "partial",
-    captureMode: "plannedExtension",
+    captureMode: "browserNativeMessaging",
     userActionRequired:
-      "별도 swarea/mori-browser-extension prototype 설치 + capture opt-in. Mori live transport는 아직 없음.",
+      "별도 swarea/mori-browser-extension 설치 후 캡처를 직접 켭니다. 기본값은 꺼짐입니다.",
     canCreateSource: false,
     canCreateEvents: true,
     canEnterImportReview: false,
     rawDataPolicy: "summaryOnly",
     trustDefault: "observed",
     privacyBoundary:
-      "확장 capture는 기본 OFF이며 URL은 origin+path로 제한. Mori transport/persistence는 아직 없음.",
+      "캡처는 기본 OFF이며 URL은 origin+path로 제한됩니다. 쿼리와 fragment는 저장하지 않습니다.",
     whatMoriCanAccess: [
-      "(prototype) context_snapshot / tab_activated / navigation_committed observation envelope",
+      "현재 브라우저 Context snapshot",
+      "tab_activated / navigation_committed 활동 메타데이터",
     ],
     whatMoriNeverAccesses: ["페이지 DOM", "히스토리", "쿠키", "OAuth", "폼 입력", "비밀번호"],
     setupRequirement:
-      "swarea/mori-browser-extension repo의 unpacked extension 수동 설치. Mori live transport는 다음 단계.",
+      "Mori Desktop과 Chromium 확장, 일치하는 Native Messaging extension id가 필요합니다.",
     nextStep:
-      "Native Messaging 또는 기존 connector ingress 중 하나를 선택해 Browser observation transport 연결.",
+      "스토어 production identity는 보류. 현재는 개발 설치와 로컬 Native Messaging 경로를 사용합니다.",
     relatedIntegrationIds: ["browserTab"],
   },
   {

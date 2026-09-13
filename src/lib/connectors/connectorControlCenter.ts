@@ -189,9 +189,11 @@ const AVAILABILITY_RANK: Record<ControlCenterAvailability, number> = {
 // Classification
 // ---------------------------------------------------------------------------
 
-/** True when a surface can only run through a desktop (Tauri) command. */
+/** True when a surface depends on Mori's desktop runtime. */
 function requiresDesktop(row: CaptureSurfaceRow): boolean {
-  return row.captureMode === "localDesktopCommand";
+  return (
+    row.captureMode === "localDesktopCommand" || row.captureMode === "browserNativeMessaging"
+  );
 }
 
 function classifyAvailability(
