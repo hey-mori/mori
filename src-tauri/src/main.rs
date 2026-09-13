@@ -131,6 +131,8 @@ fn main() {
         .manage(llm_stream::LlmStreamState::default())
         .manage(browser_relay::BrowserRelayState::default())
         .invoke_handler(tauri::generate_handler![
+            sqlite::append_browser_evidence,
+            sqlite::list_recent_browser_evidence,
             commands::get_app_info,
             commands::host_platform,
             commands::send_os_notification,

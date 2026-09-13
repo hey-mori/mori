@@ -57,6 +57,28 @@ pub struct SqliteSessionListOutput {
 }
 
 #[tauri::command]
+pub fn append_browser_evidence(
+    state: tauri::State<'_, SqliteState>,
+    input: crate::db::browser_evidence::BrowserEvidenceInput,
+) -> Result<i64, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        crate::db::browser_evidence::append(conn, &input)
+    })
+}
+
+#[tauri::command]
+pub fn list_recent_browser_evidence(
+    state: tauri::State<'_, SqliteState>,
+    limit: u32,
+) -> Result<Vec<crate::db::browser_evidence::BrowserEvidenceRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        crate::db::browser_evidence::recent(conn, limit)
+    })
+}
+
+#[tauri::command]
 pub fn get_sqlite_migration_status(state: tauri::State<'_, SqliteState>) -> Result<DatabaseStatus, String> {
     with_connection(&state, |conn, path| {
         let records = applied_migrations(conn)?;

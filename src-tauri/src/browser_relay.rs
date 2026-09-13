@@ -1,6 +1,9 @@
 use std::{
     collections::HashMap,
-    sync::{mpsc, Arc, Mutex},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        mpsc, Arc, Mutex,
+    },
     thread,
     time::Duration,
 };
@@ -16,6 +19,7 @@ use crate::browser_relay_protocol::{
 
 const RELAY_EVENT: &str = "browser-observation-relay://request";
 const ACK_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_RELAY_CONNECTIONS: usize = 16;
 
 #[derive(Clone, Default)]
 pub struct BrowserRelayState {
@@ -131,18 +135,30 @@ fn serve_browser_observation_relay(
         .name(name)
         .create_sync()
         .map_err(|error| format!("failed to bind browser relay socket {relay_name}: {error}"))?;
+    let connections = Arc::new(AtomicUsize::new(0));
 
     for incoming in listener.incoming() {
         match incoming {
             Ok(conn) => {
+                if connections
+                    .fetch_update(Ordering::AcqRel, Ordering::Acquire, |count| {
+                        (count < MAX_RELAY_CONNECTIONS).then_some(count + 1)
+                    })
+                    .is_err()
+                {
+                    drop(conn);
+                    continue;
+                }
                 let app = app.clone();
                 let state = state.clone();
+                let connections = connections.clone();
                 thread::spawn(move || {
                     if let Err(error) = handle_browser_relay_connection(conn, |observation| {
                         forward_to_webview(&app, &state, observation)
                     }) {
                         eprintln!("browser relay connection failed: {error}");
                     }
+                    connections.fetch_sub(1, Ordering::AcqRel);
                 });
             }
             Err(error) => eprintln!("browser relay accept failed: {error}"),

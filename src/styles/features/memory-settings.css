@@ -5120,3 +5120,11 @@ button.settings-option {
   line-height: 1.6;
   max-width: 760px;
 }
+
+.browser-source-status-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text-muted);
+}
