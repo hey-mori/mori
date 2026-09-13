@@ -6,7 +6,10 @@ import {
   ingestBrowserObservationJson,
   validateBrowserObservationEnvelope,
 } from "./browserObservationIngress";
-import type { BrowserObservationEnvelopeV1 } from "./browserObservationEnvelope";
+import type {
+  BrowserHistoryStateUpdatedEnvelopeV1,
+  BrowserObservationEnvelopeV1,
+} from "./browserObservationEnvelope";
 
 describe("browser observation ingress", () => {
   it("accepts a valid context_snapshot and routes it to Browser Context", () => {
@@ -43,6 +46,18 @@ describe("browser observation ingress", () => {
     if (result.route !== "trace") return;
     expect(result.traceEvent.kind).toBe("browser.navigation_committed");
     expect(result.traceEvent.metadata.resource?.url).toBe("https://docs.oracle.com/en-us/iaas/");
+  });
+
+  it("accepts history_state_updated in v1 and keeps it distinct from a document commit", () => {
+    const result = ingestBrowserObservation(fixture("history-state-updated.v1.json"));
+
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") return;
+    expect(result.route).toBe("trace");
+    expect(result.kind).toBe("history_state_updated");
+    if (result.route !== "trace") return;
+    expect(result.traceEvent.kind).toBe("browser.history_state_updated");
+    expect(result.traceEvent.metadata.resource?.url).toBe("https://example.com/app/route-two");
   });
 
   it("parses explicit local JSON text before ingress", () => {
@@ -181,6 +196,27 @@ describe("browser observation ingress", () => {
     });
   });
 
+  it.each([
+    "https://example.com/app?token=private",
+    "https://example.com/app#private",
+  ])("rejects unsanitized history-state URL: %s", (url) => {
+    const observation = fixture<BrowserHistoryStateUpdatedEnvelopeV1>(
+      "history-state-updated.v1.json",
+    );
+    const result = validateBrowserObservationEnvelope({
+      ...observation,
+      payload: {
+        ...observation.payload,
+        details: { ...observation.payload.details, url },
+      },
+    });
+
+    expect(result).toMatchObject({
+      status: "rejected",
+      errors: expect.arrayContaining([expect.objectContaining({ code: "unsanitized_url" })]),
+    });
+  });
+
   it("does not import the browser extension repository code", () => {
     const text = readFileSync(
       join(
@@ -202,8 +238,10 @@ describe("browser observation ingress", () => {
   });
 });
 
-function fixture(fileName: string): BrowserObservationEnvelopeV1 {
-  return JSON.parse(readFileSync(fixturePath(fileName), "utf8")) as BrowserObservationEnvelopeV1;
+function fixture<T extends BrowserObservationEnvelopeV1 = BrowserObservationEnvelopeV1>(
+  fileName: string,
+): T {
+  return JSON.parse(readFileSync(fixturePath(fileName), "utf8")) as T;
 }
 
 function fixturePath(fileName: string): string {

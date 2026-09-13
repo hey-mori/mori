@@ -13,7 +13,10 @@ import {
   type BrowserWindowObservation,
 } from "./browserContext";
 
-export type BrowserTraceKind = "tab_activated" | "navigation_committed";
+export type BrowserTraceKind =
+  | "tab_activated"
+  | "navigation_committed"
+  | "history_state_updated";
 
 export type BrowserTraceMetadata = {
   runtime: Pick<BrowserRuntimeObservation, "id" | "provider" | "label" | "version">;
@@ -46,9 +49,17 @@ export type BrowserNavigationCommittedObservation = {
   urlDetailPolicy?: BrowserUrlDetailPolicy;
 };
 
+export type BrowserHistoryStateUpdatedObservation = Omit<
+  BrowserNavigationCommittedObservation,
+  "kind"
+> & {
+  kind: "history_state_updated";
+};
+
 export type BrowserTraceObservation =
   | BrowserTabActivatedObservation
-  | BrowserNavigationCommittedObservation;
+  | BrowserNavigationCommittedObservation
+  | BrowserHistoryStateUpdatedObservation;
 
 export function browserObservationToTraceEvent(
   observation: BrowserTraceObservation,
@@ -78,9 +89,15 @@ export function browserNavigationCommittedToTraceEvent(
   return browserObservationToTraceEvent({ ...observation, kind: "navigation_committed" });
 }
 
+export function browserHistoryStateUpdatedToTraceEvent(
+  observation: Omit<BrowserHistoryStateUpdatedObservation, "kind">,
+): TraceEvent<BrowserTraceMetadata> {
+  return browserObservationToTraceEvent({ ...observation, kind: "history_state_updated" });
+}
+
 function browserTraceMetadata(observation: BrowserTraceObservation): BrowserTraceMetadata {
   const resource =
-    observation.kind === "navigation_committed"
+    observation.kind !== "tab_activated"
       ? browserResourceFromUrl({
           url: observation.url,
           title: observation.title ?? observation.tab.title,
@@ -88,11 +105,11 @@ function browserTraceMetadata(observation: BrowserTraceObservation): BrowserTrac
         })
       : observation.resource;
   const currentResourceId =
-    observation.kind === "navigation_committed"
+    observation.kind !== "tab_activated"
       ? (resource?.id ?? browserResourceId(observation.url))
       : observation.tab.currentResourceId;
   const tab =
-    observation.kind === "navigation_committed"
+    observation.kind !== "tab_activated"
       ? {
           ...observation.tab,
           currentResourceId,
@@ -148,7 +165,9 @@ function browserTraceTitle(
   if (observation.kind === "tab_activated") {
     return `Tab activated${resource?.title ? `: ${resource.title}` : ""}`;
   }
-  return `Navigation committed${resource?.title ? `: ${resource.title}` : ""}`;
+  const action =
+    observation.kind === "navigation_committed" ? "Navigation committed" : "History state updated";
+  return `${action}${resource?.title ? `: ${resource.title}` : ""}`;
 }
 
 function browserTraceSummary(
@@ -157,9 +176,11 @@ function browserTraceSummary(
 ): string {
   const url =
     resource?.url ??
-    (observation.kind === "navigation_committed" ? browserResourceId(observation.url) : "");
+    (observation.kind !== "tab_activated" ? browserResourceId(observation.url) : "");
   if (observation.kind === "tab_activated") {
     return url ? `Active tab now points to ${url}` : "Active browser tab changed";
   }
-  return `Browser tab navigated to ${resource?.url ?? "a resource"}`;
+  return observation.kind === "navigation_committed"
+    ? `Browser tab navigated to ${resource?.url ?? "a resource"}`
+    : `Browser tab history state changed to ${resource?.url ?? "a resource"}`;
 }

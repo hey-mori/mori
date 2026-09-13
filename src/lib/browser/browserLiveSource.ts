@@ -61,7 +61,7 @@ export function createBrowserLiveSource(
       const event = clean.traceEvent;
       const metadata = event.metadata;
       const details =
-        clean.envelope.kind === "navigation_committed" ? clean.envelope.payload.details : null;
+        clean.envelope.kind === "tab_activated" ? null : clean.envelope.payload.details;
       const input: BrowserEvidenceInput = {
         deliveryId,
         receivedAt,

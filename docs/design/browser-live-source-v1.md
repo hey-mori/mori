@@ -49,7 +49,7 @@ appended to historical evidence. A snapshot from the same runtime with an older
 observation time cannot overwrite a newer one. The read model retains the
 snapshot but labels it stale 60 seconds after receipt. This is a freshness bound,
 not a claim that the browser is alive, unchanged, or focused throughout that time.
-The three v1 event kinds cannot keep an exact live tab inventory: closes and
+The four v1 observation kinds cannot keep an exact live tab inventory: closes and
 window changes are not observed. UI says **last browser state**.
 
 Restart starts with unknown context. A successful trace ACK may include

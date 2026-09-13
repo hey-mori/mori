@@ -42,6 +42,16 @@ describe("Browser activity presentation", () => {
       expect(html).toContain("<summary>");
     }
   });
+  it("renders same-document route changes separately from full navigation", () => {
+    const html = renderToStaticMarkup(
+      createElement(BrowserActivityRow, {
+        item: { ...item, kind: "history_state_updated", url: "https://example.com/app/settings" },
+      }),
+    );
+    expect(html).toContain("페이지 경로 변경");
+    expect(html).toContain("https://example.com/app/settings");
+    expect(html).not.toContain("페이지 이동");
+  });
   it("distinguishes loading, empty, older, end, failure and retry states", () => {
     const initial = createBrowserEvidenceHistory({
       page: async () => ({ items: [], nextCursor: null }),

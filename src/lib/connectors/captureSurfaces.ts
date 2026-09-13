@@ -599,9 +599,16 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
       "캡처는 기본 OFF이며 URL은 origin+path로 제한됩니다. 쿼리와 fragment는 저장하지 않습니다.",
     whatMoriCanAccess: [
       "현재 브라우저 Context snapshot",
-      "tab_activated / navigation_committed 활동 메타데이터",
+      "tab_activated / navigation_committed / history_state_updated 활동 메타데이터",
     ],
-    whatMoriNeverAccesses: ["페이지 DOM", "히스토리", "쿠키", "OAuth", "폼 입력", "비밀번호"],
+    whatMoriNeverAccesses: [
+      "페이지 DOM",
+      "브라우저 방문 기록 DB",
+      "쿠키",
+      "OAuth",
+      "폼 입력",
+      "비밀번호",
+    ],
     setupRequirement:
       "Mori Desktop과 Chromium 확장, 일치하는 Native Messaging extension id가 필요합니다.",
     nextStep:

@@ -66,6 +66,14 @@ describe("Browser history projection and bridge", () => {
     row.data.url = null;
     expect(browserEvidenceToHistory(row)).toMatchObject({ kind: "tab_activated", url: null });
   });
+  it("keeps same-document route evidence distinct in the shared history", () => {
+    const row = evidenceRow();
+    row.kind = "history_state_updated";
+    expect(browserEvidenceToHistory(row)).toMatchObject({
+      kind: "history_state_updated",
+      url: "https://example.com/docs",
+    });
+  });
   it("propagates typed pages and cursors without changing recent callers", async () => {
     vi.mocked(invoke).mockResolvedValueOnce(batch(250));
     expect(await browserEvidenceRepository.page(50, cursor)).toEqual(batch(250));

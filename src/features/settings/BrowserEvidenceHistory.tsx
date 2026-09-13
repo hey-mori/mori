@@ -1,4 +1,12 @@
-import { ArrowDown, ArrowLeft, ChevronRight, Globe, MousePointer2, RefreshCw } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ChevronRight,
+  Globe,
+  MousePointer2,
+  RefreshCw,
+  Route,
+} from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
@@ -9,7 +17,11 @@ import {
   type BrowserEvidenceHistoryState,
 } from "../../lib/browser/browserEvidenceHistory";
 
-const LABELS = { navigation_committed: "페이지 이동", tab_activated: "탭 전환" };
+const LABELS = {
+  navigation_committed: "페이지 이동",
+  history_state_updated: "페이지 경로 변경",
+  tab_activated: "탭 전환",
+};
 const timeText = (value: string) => new Date(value).toLocaleString("ko-KR");
 
 export function BrowserEvidenceHistory({ onBack }: { onBack: () => void }) {
@@ -104,7 +116,12 @@ export function BrowserHistoryControls({
 }
 
 export function BrowserActivityRow({ item }: { item: BrowserEvidenceHistoryItem }) {
-  const Icon = item.kind === "navigation_committed" ? Globe : MousePointer2;
+  const Icon =
+    item.kind === "navigation_committed"
+      ? Globe
+      : item.kind === "history_state_updated"
+        ? Route
+        : MousePointer2;
   const provider =
     item.provider === "chrome" ? "Chrome" : item.provider === "edge" ? "Edge" : item.provider;
   return (

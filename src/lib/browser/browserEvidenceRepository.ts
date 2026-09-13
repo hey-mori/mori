@@ -6,7 +6,7 @@ export type BrowserEvidenceInput = {
   deliveryId: string;
   observedAt: string;
   receivedAt: string;
-  kind: "tab_activated" | "navigation_committed";
+  kind: "tab_activated" | "navigation_committed" | "history_state_updated";
   data: {
     provider: string;
     runtimeId: string | null;

@@ -77,7 +77,7 @@ describe("Browser application evidence boundary", () => {
     expect(source.getState().context?.observedAt).toBe("2026-09-12T00:00:00.000Z");
   });
 
-  it.each(["tab-activated", "navigation-committed"])(
+  it.each(["tab-activated", "navigation-committed", "history-state-updated"])(
     "persists %s and projects a source evidence read model",
     async (name) => {
       const { source, rows, deliver } = setup();

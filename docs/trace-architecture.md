@@ -134,8 +134,8 @@ Mori's internal `TraceEvent`. The current fixtures live under
 Mori's Browser ingress is transport-neutral: it accepts an already-decoded v1
 Browser observation envelope, validates `version`, `source`, `kind`,
 `observedAt`, required payload fields, and URL privacy invariants, then routes
-`context_snapshot` to Browser Context and `tab_activated` /
-`navigation_committed` to Browser Trace.
+`context_snapshot` to Browser Context and `tab_activated`,
+`navigation_committed`, and `history_state_updated` to Browser Trace.
 
 Native Messaging transport types and framing live under
 `src/lib/trace/transports/native-messaging/`. The packaged Rust host forwards
@@ -147,6 +147,8 @@ fields into Trace core or give transport code ownership of interpretation.
 Current implementation and verification details are recorded in
 [`docs/design/browser-live-source-v1.md`](design/browser-live-source-v1.md) and
 [`docs/design/browser-evidence-history.md`](design/browser-evidence-history.md).
+Same-document History API evidence is documented in
+[`docs/design/browser-history-state-evidence.md`](design/browser-history-state-evidence.md).
 
 This split still does not implement cross-device sync, durable account
 identity, page content capture, Flow, Episode, or Memory.

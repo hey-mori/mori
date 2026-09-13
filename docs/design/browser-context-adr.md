@@ -352,7 +352,7 @@ MVP include:
   it without private-store access.
 - Runtime Window and Tab instances as ephemeral observations.
 - Current tab title and URL/resource reference.
-- `tab_activated` and `navigation_committed` events.
+- `tab_activated`, `navigation_committed`, and `history_state_updated` events.
 - Source-specific metadata only. No Trace core change unless implementation
   proves it is unavoidable.
 - Architecture tests that keep browser metadata out of Trace core.
@@ -490,11 +490,14 @@ Event semantics:
   active in its window; it is not by itself a semantic task switch.
 - `webNavigation.onCommitted` is mapped to `navigation_committed` for main-frame
   navigation only. Subframe events are dropped.
+- `webNavigation.onHistoryStateUpdated` is mapped to `history_state_updated`
+  for main-frame History API URL updates. It remains distinct from a document
+  commit and does not mutate Browser Context directly.
 - `onCommitted` means the browser has committed to a document transition. It
   does not mean the page finished loading.
-- This slice does not observe History API SPA updates, fragment-only updates,
-  completed loads, navigation errors, redirects as a full chain, tab creation,
-  tab closure, or window switching as separate events.
+- This slice does not observe fragment-only updates, completed loads, navigation
+  errors, redirects as a full chain, tab creation, tab closure, or window
+  switching as separate events.
 - Ordering is represented by observed time and source timestamps only. No global
   sequence coordinator is introduced.
 
@@ -505,7 +508,8 @@ Permission findings:
 - `tabs` is required because Chromium limits access to tab URL/title data unless
   the extension has `tabs` or suitable host permissions. Mori uses URL and tab
   metadata only after sanitization.
-- `webNavigation` is required for committed navigation events.
+- `webNavigation` is required for committed navigation and History API state
+  update events.
 - Unused by design: `history`, `cookies`, `webRequest`, `scripting`,
   `downloads`, `bookmarks`, clipboard permissions, content scripts, DOM access,
   and page-content capture.
@@ -553,7 +557,8 @@ Ingress responsibilities:
   invariants.
 - Reject unsupported future versions instead of interpreting them as v1.
 - Route `context_snapshot` to Browser Context.
-- Route `tab_activated` and `navigation_committed` to Browser Trace.
+- Route `tab_activated`, `navigation_committed`, and `history_state_updated` to
+  Browser Trace.
 - Return accepted/rejected results without throwing for malformed input.
 
 Privacy defense:

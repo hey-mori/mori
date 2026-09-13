@@ -11,6 +11,7 @@ import {
   browserObservationEnvelopeToContextSnapshot,
   browserObservationEnvelopeToTraceEvent,
   type BrowserContextSnapshotEnvelopeV1,
+  type BrowserHistoryStateUpdatedEnvelopeV1,
   type BrowserNavigationCommittedEnvelopeV1,
   type BrowserObservationEnvelopeV1,
   type BrowserTabActivatedEnvelopeV1,
@@ -178,6 +179,19 @@ describe("browser observation v1 envelope adapter", () => {
     expect(event.occurredAt).toBe("2026-09-09T00:02:00.000Z");
     expect(event.metadata.resource?.url).toBe("https://docs.oracle.com/en-us/iaas/");
     expect(event.metadata.privacy.queryCaptured).toBe(false);
+  });
+
+  it("turns history state envelopes into distinct observable Browser Trace", () => {
+    const event = browserObservationEnvelopeToTraceEvent(
+      fixture<BrowserHistoryStateUpdatedEnvelopeV1>("history-state-updated.v1.json"),
+    );
+
+    expect(event.kind).toBe("browser.history_state_updated");
+    expect(event.title).toBe("History state updated");
+    expect(event.summary).toBe(
+      "Browser tab history state changed to https://example.com/app/route-two",
+    );
+    expect(event.metadata.resource?.url).toBe("https://example.com/app/route-two");
   });
 
   it("does not use TraceEvent as the cross-repository wire shape", () => {
