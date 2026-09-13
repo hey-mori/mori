@@ -79,6 +79,21 @@ pub fn list_recent_browser_evidence(
 }
 
 #[tauri::command]
+pub fn list_browser_evidence_page(
+    state: tauri::State<'_, SqliteState>,
+    limit: i64,
+    cursor: Option<crate::db::browser_evidence::BrowserEvidenceCursor>,
+) -> Result<crate::db::browser_evidence::BrowserEvidencePage, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        crate::db::browser_evidence::page(conn, limit, cursor.as_ref())
+    }).map_err(|error| match error.as_str() {
+        "invalid browser evidence cursor" | "invalid browser evidence page limit" => error,
+        _ => "browser evidence read failed".into(),
+    })
+}
+
+#[tauri::command]
 pub fn get_sqlite_migration_status(state: tauri::State<'_, SqliteState>) -> Result<DatabaseStatus, String> {
     with_connection(&state, |conn, path| {
         let records = applied_migrations(conn)?;
@@ -866,4 +881,3 @@ mod tests {
         assert!(!old_db.exists());
     }
 }
-

@@ -133,6 +133,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             sqlite::append_browser_evidence,
             sqlite::list_recent_browser_evidence,
+            sqlite::list_browser_evidence_page,
             commands::get_app_info,
             commands::host_platform,
             commands::send_os_notification,

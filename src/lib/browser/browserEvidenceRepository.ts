@@ -22,15 +22,31 @@ export type BrowserEvidenceInput = {
 
 export type BrowserEvidenceRow = BrowserEvidenceInput & { sequence: number };
 
+/** Read position only; never an observation identity. */
+export type BrowserEvidenceCursor = {
+  snapshotSequence: number;
+  observedAt: string;
+  sequence: number;
+};
+export type BrowserEvidencePage = {
+  items: BrowserEvidenceRow[];
+  nextCursor: BrowserEvidenceCursor | null;
+};
+export interface BrowserEvidencePageReader {
+  page(limit: number, cursor: BrowserEvidenceCursor | null): Promise<BrowserEvidencePage>;
+}
+
 export interface BrowserEvidenceRepository {
   append(input: BrowserEvidenceInput): Promise<number>;
   recent(limit: number): Promise<BrowserEvidenceRow[]>;
 }
 
 // No localStorage fallback: a successful desktop ACK must mean a durable write.
-export const browserEvidenceRepository: BrowserEvidenceRepository = {
+export const browserEvidenceRepository: BrowserEvidenceRepository & BrowserEvidencePageReader = {
   append: (input) => invoke<number>("append_browser_evidence", { input }),
   recent: (limit) => invoke<BrowserEvidenceRow[]>("list_recent_browser_evidence", { limit }),
+  page: (limit, cursor) =>
+    invoke<BrowserEvidencePage>("list_browser_evidence_page", { limit, cursor }),
 };
 
 export function browserEvidenceToTrace(row: BrowserEvidenceRow) {

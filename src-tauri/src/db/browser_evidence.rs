@@ -33,6 +33,125 @@ pub struct BrowserEvidenceRow {
     pub evidence: BrowserEvidenceInput,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BrowserEvidenceCursor {
+    pub snapshot_sequence: i64,
+    pub observed_at: String,
+    pub sequence: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserEvidencePage {
+    pub items: Vec<BrowserEvidenceRow>,
+    pub next_cursor: Option<BrowserEvidenceCursor>,
+}
+
+const FIRST_PAGE_SQL: &str =
+    "SELECT sequence, delivery_id, observed_at, received_at, kind, data_json
+    FROM browser_evidence WHERE sequence <= ?1
+    ORDER BY observed_at DESC, sequence DESC LIMIT ?2";
+// Tuple comparison lets SQLite seek the existing observed-time index, including ties.
+const OLDER_PAGE_SQL: &str =
+    "SELECT sequence, delivery_id, observed_at, received_at, kind, data_json
+    FROM browser_evidence WHERE sequence <= ?1 AND (observed_at, sequence) < (?2, ?3)
+    ORDER BY observed_at DESC, sequence DESC LIMIT ?4";
+const MAX_SAFE_SEQUENCE: i64 = 9_007_199_254_740_991;
+
+pub fn page(
+    conn: &Connection,
+    limit: i64,
+    cursor: Option<&BrowserEvidenceCursor>,
+) -> Result<BrowserEvidencePage, String> {
+    if !(1..=100).contains(&limit) {
+        return Err("invalid browser evidence page limit".into());
+    }
+    // Keep boundary validation and the page read coherent even with another connection.
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|_| "browser evidence read failed")?;
+    let snapshot: i64 = match cursor {
+        None => tx
+            .query_row(
+                "SELECT COALESCE(MAX(sequence), 0) FROM browser_evidence",
+                [],
+                |r| r.get(0),
+            )
+            .map_err(|_| "browser evidence read failed")?,
+        Some(cursor) => {
+            if cursor.sequence <= 0
+                || cursor.snapshot_sequence < cursor.sequence
+                || cursor.snapshot_sequence > MAX_SAFE_SEQUENCE
+                || cursor.observed_at.len() != 24
+            {
+                return Err("invalid browser evidence cursor".into());
+            }
+            let valid: bool = tx.query_row(
+                "SELECT strftime('%Y-%m-%dT%H:%M:%fZ', ?1) IS ?1
+                 AND EXISTS(SELECT 1 FROM browser_evidence WHERE sequence = ?2)
+                 AND EXISTS(SELECT 1 FROM browser_evidence WHERE sequence = ?3 AND observed_at = ?1)",
+                params![cursor.observed_at, cursor.snapshot_sequence, cursor.sequence], |r| r.get(0),
+            ).map_err(|_| "browser evidence read failed")?;
+            if !valid {
+                return Err("invalid browser evidence cursor".into());
+            }
+            cursor.snapshot_sequence
+        }
+    };
+    if snapshot > MAX_SAFE_SEQUENCE {
+        return Err("browser evidence read failed".into());
+    }
+    let mut stmt = tx
+        .prepare(if cursor.is_some() {
+            OLDER_PAGE_SQL
+        } else {
+            FIRST_PAGE_SQL
+        })
+        .map_err(|_| "browser evidence read failed")?;
+    let mapped = match cursor {
+        Some(cursor) => stmt.query_map(
+            params![snapshot, cursor.observed_at, cursor.sequence, limit + 1],
+            decode_row,
+        ),
+        None => stmt.query_map(params![snapshot, limit + 1], decode_row),
+    }
+    .map_err(|_| "browser evidence read failed")?;
+    let mut items = mapped
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| "browser evidence read failed")?;
+    let next_cursor = if items.len() > limit as usize {
+        items.truncate(limit as usize);
+        items.last().map(|row| BrowserEvidenceCursor {
+            snapshot_sequence: snapshot,
+            observed_at: row.evidence.observed_at.clone(),
+            sequence: row.sequence,
+        })
+    } else {
+        None
+    };
+    drop(stmt);
+    tx.commit().map_err(|_| "browser evidence read failed")?;
+    Ok(BrowserEvidencePage { items, next_cursor })
+}
+
+fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<BrowserEvidenceRow> {
+    let json: String = row.get(5)?;
+    let data = serde_json::from_str(&json).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(5, rusqlite::types::Type::Text, Box::new(error))
+    })?;
+    Ok(BrowserEvidenceRow {
+        sequence: row.get(0)?,
+        evidence: BrowserEvidenceInput {
+            delivery_id: row.get(1)?,
+            observed_at: row.get(2)?,
+            received_at: row.get(3)?,
+            kind: row.get(4)?,
+            data,
+        },
+    })
+}
+
 pub fn append(conn: &Connection, input: &BrowserEvidenceInput) -> Result<i64, String> {
     validate(conn, input)?;
     let data = serde_json::to_string(&input.data).map_err(|_| "invalid browser evidence")?;
@@ -184,6 +303,195 @@ mod tests {
                 transition_qualifiers: Some(vec![]),
             },
         }
+    }
+
+    #[test]
+    fn pages_mixed_ties_and_late_arrivals_without_gaps_across_reopen() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("history.sqlite");
+        let mut conn = open_database(&path).unwrap();
+        apply_migrations(&mut conn).unwrap();
+        assert!(page(&conn, 50, None).unwrap().items.is_empty());
+        let mut expected = Vec::new();
+        for i in 0..325 {
+            let mut row = input(&format!("mixed-{i}"));
+            row.observed_at = format!("2026-09-12T00:00:{:02}.000Z", (i * 7) % 13);
+            if i % 2 == 0 {
+                row.kind = "tab_activated".into();
+                row.data.url = None;
+            }
+            let sequence = append(&conn, &row).unwrap();
+            expected.push((row.observed_at, sequence));
+        }
+        expected.sort_by(|a, b| b.cmp(a));
+        let first = page(&conn, 50, None).unwrap();
+        let mut actual: Vec<_> = first
+            .items
+            .iter()
+            .map(|row| (row.evidence.observed_at.clone(), row.sequence))
+            .collect();
+        let mut cursor = first.next_cursor;
+        assert_eq!(cursor.as_ref().unwrap().snapshot_sequence, 325);
+        // A second connection appends both an older and a newer observation mid-read.
+        let writer = open_database(&path).unwrap();
+        for (id, time) in [
+            ("new-old", "2026-09-11T00:00:00.000Z"),
+            ("new-new", "2026-09-13T00:00:00.000Z"),
+        ] {
+            let mut row = input(id);
+            row.observed_at = time.into();
+            append(&writer, &row).unwrap();
+        }
+        drop(conn);
+        let conn = open_database(&path).unwrap();
+        conn.execute_batch("PRAGMA query_only = ON").unwrap();
+        while let Some(position) = cursor {
+            let batch = page(&conn, 50, Some(&position)).unwrap();
+            assert!(batch.items.len() <= 50);
+            actual.extend(
+                batch
+                    .items
+                    .iter()
+                    .map(|row| (row.evidence.observed_at.clone(), row.sequence)),
+            );
+            cursor = batch.next_cursor;
+        }
+        assert_eq!(actual, expected);
+        assert_eq!(
+            actual
+                .iter()
+                .map(|(_, seq)| seq)
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            325
+        );
+        let mut refreshed = page(&conn, 100, None).unwrap();
+        assert_eq!(refreshed.items[0].evidence.delivery_id, "new-new");
+        let mut total = refreshed.items.len();
+        while let Some(cursor) = refreshed.next_cursor {
+            refreshed = page(&conn, 100, Some(&cursor)).unwrap();
+            total += refreshed.items.len();
+        }
+        assert_eq!(total, 327);
+        assert_eq!(
+            refreshed.items.last().unwrap().evidence.delivery_id,
+            "new-old"
+        );
+        assert_eq!(conn.total_changes(), 0);
+        assert_eq!(recent(&conn, 999).unwrap().len(), 200);
+    }
+
+    #[test]
+    fn validates_cursor_positions_and_limits_without_disclosing_data() {
+        let mut conn = open_in_memory().unwrap();
+        apply_migrations(&mut conn).unwrap();
+        append(&conn, &input("one")).unwrap();
+        append(&conn, &input("one")).unwrap(); // An ignored insert consumes a sequence.
+        append(&conn, &input("three")).unwrap();
+        let valid = page(&conn, 1, None).unwrap().next_cursor.unwrap();
+        assert_eq!(valid.sequence, 3);
+        for limit in [i64::MIN, -1, 0, 101, i64::MAX] {
+            assert_eq!(
+                page(&conn, limit, None).unwrap_err(),
+                "invalid browser evidence page limit"
+            );
+        }
+        for (snapshot, sequence, observed) in [
+            (0, 0, valid.observed_at.as_str()),
+            (-1, 1, valid.observed_at.as_str()),
+            (4, 1, valid.observed_at.as_str()),
+            (2, 1, valid.observed_at.as_str()),
+            (3, 0, valid.observed_at.as_str()),
+            (3, -1, valid.observed_at.as_str()),
+            (1, 3, valid.observed_at.as_str()),
+            (3, 2, valid.observed_at.as_str()),
+            (3, 1, "invalid"),
+            (3, 1, "2026-09-12T00:00:00Z"),
+            (3, 1, "2026-02-30T00:00:00.000Z"),
+            (3, 1, "2026-09-11T00:00:00.000Z"),
+            (i64::MAX, 1, valid.observed_at.as_str()),
+        ] {
+            let cursor = BrowserEvidenceCursor {
+                snapshot_sequence: snapshot,
+                sequence,
+                observed_at: observed.into(),
+            };
+            assert_eq!(
+                page(&conn, 50, Some(&cursor)).unwrap_err(),
+                "invalid browser evidence cursor"
+            );
+        }
+        let last = page(&conn, 1, Some(&valid)).unwrap();
+        assert_eq!(last.items.len(), 1);
+        assert!(last.next_cursor.is_none());
+        assert!(serde_json::from_value::<BrowserEvidenceCursor>(serde_json::json!({
+            "snapshotSequence": 3, "sequence": 1, "observedAt": valid.observed_at, "extra": true,
+        })).is_err());
+        conn.execute_batch("DROP TABLE browser_evidence").unwrap();
+        assert_eq!(
+            page(&conn, 50, None).unwrap_err(),
+            "browser evidence read failed"
+        );
+    }
+
+    #[test]
+    fn pagination_uses_existing_ordering_index_on_large_dataset() {
+        let mut conn = open_in_memory().unwrap();
+        apply_migrations(&mut conn).unwrap();
+        let tx = conn.transaction().unwrap();
+        for i in 0..10_000 {
+            let mut row = input(&format!("volume-{i}"));
+            row.observed_at = format!("2026-09-12T00:{:02}:{:02}.000Z", (i / 60) % 60, i % 60);
+            append(&tx, &row).unwrap();
+        }
+        tx.commit().unwrap();
+        conn.execute_batch("ANALYZE").unwrap();
+        for (sql, values) in [
+            (
+                FIRST_PAGE_SQL,
+                vec![rusqlite::types::Value::Integer(10_000), 51.into()],
+            ),
+            (
+                OLDER_PAGE_SQL,
+                vec![
+                    10_000.into(),
+                    "2026-09-12T00:30:00.000Z".to_string().into(),
+                    5000.into(),
+                    51.into(),
+                ],
+            ),
+        ] {
+            let plan: Vec<String> = conn
+                .prepare(&format!("EXPLAIN QUERY PLAN {sql}"))
+                .unwrap()
+                .query_map(rusqlite::params_from_iter(values), |row| row.get(3))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
+            assert!(
+                plan.iter()
+                    .any(|line| line.contains("browser_evidence_observed")),
+                "{plan:?}"
+            );
+            assert!(
+                !plan.iter().any(|line| line.contains("TEMP B-TREE")),
+                "{plan:?}"
+            );
+            if sql == OLDER_PAGE_SQL {
+                assert!(plan.iter().any(|line| line.contains("SEARCH")), "{plan:?}");
+            }
+            println!("browser page plan: {plan:?}");
+        }
+        let start = std::time::Instant::now();
+        let first = page(&conn, 50, None).unwrap();
+        assert_eq!(
+            page(&conn, 50, first.next_cursor.as_ref())
+                .unwrap()
+                .items
+                .len(),
+            50
+        );
+        println!("two 50-row pages from 10000 rows: {:?}", start.elapsed());
     }
 
     #[test]

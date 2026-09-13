@@ -1,4 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { History } from "lucide-react";
+import { Button } from "../../components/ui/Button";
 import { browserLiveSource } from "../../app/browserLiveSource";
 import { Badge } from "../../components/ui/Badge";
 import { InfoHint } from "../../components/ui/InfoHint";
@@ -12,7 +14,7 @@ const KIND_LABEL = {
   navigation_committed: "페이지 이동",
 };
 
-export function BrowserSourceStatus() {
+export function BrowserSourceStatus({ onHistory }: { onHistory: () => void }) {
   const state = useSyncExternalStore(browserLiveSource.subscribe, browserLiveSource.getState);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -65,6 +67,9 @@ export function BrowserSourceStatus() {
           </span>
         ) : null}
       </div>
+      <Button className="browser-source-history-entry" icon={History} size="sm" onClick={onHistory}>
+        브라우저 활동 보기
+      </Button>
     </SettingsSection>
   );
 }
