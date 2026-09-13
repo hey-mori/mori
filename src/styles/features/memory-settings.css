@@ -5128,3 +5128,109 @@ button.settings-option {
   font-size: var(--base-font-size-sm);
   color: var(--base-text-muted);
 }
+.browser-history {
+  display: flex;
+  flex-direction: column;
+  height: min(660px, calc(100vh - 220px));
+  min-height: 280px;
+  min-width: 0;
+}
+
+.browser-history-head,
+.browser-history-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  min-height: 48px;
+}
+
+.browser-history-head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: var(--base-font-size-lg);
+  outline: none;
+}
+
+.browser-history-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-block: 1px solid var(--line);
+}
+
+.browser-history-list ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.browser-history-row {
+  border-bottom: 1px solid var(--line);
+}
+
+.browser-history-row summary {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 50px 166px 14px;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 6px;
+  cursor: pointer;
+  font-size: var(--base-font-size-xs);
+}
+
+.browser-history-row summary:hover,
+.browser-history-row details[open] summary {
+  background: var(--panel-soft);
+}
+
+.browser-history-row summary:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: -2px;
+}
+
+.browser-history-row details[open] .browser-history-expand {
+  transform: rotate(90deg);
+}
+
+.browser-history-fact {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.browser-history-fact strong {
+  font-size: var(--base-font-size-sm);
+  font-weight: 600;
+}
+
+.browser-history-source,
+.browser-history-row time,
+.browser-history-status,
+.browser-history-foot {
+  color: var(--muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.browser-history-details {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 8px 12px;
+  padding: 8px 32px 16px;
+  margin: 0;
+  font-size: var(--base-font-size-xs);
+}
+
+.browser-history-details dt {
+  color: var(--muted);
+}
+
+.browser-history-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.browser-history-foot {
+  justify-content: center;
+}

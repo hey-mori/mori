@@ -29,6 +29,7 @@ import { NotificationsCard } from "./NotificationsCard";
 import { SettingsSection } from "./SettingsPrimitives";
 import { SourcesView } from "../sources/SourcesView";
 import { BrowserSourceStatus } from "./BrowserSourceStatus";
+import { BrowserEvidenceHistory } from "./BrowserEvidenceHistory";
 import { AboutCard } from "./AboutCard";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
@@ -60,6 +61,10 @@ export function SettingsView() {
   const refreshSqlite = useSqliteStore((state) => state.refresh);
 
   const activeTab = useAppStore((state) => state.settingsTab);
+  const [browserHistory, setBrowserHistory] = useState(false);
+  useEffect(() => {
+    setBrowserHistory(false);
+  }, [activeTab]);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -97,9 +102,17 @@ export function SettingsView() {
           </>
         ) : null}
         {activeTab === "connections" ? (
+          browserHistory ? (
+            <BrowserEvidenceHistory onBack={() => {
+              setBrowserHistory(false);
+              requestAnimationFrame(() => {
+                document.querySelector<HTMLButtonElement>(".browser-source-history-entry")?.focus();
+              });
+            }} />
+          ) : (
           <>
             <AutoImportCard />
-            <BrowserSourceStatus />
+            <BrowserSourceStatus onHistory={() => setBrowserHistory(true)} />
             <AgentConnectionsCard />
             <details className="settings-advanced">
               <summary className="settings-advanced-summary">직접 연결 · 가져오기 (고급)</summary>
@@ -111,6 +124,7 @@ export function SettingsView() {
               <SourcesView embedded />
             </details>
           </>
+          )
         ) : null}
         {activeTab === "privacy" ? <RequestDisclosureCard /> : null}
         {activeTab === "storage" ? (

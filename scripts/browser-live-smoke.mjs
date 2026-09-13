@@ -15,6 +15,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createBrowserHistorySmoke } from "./lib/browser-history-smoke.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -29,7 +30,11 @@ const nativeHostPath = path.resolve(
   option("--host-exe", "src-tauri/target/release/mori-browser-native-host.exe"),
 );
 const count = Number(option("--observations", "60"));
-assert.ok(Number.isInteger(count) && count >= 20 && count <= 80, "observations must be 20..80");
+const historyMode = args.includes("--history");
+assert.ok(
+  Number.isInteger(count) && count >= 20 && count <= (historyMode ? 400 : 80),
+  "invalid observation count",
+);
 for (const file of [moriExe, nativeHostPath, path.join(extensionRoot, "manifest.json")])
   assert.ok(existsSync(file), `Missing ${file}`);
 const {
@@ -68,6 +73,11 @@ const registry = new NativeHostRegistry("chrome");
 const initialRegistry = registry.read();
 const env = { MORI_BROWSER_RELAY_NAME: relayName };
 const log = (message) => console.error(`[browser-live] ${message}`);
+const history = createBrowserHistorySmoke({
+  run: (expression) => evaluate(desktopCdp, desktopSession, expression, { awaitPromise: true }),
+  waitFor,
+  capture: (name) => capture(desktopCdp, desktopSession, name),
+});
 
 async function freePort() {
   const server = net.createServer();
@@ -166,7 +176,16 @@ async function rows() {
   return evaluate(
     desktopCdp,
     desktopSession,
-    "window.__TAURI_INTERNALS__.invoke('list_recent_browser_evidence', {limit:200})",
+    historyMode
+      ? `(async () => {
+      const items = []; let cursor = null;
+      do {
+        const page = await window.__TAURI_INTERNALS__.invoke('list_browser_evidence_page', {limit:100, cursor});
+        items.push(...page.items); cursor = page.nextCursor;
+      } while (cursor);
+      return items;
+    })()`
+      : "window.__TAURI_INTERNALS__.invoke('list_recent_browser_evidence', {limit:200})",
     { awaitPromise: true },
   );
 }
@@ -280,6 +299,11 @@ try {
   log("Starting isolated Mori and Chrome");
   await startDesktop();
   assert.equal((await rows()).length, 0);
+  if (historyMode) {
+    await openHealth();
+    await history.empty();
+    result.scenarios.historyEmpty = true;
+  }
   chrome = await launchChrome({ chromePath: discoverChromePath(), profileDir: profile, env });
   result.chromeVersion = (await chrome.cdp.send("Browser.getVersion")).product;
   const extensionId = await loadExtension(chrome.cdp, extensionRoot);
@@ -454,6 +478,19 @@ try {
     lastError: (await state()).transport.lastError,
   };
   result.scenarios.soak = true;
+  if (historyMode) {
+    log("History pages, concurrent arrival, refresh and minimum layout");
+    await desktopCdp.send("Emulation.setDeviceMetricsOverride", {
+      width: 1180,
+      height: 760,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    result.history = await history.verify(() =>
+      navigatePage(targets[0].sessionId, "history-concurrent"),
+    );
+    result.scenarios.historyPagination = true;
+  }
 
   log("Capture-off privacy");
   const beforeOff = await rows();
@@ -511,6 +548,20 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 500));
   assert.deepEqual(await rows(), beforeOff);
   result.scenarios.captureOffStoredNothing = true;
+  if (historyMode) {
+    log("History restart and capture-off read surface");
+    await stopDesktop();
+    await startDesktop();
+    await desktopCdp.send("Emulation.setDeviceMetricsOverride", {
+      width: 1180,
+      height: 760,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    await openHealth();
+    result.historyReopen = await history.reopenAndOff(beforeOff);
+    result.scenarios.historyRestartAndOff = true;
+  }
 
   log("Chrome restart with persisted opt-in");
   await setCaptureFromPopup(chrome.cdp, popup.sessionId, true);
