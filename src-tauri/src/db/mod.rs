@@ -1,5 +1,6 @@
 pub mod accepted_memory;
 pub mod backup;
+pub mod browser_evidence;
 pub mod connection;
 pub mod documents;
 pub mod intake;

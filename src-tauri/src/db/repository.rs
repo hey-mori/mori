@@ -154,6 +154,8 @@ pub fn clear_all_data(conn: &mut Connection) -> Result<ClearAllDataResult, Strin
     // dedup overlay keep reporting items as already-imported after a wipe.
     tx.execute("DELETE FROM lens_transfers", [])
         .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM browser_evidence", [])
+        .map_err(|error| error.to_string())?;
 
     tx.commit().map_err(|error| error.to_string())?;
 
@@ -1001,6 +1003,7 @@ mod tests {
     /// and would pass the emptiness check without the reset ever touching it.
     /// That is exactly how `V010` slipped past the first version of this guard.
     fn seed_every_later_table(conn: &Connection) {
+        conn.execute("INSERT INTO browser_evidence (delivery_id, observed_at, received_at, kind, data_json) VALUES ('delivery', '2026-09-12T00:00:00.000Z', '2026-09-12T00:00:01.000Z', 'tab_activated', '{}')", []).expect("seed browser evidence");
         conn.execute(
             "INSERT INTO kernel_records                (id, schema_id, title, body, captured_at, time_basis, status, origin, created_at, updated_at)              VALUES ('rec-1', 'note', '제목', '본문', '2026-08-18T00:00:00Z', 'explicit', 'active', 'user',                      '2026-08-18T00:00:00Z', '2026-08-18T00:00:00Z')",
             [],

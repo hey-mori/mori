@@ -3,6 +3,7 @@ import { isTauriRuntime } from "../../../desktop/environment";
 import {
   ingestBrowserObservation,
   type BrowserObservationIngressError,
+  type BrowserObservationIngressResult,
 } from "../../sources/browser";
 
 export const BROWSER_OBSERVATION_RELAY_EVENT = "browser-observation-relay://request";
@@ -18,10 +19,11 @@ export type BrowserObservationRelayAck =
       ok: true;
       kind: "context_snapshot" | "tab_activated" | "navigation_committed";
       route: "context" | "trace";
+      contextRequired?: true;
     }
   | {
       ok: false;
-      code: "unsupported_envelope" | "invalid_relay_request";
+      code: "unsupported_envelope" | "invalid_relay_request" | "persistence_failed";
       message: string;
       errors?: BrowserObservationIngressError[];
     };
@@ -31,9 +33,15 @@ export type BrowserObservationRelayAckInput = {
   acknowledgement: BrowserObservationRelayAck;
 };
 
-export function acknowledgeBrowserObservationRelayRequest(
+export type BrowserObservationConsumer = (
+  result: Extract<BrowserObservationIngressResult, { status: "accepted" }>,
+  deliveryId: string,
+) => Promise<void | { contextRequired: boolean }>;
+
+export async function acknowledgeBrowserObservationRelayRequest(
   request: unknown,
-): BrowserObservationRelayAckInput {
+  consume: BrowserObservationConsumer,
+): Promise<BrowserObservationRelayAckInput> {
   if (!isRelayRequest(request)) {
     return {
       requestId: "",
@@ -45,7 +53,19 @@ export function acknowledgeBrowserObservationRelayRequest(
     };
   }
 
-  const result = ingestBrowserObservation(request.observation);
+  let result: BrowserObservationIngressResult;
+  try {
+    result = ingestBrowserObservation(request.observation);
+  } catch {
+    return {
+      requestId: request.requestId,
+      acknowledgement: {
+        ok: false,
+        code: "unsupported_envelope",
+        message: "Browser observation was rejected.",
+      },
+    };
+  }
   if (result.status === "rejected") {
     return {
       requestId: request.requestId,
@@ -53,22 +73,46 @@ export function acknowledgeBrowserObservationRelayRequest(
         ok: false,
         code: "unsupported_envelope",
         message: "Browser observation envelope was rejected by Mori ingress.",
-        errors: result.errors,
+        errors: result.errors.map(({ field, code }) => ({
+          field,
+          code,
+          message: "Invalid Browser observation field.",
+        })),
       },
     };
   }
 
+  let consumed: void | { contextRequired: boolean };
+  try {
+    consumed = await consume(result, request.requestId);
+  } catch (error) {
+    const code =
+      error instanceof Error && error.message === "unsupported_envelope"
+        ? "unsupported_envelope"
+        : "persistence_failed";
+    return {
+      requestId: request.requestId,
+      acknowledgement: {
+        ok: false,
+        code,
+        message: "Mori could not accept the Browser observation into application storage.",
+      },
+    };
+  }
   return {
     requestId: request.requestId,
     acknowledgement: {
       ok: true,
       kind: result.kind,
       route: result.route,
+      ...(consumed?.contextRequired ? { contextRequired: true as const } : {}),
     },
   };
 }
 
-export async function installBrowserObservationRelay(): Promise<() => void> {
+export async function installBrowserObservationRelay(
+  consume: BrowserObservationConsumer,
+): Promise<() => void> {
   if (!isTauriRuntime()) return () => undefined;
 
   const { listen } = await import("@tauri-apps/api/event");
@@ -80,10 +124,10 @@ export async function installBrowserObservationRelay(): Promise<() => void> {
     try {
       const requests = await invoke<unknown[]>("claim_browser_observation_relay_requests");
       for (const request of requests) {
-        await acknowledgeBrowserObservationRelayRequestPayload(request);
+        await acknowledgeBrowserObservationRelayRequestPayload(request, consume);
       }
-    } catch (error) {
-      console.error("Browser observation relay drain failed.", error);
+    } catch {
+      console.error("Browser observation relay drain failed.");
     } finally {
       draining = false;
     }
@@ -106,13 +150,16 @@ export async function installBrowserObservationRelay(): Promise<() => void> {
   };
 }
 
-async function acknowledgeBrowserObservationRelayRequestPayload(request: unknown): Promise<void> {
-  const input = acknowledgeBrowserObservationRelayRequest(request);
+async function acknowledgeBrowserObservationRelayRequestPayload(
+  request: unknown,
+  consume: BrowserObservationConsumer,
+): Promise<void> {
+  const input = await acknowledgeBrowserObservationRelayRequest(request, consume);
   if (!input.requestId) return;
   try {
     await invoke("ack_browser_observation_relay", { input });
-  } catch (error) {
-    console.error("Browser observation relay acknowledgement failed.", error);
+  } catch {
+    console.error("Browser observation relay acknowledgement failed.");
   }
 }
 

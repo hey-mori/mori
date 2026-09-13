@@ -36,6 +36,8 @@ pub struct BrowserRelayAck {
     pub kind: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub route: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_required: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -49,6 +51,7 @@ impl BrowserRelayAck {
             code: Some(code.into()),
             kind: None,
             route: None,
+            context_required: None,
             message: Some(message.into()),
             errors: None,
         }
@@ -201,6 +204,7 @@ mod tests {
                     .and_then(Value::as_str)
                     .map(str::to_string),
                 route: Some("trace".to_string()),
+                context_required: Some(true),
                 message: None,
                 errors: None,
             })
@@ -224,5 +228,6 @@ mod tests {
         assert!(ack.ok);
         assert_eq!(ack.kind.as_deref(), Some("tab_activated"));
         assert_eq!(ack.route.as_deref(), Some("trace"));
+        assert_eq!(ack.context_required, Some(true));
     }
 }

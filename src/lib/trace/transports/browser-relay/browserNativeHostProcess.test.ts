@@ -26,7 +26,7 @@ describeProcessHarness("mori-browser-native-host process relay", () => {
       const server = net.createServer((socket) => {
         let buffer = "";
         socket.setEncoding("utf8");
-        socket.on("data", (chunk) => {
+        socket.on("data", async (chunk) => {
           buffer += chunk;
           const newline = buffer.indexOf("\n");
           if (newline < 0) return;
@@ -34,10 +34,10 @@ describeProcessHarness("mori-browser-native-host process relay", () => {
           const line = buffer.slice(0, newline);
           const request = JSON.parse(line) as { observation: unknown };
           relayedObservation = request.observation;
-          const ack = acknowledgeBrowserObservationRelayRequest({
+          const ack = await acknowledgeBrowserObservationRelayRequest({
             requestId: "process-harness",
             observation: request.observation,
-          });
+          }, async () => undefined);
           socket.end(`${JSON.stringify(ack.acknowledgement)}\n`);
           server.close();
         });

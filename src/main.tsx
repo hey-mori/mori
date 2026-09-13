@@ -7,6 +7,7 @@ import {
   loadThemePreference,
 } from "./lib/settings/themePreference";
 import { installBrowserObservationRelay } from "./lib/trace/transports/browser-relay/browserObservationRelay";
+import { browserLiveSource } from "./app/browserLiveSource";
 import "./styles/globals.css";
 
 /**
@@ -48,7 +49,7 @@ const surface = selectedSurface();
 document.documentElement.dataset.surface = surface;
 
 if (surface === "app") {
-  void installBrowserObservationRelay();
+  void installBrowserObservationRelay(browserLiveSource.accept);
 }
 
 createRoot(document.getElementById("root")!).render(

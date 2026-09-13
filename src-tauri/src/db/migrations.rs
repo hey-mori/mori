@@ -85,6 +85,12 @@ pub const MIGRATIONS: &[MigrationManifestEntry] = &[
         name: "lens_transfers",
         sql: include_str!("../../migrations/V011__lens_transfers.sql"),
     },
+    MigrationManifestEntry {
+        version: "012",
+        filename: "V012__browser_evidence.sql",
+        name: "browser_evidence",
+        sql: include_str!("../../migrations/V012__browser_evidence.sql"),
+    },
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -264,13 +270,14 @@ mod tests {
                 "008".to_string(),
                 "009".to_string(),
                 "010".to_string(),
-                "011".to_string()
+                "011".to_string(),
+                "012".to_string()
             ]
         );
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 11);
+        assert_eq!(applied.len(), 12);
         assert_eq!(applied[0].version, "001");
         assert_eq!(applied[1].version, "002");
         assert_eq!(applied[2].version, "003");
@@ -282,6 +289,7 @@ mod tests {
         assert_eq!(applied[8].version, "009");
         assert_eq!(applied[9].version, "010");
         assert_eq!(applied[10].version, "011");
+        assert_eq!(applied[11].version, "012");
         for record in &applied {
             assert!(!record.checksum.is_empty());
         }
@@ -306,7 +314,8 @@ mod tests {
                 "008".to_string(),
                 "009".to_string(),
                 "010".to_string(),
-                "011".to_string()
+                "011".to_string(),
+                "012".to_string()
             ]
         );
     }
@@ -332,7 +341,7 @@ mod tests {
         let outcome = apply_migrations(&mut conn).expect("upgrade");
 
         assert_eq!(outcome.applied, vec!["011".to_string()]);
-        assert_eq!(outcome.already_applied.len(), 10);
+        assert_eq!(outcome.already_applied.len(), 11);
         // Usable, not merely recorded: a migration that registers without
         // creating its table would pass the assertion above.
         conn.execute(

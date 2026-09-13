@@ -28,6 +28,7 @@ import { DatabaseRecoveryCard } from "./DatabaseRecoveryCard";
 import { NotificationsCard } from "./NotificationsCard";
 import { SettingsSection } from "./SettingsPrimitives";
 import { SourcesView } from "../sources/SourcesView";
+import { BrowserSourceStatus } from "./BrowserSourceStatus";
 import { AboutCard } from "./AboutCard";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
@@ -98,6 +99,7 @@ export function SettingsView() {
         {activeTab === "connections" ? (
           <>
             <AutoImportCard />
+            <BrowserSourceStatus />
             <AgentConnectionsCard />
             <details className="settings-advanced">
               <summary className="settings-advanced-summary">직접 연결 · 가져오기 (고급)</summary>
