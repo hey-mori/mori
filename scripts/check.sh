@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# The single verification gate.
+# The single verification gate. `.gitattributes` keeps this entrypoint LF-only
+# so it remains executable from Windows checkouts as well as CI.
 #
 # Local runs and CI both call this script, so there is exactly one definition of
 # "verified" and the two cannot drift. CI must never re-list these commands in
