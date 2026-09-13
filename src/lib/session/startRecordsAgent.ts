@@ -2,7 +2,7 @@ import {
   AGENT_REGISTRY,
   type AgentDescriptor,
   type AgentWorkAgentId,
-} from "../agents/agentRegistry";
+} from "../trace/sources/ai/agentRegistry";
 
 /**
  * Resolve which agent the 새 세션 picker should pre-select for a

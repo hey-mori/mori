@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { selectSessionSource, useSessionStore } from "../../app/sessionStore";
-import { isAutoImportedSessionId } from "../../lib/agents/autoImportSessions";
+import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 
 /**
  * Resolve a stored or discovered session into the active draft, materializing an

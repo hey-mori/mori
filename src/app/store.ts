@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { ViewKey } from "../domain/types";
 import type { ActivityLaneId } from "../lib/timeline/activityModel";
 import type { ReviewSelection } from "../lib/review-workspace/reviewWorkspace";
-import type { AgentWorkAgentId } from "../lib/agents/agentRegistry";
+import type { AgentWorkAgentId } from "../lib/trace/sources/ai/agentRegistry";
 
 /** Active tab on the Review surface. Persisted so the user returns to the same tab. */
 export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";

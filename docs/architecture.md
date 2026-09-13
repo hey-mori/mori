@@ -4,6 +4,8 @@ This document describes Mori's intended engineering architecture and the current
 
 The full module-by-module map (boundaries, shared concepts, data flow,
 extension paths) lives in [Modular Architecture](modular-architecture.md).
+The activity-evidence boundary introduced for AI session discovery lives in
+[Trace Architecture](trace-architecture.md).
 The product loop, feature-status policy, data pipeline contract, and theme
 system are documented in:
 

@@ -49,14 +49,14 @@ import {
   type SourceWorkspaceCategory,
   type SourceWorkspaceSource,
 } from "../../lib/sources/sourceWorkspace";
-import { loadAutoImportSettings } from "../../lib/agents/autoImportSettings";
+import { loadAutoImportSettings } from "../../lib/session/autoImportSettings";
 import {
   ANCHOR_AGENT_IDS,
   buildSourceProviderGroups,
   type SourceProvider,
   type SourceProviderMethod,
 } from "../../lib/sources/sourceProviderGroups";
-import type { AgentWorkAgentId } from "../../lib/agents/agentRegistry";
+import type { AgentWorkAgentId } from "../../lib/trace/sources/ai/agentRegistry";
 import {
   buildConnectorJsonlPreviewWithHistory,
   getConnectorSetupGuide,

@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildAgentSessionRecordInput,
   upsertAgentSessionRecords,
-} from "./agentSessionKernel";
-import { autoImportedSessionId } from "./autoImportSessions";
-import { createRecord } from "../record-kernel/recordFactory";
-import { createSchemaRegistry } from "../record-kernel/schemaRegistry";
-import type { AgentWorkSessionMeta } from "./workSessions";
-import type { KernelContext, MoriRecord, KernelRevision } from "../record-kernel/kernelTypes";
-import type { KernelResult } from "../record-kernel/kernelRepository";
+} from "./agentSessionRecordAdapter";
+import { autoImportedSessionId } from "../session/autoImportSessions";
+import { createRecord } from "./recordFactory";
+import { createSchemaRegistry } from "./schemaRegistry";
+import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
+import type { KernelContext, MoriRecord, KernelRevision } from "./kernelTypes";
+import type { KernelResult } from "./kernelRepository";
 
 function meta(partial: Partial<AgentWorkSessionMeta> = {}): AgentWorkSessionMeta {
   return {

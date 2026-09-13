@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Loader2, Radio, TriangleAlert } from "lucide-react";
 import { selectSessionSource, useSessionStore } from "../../app/sessionStore";
-import { isAutoImportedSessionId } from "../../lib/agents/autoImportSessions";
+import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { LiveSessionView } from "../live-session/LiveSessionView";
 import { SessionDetailView } from "./SessionDetailView";

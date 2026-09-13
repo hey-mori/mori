@@ -43,7 +43,7 @@ The grid is a pure derivation:
 [`buildSourceWorkspace`](../../src/lib/sources/sourceWorkspace.ts) →
 [`buildSourceProviderGroups`](../../src/lib/sources/sourceProviderGroups.ts).
 The single rule that decides agent vs evidence is `ANCHOR_AGENT_IDS`, derived
-from the central [`agentRegistry`](../../src/lib/agents/agentRegistry.ts), so
+from the central [`agentRegistry`](../../src/lib/trace/sources/ai/agentRegistry.ts), so
 the 연동 page and the 새 세션 picker can never disagree about what anchors a
 session.
 
@@ -215,7 +215,7 @@ events.
 
 Adding the next anchor agent is meant to be a registry entry, not a fan-out:
 
-1. Add the agent to [`agentRegistry`](../../src/lib/agents/agentRegistry.ts)
+1. Add the agent to [`agentRegistry`](../../src/lib/trace/sources/ai/agentRegistry.ts)
    (classifies it as an anchor everywhere via `ANCHOR_AGENT_IDS`).
 2. Map its source ids to a provider in
    [`sourceProviderGroups`](../../src/lib/sources/sourceProviderGroups.ts).

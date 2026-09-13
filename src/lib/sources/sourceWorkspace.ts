@@ -511,7 +511,10 @@ const DISCOVERY_AGENT_SPECS: readonly DiscoveryAgentSpec[] = [
     whatMoriCanAccess: ["User-selected Manus work records after implementation"],
     whatMoriCannotAccess: ["Manus account", "remote sessions", "background monitoring"],
     reviewBehavior: "Future Manus imports will still pass through Import Review before timeline changes.",
-    likelyFiles: ["src/lib/agents/agentRegistry.ts", "src/lib/sources/sourceWorkspace.ts"],
+    likelyFiles: [
+      "src/lib/trace/sources/ai/agentRegistry.ts",
+      "src/lib/sources/sourceWorkspace.ts",
+    ],
     testsNeeded: ["Manus discovery adapter", "privacy boundary"],
   },
 ];

@@ -34,3 +34,9 @@ export {
   type GitDiffFile,
   type GitDiffParseResult,
 } from "./parseGitDiff";
+export {
+  buildImportCandidatesFromAgentWorkSession,
+  buildPrimaryImportCandidateFromAgentWorkSession,
+  reviewOriginForAgentWorkSession,
+  type BuildAgentWorkImportInput,
+} from "./agentWorkSessionImport";

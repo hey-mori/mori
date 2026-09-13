@@ -50,6 +50,19 @@ function makeStub(root: string, name: string): string {
   return path;
 }
 
+function makeRunnableScript(root: string, sourcePath: string, name: string): string {
+  const path = join(root, name);
+  writeFileSync(path, readFileSync(sourcePath, "utf8").replace(/\r\n/g, "\n"));
+  chmodSync(path, 0o755);
+  return path;
+}
+
+function copyTextFile(root: string, sourcePath: string, name: string): string {
+  const path = join(root, name);
+  writeFileSync(path, readFileSync(sourcePath, "utf8").replace(/\r\n/g, "\n"));
+  return path;
+}
+
 function readJsonl(outDir: string): string {
   const files = readdirSync(outDir).filter((file) => file.endsWith(".jsonl"));
   expect(files.length).toBeGreaterThan(0);
@@ -100,7 +113,6 @@ function isWslBashRuntime(): boolean {
   }
   return cachedIsWslBashRuntime;
 }
-
 /**
  * Whether a POSIX runtime is usable, decided without a login shell.
  *
@@ -130,8 +142,9 @@ describeIfPosix("POSIX connector wrappers", () => {
     const root = makeTempRoot();
     const outDir = join(root, "out");
     const stub = makeStub(root, "codex-stub");
+    const wrapper = makeRunnableScript(root, CODEX_WRAPPER, "mori-codex-wrapper.sh");
     execFileSync("bash", [
-      bashPath(CODEX_WRAPPER),
+      bashPath(wrapper),
       "--out",
       bashPath(outDir),
       "--session",
@@ -151,8 +164,9 @@ describeIfPosix("POSIX connector wrappers", () => {
     const root = makeTempRoot();
     const outDir = join(root, "out");
     const stub = makeStub(root, "opencode-stub");
+    const wrapper = makeRunnableScript(root, OPENCODE_WRAPPER, "mori-opencode-wrapper.sh");
     execFileSync("bash", [
-      bashPath(OPENCODE_WRAPPER),
+      bashPath(wrapper),
       "--out",
       bashPath(outDir),
       "--session",
@@ -173,10 +187,16 @@ describeIfPosix("POSIX connector wrappers", () => {
     const payload = JSON.stringify({
       hook_event_name: "UserPromptSubmit",
       session_id: 'claude-session-"한글"',
-      cwd: root,
+      cwd: bashPath(root),
       prompt: '요약해줘: "연동" 경계를 확인',
     });
-    execFileSync("bash", [bashPath(CLAUDE_HOOK), "--out", bashPath(outDir)], {
+    const hook = makeRunnableScript(root, CLAUDE_HOOK, "mori-claude-hook.sh");
+    copyTextFile(
+      root,
+      join(process.cwd(), "connectors/claude-code/mori-claude-hook.py"),
+      "mori-claude-hook.py",
+    );
+    execFileSync("bash", [bashPath(hook), "--out", bashPath(outDir)], {
       input: payload,
       encoding: "utf8",
     });

@@ -49,13 +49,15 @@ import {
   type LocalAiToolReport,
 } from "../../lib/claude/installations";
 import {
-  buildPrimaryImportCandidateFromAgentWorkSession,
   getAgentWorkSession,
   listAllAgentWorkSessions,
-  reviewOriginForAgentWorkSession,
   type AgentWorkSessionDetail,
   type AgentWorkSessionMeta,
-} from "../../lib/agents/workSessions";
+} from "../../lib/trace/sources/ai/workSessions";
+import {
+  buildPrimaryImportCandidateFromAgentWorkSession,
+  reviewOriginForAgentWorkSession,
+} from "../../lib/import/agentWorkSessionImport";
 import { isTauriRuntime } from "../../lib/desktop";
 import { ConversationViewer } from "./ConversationViewer";
 import { SourceControlCenter } from "./SourceControlCenter";

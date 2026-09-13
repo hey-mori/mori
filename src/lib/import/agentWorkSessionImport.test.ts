@@ -3,10 +3,12 @@ import {
   buildImportCandidatesFromAgentWorkSession,
   buildPrimaryImportCandidateFromAgentWorkSession,
   reviewOriginForAgentWorkSession,
-  type AgentWorkImportKind,
-  type AgentWorkSessionDetail,
-} from "./workSessions";
+} from "./agentWorkSessionImport";
+import type { AgentWorkImportKind, AgentWorkSessionDetail } from "../trace/sources/ai/workSessions";
 import type { ClaudeMessage } from "../claude/types";
+import { AGENT_REGISTRY } from "../trace/sources/ai/agentRegistry";
+import { normalizeAiTranscript } from "./normalizeAiTranscript";
+import { getIntegration } from "../sources/sourceRegistry";
 
 const buildInput = {
   projectId: "proj-1",
@@ -185,5 +187,26 @@ describe("buildPrimaryImportCandidateFromAgentWorkSession", () => {
       buildInput,
     );
     expect(candidate.source.kind).toBe("codexTranscript");
+  });
+});
+
+describe("agent transcript platform integration", () => {
+  it("resolves every agent's paste platform to a registered source kind", () => {
+    // This is an import-layer guard because platform-to-source-kind resolution
+    // is Mori import policy, not AI source discovery.
+    for (const descriptor of AGENT_REGISTRY) {
+      const candidate = normalizeAiTranscript({
+        projectId: "p",
+        sessionId: "s",
+        platform: descriptor.platform,
+        title: `${descriptor.agentName} session`,
+        text: "User: hi\nAssistant: hello",
+      });
+      const integration = getIntegration(candidate.source.kind);
+      expect(
+        integration,
+        `agent "${descriptor.agentId}" (platform "${descriptor.platform}") resolved to unregistered kind "${candidate.source.kind}"`,
+      ).toBeDefined();
+    }
   });
 });

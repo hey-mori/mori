@@ -128,7 +128,18 @@ describe("availability classification", () => {
 
   it("keeps planned surfaces planned in every runtime", () => {
     expect(findSurface(DESKTOP_WITH_SESSION, "vscodeExtension").availability).toBe("planned");
-    expect(findSurface(BROWSER_NO_SESSION, "browserExtension").availability).toBe("planned");
+    expect(findSurface(BROWSER_NO_SESSION, "githubPrImport").availability).toBe("planned");
+  });
+
+  it("marks the browser live source as partial, desktop-only, and not importable", () => {
+    const surface = findSurface(DESKTOP_WITH_SESSION, "browserExtension");
+    expect(surface.availability).toBe("available");
+    expect(surface.status).toBe("partial");
+    expect(surface.action.kind).toBe("none");
+
+    const browserSurface = findSurface(BROWSER_WITH_SESSION, "browserExtension");
+    expect(browserSurface.availability).toBe("needsDesktopApp");
+    expect(browserSurface.action.enabled).toBe(false);
   });
 });
 
@@ -203,9 +214,9 @@ describe("partitionControlCenterSurfaces", () => {
     expect(ids.size).toBe(all.length);
     // No planned surface leaks into the actionable list and vice versa.
     expect(actionable.every((s) => s.availability !== "planned")).toBe(true);
-    expect(planned.every((s) => s.availability === "planned" || s.availability === "unavailable")).toBe(
-      true,
-    );
+    expect(
+      planned.every((s) => s.availability === "planned" || s.availability === "unavailable"),
+    ).toBe(true);
   });
 
   it("orders the actionable list available-first", () => {

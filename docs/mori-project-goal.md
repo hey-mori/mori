@@ -188,7 +188,7 @@ that is called out.
 - URL import (URL + optional excerpt; no automatic fetch).
 - Session creation flow (새 세션) that realizes "one AI-agent conversation =
   one session". An agent-first screen with the roster derived from the central
-  `src/lib/agents/agentRegistry.ts` (currently seven anchor agents: Claude /
+  `src/lib/trace/sources/ai/agentRegistry.ts` (currently seven anchor agents: Claude /
   Codex / OpenCode / Antigravity / Continue / Cline / Cursor), where the
   conversation enters by one of three methods: 기록에서 불러오기 (a desktop-only
   auto-detected work-record browse modal with a content preview) · each agent has
@@ -197,7 +197,7 @@ that is called out.
   `~/.local/share/opencode/storage`, Antigravity generated-transcript logs,
   Continue `~/.continue/sessions`, Cline VS Code globalStorage tasks, Cursor
   `state.vscdb` `cursorDiskKV`); Codex and OpenCode also accept the connector
-  inbox as a fallback. See `src/lib/agents/workSessions.ts` and
+  inbox as a fallback. See `src/lib/trace/sources/ai/workSessions.ts` and
   `src-tauri/src/{claude,codex,antigravity,opencode,continue_agent,cline,cursor}/`.
   The other two methods are 붙여넣기 (paste a transcript, platform follows the
   agent), or 빈 세션으로 시작 (anchor first, since Mori never starts or drives

@@ -6,7 +6,7 @@ import {
   AUTO_IMPORT_SETTINGS_CHANGED_EVENT,
   loadAutoImportSettings,
   saveAutoImportSettings,
-} from "../../lib/agents/autoImportSettings";
+} from "../../lib/session/autoImportSettings";
 import { PreferenceToggle, SettingsRow, SettingsSection } from "./SettingsPrimitives";
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AgentWorkSessionMeta } from "../agents/workSessions";
+import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import type { ConnectorEvent } from "../connectors/types";
 import {
   agentWorkSessionToSpine,
