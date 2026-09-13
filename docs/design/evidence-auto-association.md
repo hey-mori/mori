@@ -83,7 +83,7 @@ the behaviour is legible and tunable, never magic.
 
 Grounded in the current repo (see file references):
 
-- **Spine metadata:** `AgentWorkSessionMeta` (`src/lib/agents/workSessions.ts`),
+- **Spine metadata:** `AgentWorkSessionMeta` (`src/lib/trace/sources/ai/workSessions.ts`),
   carrying `projectPath`, `projectName`, `startedAt`, `updatedAt`,
   `connectorId`. The active `Session` (`src/domain/types.ts`) plus its events'
   `start` / `end` can also act as a spine window.

@@ -194,8 +194,14 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriCanAccess: ["붙여넣은 대화 텍스트", "추출한 턴 수 / 코드블록 수 / 토큰 추정"],
     whatMoriNeverAccesses: ["Anthropic / OpenAI 계정", "API 키", "브라우저 / 데스크톱 앱 창"],
     setupRequirement: "설정 불필요.",
-    nextStep: "추가 작업 없음 — 자료 탭의 Connector JSONL Import 탭이 hook/wrapper 결과도 같은 흐름으로 합류시킴.",
-    relatedIntegrationIds: ["claudeTranscript", "chatgptTranscript", "codexTranscript", "aiConversation"],
+    nextStep:
+      "추가 작업 없음 — 자료 탭의 Connector JSONL Import 탭이 hook/wrapper 결과도 같은 흐름으로 합류시킴.",
+    relatedIntegrationIds: [
+      "claudeTranscript",
+      "chatgptTranscript",
+      "codexTranscript",
+      "aiConversation",
+    ],
   },
   {
     id: "gitDiffPaste",
@@ -224,13 +230,15 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     surface: "localCommand",
     status: "implemented",
     captureMode: "localDesktopCommand",
-    userActionRequired: "Tauri 앱에서 \"Fetch Git Diff\" 버튼을 직접 클릭. 저장된 repo 경로 + range가 필요합니다.",
+    userActionRequired:
+      'Tauri 앱에서 "Fetch Git Diff" 버튼을 직접 클릭. 저장된 repo 경로 + range가 필요합니다.',
     canCreateSource: true,
     canCreateEvents: true,
     canEnterImportReview: true,
     rawDataPolicy: "retained",
     trustDefault: "verified",
-    privacyBoundary: "사용자가 명시적으로 추가한 repo 경로에 대해서만, 사용자가 fetch 버튼을 누른 순간에만 git diff 실행.",
+    privacyBoundary:
+      "사용자가 명시적으로 추가한 repo 경로에 대해서만, 사용자가 fetch 버튼을 누른 순간에만 git diff 실행.",
     whatMoriCanAccess: ["선택한 repo의 git diff 출력 (사용자 입력 range)"],
     whatMoriNeverAccesses: ["다른 디스크 위치", "background scan", "git history 자동 fetch"],
     setupRequirement: "Git diff 가져오기에서 리포지토리 경로를 직접 입력하거나 찾아보기로 선택.",
@@ -264,16 +272,19 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     surface: "analysis",
     status: "implemented",
     captureMode: "manualAnalysis",
-    userActionRequired: "검토 또는 보고서에서 \"분석 실행\" 버튼을 직접 클릭.",
+    userActionRequired: '검토 또는 보고서에서 "분석 실행" 버튼을 직접 클릭.',
     canCreateSource: false,
     canCreateEvents: false,
     canEnterImportReview: false,
     rawDataPolicy: "summaryOnly",
     trustDefault: "inferred",
     privacyBoundary: "이미 import된 세션 데이터만 분석. 추가 데이터는 가져오지 않습니다.",
-    whatMoriCanAccess: ["현재 세션의 이벤트 + 소스 텍스트 (deterministic 또는 사용자 설정 Ollama endpoint)"],
+    whatMoriCanAccess: [
+      "현재 세션의 이벤트 + 소스 텍스트 (deterministic 또는 사용자 설정 Ollama endpoint)",
+    ],
     whatMoriNeverAccesses: ["외부 API (cloud opt-in 없을 때)", "다른 세션", "다른 프로젝트"],
-    setupRequirement: "deterministic은 즉시 사용 가능. Ollama 등 로컬 LLM은 설정에서 endpoint를 직접 입력.",
+    setupRequirement:
+      "deterministic은 즉시 사용 가능. Ollama 등 로컬 LLM은 설정에서 endpoint를 직접 입력.",
     nextStep: "LM Studio / OpenAI-compatible local endpoint 지원 추가.",
     relatedIntegrationIds: ["quickPass"],
   },
@@ -326,12 +337,23 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     canEnterImportReview: true,
     rawDataPolicy: "summaryOnly",
     trustDefault: "observed",
-    privacyBoundary: "스크립트가 로컬 JSONL 파일을 작성합니다. Mori는 사용자가 파일을 가져오라고 클릭한 순간에만 읽습니다.",
-    whatMoriCanAccess: ["사용자가 등록한 hook 이벤트의 summary", "tool 호출 메타데이터", "session start/finish 시각"],
-    whatMoriNeverAccesses: ["Claude 계정", "Anthropic API 키", "다른 앱 / 브라우저", "raw transcript 본문 (기본은 summary_only)"],
+    privacyBoundary:
+      "스크립트가 로컬 JSONL 파일을 작성합니다. Mori는 사용자가 파일을 가져오라고 클릭한 순간에만 읽습니다.",
+    whatMoriCanAccess: [
+      "사용자가 등록한 hook 이벤트의 summary",
+      "tool 호출 메타데이터",
+      "session start/finish 시각",
+    ],
+    whatMoriNeverAccesses: [
+      "Claude 계정",
+      "Anthropic API 키",
+      "다른 앱 / 브라우저",
+      "raw transcript 본문 (기본은 summary_only)",
+    ],
     setupRequirement: "connectors/claude-code/ 템플릿을 사용자가 PATH에 설치.",
     recommended: true,
-    nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 hook 설치를 돕는 in-app 가이드.",
+    nextStep:
+      "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 hook 설치를 돕는 in-app 가이드.",
     relatedIntegrationIds: ["claudeTranscript"],
   },
   {
@@ -341,7 +363,8 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     surface: "desktop",
     status: "planned",
     captureMode: "explicitFileImport",
-    userActionRequired: "사용자가 Claude Desktop에서 transcript를 export → Mori에서 파일을 직접 선택.",
+    userActionRequired:
+      "사용자가 Claude Desktop에서 transcript를 export → Mori에서 파일을 직접 선택.",
     canCreateSource: false,
     canCreateEvents: false,
     canEnterImportReview: false,
@@ -369,9 +392,15 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     trustDefault: "verified",
     privacyBoundary: "Claude 웹 화면을 자동으로 읽는 capture는 절대 추가하지 않습니다.",
     whatMoriCanAccess: ["사용자가 직접 붙여넣은 / 다운로드한 transcript"],
-    whatMoriNeverAccesses: ["claude.ai 세션 쿠키", "OAuth", "탭 자동 읽기", "browser auto-scraping"],
+    whatMoriNeverAccesses: [
+      "claude.ai 세션 쿠키",
+      "OAuth",
+      "탭 자동 읽기",
+      "browser auto-scraping",
+    ],
     setupRequirement: "현재는 transcript paste 사용.",
-    nextStep: "Anthropic이 안정적 export를 제공하면 importer 추가. browser extension은 명시적으로 Planned.",
+    nextStep:
+      "Anthropic이 안정적 export를 제공하면 importer 추가. browser extension은 명시적으로 Planned.",
     relatedIntegrationIds: ["claudeTranscript"],
   },
   // ---- Codex family ----
@@ -382,18 +411,30 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     surface: "cli",
     status: "docsTemplateOnly",
     captureMode: "localCliWrapper",
-    userActionRequired: "사용자가 PATH에 wrapper를 설치하고 `mori-codex-wrapper.sh -- codex run ...` 형태로 직접 실행.",
+    userActionRequired:
+      "사용자가 PATH에 wrapper를 설치하고 `mori-codex-wrapper.sh -- codex run ...` 형태로 직접 실행.",
     canCreateSource: true,
     canCreateEvents: true,
     canEnterImportReview: true,
     rawDataPolicy: "summaryOnly",
     trustDefault: "observed",
-    privacyBoundary: "wrapper는 prompt summary / exit code / duration / --git 옵션 시 shortstat만 기록합니다. Codex 출력 본문은 수집하지 않습니다.",
-    whatMoriCanAccess: ["session_started / command_finished 메타데이터", "(옵션) git diff --shortstat 한 줄"],
-    whatMoriNeverAccesses: ["Codex 계정", "API 키", "환경 변수", "git diff 본문", "stdout/stderr 전체"],
+    privacyBoundary:
+      "wrapper는 prompt summary / exit code / duration / --git 옵션 시 shortstat만 기록합니다. Codex 출력 본문은 수집하지 않습니다.",
+    whatMoriCanAccess: [
+      "session_started / command_finished 메타데이터",
+      "(옵션) git diff --shortstat 한 줄",
+    ],
+    whatMoriNeverAccesses: [
+      "Codex 계정",
+      "API 키",
+      "환경 변수",
+      "git diff 본문",
+      "stdout/stderr 전체",
+    ],
     setupRequirement: "connectors/codex-cli/ 템플릿을 PATH에 설치.",
     recommended: true,
-    nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 wrapper 설치를 돕는 in-app 가이드.",
+    nextStep:
+      "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 wrapper 설치를 돕는 in-app 가이드.",
     relatedIntegrationIds: ["codexTranscript"],
   },
   {
@@ -429,11 +470,13 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     canEnterImportReview: false,
     rawDataPolicy: "summaryOnly",
     trustDefault: "verified",
-    privacyBoundary: "Mori는 GitHub OAuth 없이는 PR을 읽지 않습니다. 사용자가 명시적으로 paste / file import해야 합니다.",
+    privacyBoundary:
+      "Mori는 GitHub OAuth 없이는 PR을 읽지 않습니다. 사용자가 명시적으로 paste / file import해야 합니다.",
     whatMoriCanAccess: ["사용자가 직접 입력한 PR URL + paste한 본문 / diff"],
     whatMoriNeverAccesses: ["GitHub OAuth 자동 연결", "Codex cloud 세션 / API"],
     setupRequirement: "현재는 paste 또는 git diff 활용.",
-    nextStep: "github-pr-import.md에 따라 사용자가 URL을 입력하면 paste + diff를 결합하는 importer 설계.",
+    nextStep:
+      "github-pr-import.md에 따라 사용자가 URL을 입력하면 paste + diff를 결합하는 importer 설계.",
     relatedIntegrationIds: ["codexTranscript"],
   },
   // ---- OpenCode family ----
@@ -466,7 +509,8 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     ],
     setupRequirement: "connectors/opencode-cli/ 템플릿을 PATH에 설치.",
     recommended: true,
-    nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 wrapper 설치를 돕는 in-app 가이드.",
+    nextStep:
+      "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 wrapper 설치를 돕는 in-app 가이드.",
     relatedIntegrationIds: [],
   },
   // ---- IDE / shell / browser families (planned) ----
@@ -484,7 +528,9 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     rawDataPolicy: "summaryOnly",
     trustDefault: "observed",
     privacyBoundary: "구현 시 파일 단위 이벤트만 캡처. 키 입력은 캡처하지 않음.",
-    whatMoriCanAccess: ["(구현 시) 사용자가 열어둔 워크스페이스의 파일 open / save / test run 이벤트 메타데이터"],
+    whatMoriCanAccess: [
+      "(구현 시) 사용자가 열어둔 워크스페이스의 파일 open / save / test run 이벤트 메타데이터",
+    ],
     whatMoriNeverAccesses: ["키 입력", "터미널 출력 전체", "VS Code 계정"],
     setupRequirement:
       "확장 미구현. 명시적 캡처는 connectors/vscode-task/ 태스크 템플릿(localCaptureBridge 호출)으로 오늘 가능.",
@@ -524,12 +570,14 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     canEnterImportReview: false,
     rawDataPolicy: "summaryOnly",
     trustDefault: "observed",
-    privacyBoundary: "구현 시 명령 / exit code / 작업 디렉터리만 기록. stdout/stderr 본문은 기록하지 않음.",
+    privacyBoundary:
+      "구현 시 명령 / exit code / 작업 디렉터리만 기록. stdout/stderr 본문은 기록하지 않음.",
     whatMoriCanAccess: ["(구현 시) 사용자가 hook으로 등록한 명령의 메타데이터"],
     whatMoriNeverAccesses: ["bash_history 자동 스캔", "환경 변수 dump", "다른 셸 세션"],
     setupRequirement:
       "진짜 shell hook은 미구현. 오늘 제공되는 connectors/terminal-helper/ 는 별도 terminalShell 이벤트를 만들지 않고 mori-local-capture.py를 호출하는 명시적 런처입니다.",
-    nextStep: "terminal-helper는 localCaptureBridge 런처로 유지. 별도 terminalShell 훅은 CLI wrapper 이후 재검토.",
+    nextStep:
+      "terminal-helper는 localCaptureBridge 런처로 유지. 별도 terminalShell 훅은 CLI wrapper 이후 재검토.",
     relatedIntegrationIds: ["terminal"],
   },
   {
@@ -537,19 +585,25 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     label: "브라우저 확장",
     toolFamily: "browser",
     surface: "extension",
-    status: "planned",
+    status: "partial",
     captureMode: "plannedExtension",
-    userActionRequired: "(미구현) 사용자가 브라우저 확장을 직접 설치 + 사이트 권한 부여.",
+    userActionRequired:
+      "별도 swarea/mori-browser-extension prototype 설치 + capture opt-in. Mori live transport는 아직 없음.",
     canCreateSource: false,
-    canCreateEvents: false,
+    canCreateEvents: true,
     canEnterImportReview: false,
     rawDataPolicy: "summaryOnly",
     trustDefault: "observed",
-    privacyBoundary: "구현 시 명시적으로 등록한 사이트만 캡처. 자동 탭 스캔은 절대 없음.",
-    whatMoriCanAccess: ["(구현 시) 사용자가 \"이 페이지를 Mori에 추가\"를 클릭한 페이지 메타데이터"],
-    whatMoriNeverAccesses: ["탭 목록 자동 읽기", "히스토리", "쿠키", "OAuth"],
-    setupRequirement: "확장 미구현. 페이지 추가는 현재 URL paste로 대체.",
-    nextStep: "Manifest v3 확장 설계 + URL paste API 보완.",
+    privacyBoundary:
+      "확장 capture는 기본 OFF이며 URL은 origin+path로 제한. Mori transport/persistence는 아직 없음.",
+    whatMoriCanAccess: [
+      "(prototype) context_snapshot / tab_activated / navigation_committed observation envelope",
+    ],
+    whatMoriNeverAccesses: ["페이지 DOM", "히스토리", "쿠키", "OAuth", "폼 입력", "비밀번호"],
+    setupRequirement:
+      "swarea/mori-browser-extension repo의 unpacked extension 수동 설치. Mori live transport는 다음 단계.",
+    nextStep:
+      "Native Messaging 또는 기존 connector ingress 중 하나를 선택해 Browser observation transport 연결.",
     relatedIntegrationIds: ["browserTab"],
   },
   {
@@ -565,8 +619,11 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     canEnterImportReview: false,
     rawDataPolicy: "summaryOnly",
     trustDefault: "verified",
-    privacyBoundary: "GitHub OAuth는 명시적으로 Planned. 사용자가 데이터를 직접 paste / file import해야 함.",
-    whatMoriCanAccess: ["(구현 시) 사용자가 URL을 입력하고 paste한 PR title / body / diff stats / commit messages"],
+    privacyBoundary:
+      "GitHub OAuth는 명시적으로 Planned. 사용자가 데이터를 직접 paste / file import해야 함.",
+    whatMoriCanAccess: [
+      "(구현 시) 사용자가 URL을 입력하고 paste한 PR title / body / diff stats / commit messages",
+    ],
     whatMoriNeverAccesses: ["GitHub 자동 fetch", "repo 자동 스캔", "private 토큰 자동 사용"],
     setupRequirement: "현재는 manual paste + Git diff capture로 대체.",
     nextStep: "docs/connectors/github-pr-import.md 기반으로 PR paste importer 설계.",
@@ -612,7 +669,8 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriNeverAccesses: ["호스트 앱 메모리", "auto-discovery", "background polling"],
     setupRequirement:
       "connectors/mcp/ 템플릿(MCP 서버)을 호스트에 등록. 가져오기는 Connector JSONL 인박스 → Import Review를 거칩니다.",
-    nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 MCP 서버 등록을 돕는 in-app 가이드 + 도구 스키마 확장.",
+    nextStep:
+      "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 MCP 서버 등록을 돕는 in-app 가이드 + 도구 스키마 확장.",
     relatedIntegrationIds: ["claudeTranscript"],
   },
 ];
@@ -625,30 +683,22 @@ export function getAllCaptureSurfaces(): CaptureSurfaceRow[] {
   return CAPTURE_SURFACES.slice();
 }
 
-export function getCaptureSurfacesByFamily(
-  family: CaptureSurfaceToolFamily,
-): CaptureSurfaceRow[] {
+export function getCaptureSurfacesByFamily(family: CaptureSurfaceToolFamily): CaptureSurfaceRow[] {
   return CAPTURE_SURFACES.filter((row) => row.toolFamily === family);
 }
 
-export function getCaptureSurfacesByStatus(
-  status: CaptureSurfaceStatus,
-): CaptureSurfaceRow[] {
+export function getCaptureSurfacesByStatus(status: CaptureSurfaceStatus): CaptureSurfaceRow[] {
   return CAPTURE_SURFACES.filter((row) => row.status === status);
 }
 
 export function getImplementedCaptureSurfaces(): CaptureSurfaceRow[] {
-  return CAPTURE_SURFACES.filter(
-    (row) => row.status === "implemented" || row.status === "partial",
-  );
+  return CAPTURE_SURFACES.filter((row) => row.status === "implemented" || row.status === "partial");
 }
 
 export function getPlannedCaptureSurfaces(): CaptureSurfaceRow[] {
   return CAPTURE_SURFACES.filter(
     (row) =>
-      row.status === "planned" ||
-      row.status === "docsTemplateOnly" ||
-      row.status === "manualOnly",
+      row.status === "planned" || row.status === "docsTemplateOnly" || row.status === "manualOnly",
   );
 }
 
@@ -657,14 +707,8 @@ export function getPlannedCaptureSurfaces(): CaptureSurfaceRow[] {
  * from `sourceRegistry.ts`. Used by 자료 탭 when it wants the
  * "honest status" copy without duplicating the registry data.
  */
-export function getCaptureSurfaceForIntegration(
-  integrationId: string,
-): CaptureSurfaceRow | null {
-  return (
-    CAPTURE_SURFACES.find((row) =>
-      row.relatedIntegrationIds.includes(integrationId),
-    ) ?? null
-  );
+export function getCaptureSurfaceForIntegration(integrationId: string): CaptureSurfaceRow | null {
+  return CAPTURE_SURFACES.find((row) => row.relatedIntegrationIds.includes(integrationId)) ?? null;
 }
 
 const STATUS_LABEL: Record<CaptureSurfaceStatus, string> = {
@@ -676,10 +720,7 @@ const STATUS_LABEL: Record<CaptureSurfaceStatus, string> = {
   unavailable: "사용 불가",
 };
 
-const STATUS_TONE: Record<
-  CaptureSurfaceStatus,
-  "green" | "blue" | "purple" | "gray" | "orange"
-> = {
+const STATUS_TONE: Record<CaptureSurfaceStatus, "green" | "blue" | "purple" | "gray" | "orange"> = {
   implemented: "green",
   partial: "blue",
   manualOnly: "purple",

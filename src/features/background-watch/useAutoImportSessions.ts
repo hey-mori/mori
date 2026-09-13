@@ -17,25 +17,25 @@ import { useEffect, useRef, useState } from "react";
 import { useSessionStore } from "../../app/sessionStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { isClaudeBridgeAvailable } from "../../lib/claude/claudeTauri";
-import { listAllAgentWorkSessions } from "../../lib/agents/workSessions";
+import { listAllAgentWorkSessions } from "../../lib/trace/sources/ai/workSessions";
 import {
   agentSessionFingerprint,
   agentSessionToStoredDraft,
   autoImportedSessionId,
   diffDiscoveredSessions,
   seenFingerprintsFromMetas,
-} from "../../lib/agents/autoImportSessions";
-import { upsertAgentSessionRecords } from "../../lib/agents/agentSessionKernel";
+} from "../../lib/session/autoImportSessions";
+import { upsertAgentSessionRecords } from "../../lib/record-kernel/agentSessionRecordAdapter";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import {
   loadAutoImportMetas,
   upsertAutoImportMetas,
-} from "../../lib/agents/autoImportMetaStore";
+} from "../../lib/session/autoImportMetaStore";
 import {
   AUTO_IMPORT_SETTINGS_CHANGED_EVENT,
   loadAutoImportSettings,
-} from "../../lib/agents/autoImportSettings";
+} from "../../lib/session/autoImportSettings";
 import { buildSessionSyncNotification } from "../../lib/notifications/sessionSyncNotifications";
 
 /** Auto-register only the most-recent N discovered sessions, so the localStorage

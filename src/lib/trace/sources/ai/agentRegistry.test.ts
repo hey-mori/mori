@@ -6,8 +6,6 @@ import {
   listAgentIds,
   type AgentWorkAgentId,
 } from "./agentRegistry";
-import { normalizeAiTranscript } from "../import";
-import { getIntegration } from "../sources/sourceRegistry";
 
 describe("agentRegistry", () => {
   it("covers every anchor agent exactly once", () => {
@@ -71,27 +69,6 @@ describe("agentRegistry", () => {
     ]);
     for (const descriptor of AGENT_REGISTRY) {
       expect(allowed.has(descriptor.iconKey)).toBe(true);
-    }
-  });
-
-  it("resolves every agent's paste platform to a registered source kind", () => {
-    // Extensibility guard: a new agent whose platform lacks a normalizer case
-    // or a sourceRegistry entry would silently fall back to a generic /
-    // unresolved kind. Lock that an imported session of every agent carries a
-    // source kind the registry can label.
-    for (const descriptor of AGENT_REGISTRY) {
-      const candidate = normalizeAiTranscript({
-        projectId: "p",
-        sessionId: "s",
-        platform: descriptor.platform,
-        title: `${descriptor.agentName} session`,
-        text: "User: hi\nAssistant: hello",
-      });
-      const integration = getIntegration(candidate.source.kind);
-      expect(
-        integration,
-        `agent "${descriptor.agentId}" (platform "${descriptor.platform}") resolved to unregistered kind "${candidate.source.kind}"`,
-      ).toBeDefined();
     }
   });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveStartRecordsAgentId } from "./startRecordsAgent";
-import { AGENT_REGISTRY, type AgentWorkAgentId } from "../agents/agentRegistry";
+import { AGENT_REGISTRY, type AgentWorkAgentId } from "../trace/sources/ai/agentRegistry";
 
 describe("resolveStartRecordsAgentId", () => {
   it("honours a requested agent the roster still has", () => {

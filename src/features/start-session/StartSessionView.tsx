@@ -62,16 +62,16 @@ import {
   formatClaudeRelativeKo,
 } from "../../lib/claude/claudeTauri";
 import {
-  buildPrimaryImportCandidateFromAgentWorkSession,
   getAgentWorkSession,
   type AgentWorkAgentId,
   type AgentWorkSessionMeta,
-} from "../../lib/agents/workSessions";
+} from "../../lib/trace/sources/ai/workSessions";
+import { buildPrimaryImportCandidateFromAgentWorkSession } from "../../lib/import/agentWorkSessionImport";
 import {
   AGENT_REGISTRY,
   type AgentDescriptor,
   type AgentIconKey,
-} from "../../lib/agents/agentRegistry";
+} from "../../lib/trace/sources/ai/agentRegistry";
 import { DetectedConversationsModal } from "./DetectedConversationsModal";
 import { ProjectFormModal, type ProjectFormValues } from "../project/ProjectFormModal";
 

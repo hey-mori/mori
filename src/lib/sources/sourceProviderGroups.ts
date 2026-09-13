@@ -4,7 +4,7 @@ import type {
   SourceWorkspaceStatus,
   SourceWorkspaceViewModel,
 } from "./sourceWorkspace";
-import { listAgentIds } from "../agents/agentRegistry";
+import { listAgentIds } from "../trace/sources/ai/agentRegistry";
 
 /**
  * Provider grouping for the 소스 page.

@@ -28,21 +28,21 @@ import {
 } from "../lib/analysis";
 import { buildLlmRequestAbstraction, type DisclosureLevel } from "../lib/disclosure";
 import {
-  buildPrimaryImportCandidateFromAgentWorkSession,
   getAgentWorkSession,
   listAllAgentWorkSessions,
-} from "../lib/agents/workSessions";
+} from "../lib/trace/sources/ai/workSessions";
+import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
 import {
   agentSessionToStoredDraft,
   autoImportedProjectId,
   autoImportedSessionId,
   isAutoImportedSessionId,
-} from "../lib/agents/autoImportSessions";
+} from "../lib/session/autoImportSessions";
 import {
   loadAutoImportMeta,
   removeAutoImportMeta,
   upsertAutoImportMetas,
-} from "../lib/agents/autoImportMetaStore";
+} from "../lib/session/autoImportMetaStore";
 import {
   decideFollowReaction,
   followReducer,

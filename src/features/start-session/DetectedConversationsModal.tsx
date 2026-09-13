@@ -30,7 +30,7 @@ import {
   listAgentWorkSessions,
   type AgentWorkAgentId,
   type AgentWorkSessionMeta,
-} from "../../lib/agents/workSessions";
+} from "../../lib/trace/sources/ai/workSessions";
 
 /**
  * 작업 대화 둘러보기 — a two-pane modal for browsing an agent's detected work

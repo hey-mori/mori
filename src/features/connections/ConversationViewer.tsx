@@ -41,7 +41,7 @@ import {
   formatTokenCount,
 } from "../../lib/claude/conversationStats";
 import type { ClaudeMessage } from "../../lib/claude/types";
-import type { AgentWorkSessionDetail } from "../../lib/agents/workSessions";
+import type { AgentWorkSessionDetail } from "../../lib/trace/sources/ai/workSessions";
 import { computeVisibleRange, offsetForIndex } from "./conversationWindow";
 
 /**

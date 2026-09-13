@@ -1,9 +1,10 @@
 # Anchor agents (multi-agent session discovery)
 
 A Mori *session* is anchored on one AI-agent work conversation (the spine).
-This doc is the map for the **anchor-agent layer**: how Mori discovers and
-imports sessions from each supported agent, and how to add another one. For the
-broader source / evidence model see [source-integrations.md](source-integrations.md);
+This doc is the map for the **AI Trace source**: how Mori discovers and
+loads sessions from each supported agent, and how to add another one. For the
+broader Trace boundary see [trace-architecture.md](trace-architecture.md);
+for the source / evidence model see [source-integrations.md](source-integrations.md);
 for the MCP / connector capture path (evidence, not an anchor) see
 [connectors/connector-event-format.md](connectors/connector-event-format.md).
 
@@ -37,15 +38,18 @@ on-disk format
 Rust / Tauri discovery        src-tauri/src/<agent>/sessions.rs
    │  discover_<agent>_sessions / get_<agent>_session commands
    ▼
-TypeScript normalize          src/lib/agents/workSessions.ts
-   │  AgentWorkSessionMeta / Detail, dispatch, transcript build
+TypeScript normalize          src/lib/trace/sources/ai/workSessions.ts
+   │  AiSessionObservation / Detail, dispatch, source-local parsing
+   ▼
+Import adapter                src/lib/import/agentWorkSessionImport.ts
+   │  Import Review candidate creation
    ▼
 UI enumerate                  StartSessionView · ConnectionsView · SourcesView
 ```
 
 ## The central registry
 
-[`src/lib/agents/agentRegistry.ts`](../src/lib/agents/agentRegistry.ts) is the
+[`src/lib/trace/sources/ai/agentRegistry.ts`](../src/lib/trace/sources/ai/agentRegistry.ts) is the
 single source of truth for "what an anchor agent is": `agentId`, `agentName`,
 UI `detail`, glyph `iconKey`, paste `platform`, `detect`, and the optional
 connector binding. It is pure data (no React, no Tauri) so every layer derives
@@ -54,15 +58,17 @@ from it:
 - `StartSessionView` builds the 새 세션 agent picker from `AGENT_REGISTRY`.
 - `listAllAgentWorkSessions` iterates `listAgentIds()`.
 - `sourceProviderGroups` derives `ANCHOR_AGENT_IDS` + `AGENT_ORDER` from it.
-- `buildImportCandidatesFromAgentWorkSession` reads the paste `platform` from
-  the descriptor (one branch covers every native agent).
+- `buildImportCandidatesFromAgentWorkSession` in `src/lib/import/` reads the
+  paste `platform` from the descriptor (one branch covers every native agent).
 - `normalizeAiTranscript` maps a platform to its source kind by convention
   (`<platform>Transcript`, with `other` → `aiConversation`).
 
 This derivation is why a missing surface can't silently drop an agent (the bug
-that once hid Antigravity from the picker). A guard test
-(`agentRegistry.test.ts`) asserts every descriptor's `platform` resolves to a
-registered `sourceRegistry` transcript kind, so a half-wired agent fails fast.
+that once hid Antigravity from the picker). The source registry test keeps
+registry shape pure; the import-layer test asserts every descriptor's
+`platform` resolves to a registered `sourceRegistry` transcript kind, so a
+half-wired import path fails fast without making the AI source depend on import
+policy.
 
 ## Adding an agent
 
@@ -78,12 +84,14 @@ registered `sourceRegistry` transcript kind, so a half-wired agent fails fast.
    iconKey, platform, detect).
 4. **workSessions wiring** · add the `<agent>-session` importKind, a discovery
    branch in `listAgentWorkSessions`, a `get` branch, and a `map<Agent>Meta`.
-   The transcript build path is already registry-driven (no edit).
-5. **Platform + provenance** · add the platform to `AiTranscriptPlatform`, a
+5. **Import adapter** · only edit `src/lib/import/agentWorkSessionImport.ts`
+   if the new agent cannot use the registry-driven native transcript path.
+6. **Platform + provenance** · add the platform to `AgentTranscriptPlatform`
+   and `AiTranscriptPlatform`, a
    `<platform>Transcript` entry in `sourceRegistry.ts` (hub-hidden in
    `integrationGroups.ts`), a `DISCOVERY_AGENT_SPECS` entry in
    `sourceWorkspace.ts`, and a provider spec/method in `sourceProviderGroups.ts`.
-6. **Icons** · map the `iconKey` glyph in `StartSessionView` `AGENT_ICON` and
+7. **Icons** · map the `iconKey` glyph in `StartSessionView` `AGENT_ICON` and
    the agent id in `SourcesView` `PROVIDER_ICON`.
 
 The `getIntegrationId` convention and the build-dispatch dedup removed what used

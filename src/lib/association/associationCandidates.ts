@@ -1,5 +1,5 @@
 import type { SourceKind } from "../../domain/types";
-import type { AgentWorkSessionMeta } from "../agents/workSessions";
+import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import type { ConnectorEvent, ConnectorId } from "../connectors/types";
 import type { AssociationCandidate, AssociationSpine } from "./evidenceAssociation";
 

@@ -3,7 +3,7 @@
 Status: **core implemented 2026-07-16.** The driver
 (`useAutoImportSessions`) now dual-writes each registered session as a
 `provisional` `agent-session` kernel record via `upsertAgentSessionRecords`
-(`src/lib/agents/agentSessionKernel.ts`, id = `autoImportedSessionId`,
+(`src/lib/record-kernel/agentSessionRecordAdapter.ts`, id = `autoImportedSessionId`,
 best-effort, context-bound only to an existing match), and the 기록 explorer
 excludes `agent-session` from its default view (opt-in via the 에이전트 세션
 facet chip). Status is `provisional` (not the spec's original `active`) per the
@@ -20,7 +20,7 @@ step of the architecture doc's Adapt verdict (session → `agent-session`
 record + `Source`); S3 (read-path union) exits it.
 
 Grounded in the shipped auto-import: pure core
-`src/lib/agents/autoImportSessions.ts` (stable
+`src/lib/session/autoImportSessions.ts` (stable
 `auto-<agentId>-<hash>` ids, fingerprint diff, REGISTER_CAP 400),
 driver `src/features/background-watch/useAutoImportSessions.ts`
 (desktop-only, foreground-only, 90s cadence, opt-out in 연동), store

@@ -12,7 +12,7 @@ import {
 import {
   AUTO_IMPORT_SETTINGS_CHANGED_EVENT,
   loadAutoImportSettings,
-} from "../../lib/agents/autoImportSettings";
+} from "../../lib/session/autoImportSettings";
 import { SettingsSection } from "./SettingsPrimitives";
 
 /**

@@ -102,7 +102,7 @@ Missing pieces, in order of leverage:
 Commit `35b0d7a` (auto-import foundation) maps discovered agent sessions
 to **legacy `StoredSessionDraft` rows** with a stable
 `auto-<agentId>-<hash>` id and idempotent upsert
-(`src/lib/agents/autoImportSessions.ts:46-48,79-115`), with an explicit
+(`src/lib/session/autoImportSessions.ts`), with an explicit
 "registers, does not apply" doctrine note (`:12-17`). It creates **no
 kernel records.**
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AgentWorkSessionMeta } from "./workSessions";
+import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import {
   agentSessionFingerprint,
   agentSessionToStoredDraft,
