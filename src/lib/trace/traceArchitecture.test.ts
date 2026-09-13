@@ -65,6 +65,20 @@ describe("trace architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("keeps trace sources on narrow connector evidence contracts", () => {
+    const connectorContract = /src\/lib\/connectors\/(types|validation)$/;
+    const offenders = tsFiles(join(traceRoot, "sources")).flatMap((file) =>
+      importRefs(file)
+        .filter(
+          (ref) =>
+            ref.resolved.includes("/src/lib/connectors") &&
+            !connectorContract.test(ref.resolved),
+        )
+        .map((ref) => ref.display),
+    );
+    expect(offenders).toEqual([]);
+  });
+
   it("keeps new source consumers on trace paths instead of legacy agents paths", () => {
     const sourceFiles = tsFiles(srcRoot).filter(
       (file) => !relative(root, file).startsWith(join("src", "lib", "agents")),

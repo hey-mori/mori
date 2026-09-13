@@ -41,10 +41,8 @@ import {
   getCursorSession,
 } from "../../../cursor/cursorTauri";
 import type { CursorSessionMeta } from "../../../cursor/types";
-import {
-  parseConnectorJsonl,
-  type ConnectorEvent,
-} from "../../../connectors";
+import type { ConnectorEvent } from "../../../connectors/types";
+import { parseConnectorJsonl } from "../../../connectors/validation";
 import {
   listConnectorJsonlInbox,
   readConnectorJsonlFile,
