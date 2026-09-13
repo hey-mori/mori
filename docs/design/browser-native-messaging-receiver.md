@@ -1,12 +1,14 @@
 # Browser Native Host Relay
 
-Status: process-boundary implementation plus Windows installer packaging,
-2026-09-11.
+Status: process-boundary implementation plus Windows installer packaging.
+The live application sink and stronger ACK semantics are documented in
+[Browser Live Source v1](browser-live-source-v1.md). Earlier smoke results below
+describe their historical validation-only boundary.
 
-This note records the first Mori-side Native Messaging process boundary for
-Browser observations. It does not connect the production extension transport
-client yet, add reconnect behavior, offline queueing, production persistence,
-Identity, Work, Sync, Flow, Episode, Memory, or Vision.
+This note records the Mori-side Native Messaging process boundary for Browser
+observations. Browser live source v1 adds application consumption after ingress;
+offline queueing, Identity, Work, Sync, Flow, Episode, Memory, and Vision remain
+outside this transport.
 
 ## First Chrome E2E Finding
 
