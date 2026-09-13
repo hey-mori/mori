@@ -17,9 +17,11 @@ export {
   type BrowserWindowObservation,
 } from "./browserContext";
 export {
+  browserHistoryStateUpdatedToTraceEvent,
   browserNavigationCommittedToTraceEvent,
   browserObservationToTraceEvent,
   browserTabActivatedToTraceEvent,
+  type BrowserHistoryStateUpdatedObservation,
   type BrowserNavigationCommittedObservation,
   type BrowserTabActivatedObservation,
   type BrowserTraceKind,
@@ -30,9 +32,11 @@ export {
   browserObservationEnvelopeToContextSnapshot,
   browserObservationEnvelopeToTraceEvent,
   type BrowserContextSnapshotEnvelopeV1,
+  type BrowserHistoryStateUpdatedEnvelopeV1,
   type BrowserNavigationCommittedEnvelopeV1,
   type BrowserObservationEnvelopeKind,
   type BrowserObservationEnvelopeV1,
+  type BrowserObservationHistoryStateUpdatedPayload,
   type BrowserObservationNavigationCommittedPayload,
   type BrowserObservationRuntimePayload,
   type BrowserObservationTabPayload,

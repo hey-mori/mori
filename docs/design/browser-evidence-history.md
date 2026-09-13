@@ -65,10 +65,12 @@ LIMIT :limitPlusOne
 
 The tuple comparison is the same strict lexicographic condition as timestamp
 less-than OR timestamp equality with sequence less-than. Limit+1 determines
-whether a next cursor exists. V012's `browser_evidence_observed` index is reused.
+whether a next cursor exists. At this milestone, V012's
+`browser_evidence_observed` index was reused.
 The 10,000-row EXPLAIN test requires that index, no temporary sort, and an index
 SEARCH for older pages. First-page traversal scans the ordering index and stops
-at the bounded limit. No V013, schema churn, count query or retention change.
+at the bounded limit. This milestone introduced no V013, schema churn, count
+query or retention change; issue #128 later adds V013 for the new evidence kind.
 
 ## G. Read Model
 
@@ -210,3 +212,12 @@ but v1 still misses route changes that never commit a main-frame navigation.
 Covering this common modern-site gap is the smallest next improvement to the
 factual evidence stream. It should remain a new observable Browser event path,
 not semantic interpretation or Browser history import.
+
+## X. History State Evolution
+
+Issue #128 implements that next milestone. V013 expands the existing table for
+`history_state_updated` while preserving rows and sequence values. The same
+history projection and keyset cursor now mix full navigations, same-document
+route updates, and tab activations. The event remains Browser evidence, not
+Browser History import or semantic interpretation. See
+[`browser-history-state-evidence.md`](browser-history-state-evidence.md).

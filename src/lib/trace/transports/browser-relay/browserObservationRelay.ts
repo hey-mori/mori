@@ -17,7 +17,11 @@ export type BrowserObservationRelayRequest = {
 export type BrowserObservationRelayAck =
   | {
       ok: true;
-      kind: "context_snapshot" | "tab_activated" | "navigation_committed";
+      kind:
+        | "context_snapshot"
+        | "tab_activated"
+        | "navigation_committed"
+        | "history_state_updated";
       route: "context" | "trace";
       contextRequired?: true;
     }

@@ -12,6 +12,7 @@ import {
   type BrowserWindowObservation,
 } from "./browserContext";
 import {
+  browserHistoryStateUpdatedToTraceEvent,
   browserNavigationCommittedToTraceEvent,
   browserTabActivatedToTraceEvent,
   type BrowserTraceMetadata,
@@ -20,7 +21,8 @@ import {
 export type BrowserObservationEnvelopeV1 =
   | BrowserContextSnapshotEnvelopeV1
   | BrowserTabActivatedEnvelopeV1
-  | BrowserNavigationCommittedEnvelopeV1;
+  | BrowserNavigationCommittedEnvelopeV1
+  | BrowserHistoryStateUpdatedEnvelopeV1;
 
 export type BrowserObservationEnvelopeKind = BrowserObservationEnvelopeV1["kind"];
 
@@ -58,6 +60,9 @@ export type BrowserObservationNavigationCommittedPayload = {
   transitionType?: string;
   transitionQualifiers?: string[];
 };
+
+export type BrowserObservationHistoryStateUpdatedPayload =
+  BrowserObservationNavigationCommittedPayload;
 
 export type BrowserContextSnapshotEnvelopeV1 = {
   version: 1;
@@ -102,6 +107,20 @@ export type BrowserNavigationCommittedEnvelopeV1 = {
   };
 };
 
+export type BrowserHistoryStateUpdatedEnvelopeV1 = {
+  version: 1;
+  source: "browser";
+  kind: "history_state_updated";
+  observedAt: string;
+  payload: {
+    runtime: BrowserObservationRuntimePayload;
+    details: BrowserObservationHistoryStateUpdatedPayload;
+    tab?: BrowserObservationTabPayload;
+    window?: BrowserObservationWindowPayload;
+    urlDetailPolicy?: BrowserUrlDetailPolicy;
+  };
+};
+
 export function browserObservationEnvelopeToContextSnapshot(
   envelope: BrowserContextSnapshotEnvelopeV1,
 ): BrowserContextSnapshot {
@@ -138,7 +157,10 @@ export function browserObservationEnvelopeToContextSnapshot(
 }
 
 export function browserObservationEnvelopeToTraceEvent(
-  envelope: BrowserTabActivatedEnvelopeV1 | BrowserNavigationCommittedEnvelopeV1,
+  envelope:
+    | BrowserTabActivatedEnvelopeV1
+    | BrowserNavigationCommittedEnvelopeV1
+    | BrowserHistoryStateUpdatedEnvelopeV1,
 ): TraceEvent<BrowserTraceMetadata> {
   if (envelope.kind === "tab_activated") {
     const activeInfo = envelope.payload.activeInfo;
@@ -171,7 +193,7 @@ export function browserObservationEnvelopeToTraceEvent(
 
   const details = envelope.payload.details;
   const windowId = envelope.payload.tab?.windowId ?? envelope.payload.window?.id ?? -1;
-  return browserNavigationCommittedToTraceEvent({
+  const observation = {
     occurredAt: envelope.observedAt,
     runtime: browserRuntimeObservation(envelope.payload.runtime, envelope.observedAt),
     window: envelope.payload.window
@@ -187,7 +209,10 @@ export function browserObservationEnvelopeToTraceEvent(
     url: details.url,
     title: envelope.payload.tab?.title,
     urlDetailPolicy: envelope.payload.urlDetailPolicy,
-  });
+  };
+  return envelope.kind === "navigation_committed"
+    ? browserNavigationCommittedToTraceEvent(observation)
+    : browserHistoryStateUpdatedToTraceEvent(observation);
 }
 
 function browserRuntimeObservation(

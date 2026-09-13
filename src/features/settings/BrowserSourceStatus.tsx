@@ -12,6 +12,7 @@ const KIND_LABEL = {
   context_snapshot: "브라우저 상태",
   tab_activated: "탭 전환",
   navigation_committed: "페이지 이동",
+  history_state_updated: "페이지 경로 변경",
 };
 
 export function BrowserSourceStatus({ onHistory }: { onHistory: () => void }) {

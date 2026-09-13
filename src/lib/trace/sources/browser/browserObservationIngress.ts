@@ -4,6 +4,7 @@ import {
   browserObservationEnvelopeToContextSnapshot,
   browserObservationEnvelopeToTraceEvent,
   type BrowserContextSnapshotEnvelopeV1,
+  type BrowserHistoryStateUpdatedEnvelopeV1,
   type BrowserNavigationCommittedEnvelopeV1,
   type BrowserObservationEnvelopeKind,
   type BrowserObservationEnvelopeV1,
@@ -22,8 +23,11 @@ export type BrowserObservationIngressResult =
   | {
       status: "accepted";
       route: "trace";
-      kind: "tab_activated" | "navigation_committed";
-      envelope: BrowserTabActivatedEnvelopeV1 | BrowserNavigationCommittedEnvelopeV1;
+      kind: "tab_activated" | "navigation_committed" | "history_state_updated";
+      envelope:
+        | BrowserTabActivatedEnvelopeV1
+        | BrowserNavigationCommittedEnvelopeV1
+        | BrowserHistoryStateUpdatedEnvelopeV1;
       traceEvent: TraceEvent<BrowserTraceMetadata>;
     }
   | {
@@ -51,6 +55,7 @@ const BROWSER_OBSERVATION_KINDS = [
   "context_snapshot",
   "tab_activated",
   "navigation_committed",
+  "history_state_updated",
 ] as const satisfies readonly BrowserObservationEnvelopeKind[];
 
 const URL_POLICIES = new Set<BrowserUrlDetailPolicy>([
@@ -183,6 +188,7 @@ export function validateBrowserObservationEnvelope(
         validateTabActivatedPayload(payload, errors);
         break;
       case "navigation_committed":
+      case "history_state_updated":
         validateNavigationCommittedPayload(payload, errors);
         break;
     }

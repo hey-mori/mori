@@ -17,7 +17,12 @@ export function createBrowserHistorySmoke({ run, waitFor, capture }) {
     items.map((row) => ({
       observedAt: row.observedAt,
       receivedAt: row.receivedAt,
-      kind: row.kind === "navigation_committed" ? "페이지 이동" : "탭 전환",
+      kind:
+        row.kind === "navigation_committed"
+          ? "페이지 이동"
+          : row.kind === "history_state_updated"
+            ? "페이지 경로 변경"
+            : "탭 전환",
       url: row.data.url ?? "탭 활성화",
     }));
   const click = (label) =>

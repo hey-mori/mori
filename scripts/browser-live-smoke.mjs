@@ -31,6 +31,7 @@ const nativeHostPath = path.resolve(
 );
 const count = Number(option("--observations", "60"));
 const historyMode = args.includes("--history");
+const spaMode = args.includes("--spa");
 assert.ok(
   Number.isInteger(count) && count >= 20 && count <= (historyMode ? 400 : 80),
   "invalid observation count",
@@ -257,6 +258,34 @@ async function navigatePage(sessionId, index) {
   );
   await waitDelivered();
 }
+async function updateHistoryState(sessionId, method, relativeUrl) {
+  const before = await rows();
+  const beforeSequence = Math.max(0, ...before.map((row) => row.sequence));
+  const expectedUrl = new URL(relativeUrl, siteOrigin);
+  expectedUrl.search = "";
+  expectedUrl.hash = "";
+  await evaluate(
+    chrome.cdp,
+    sessionId,
+    `history.${method}({ test: ${beforeSequence + 1} }, "", ${JSON.stringify(relativeUrl)})`,
+  );
+  await waitFor(
+    async () =>
+      (await rows()).find(
+        (row) =>
+          row.sequence > beforeSequence &&
+          row.kind === "history_state_updated" &&
+          row.data.url === expectedUrl.href,
+      ),
+    `${method} history-state evidence`,
+  );
+  await waitDelivered();
+  const added = (await rows()).filter((row) => row.sequence > beforeSequence);
+  assert.equal(added.length, 1, `${method} emitted one durable observation`);
+  assert.equal(added[0].kind, "history_state_updated");
+  assert.equal(added[0].data.url, expectedUrl.href);
+  return added[0];
+}
 
 try {
   if (args.includes("--instrument-webview")) {
@@ -362,6 +391,42 @@ try {
     await chrome.cdp.send("Page.enable", {}, sessionId);
     targets.push({ targetId, sessionId });
     await navigatePage(sessionId, i);
+    if (i === 0 && spaMode) {
+      const push = await updateHistoryState(
+        sessionId,
+        "pushState",
+        "/spa/route-one?secret=alpha#private",
+      );
+      const replace = await updateHistoryState(
+        sessionId,
+        "replaceState",
+        "/spa/route-two?token=beta#hidden",
+      );
+      const beforeFragment = await rows();
+      await evaluate(chrome.cdp, sessionId, `location.hash = "private"`);
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      assert.deepEqual(await rows(), beforeFragment);
+      const queryOne = await updateHistoryState(sessionId, "pushState", "/search?q=one");
+      const queryTwo = await updateHistoryState(sessionId, "pushState", "/search?q=two");
+      await navigatePage(sessionId, "spa-full-after");
+      result.spa = {
+        pushState: push.data.url,
+        replaceState: replace.data.url,
+        fragmentEvidence: 0,
+        queryOnly: [queryOne.data.url, queryTwo.data.url],
+        observationsPerAction: { pushState: 1, replaceState: 1 },
+        fullSequence: [
+          "navigation_committed",
+          push.kind,
+          replace.kind,
+          "navigation_committed",
+        ],
+      };
+      assert.ok(!JSON.stringify(result.spa).match(/secret=|token=|#private|#hidden|q=/));
+      result.scenarios.spaHistoryState = true;
+      result.scenarios.fragmentStoredNothing = true;
+      result.scenarios.queryOnlyEventsRetained = true;
+    }
   }
   // Creating about:blank targets need not produce a capturable activation.
   // Switch between two already navigated tabs in the same normal window.
@@ -518,11 +583,19 @@ try {
     };
   })()`,
   );
-  await chrome.cdp.send(
-    "Page.navigate",
-    { url: `${siteOrigin}/in-flight-off` },
-    targets[0].sessionId,
-  );
+  if (spaMode) {
+    await evaluate(
+      chrome.cdp,
+      targets[0].sessionId,
+      `history.pushState({}, "", "/spa/in-flight-off?private=value#hidden")`,
+    );
+  } else {
+    await chrome.cdp.send(
+      "Page.navigate",
+      { url: `${siteOrigin}/in-flight-off` },
+      targets[0].sessionId,
+    );
+  }
   await waitFor(
     () => evaluate(chrome.cdp, workerSession, "globalThis.__moriLookupGates.length > 0"),
     "in-flight window lookup",
@@ -539,12 +612,21 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 500));
   assert.deepEqual(await rows(), beforeOff);
   result.scenarios.inFlightOffStoredNothing = true;
-  for (let i = 0; i < 10; i++)
-    await chrome.cdp.send(
-      "Page.navigate",
-      { url: `${siteOrigin}/after-off-${i}` },
-      targets[0].sessionId,
-    );
+  for (let i = 0; i < 10; i++) {
+    if (spaMode) {
+      await evaluate(
+        chrome.cdp,
+        targets[0].sessionId,
+        `history.pushState({}, "", "/spa/after-off-${i}?private=value#hidden")`,
+      );
+    } else {
+      await chrome.cdp.send(
+        "Page.navigate",
+        { url: `${siteOrigin}/after-off-${i}` },
+        targets[0].sessionId,
+      );
+    }
+  }
   await new Promise((resolve) => setTimeout(resolve, 500));
   assert.deepEqual(await rows(), beforeOff);
   result.scenarios.captureOffStoredNothing = true;

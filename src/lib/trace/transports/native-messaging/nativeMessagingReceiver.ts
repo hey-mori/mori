@@ -11,7 +11,11 @@ import {
 export type BrowserNativeMessagingAck =
   | {
       ok: true;
-      kind: "context_snapshot" | "tab_activated" | "navigation_committed";
+      kind:
+        | "context_snapshot"
+        | "tab_activated"
+        | "navigation_committed"
+        | "history_state_updated";
       route: "context" | "trace";
     }
   | {

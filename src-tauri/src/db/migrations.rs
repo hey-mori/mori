@@ -91,6 +91,12 @@ pub const MIGRATIONS: &[MigrationManifestEntry] = &[
         name: "browser_evidence",
         sql: include_str!("../../migrations/V012__browser_evidence.sql"),
     },
+    MigrationManifestEntry {
+        version: "013",
+        filename: "V013__browser_history_state_evidence.sql",
+        name: "browser_history_state_evidence",
+        sql: include_str!("../../migrations/V013__browser_history_state_evidence.sql"),
+    },
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -251,7 +257,21 @@ fn now_iso() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::open_in_memory;
+    use crate::db::{
+        browser_evidence::{
+            append as append_browser_evidence, page as browser_evidence_page, BrowserEvidenceData,
+            BrowserEvidenceInput,
+        },
+        open_database, open_in_memory,
+    };
+
+    fn apply_migration_prefix(conn: &mut Connection, count: usize) {
+        ensure_migration_table(conn).expect("create migration ledger");
+        for migration in MIGRATIONS.iter().take(count) {
+            let checksum = checksum_for(migration.sql);
+            apply_one(conn, migration, &checksum).expect("apply migration prefix");
+        }
+    }
 
     #[test]
     fn applies_initial_migration_on_empty_database() {
@@ -271,13 +291,14 @@ mod tests {
                 "009".to_string(),
                 "010".to_string(),
                 "011".to_string(),
-                "012".to_string()
+                "012".to_string(),
+                "013".to_string()
             ]
         );
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 12);
+        assert_eq!(applied.len(), 13);
         assert_eq!(applied[0].version, "001");
         assert_eq!(applied[1].version, "002");
         assert_eq!(applied[2].version, "003");
@@ -290,6 +311,7 @@ mod tests {
         assert_eq!(applied[9].version, "010");
         assert_eq!(applied[10].version, "011");
         assert_eq!(applied[11].version, "012");
+        assert_eq!(applied[12].version, "013");
         for record in &applied {
             assert!(!record.checksum.is_empty());
         }
@@ -315,7 +337,8 @@ mod tests {
                 "009".to_string(),
                 "010".to_string(),
                 "011".to_string(),
-                "012".to_string()
+                "012".to_string(),
+                "013".to_string()
             ]
         );
     }
@@ -341,7 +364,7 @@ mod tests {
         let outcome = apply_migrations(&mut conn).expect("upgrade");
 
         assert_eq!(outcome.applied, vec!["011".to_string()]);
-        assert_eq!(outcome.already_applied.len(), 11);
+        assert_eq!(outcome.already_applied.len(), 12);
         // Usable, not merely recorded: a migration that registers without
         // creating its table would pass the assertion above.
         conn.execute(
@@ -350,6 +373,141 @@ mod tests {
             [],
         )
         .expect("write into the new table");
+    }
+
+    #[test]
+    fn upgrades_v012_browser_evidence_without_gaps_or_sequence_reset() {
+        let temp = tempfile::tempdir().expect("temporary database directory");
+        let path = temp.path().join("mori.sqlite");
+        let mut conn = open_database(&path).expect("open database");
+        apply_migration_prefix(&mut conn, 12);
+
+        let data = serde_json::json!({
+            "provider": "chrome",
+            "tabId": "17",
+            "url": "https://example.com/existing"
+        })
+        .to_string();
+        for i in 0..325 {
+            let kind = if i % 2 == 0 {
+                "navigation_committed"
+            } else {
+                "tab_activated"
+            };
+            conn.execute(
+                "INSERT INTO browser_evidence
+                 (delivery_id, observed_at, received_at, kind, data_json)
+                 VALUES (?1, ?2, '2026-09-14T00:01:00.000Z', ?3, ?4)",
+                params![
+                    format!("existing-{i}"),
+                    format!("2026-09-14T00:00:{:02}.000Z", (i * 7) % 13),
+                    kind,
+                    data
+                ],
+            )
+            .expect("seed V012 evidence");
+        }
+        assert!(conn
+            .execute(
+                "INSERT INTO browser_evidence
+                 (delivery_id, observed_at, received_at, kind, data_json)
+                 VALUES ('unsupported', '2026-09-14T00:00:00.000Z',
+                         '2026-09-14T00:01:00.000Z', 'history_state_updated', ?1)",
+                [&data],
+            )
+            .is_err());
+        let old_max: i64 = conn
+            .query_row("SELECT MAX(sequence) FROM browser_evidence", [], |row| {
+                row.get(0)
+            })
+            .expect("read old maximum sequence");
+
+        let outcome = apply_migrations(&mut conn).expect("apply V013");
+        assert_eq!(outcome.applied, vec!["013"]);
+        assert_eq!(outcome.already_applied.len(), 12);
+        assert_eq!(
+            conn.query_row("SELECT COUNT(*) FROM browser_evidence", [], |row| row
+                .get::<_, i64>(0))
+                .expect("count migrated rows"),
+            325
+        );
+        assert_eq!(
+            conn.query_row("SELECT MAX(sequence) FROM browser_evidence", [], |row| row
+                .get::<_, i64>(
+                0
+            ))
+            .expect("read migrated maximum sequence"),
+            old_max
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT seq FROM sqlite_sequence WHERE name = 'browser_evidence'",
+                [],
+                |row| row.get::<_, i64>(0)
+            )
+            .expect("read migrated autoincrement sequence"),
+            old_max
+        );
+
+        let mut first_new_sequence = None;
+        for i in 0..75 {
+            let input = BrowserEvidenceInput {
+                delivery_id: format!("history-{i}"),
+                observed_at: format!("2026-09-14T00:00:{:02}.000Z", (i * 11) % 13),
+                received_at: "2026-09-14T00:02:00.000Z".into(),
+                kind: "history_state_updated".into(),
+                data: BrowserEvidenceData {
+                    provider: "chrome".into(),
+                    runtime_id: None,
+                    tab_id: "17".into(),
+                    window_id: Some("2".into()),
+                    url: Some("https://example.com/spa/route".into()),
+                    active: Some(true),
+                    focused: Some(true),
+                    transition_type: Some("link".into()),
+                    transition_qualifiers: Some(vec![]),
+                },
+            };
+            let sequence = append_browser_evidence(&conn, &input).expect("append V013 evidence");
+            first_new_sequence.get_or_insert(sequence);
+        }
+        assert!(first_new_sequence.expect("first new sequence") > old_max);
+
+        drop(conn);
+        let conn = open_database(&path).expect("reopen migrated database");
+        let expected = conn
+            .prepare(
+                "SELECT delivery_id FROM browser_evidence ORDER BY observed_at DESC, sequence DESC",
+            )
+            .expect("prepare expected order")
+            .query_map([], |row| row.get::<_, String>(0))
+            .expect("query expected order")
+            .collect::<Result<Vec<_>, _>>()
+            .expect("collect expected order");
+        let mut actual = Vec::new();
+        let mut cursor = None;
+        loop {
+            let page =
+                browser_evidence_page(&conn, 37, cursor.as_ref()).expect("read migrated page");
+            actual.extend(
+                page.items
+                    .iter()
+                    .map(|row| row.evidence.delivery_id.clone()),
+            );
+            cursor = page.next_cursor;
+            if cursor.is_none() {
+                break;
+            }
+        }
+        assert_eq!(actual, expected);
+        assert_eq!(actual.len(), 400);
+        assert_eq!(
+            actual
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            400
+        );
     }
 
     #[test]

@@ -218,7 +218,7 @@ pub fn recent(conn: &Connection, limit: u32) -> Result<Vec<BrowserEvidenceRow>, 
 fn validate(conn: &Connection, input: &BrowserEvidenceInput) -> Result<(), String> {
     if !matches!(
         input.kind.as_str(),
-        "tab_activated" | "navigation_committed"
+        "tab_activated" | "navigation_committed" | "history_state_updated"
     ) || input.delivery_id.is_empty()
         || input.delivery_id.len() > 256
         || input.data.provider.is_empty()
@@ -249,7 +249,11 @@ fn validate(conn: &Connection, input: &BrowserEvidenceInput) -> Result<(), Strin
             return Err("invalid browser evidence timestamp".into());
         }
     }
-    if input.kind == "navigation_committed" && input.data.url.is_none() {
+    if matches!(
+        input.kind.as_str(),
+        "navigation_committed" | "history_state_updated"
+    ) && input.data.url.is_none()
+    {
         return Err("navigation requires a URL".into());
     }
     if let Some(raw) = &input.data.url {
@@ -316,9 +320,11 @@ mod tests {
         for i in 0..325 {
             let mut row = input(&format!("mixed-{i}"));
             row.observed_at = format!("2026-09-12T00:00:{:02}.000Z", (i * 7) % 13);
-            if i % 2 == 0 {
+            if i % 3 == 0 {
                 row.kind = "tab_activated".into();
                 row.data.url = None;
+            } else if i % 3 == 1 {
+                row.kind = "history_state_updated".into();
             }
             let sequence = append(&conn, &row).unwrap();
             expected.push((row.observed_at, sequence));
@@ -501,15 +507,18 @@ mod tests {
         let mut conn = open_database(&path).unwrap();
         apply_migrations(&mut conn).unwrap();
         conn.execute("DROP TABLE browser_evidence", []).unwrap();
-        conn.execute("DELETE FROM _mori_migrations WHERE version = '012'", [])
-            .unwrap();
+        conn.execute(
+            "DELETE FROM _mori_migrations WHERE version IN ('012', '013')",
+            [],
+        )
+        .unwrap();
         conn.execute(
             "INSERT INTO durable_documents VALUES ('user_projects', '@app', 1, '[]', 'before')",
             [],
         )
         .unwrap();
         let outcome = apply_migrations(&mut conn).unwrap();
-        assert_eq!(outcome.applied, vec!["012"]);
+        assert_eq!(outcome.applied, vec!["012", "013"]);
         append(&conn, &input("one")).unwrap();
         drop(conn);
         let conn = open_database(&path).unwrap();
