@@ -38,7 +38,16 @@ export function createBrowserHistorySmoke({ run, waitFor, capture }) {
       "history page settled",
     );
   async function open() {
-    await run("document.querySelector('.browser-source-history-entry').click()");
+    await waitFor(
+      () =>
+        run(`(() => {
+          const entry = document.querySelector('.browser-source-history-entry');
+          if (!entry) return false;
+          entry.click();
+          return true;
+        })()`),
+      "Browser history entry",
+    );
     await settled();
   }
   async function readAll(first = null) {
