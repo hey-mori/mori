@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   mkdtempSync,
   mkdirSync,
@@ -25,6 +26,7 @@ function option(name, fallback) {
 }
 const extensionRepo = path.resolve(option("--extension-repo", "../mori-browser-extension"));
 const extensionRoot = path.join(extensionRepo, "dist/chrome/mori-browser-extension-0.1.0");
+const extensionPackage = path.join(extensionRepo, "dist/chrome/mori-browser-extension-0.1.0.zip");
 const moriExe = path.resolve(option("--mori-exe", "src-tauri/target/release/mori.exe"));
 const nativeHostPath = path.resolve(
   option("--host-exe", "src-tauri/target/release/mori-browser-native-host.exe"),
@@ -32,6 +34,10 @@ const nativeHostPath = path.resolve(
 const count = Number(option("--observations", "60"));
 const historyMode = args.includes("--history");
 const spaMode = args.includes("--spa");
+const coreMode = args.includes("--core");
+const leaveCaptureOff = args.includes("--leave-capture-off");
+const runId = option("--run-id", `browser-live-${process.pid}-${Date.now()}`);
+const matrix = option("--matrix", "canonical");
 assert.ok(
   Number.isInteger(count) && count >= 20 && count <= (historyMode ? 400 : 80),
   "invalid observation count",
@@ -53,10 +59,50 @@ const { discoverChromePath } = await import(
 );
 
 const output = mkdtempSync(path.join(os.tmpdir(), "mori-browser-live-"));
-const profile = path.join(output, "chrome");
-mkdirSync(profile);
+const profile = path.resolve(option("--chrome-profile", path.join(output, "chrome")));
+const webviewProfile = path.resolve(option("--webview-profile", path.join(output, "webview")));
+const homeRoot = path.resolve(option("--home", path.join(output, "home")));
+mkdirSync(profile, { recursive: true });
 const relayName = `mori-browser-live-${process.pid}-${Date.now()}`;
-const result = { output, scenarios: {}, failures: [], observationsRequested: count };
+const runStarted = Date.now();
+const result = {
+  runId,
+  matrix,
+  mode: coreMode ? "core" : "full",
+  output,
+  startedAt: new Date(runStarted).toISOString(),
+  scenarios: {},
+  failures: [],
+  observationsRequested: count,
+  artifacts: {
+    mori: { path: moriExe, sha256: fileHash(moriExe) },
+    nativeHost: { path: nativeHostPath, sha256: fileHash(nativeHostPath) },
+    extension: {
+      path: existsSync(extensionPackage)
+        ? extensionPackage
+        : path.join(extensionRoot, "manifest.json"),
+      sha256: fileHash(
+        existsSync(extensionPackage) ? extensionPackage : path.join(extensionRoot, "manifest.json"),
+      ),
+    },
+  },
+  profiles: {
+    chrome: { path: profile, fresh: !args.includes("--chrome-profile") },
+    webview: { path: webviewProfile, fresh: !args.includes("--webview-profile") },
+    home: { path: homeRoot, fresh: !args.includes("--home") },
+  },
+  ports: { webview: [], chromeCdp: [] },
+  processIds: { mori: [], chrome: [] },
+  firstObservations: {
+    contextSnapshot: { pass: false, acknowledgement: false, durableRow: null },
+    navigationCommitted: { pass: false, acknowledgement: false, durableRow: false },
+    tabActivated: { pass: false, acknowledgement: false, durableRow: false },
+    historyStateUpdated: { pass: false, acknowledgement: false, durableRow: false },
+  },
+  timeline: {},
+};
+let currentStage = "run_started";
+mark(currentStage);
 let desktopExe = moriExe;
 let testPort = args.includes("--webview-port") ? Number(option("--webview-port")) : undefined;
 let chrome;
@@ -64,6 +110,8 @@ let desktop;
 let desktopCdp;
 let desktopSession;
 let popup;
+let desktopStarts = 0;
+class CoreRunComplete extends Error {}
 const site = createServer((_req, res) => {
   res.writeHead(200, { "Content-Type": "text/html" });
   res.end("<!doctype html><title>Private test title</title><p>Browser live source test</p>");
@@ -72,6 +120,7 @@ await new Promise((resolve) => site.listen(0, "127.0.0.1", resolve));
 const siteOrigin = `http://127.0.0.1:${site.address().port}`;
 const registry = new NativeHostRegistry("chrome");
 const initialRegistry = registry.read();
+const initialNativeHostPids = windowsProcessIds("mori-browser-native-host");
 const env = { MORI_BROWSER_RELAY_NAME: relayName };
 const log = (message) => console.error(`[browser-live] ${message}`);
 const history = createBrowserHistorySmoke({
@@ -79,6 +128,104 @@ const history = createBrowserHistorySmoke({
   waitFor,
   capture: (name) => capture(desktopCdp, desktopSession, name),
 });
+
+function mark(stage) {
+  currentStage = stage;
+  result.timeline[stage] = {
+    at: new Date().toISOString(),
+    elapsedMs: Date.now() - runStarted,
+  };
+  return result.timeline[stage];
+}
+
+function fileHash(file) {
+  return createHash("sha256").update(readFileSync(file)).digest("hex");
+}
+
+function windowsProcessIds(name) {
+  const command = `Get-Process -Name '${name}' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id`;
+  const found = spawnSync("powershell.exe", ["-NoProfile", "-Command", command], {
+    windowsHide: true,
+    encoding: "utf8",
+  });
+  if (found.status !== 0 && found.status !== null) return [];
+  return String(found.stdout || "")
+    .split(/\r?\n/)
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0);
+}
+
+function profileProcessIds(profilePath) {
+  const script = [
+    "$needle = $env:MORI_PROFILE_NEEDLE",
+    "Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |",
+    "  Where-Object {",
+    "    $_.Name -in @('chrome.exe', 'msedgewebview2.exe') -and",
+    "    $_.CommandLine -and $_.CommandLine.Contains($needle)",
+    "  } |",
+    "  Select-Object -ExpandProperty ProcessId",
+  ].join("\n");
+  const found = spawnSync("powershell.exe", ["-NoProfile", "-Command", script], {
+    windowsHide: true,
+    encoding: "utf8",
+    env: { ...process.env, MORI_PROFILE_NEEDLE: profilePath },
+  });
+  return String(found.stdout || "")
+    .split(/\r?\n/)
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0 && value !== process.pid);
+}
+
+function processRunning(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function portAvailable(port) {
+  const server = net.createServer();
+  try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, "127.0.0.1", resolve);
+    });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (server.listening) await new Promise((resolve) => server.close(resolve));
+  }
+}
+
+function classifyFailure(error, stage) {
+  const message = String(error?.message || error);
+  if (/Chrome DevToolsActivePort|Chrome process/i.test(message)) return "chrome_startup";
+  if (/extension popup document/i.test(message)) return "extension_startup";
+  if (
+    /Mori WebView|Mori application ready|Mori exited|Mori process|CDP Runtime\.evaluate/i.test(
+      message,
+    )
+  )
+    return "mori_startup";
+  if (/native host|host unavailable/i.test(message)) return "native_host";
+  if (/delivery ACK|relay|mori_unavailable/i.test(message)) return "relay_delivery";
+  if (/persisted|durable observation|stored|history-state evidence/i.test(message))
+    return "evidence_persistence";
+  if (/cleanup|registry|stopped|port/i.test(message) || stage === "cleanup") return "cleanup";
+  return "unknown";
+}
+
+function kindCounts(items) {
+  return items.reduce((counts, item) => {
+    const kind = typeof item?.kind === "string" ? item.kind : "unknown";
+    counts[kind] = (counts[kind] ?? 0) + 1;
+    return counts;
+  }, {});
+}
 
 async function freePort() {
   const server = net.createServer();
@@ -88,7 +235,10 @@ async function freePort() {
   return port;
 }
 async function startDesktop(retry = true) {
+  const startIndex = desktopStarts++;
+  mark(startIndex === 0 ? "mori_spawn_started" : `mori_restart_${startIndex}_started`);
   const port = testPort ?? (await freePort());
+  result.ports.webview.push(port);
   const desktopEnv = { ...process.env, ...env };
   delete desktopEnv.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS;
   const launched = spawnSync(
@@ -105,11 +255,11 @@ async function startDesktop(retry = true) {
         ...desktopEnv,
         MORI_SMOKE_EXE: desktopExe,
         MORI_SMOKE_ROOT: root,
-        HOME: path.join(output, "home"),
-        USERPROFILE: path.join(output, "home"),
-        APPDATA: path.join(output, "home/AppData/Roaming"),
-        LOCALAPPDATA: path.join(output, "home/AppData/Local"),
-        WEBVIEW2_USER_DATA_FOLDER: path.join(output, "webview"),
+        HOME: homeRoot,
+        USERPROFILE: homeRoot,
+        APPDATA: path.join(homeRoot, "AppData/Roaming"),
+        LOCALAPPDATA: path.join(homeRoot, "AppData/Local"),
+        WEBVIEW2_USER_DATA_FOLDER: webviewProfile,
         WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --enable-logging --log-file=${path.join(output, "webview-debug.log")}`,
       },
     },
@@ -117,6 +267,8 @@ async function startDesktop(retry = true) {
   assert.equal(launched.status, 0, launched.stderr);
   desktop = { pid: Number(launched.stdout.trim()) };
   assert.ok(Number.isInteger(desktop.pid) && desktop.pid > 0, "Mori process id");
+  result.processIds.mori.push(desktop.pid);
+  mark(startIndex === 0 ? "mori_process_spawned" : `mori_restart_${startIndex}_spawned`);
   let pages;
   try {
     pages = await waitFor(
@@ -151,6 +303,7 @@ async function startDesktop(retry = true) {
     { timeoutMs: 30000 },
   );
   await evaluate(desktopCdp, desktopSession, "document.querySelector('.first-run-close')?.click()");
+  mark(startIndex === 0 ? "mori_webview_ready" : `mori_restart_${startIndex}_ready`);
 }
 async function stopDesktop() {
   desktopCdp?.close();
@@ -165,13 +318,7 @@ async function stopDesktop() {
   desktop = null;
 }
 function desktopRunning() {
-  if (!desktop) return false;
-  try {
-    process.kill(desktop.pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
+  return processRunning(desktop?.pid);
 }
 async function rows() {
   return evaluate(
@@ -191,7 +338,7 @@ async function rows() {
   );
 }
 function databaseSize() {
-  const db = path.join(output, "home/Mori/Records/mori.sqlite");
+  const db = path.join(homeRoot, "Mori/Records/mori.sqlite");
   const bytes = (file) => (existsSync(file) ? statSync(file).size : 0);
   return { main: bytes(db), wal: bytes(`${db}-wal`), sharedMemory: bytes(`${db}-shm`) };
 }
@@ -203,11 +350,19 @@ async function state() {
     { awaitPromise: true },
   );
 }
-async function waitDelivered() {
+async function waitDelivered(kind, { allowRecoveryContext = false } = {}) {
   return waitFor(
     async () => {
       const current = await state();
-      return current.transport.pending === 0 && current.transport.lastAcknowledgement?.ok
+      const acknowledgement = current.transport.lastAcknowledgement;
+      const exactKind = !kind || acknowledgement?.kind === kind;
+      const recoveryProvesPriorAcknowledgement =
+        allowRecoveryContext &&
+        current.lastSnapshot?.reason === "recovery" &&
+        acknowledgement?.kind === "context_snapshot";
+      return current.transport.pending === 0 &&
+        acknowledgement?.ok &&
+        (exactKind || recoveryProvesPriorAcknowledgement)
         ? current
         : null;
     },
@@ -249,14 +404,32 @@ async function capture(cdp, session, name) {
   const screenshot = await cdp.send("Page.captureScreenshot", { format: "png" }, session);
   writeFileSync(path.join(output, name), Buffer.from(screenshot.data, "base64"));
 }
-async function navigatePage(sessionId, index) {
+async function navigatePage(sessionId, index, { allowRecoveryContext = false } = {}) {
   const clean = `${siteOrigin}/activity/${index}`;
-  await chrome.cdp.send("Page.navigate", { url: `${clean}?token=synthetic#private` }, sessionId);
+  const first = !result.timeline.first_navigation_issued;
+  if (first) mark("first_navigation_issued");
+  const navigation = await chrome.cdp.send(
+    "Page.navigate",
+    { url: `${clean}?token=synthetic#private` },
+    sessionId,
+  );
+  assert.equal(navigation.errorText, undefined, `navigation ${index} accepted by Chrome`);
   await waitFor(
     async () => (await rows()).some((row) => row.data.url === clean),
     `persisted navigation ${index}`,
   );
-  await waitDelivered();
+  const delivery = await waitDelivered("navigation_committed", { allowRecoveryContext });
+  if (first) {
+    mark("first_navigation_persisted");
+    result.firstObservations.navigationCommitted = {
+      pass: true,
+      acknowledgement: delivery.transport.lastAcknowledgement?.ok === true,
+      durableRow: true,
+      latencyMs:
+        result.timeline.first_navigation_persisted.elapsedMs -
+        result.timeline.first_navigation_issued.elapsedMs,
+    };
+  }
 }
 async function updateHistoryState(sessionId, method, relativeUrl) {
   const before = await rows();
@@ -264,6 +437,8 @@ async function updateHistoryState(sessionId, method, relativeUrl) {
   const expectedUrl = new URL(relativeUrl, siteOrigin);
   expectedUrl.search = "";
   expectedUrl.hash = "";
+  const first = !result.timeline.first_history_state_issued;
+  if (first) mark("first_history_state_issued");
   await evaluate(
     chrome.cdp,
     sessionId,
@@ -279,16 +454,28 @@ async function updateHistoryState(sessionId, method, relativeUrl) {
       ),
     `${method} history-state evidence`,
   );
-  await waitDelivered();
+  const delivery = await waitDelivered("history_state_updated");
   const added = (await rows()).filter((row) => row.sequence > beforeSequence);
   assert.equal(added.length, 1, `${method} emitted one durable observation`);
   assert.equal(added[0].kind, "history_state_updated");
   assert.equal(added[0].data.url, expectedUrl.href);
+  if (first) {
+    mark("first_history_state_persisted");
+    result.firstObservations.historyStateUpdated = {
+      pass: true,
+      acknowledgement: delivery.transport.lastAcknowledgement?.ok === true,
+      durableRow: true,
+      latencyMs:
+        result.timeline.first_history_state_persisted.elapsedMs -
+        result.timeline.first_history_state_issued.elapsedMs,
+    };
+  }
   return added[0];
 }
 
 try {
   if (args.includes("--instrument-webview")) {
+    mark("webview_instrumentation_build_started");
     testPort = await freePort();
     const config = JSON.parse(readFileSync(path.join(root, "src-tauri/tauri.conf.json"), "utf8"));
     const override = path.join(output, "tauri.e2e.json");
@@ -324,6 +511,7 @@ try {
     copyFileSync(moriExe, desktopExe);
     result.webviewInstrumentation =
       "test-only tauri/devtools and window additionalBrowserArgs; no production config or installer change";
+    mark("webview_instrumentation_build_completed");
   }
   log("Starting isolated Mori and Chrome");
   await startDesktop();
@@ -333,16 +521,24 @@ try {
     await history.empty();
     result.scenarios.historyEmpty = true;
   }
+  mark("chrome_spawn_started");
   chrome = await launchChrome({ chromePath: discoverChromePath(), profileDir: profile, env });
+  result.processIds.chrome.push(chrome.pid);
+  const chromePortFile = readFileSync(path.join(profile, "DevToolsActivePort"), "utf8");
+  result.ports.chromeCdp.push(Number(chromePortFile.split(/\r?\n/, 1)[0]));
+  mark("chrome_cdp_ready");
   result.chromeVersion = (await chrome.cdp.send("Browser.getVersion")).product;
   const extensionId = await loadExtension(chrome.cdp, extensionRoot);
   result.extensionId = extensionId;
+  mark("extension_loaded");
   registry.install({
     extensionId,
     manifestPath: path.join(output, "host.json"),
     paths: { moriWorktree: root, nativeHostPath },
   });
+  mark("native_host_registered");
   popup = await openExtensionPopup(chrome.cdp, extensionId);
+  mark("extension_popup_ready");
   assert.equal((await state()).captureEnabled, false);
   await chrome.cdp.send(
     "Emulation.setDeviceMetricsOverride",
@@ -375,8 +571,18 @@ try {
       popup.sessionId,
     );
   await waitFor(async () => (await state()).captureEnabled === true, "keyboard capture opt-in");
+  mark("capture_enabled");
   result.scenarios.keyboardOptIn = true;
-  await waitDelivered();
+  const contextDelivery = await waitDelivered("context_snapshot");
+  mark("first_context_snapshot_acknowledged");
+  result.firstObservations.contextSnapshot = {
+    pass: true,
+    acknowledgement: contextDelivery.transport.lastAcknowledgement?.ok === true,
+    durableRow: null,
+    latencyMs:
+      result.timeline.first_context_snapshot_acknowledged.elapsedMs -
+      result.timeline.capture_enabled.elapsedMs,
+  };
   result.scenarios.moriFirst = true;
   const targets = [];
   for (let i = 0; i < 3; i++) {
@@ -420,12 +626,7 @@ try {
         fragmentEvidence: 0,
         queryOnly: [queryOne.data.url, queryTwo.data.url],
         observationsPerAction: { pushState: 1, replaceState: 1 },
-        fullSequence: [
-          "navigation_committed",
-          push.kind,
-          replace.kind,
-          "navigation_committed",
-        ],
+        fullSequence: ["navigation_committed", push.kind, replace.kind, "navigation_committed"],
       };
       assert.ok(!JSON.stringify(result.spa).match(/secret=|token=|#private|#hidden|q=/));
       result.scenarios.spaHistoryState = true;
@@ -435,19 +636,25 @@ try {
   }
   // Creating about:blank targets need not produce a capturable activation.
   // Switch between two already navigated tabs in the same normal window.
+  const activationBefore = Math.max(0, ...(await rows()).map((row) => row.sequence));
+  mark("first_tab_activation_issued");
   await chrome.cdp.send("Target.activateTarget", { targetId: targets[1].targetId });
   await chrome.cdp.send("Target.activateTarget", { targetId: targets[0].targetId });
   await waitFor(
-    async () => (await rows()).some((row) => row.kind === "tab_activated"),
+    async () =>
+      (await rows()).some((row) => row.sequence > activationBefore && row.kind === "tab_activated"),
     "persisted tab activation",
   );
-  await evaluate(
-    chrome.cdp,
-    popup.sessionId,
-    "chrome.runtime.sendMessage({type:'mori.browser.bootstrap_context'})",
-    { awaitPromise: true },
-  );
-  await waitDelivered();
+  const activationDelivery = await waitDelivered("tab_activated");
+  mark("first_tab_activation_persisted");
+  result.firstObservations.tabActivated = {
+    pass: true,
+    acknowledgement: activationDelivery.transport.lastAcknowledgement?.ok === true,
+    durableRow: true,
+    latencyMs:
+      result.timeline.first_tab_activation_persisted.elapsedMs -
+      result.timeline.first_tab_activation_issued.elapsedMs,
+  };
   await openHealth();
   await waitFor(
     () =>
@@ -459,6 +666,7 @@ try {
     "current context state",
   );
   result.scenarios.contextUpdated = true;
+  result.firstObservations.contextSnapshot.durableRow = true;
   await capture(desktopCdp, desktopSession, "mori-health.png");
   await desktopCdp.send("Emulation.setDeviceMetricsOverride", {
     width: 1180,
@@ -474,6 +682,10 @@ try {
   assert.ok(initialRows.some((row) => row.kind === "navigation_committed"));
   result.scenarios.activationPersisted = true;
   result.scenarios.navigationPersisted = true;
+  if (coreMode) {
+    result.scenarios.core = true;
+    throw new CoreRunComplete();
+  }
 
   log("Crash/restart durability and Chrome-first recovery");
   await stopDesktop();
@@ -492,7 +704,7 @@ try {
   const restored = await rows();
   assert.deepEqual(restored, initialRows);
   result.scenarios.restartDurability = true;
-  await navigatePage(targets[0].sessionId, "recovered");
+  await navigatePage(targets[0].sessionId, "recovered", { allowRecoveryContext: true });
   await waitFor(
     async () => (await state()).lastSnapshot?.reason === "recovery",
     "recovery context snapshot",
@@ -511,13 +723,16 @@ try {
   );
 
   log("MV3 service worker restart");
+  mark("mv3_worker_restart_started");
   await chrome.cdp.send("ServiceWorker.enable", {}, popup.sessionId);
   await chrome.cdp.send("ServiceWorker.stopAllWorkers", {}, popup.sessionId);
   await navigatePage(targets[1].sessionId, "worker-restarted");
+  mark("mv3_worker_restart_observed");
   assert.equal((await state()).captureEnabled, true);
   result.scenarios.workerRestart = true;
 
   log(`Soak: ${count} navigations and tab switches`);
+  mark("soak_started");
   const started = Date.now();
   const beforeSequence = Math.max(...(await rows()).map((r) => r.sequence));
   const storageBefore = databaseSize();
@@ -550,6 +765,7 @@ try {
     lastError: (await state()).transport.lastError,
   };
   result.scenarios.soak = true;
+  mark("soak_completed");
   if (historyMode) {
     log("History pages, concurrent arrival, refresh and minimum layout");
     await desktopCdp.send("Emulation.setDeviceMetricsOverride", {
@@ -656,7 +872,19 @@ try {
   await setCaptureFromPopup(chrome.cdp, popup.sessionId, true);
   await waitDelivered();
   await chrome.close();
+  mark("chrome_profile_release_started");
+  await waitFor(
+    () => (profileProcessIds(profile).length === 0 ? true : null),
+    "Chrome profile process cleanup",
+    { timeoutMs: 10000, intervalMs: 250 },
+  );
+  mark("chrome_profile_released");
+  mark("chrome_restart_started");
   chrome = await launchChrome({ chromePath: discoverChromePath(), profileDir: profile, env });
+  result.processIds.chrome.push(chrome.pid);
+  const restartedChromePortFile = readFileSync(path.join(profile, "DevToolsActivePort"), "utf8");
+  result.ports.chromeCdp.push(Number(restartedChromePortFile.split(/\r?\n/, 1)[0]));
+  mark("chrome_restart_cdp_ready");
   await loadExtension(chrome.cdp, extensionRoot);
   popup = await openExtensionPopup(chrome.cdp, extensionId);
   assert.equal((await state()).captureEnabled, true);
@@ -682,14 +910,139 @@ try {
   await capture(chrome.cdp, popup.sessionId, "popup-host-missing.png");
   result.scenarios.hostMissing = true;
 } catch (error) {
-  result.failures.push(error.stack || String(error));
-  process.exitCode = 1;
+  if (!(error instanceof CoreRunComplete)) {
+    result.failureStage = currentStage;
+    result.failureCategory = classifyFailure(error, currentStage);
+    result.failureCode = result.failureCategory;
+    result.failures.push(error.stack || String(error));
+    const browserState = await state().catch(() => null);
+    const durableRows = await rows().catch(() => []);
+    result.failureDiagnostics = {
+      captureEnabled: browserState?.captureEnabled ?? null,
+      transport: browserState
+        ? {
+            state: browserState.transport?.state,
+            pending: browserState.transport?.pending,
+            lastAcknowledgement: browserState.transport?.lastAcknowledgement
+              ? {
+                  ok: browserState.transport.lastAcknowledgement.ok === true,
+                  kind: browserState.transport.lastAcknowledgement.kind,
+                  code: browserState.transport.lastAcknowledgement.code,
+                }
+              : null,
+            lastErrorCode: browserState.transport?.lastError?.code ?? null,
+          }
+        : null,
+      lastSnapshotReason: browserState?.lastSnapshot?.reason ?? null,
+      recentEventKinds: (browserState?.recentEvents ?? []).map((event) => event.kind),
+      durableRows: {
+        count: durableRows.length,
+        kinds: kindCounts(durableRows),
+        maxSequence: Math.max(0, ...durableRows.map((row) => row.sequence ?? 0)),
+      },
+    };
+    process.exitCode = 1;
+  }
 } finally {
-  await chrome?.close().catch(() => undefined);
-  await stopDesktop();
-  registry.restore(initialRegistry);
+  mark("cleanup_started");
+  const cleanupErrors = [];
+  if (leaveCaptureOff && chrome && popup) {
+    await setCaptureFromPopup(chrome.cdp, popup.sessionId, false).catch((error) => {
+      cleanupErrors.push(`capture off: ${error.message || error}`);
+    });
+  }
+  await chrome?.close().catch((error) => {
+    cleanupErrors.push(`Chrome close: ${error.message || error}`);
+  });
+  await stopDesktop().catch((error) => {
+    cleanupErrors.push(`Mori stop: ${error.message || error}`);
+  });
+  try {
+    registry.restore(initialRegistry);
+  } catch (error) {
+    cleanupErrors.push(`registry restore: ${error.message || error}`);
+  }
   site.closeAllConnections();
   await new Promise((resolve) => site.close(resolve));
+  const currentNativeHostPids = await waitFor(
+    () => {
+      const current = windowsProcessIds("mori-browser-native-host");
+      return current.every((pid) => initialNativeHostPids.includes(pid)) ? current : null;
+    },
+    "native host cleanup",
+    { timeoutMs: 5000 },
+  ).catch(() => windowsProcessIds("mori-browser-native-host"));
+  const profileProcesses = {
+    chrome: await waitFor(
+      () => (profileProcessIds(profile).length === 0 ? true : null),
+      "Chrome profile cleanup",
+      { timeoutMs: 10000, intervalMs: 250 },
+    )
+      .then(() => [])
+      .catch(() => profileProcessIds(profile)),
+    webview: await waitFor(
+      () => (profileProcessIds(webviewProfile).length === 0 ? true : null),
+      "WebView profile cleanup",
+      { timeoutMs: 10000, intervalMs: 250 },
+    )
+      .then(() => [])
+      .catch(() => profileProcessIds(webviewProfile)),
+  };
+  const portsReleased = await Promise.all(
+    [...new Set(result.ports.webview)].map(async (port) => {
+      const releasedAt = await waitFor(
+        async () => ((await portAvailable(port)) ? Date.now() : null),
+        `WebView port ${port} cleanup`,
+        { timeoutMs: 5000 },
+      ).catch(() => null);
+      return {
+        port,
+        available: releasedAt !== null,
+        releaseLatencyMs:
+          releasedAt === null
+            ? null
+            : releasedAt - result.timeline.cleanup_started.elapsedMs - runStarted,
+      };
+    }),
+  );
+  let currentRegistry = null;
+  try {
+    currentRegistry = registry.read();
+  } catch (error) {
+    cleanupErrors.push(`registry read-back: ${error.message || error}`);
+  }
+  result.cleanup = {
+    pass: false,
+    registryRestored:
+      currentRegistry?.exists === initialRegistry.exists &&
+      currentRegistry?.value === initialRegistry.value,
+    noNewNativeHostProcesses: currentNativeHostPids.every((pid) =>
+      initialNativeHostPids.includes(pid),
+    ),
+    profileProcesses,
+    portsReleased,
+    chromeExited: result.processIds.chrome.every((pid) => !processRunning(pid)),
+    moriExited: result.processIds.mori.every((pid) => !processRunning(pid)),
+    errors: cleanupErrors,
+  };
+  result.cleanup.pass =
+    result.cleanup.registryRestored &&
+    result.cleanup.noNewNativeHostProcesses &&
+    result.cleanup.profileProcesses.chrome.length === 0 &&
+    result.cleanup.profileProcesses.webview.length === 0 &&
+    result.cleanup.portsReleased.every((entry) => entry.available) &&
+    result.cleanup.chromeExited &&
+    result.cleanup.moriExited &&
+    cleanupErrors.length === 0;
+  if (!result.cleanup.pass) {
+    process.exitCode = 1;
+    result.failureStage ??= "cleanup";
+    result.failureCategory ??= "cleanup";
+    result.failureCode ??= "cleanup";
+  }
+  mark("cleanup_completed");
+  result.completedAt = new Date().toISOString();
+  result.durationMs = Date.now() - runStarted;
   result.storage = databaseSize();
   writeFileSync(path.join(output, "report.json"), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
