@@ -389,6 +389,11 @@ try {
       flatten: true,
     });
     await chrome.cdp.send("Page.enable", {}, sessionId);
+    await chrome.cdp.send("Target.activateTarget", { targetId });
+    await waitFor(
+      () => evaluate(chrome.cdp, sessionId, "document.readyState === 'complete'"),
+      `test target ${i} ready`,
+    );
     targets.push({ targetId, sessionId });
     await navigatePage(sessionId, i);
     if (i === 0 && spaMode) {
@@ -488,8 +493,10 @@ try {
   assert.deepEqual(restored, initialRows);
   result.scenarios.restartDurability = true;
   await navigatePage(targets[0].sessionId, "recovered");
-  const recovered = await state();
-  assert.equal(recovered.lastSnapshot.reason, "recovery");
+  await waitFor(
+    async () => (await state()).lastSnapshot?.reason === "recovery",
+    "recovery context snapshot",
+  );
   result.scenarios.chromeFirst = true;
   result.scenarios.moriRestart = true;
   await openHealth();
@@ -655,6 +662,12 @@ try {
   assert.equal((await state()).captureEnabled, true);
   const { targetId } = await chrome.cdp.send("Target.createTarget", { url: "about:blank" });
   const { sessionId } = await chrome.cdp.send("Target.attachToTarget", { targetId, flatten: true });
+  await chrome.cdp.send("Page.enable", {}, sessionId);
+  await chrome.cdp.send("Target.activateTarget", { targetId });
+  await waitFor(
+    () => evaluate(chrome.cdp, sessionId, "document.readyState === 'complete'"),
+    "restarted Chrome target ready",
+  );
   await navigatePage(sessionId, "chrome-restarted");
   result.scenarios.chromeRestart = true;
 
