@@ -141,3 +141,10 @@ their separate lifetimes without terminating the user's desktop session.
 
 The full run results and remaining limitations are recorded in the companion
 milestone report after verification.
+
+Repeat-run cold-start measurement is defined in
+`docs/design/browser-repeat-run-reliability.md`. Use
+`node scripts/browser-repeat-soak.mjs --runs 20 --core` for sequential,
+isolated first-observation sampling and keep the full canonical smoke as the
+periodic release proof. The runner never retries a failed Browser observation.
+Production and Extension contracts remain unchanged.
