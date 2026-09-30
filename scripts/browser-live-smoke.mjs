@@ -17,6 +17,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createBrowserHistorySmoke } from "./lib/browser-history-smoke.mjs";
+import {
+  localizeBrowserObservation,
+  summarizeBrowserObservationProbes,
+} from "./lib/browser-observation-localization.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -35,12 +39,31 @@ const count = Number(option("--observations", "60"));
 const historyMode = args.includes("--history");
 const spaMode = args.includes("--spa");
 const coreMode = args.includes("--core");
+const probeMode = option("--probe", null);
+const probeCycles = Number(option("--probe-cycles", probeMode === "steady-state" ? "100" : "20"));
+const probeObservations = Number(option("--probe-observations", "25"));
 const leaveCaptureOff = args.includes("--leave-capture-off");
 const runId = option("--run-id", `browser-live-${process.pid}-${Date.now()}`);
 const matrix = option("--matrix", "canonical");
 assert.ok(
   Number.isInteger(count) && count >= 20 && count <= (historyMode ? 400 : 80),
   "invalid observation count",
+);
+const probeModes = new Set([
+  "steady-state",
+  "mv3-restart",
+  "mori-restart",
+  "chrome-restart",
+  "post-mv3-soak",
+]);
+assert.ok(!probeMode || probeModes.has(probeMode), "invalid reliability probe");
+assert.ok(
+  Number.isInteger(probeCycles) && probeCycles > 0 && probeCycles <= 100,
+  "invalid probe cycle count",
+);
+assert.ok(
+  Number.isInteger(probeObservations) && probeObservations > 0 && probeObservations <= 100,
+  "invalid probe observation count",
 );
 for (const file of [moriExe, nativeHostPath, path.join(extensionRoot, "manifest.json")])
   assert.ok(existsSync(file), `Missing ${file}`);
@@ -68,7 +91,14 @@ const runStarted = Date.now();
 const result = {
   runId,
   matrix,
-  mode: coreMode ? "core" : "full",
+  mode: probeMode ? "probe" : coreMode ? "core" : "full",
+  probe: probeMode
+    ? {
+        name: probeMode,
+        cycles: probeCycles,
+        observationsPerCycle: probeMode === "post-mv3-soak" ? probeObservations : 1,
+      }
+    : null,
   output,
   startedAt: new Date(runStarted).toISOString(),
   scenarios: {},
@@ -110,6 +140,7 @@ let desktop;
 let desktopCdp;
 let desktopSession;
 let popup;
+let extensionId;
 let desktopStarts = 0;
 class CoreRunComplete extends Error {}
 const site = createServer((_req, res) => {
@@ -176,6 +207,27 @@ function profileProcessIds(profilePath) {
     .filter((value) => Number.isInteger(value) && value > 0 && value !== process.pid);
 }
 
+function executableProcessIds(executablePath) {
+  const script = [
+    "$needle = [System.IO.Path]::GetFullPath($env:MORI_EXECUTABLE_NEEDLE)",
+    "Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |",
+    "  Where-Object {",
+    "    $_.ExecutablePath -and",
+    "    [System.IO.Path]::GetFullPath($_.ExecutablePath).Equals($needle, [System.StringComparison]::OrdinalIgnoreCase)",
+    "  } |",
+    "  Select-Object -ExpandProperty ProcessId",
+  ].join("\n");
+  const found = spawnSync("powershell.exe", ["-NoProfile", "-Command", script], {
+    windowsHide: true,
+    encoding: "utf8",
+    env: { ...process.env, MORI_EXECUTABLE_NEEDLE: executablePath },
+  });
+  return String(found.stdout || "")
+    .split(/\r?\n/)
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0 && value !== process.pid);
+}
+
 function processRunning(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
@@ -233,6 +285,15 @@ async function freePort() {
   const port = server.address().port;
   await new Promise((resolve) => server.close(resolve));
   return port;
+}
+
+async function waitForProfileRelease(profilePath, label) {
+  const startedAt = Date.now();
+  await waitFor(() => (profileProcessIds(profilePath).length === 0 ? true : null), label, {
+    timeoutMs: 30000,
+    intervalMs: 250,
+  });
+  return Date.now() - startedAt;
 }
 async function startDesktop(retry = true) {
   const startIndex = desktopStarts++;
@@ -404,6 +465,423 @@ async function capture(cdp, session, name) {
   const screenshot = await cdp.send("Page.captureScreenshot", { format: "png" }, session);
   writeFileSync(path.join(output, name), Buffer.from(screenshot.data, "base64"));
 }
+
+async function pollForValue(callback, timeoutMs, intervalMs = 100) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const value = await callback();
+      if (value) return value;
+    } catch {
+      // A runtime may disappear while a passive diagnostic snapshot is being taken.
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  return null;
+}
+
+async function extensionRuntimeInventory() {
+  const targetInfos = (await chrome.cdp.send("Target.getTargets")).targetInfos.filter((target) =>
+    target.url.startsWith(`chrome-extension://${extensionId}/`),
+  );
+  const workers = targetInfos.filter((target) => target.type === "service_worker");
+  return {
+    targetInfos,
+    workers,
+    report: {
+      targetCount: targetInfos.length,
+      types: kindCounts(targetInfos.map((target) => ({ kind: target.type }))),
+      serviceWorkerPresent: workers.length > 0,
+    },
+  };
+}
+
+async function readExtensionStatePassive() {
+  const inventory = await extensionRuntimeInventory();
+  const worker = inventory.workers[0];
+  if (!worker) {
+    return {
+      runtimeAvailable: false,
+      stateAvailable: false,
+      inventory: inventory.report,
+      state: null,
+    };
+  }
+
+  let workerSession;
+  try {
+    ({ sessionId: workerSession } = await chrome.cdp.send("Target.attachToTarget", {
+      targetId: worker.targetId,
+      flatten: true,
+    }));
+    const state = await evaluate(
+      chrome.cdp,
+      workerSession,
+      `(async () => {
+        const captureKey = "mori.browserTrace.captureEnabled";
+        const recentKey = "mori.browserTrace.recentEvents";
+        const transportKey = "mori.browserTrace.nativeMessaging";
+        const snapshotKey = "mori.browserTrace.lastSnapshot";
+        const [local, session] = await Promise.all([
+          chrome.storage.local.get(captureKey),
+          chrome.storage.session.get([recentKey, transportKey, snapshotKey]),
+        ]);
+        const transport = session[transportKey] || null;
+        const acknowledgement = transport?.lastAcknowledgement || null;
+        const error = transport?.lastError || null;
+        const snapshot = session[snapshotKey] || null;
+        return {
+          captureEnabled: local[captureKey]?.captureEnabled === true,
+          recentEvents: (session[recentKey] || []).map(event => ({
+            kind: event?.kind || null,
+            observedAt: event?.observedAt || null,
+          })),
+          transport: transport ? {
+            state: transport.state || null,
+            pending: Number.isInteger(transport.pending) ? transport.pending : null,
+            updatedAt: transport.updatedAt || null,
+            lastError: error ? { code: error.code || null } : null,
+            lastAcknowledgement: acknowledgement ? {
+              ok: acknowledgement.ok === true,
+              kind: acknowledgement.kind || null,
+              code: acknowledgement.code || null,
+            } : null,
+          } : null,
+          lastSnapshot: snapshot ? {
+            kind: snapshot.kind || null,
+            observedAt: snapshot.observedAt || null,
+            reason: snapshot.reason || null,
+          } : null,
+        };
+      })()`,
+      { awaitPromise: true },
+    );
+    return {
+      runtimeAvailable: true,
+      stateAvailable: true,
+      inventory: inventory.report,
+      state,
+    };
+  } catch {
+    return {
+      runtimeAvailable: true,
+      stateAvailable: false,
+      inventory: inventory.report,
+      state: null,
+      diagnosticError: "worker_state_unavailable",
+    };
+  } finally {
+    if (workerSession) {
+      await chrome.cdp
+        .send("Target.detachFromTarget", { sessionId: workerSession })
+        .catch(() => undefined);
+    }
+  }
+}
+
+async function seedProbeCaptureState() {
+  const { targetId } = await chrome.cdp.send("Target.createTarget", {
+    url: `chrome-extension://${extensionId}/src/popup.html?probe-setup`,
+  });
+  const { sessionId } = await chrome.cdp.send("Target.attachToTarget", {
+    targetId,
+    flatten: true,
+  });
+  await chrome.cdp.send("Runtime.enable", {}, sessionId);
+  try {
+    await waitFor(
+      () => evaluate(chrome.cdp, sessionId, "typeof chrome?.runtime?.sendMessage === 'function'"),
+      "Extension command page runtime",
+      { timeoutMs: 5000 },
+    );
+    const response = await evaluate(
+      chrome.cdp,
+      sessionId,
+      `chrome.runtime.sendMessage({
+        type: "mori.browser.set_capture_enabled",
+        enabled: true,
+      })`,
+      { awaitPromise: true },
+    );
+    assert.equal(response?.ok, true, "probe capture command accepted");
+    assert.equal(response?.state?.captureEnabled, true, "probe capture enabled");
+  } finally {
+    await chrome.cdp.send("Target.closeTarget", { targetId }).catch(() => undefined);
+  }
+  const state = await readExtensionStatePassive();
+  result.probe.setup = {
+    captureState: "enabled_by_existing_command",
+    extension: state.inventory,
+    popupRequired: false,
+  };
+}
+
+async function relaySnapshot() {
+  try {
+    const pending = await evaluate(
+      desktopCdp,
+      desktopSession,
+      `window.__TAURI_INTERNALS__.invoke('claim_browser_observation_relay_requests')
+        .then(requests => requests.map(request => ({
+          requestId: request.requestId,
+          kind: request.observation?.kind || null,
+        })))`,
+      { awaitPromise: true },
+    );
+    return { available: true, pending };
+  } catch {
+    return { available: false, pending: [] };
+  }
+}
+
+function isFresh(timestamp, startedAt) {
+  const value = Date.parse(timestamp || "");
+  return Number.isFinite(value) && value >= startedAt;
+}
+
+function hasFreshNavigationAcknowledgement(extension, startedAt) {
+  const acknowledgement = extension.state?.transport?.lastAcknowledgement;
+  const recoverySnapshot = extension.state?.lastSnapshot;
+  const recoveryProvesPriorAcknowledgement =
+    acknowledgement?.ok === true &&
+    acknowledgement?.kind === "context_snapshot" &&
+    recoverySnapshot?.reason === "recovery" &&
+    isFresh(recoverySnapshot.observedAt, startedAt);
+  return Boolean(
+    isFresh(extension.state?.transport?.updatedAt, startedAt) &&
+    (acknowledgement?.kind === "navigation_committed" ||
+      acknowledgement?.ok === false ||
+      recoveryProvesPriorAcknowledgement),
+  );
+}
+
+async function createProbeTarget() {
+  const { targetId } = await chrome.cdp.send("Target.createTarget", { url: "about:blank" });
+  const { sessionId } = await chrome.cdp.send("Target.attachToTarget", {
+    targetId,
+    flatten: true,
+  });
+  await chrome.cdp.send("Page.enable", {}, sessionId);
+  await chrome.cdp.send("Target.activateTarget", { targetId });
+  await waitFor(
+    () => evaluate(chrome.cdp, sessionId, "document.readyState === 'complete'"),
+    "reliability probe target",
+  );
+  return { targetId, sessionId };
+}
+
+async function forceWorkerRestart(sessionId) {
+  const before = await extensionRuntimeInventory();
+  const previousTargetIds = new Set(before.workers.map((target) => target.targetId));
+  await chrome.cdp.send("ServiceWorker.enable", {}, sessionId);
+  await chrome.cdp.send("ServiceWorker.stopAllWorkers", {}, sessionId);
+  const after = await pollForValue(async () => {
+    const current = await extensionRuntimeInventory();
+    return current.workers.every((target) => !previousTargetIds.has(target.targetId))
+      ? current
+      : null;
+  }, 3000);
+  const finalInventory = after ?? (await extensionRuntimeInventory());
+  return {
+    requested: true,
+    observed: finalInventory.workers.every((target) => !previousTargetIds.has(target.targetId)),
+    before: before.report,
+    after: finalInventory.report,
+  };
+}
+
+async function probeNavigation(sessionId, label) {
+  const clean = `${siteOrigin}/probe/${label}`;
+  const beforeRows = await rows();
+  const beforeSequence = Math.max(0, ...beforeRows.map((row) => row.sequence ?? 0));
+  const startedAt = Date.now();
+  let actionCommandSucceeded = false;
+  let routeReached = false;
+  let actionError = null;
+  try {
+    const navigation = await chrome.cdp.send(
+      "Page.navigate",
+      { url: `${clean}?token=synthetic#private` },
+      sessionId,
+    );
+    actionCommandSucceeded = navigation.errorText === undefined;
+    if (!actionCommandSucceeded) actionError = "navigation_rejected";
+    routeReached = Boolean(
+      await pollForValue(
+        () =>
+          evaluate(
+            chrome.cdp,
+            sessionId,
+            `location.pathname === ${JSON.stringify(`/probe/${label}`)} && document.readyState === 'complete'`,
+          ),
+        5000,
+      ),
+    );
+  } catch {
+    actionError = "navigation_command_failed";
+  }
+
+  const findDurable = async () =>
+    (await rows()).find(
+      (row) =>
+        row.sequence > beforeSequence &&
+        row.kind === "navigation_committed" &&
+        row.data.url === clean,
+    );
+  const durable = await pollForValue(findDurable, 15000);
+
+  // Target inventory is the first post-action diagnostic so absence is not hidden by a wake-up.
+  let extension = await readExtensionStatePassive();
+  const initialExtensionInventory = extension.inventory;
+  if (durable && !hasFreshNavigationAcknowledgement(extension, startedAt)) {
+    extension =
+      (await pollForValue(async () => {
+        const refreshed = await readExtensionStatePassive();
+        return hasFreshNavigationAcknowledgement(refreshed, startedAt) ? refreshed : null;
+      }, 2000)) ?? extension;
+  }
+  const relay = await relaySnapshot();
+  let late = null;
+  let lateAfterMs = null;
+  if (!durable) {
+    late = await pollForValue(findDurable, 5000);
+    if (late) lateAfterMs = Date.now() - startedAt;
+    if (!late) {
+      late = await pollForValue(findDurable, 10000);
+      if (late) lateAfterMs = Date.now() - startedAt;
+    }
+  }
+
+  const recentEventFound = Boolean(
+    extension.state?.recentEvents?.some(
+      (event) => event.kind === "navigation_committed" && isFresh(event.observedAt, startedAt),
+    ),
+  );
+  const acknowledgement = extension.state?.transport?.lastAcknowledgement;
+  const acknowledgementFresh = hasFreshNavigationAcknowledgement(extension, startedAt);
+  const relayPending = relay.pending.some((request) => request.kind === "navigation_committed");
+  const localization = localizeBrowserObservation({
+    actionCommandSucceeded,
+    routeReached,
+    extensionRuntimeAvailable: extension.runtimeAvailable,
+    extensionStateAvailable: extension.stateAvailable,
+    recentEventFound,
+    acknowledgementFresh,
+    acknowledgementOk: acknowledgement?.ok === true,
+    acknowledgementCode: acknowledgement?.code ?? extension.state?.transport?.lastError?.code,
+    relayPending,
+    durableWithinTimeout: Boolean(durable),
+    durableLate: Boolean(late),
+  });
+
+  return {
+    label,
+    startedAt: new Date(startedAt).toISOString(),
+    durationMs: Date.now() - startedAt,
+    action: { commandSucceeded: actionCommandSucceeded, routeReached, error: actionError },
+    extension: {
+      initialInventory: initialExtensionInventory,
+      inventory: extension.inventory,
+      stateAvailable: extension.stateAvailable,
+      diagnosticError: extension.diagnosticError ?? null,
+      captureEnabled: extension.state?.captureEnabled ?? null,
+      recentEventFound,
+      recentEventKinds: extension.state?.recentEvents?.map((event) => event.kind) ?? [],
+      transport: extension.state?.transport ?? null,
+      lastSnapshot: extension.state?.lastSnapshot ?? null,
+    },
+    relay,
+    nativeHostProcessIds: windowsProcessIds("mori-browser-native-host"),
+    evidence: {
+      beforeSequence,
+      withinTimeout: Boolean(durable),
+      lateAfterMs,
+      sequence: durable?.sequence ?? late?.sequence ?? null,
+    },
+    localization,
+  };
+}
+
+async function runReliabilityProbe() {
+  if (popup) {
+    await chrome.cdp.send("Target.closeTarget", { targetId: popup.targetId });
+    popup = null;
+  }
+  const records = [];
+  result.probe.records = records;
+  let target = await createProbeTarget();
+
+  const observe = async (label, lifecycle = null) => {
+    const record = await probeNavigation(target.sessionId, label);
+    if (lifecycle) record.lifecycle = lifecycle;
+    records.push(record);
+    result.probe.summary = summarizeBrowserObservationProbes(records);
+    if (records.length % 10 === 0 || !record.localization.evidenceDelivered) {
+      log(`Probe progress ${records.length}: ${record.localization.category}`);
+    }
+    if (record.localization.blocking) {
+      throw new Error(`Reliability probe stopped at ${label}: ${record.localization.category}`);
+    }
+  };
+
+  if (probeMode === "steady-state") {
+    for (let cycle = 0; cycle < probeCycles; cycle++) await observe(`steady-${cycle}`);
+  } else if (probeMode === "mv3-restart") {
+    for (let cycle = 0; cycle < probeCycles; cycle++) {
+      await observe(`mv3-${cycle}`, await forceWorkerRestart(target.sessionId));
+    }
+  } else if (probeMode === "mori-restart") {
+    for (let cycle = 0; cycle < probeCycles; cycle++) {
+      await stopDesktop();
+      await startDesktop(false);
+      await observe(`mori-${cycle}`, { moriRestarted: true });
+    }
+  } else if (probeMode === "chrome-restart") {
+    for (let cycle = 0; cycle < probeCycles; cycle++) {
+      await chrome.close();
+      const profileReleaseMs = await waitForProfileRelease(
+        profile,
+        "Chrome profile process cleanup",
+      );
+      chrome = await launchChrome({ chromePath: discoverChromePath(), profileDir: profile, env });
+      result.processIds.chrome.push(chrome.pid);
+      extensionId = await loadExtension(chrome.cdp, extensionRoot);
+      result.extensionId = extensionId;
+      registry.install({
+        extensionId,
+        manifestPath: path.join(output, "host.json"),
+        paths: { moriWorktree: root, nativeHostPath },
+      });
+      const startup = await readExtensionStatePassive();
+      target = await createProbeTarget();
+      await observe(`chrome-${cycle}`, {
+        chromeRestarted: true,
+        profileReleaseMs,
+        startupExtension: {
+          inventory: startup.inventory,
+          stateAvailable: startup.stateAvailable,
+          captureEnabled: startup.state?.captureEnabled ?? null,
+          contextSnapshotObserved: startup.state?.lastSnapshot?.reason === "startup",
+        },
+      });
+    }
+  } else if (probeMode === "post-mv3-soak") {
+    for (let cycle = 0; cycle < probeCycles; cycle++) {
+      const restart = await forceWorkerRestart(target.sessionId);
+      for (let observation = 0; observation < probeObservations; observation++) {
+        await observe(`post-mv3-${cycle}-${observation}`, observation === 0 ? restart : null);
+      }
+    }
+  }
+
+  result.probe.records = records;
+  result.probe.summary = summarizeBrowserObservationProbes(records);
+  result.scenarios.reliabilityProbe =
+    result.probe.summary.delivered === records.length && result.probe.summary.blocking === 0;
+  assert.equal(result.probe.summary.delivered, records.length, "every probe observation persisted");
+  assert.equal(result.probe.summary.blocking, 0, "no acknowledgement contract violation");
+}
+
 async function navigatePage(sessionId, index, { allowRecoveryContext = false } = {}) {
   const clean = `${siteOrigin}/activity/${index}`;
   const first = !result.timeline.first_navigation_issued;
@@ -528,7 +1006,7 @@ try {
   result.ports.chromeCdp.push(Number(chromePortFile.split(/\r?\n/, 1)[0]));
   mark("chrome_cdp_ready");
   result.chromeVersion = (await chrome.cdp.send("Browser.getVersion")).product;
-  const extensionId = await loadExtension(chrome.cdp, extensionRoot);
+  extensionId = await loadExtension(chrome.cdp, extensionRoot);
   result.extensionId = extensionId;
   mark("extension_loaded");
   registry.install({
@@ -537,6 +1015,14 @@ try {
     paths: { moriWorktree: root, nativeHostPath },
   });
   mark("native_host_registered");
+  if (probeMode) {
+    await seedProbeCaptureState();
+    mark("capture_enabled");
+    mark("reliability_probe_started");
+    await runReliabilityProbe();
+    mark("reliability_probe_completed");
+    throw new CoreRunComplete();
+  }
   popup = await openExtensionPopup(chrome.cdp, extensionId);
   mark("extension_popup_ready");
   assert.equal((await state()).captureEnabled, false);
@@ -873,11 +1359,7 @@ try {
   await waitDelivered();
   await chrome.close();
   mark("chrome_profile_release_started");
-  await waitFor(
-    () => (profileProcessIds(profile).length === 0 ? true : null),
-    "Chrome profile process cleanup",
-    { timeoutMs: 10000, intervalMs: 250 },
-  );
+  await waitForProfileRelease(profile, "Chrome profile process cleanup");
   mark("chrome_profile_released");
   mark("chrome_restart_started");
   chrome = await launchChrome({ chromePath: discoverChromePath(), profileDir: profile, env });
@@ -976,18 +1458,19 @@ try {
     chrome: await waitFor(
       () => (profileProcessIds(profile).length === 0 ? true : null),
       "Chrome profile cleanup",
-      { timeoutMs: 10000, intervalMs: 250 },
+      { timeoutMs: 30000, intervalMs: 250 },
     )
       .then(() => [])
       .catch(() => profileProcessIds(profile)),
     webview: await waitFor(
       () => (profileProcessIds(webviewProfile).length === 0 ? true : null),
       "WebView profile cleanup",
-      { timeoutMs: 10000, intervalMs: 250 },
+      { timeoutMs: 30000, intervalMs: 250 },
     )
       .then(() => [])
       .catch(() => profileProcessIds(webviewProfile)),
   };
+  const moriProcesses = executableProcessIds(desktopExe);
   const portsReleased = await Promise.all(
     [...new Set(result.ports.webview)].map(async (port) => {
       const releasedAt = await waitFor(
@@ -1020,9 +1503,10 @@ try {
       initialNativeHostPids.includes(pid),
     ),
     profileProcesses,
+    moriProcesses,
     portsReleased,
-    chromeExited: result.processIds.chrome.every((pid) => !processRunning(pid)),
-    moriExited: result.processIds.mori.every((pid) => !processRunning(pid)),
+    chromeExited: profileProcesses.chrome.length === 0,
+    moriExited: moriProcesses.length === 0,
     errors: cleanupErrors,
   };
   result.cleanup.pass =
