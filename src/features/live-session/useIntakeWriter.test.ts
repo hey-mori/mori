@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  createBrowserIntakeStore,
+  createBrowserIntakeStore as createStoreWithClock,
   IntakeBrowserStore,
   type IntakeStore,
 } from "../../lib/live-intake";
@@ -18,6 +18,13 @@ import { persistObservedRows } from "./useIntakeWriter";
  */
 
 const NOW = Date.parse("2026-08-06T12:00:00.000Z");
+
+/** Keep the browser store's retention clock aligned with fixture timestamps. */
+function browserStore(
+  inner = new IntakeBrowserStore(new MemoryKeyValueStorage()),
+): IntakeStore {
+  return createStoreWithClock(inner, () => NOW);
+}
 
 /**
  * A file the agent edited. `messageId` matters: touches are attributed to the
@@ -100,7 +107,7 @@ describe("persistObservedRows · retention", () => {
     // The follower trims its own message history, so an old request drops out of
     // the feed. Replacing a session's rows wholesale used to discard what Mori
     // had already observed; upserting keeps it.
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
 
     await run(store, [session("/s/a.jsonl", [ask("a1", "old ask"), midTurn("a2", "x")])], written);
@@ -115,7 +122,7 @@ describe("persistObservedRows · retention", () => {
   });
 
   it("overwrites a row in place when the same request is re-observed", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
 
     await run(store, [session("/s/a.jsonl", [ask("a1", "ask"), midTurn("a2", "one step")])], written);
@@ -133,7 +140,7 @@ describe("persistObservedRows · retention", () => {
 
 describe("persistObservedRows · bounds", () => {
   it("reports nothing dropped for an ordinary session", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const { result } = await run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
 
     expect(result.evicted).toBe(0);
@@ -146,7 +153,7 @@ describe("persistObservedRows · bounds", () => {
     // stand for rows an older build already wrote to disk. Going through the
     // bounded seam would drop them before the case under test began.
     const inner = new IntakeBrowserStore(new MemoryKeyValueStorage());
-    const store = createBrowserIntakeStore(inner);
+    const store = browserStore(inner);
     const written = new Map<string, string>();
     const ancient = new Date(NOW - 90 * 24 * 60 * 60 * 1000).toISOString();
     inner.saveSessionRows("/s/a.jsonl", [
@@ -178,7 +185,7 @@ describe("persistObservedRows · bounds", () => {
 
   it("still keeps a recent row the follower has forgotten", async () => {
     // The bound must not undo what merging is for.
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
 
     await run(store, [session("/s/a.jsonl", [ask("a1", "old ask"), midTurn("a2", "x")])], written);
@@ -192,7 +199,7 @@ describe("persistObservedRows · bounds", () => {
 
 describe("persistObservedRows · conflicts", () => {
   it("raises a conflict when two sessions change the same file", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
 
     // The touch rides on the agent's step, not on the human request that opened
@@ -228,7 +235,7 @@ describe("persistObservedRows · conflicts", () => {
   });
 
   it("raises no conflict when only one session is involved", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
     const touches = [fileTouch("src/app.ts", "a2"), fileTouch("src/app.ts", "a4")];
 
@@ -255,14 +262,14 @@ describe("persistObservedRows · conflicts", () => {
 
 describe("persistObservedRows · signals", () => {
   it("raises nothing the first time it sees a session", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const { result } = await run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
 
     expect(result.notifications).toEqual([]);
   });
 
   it("raises a completion from the change between two observations", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
     const working = [
       session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "still going")]),
@@ -280,7 +287,7 @@ describe("persistObservedRows · signals", () => {
   });
 
   it("does not raise the same completion twice", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const written = new Map<string, string>();
     await run(store, [session("/s/a.jsonl", [ask("a1", "ask a"), midTurn("a2", "going")])], written);
     const done = [session("/s/a.jsonl", [ask("a1", "ask a"), endedTurn("a2", "done")])];
@@ -292,7 +299,7 @@ describe("persistObservedRows · signals", () => {
 
 describe("persistObservedRows", () => {
   it("writes each observed session once", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const { result } = await run(store, [
       session("/s/a.jsonl", [ask("a1", "ask a")]),
       session("/s/b.jsonl", [ask("b1", "ask b")]),
@@ -304,7 +311,7 @@ describe("persistObservedRows", () => {
   });
 
   it("skips a session whose rows did not change", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const sessions = [session("/s/a.jsonl", [ask("a1", "ask a")])];
     const { written } = await run(store, sessions);
 
@@ -313,7 +320,7 @@ describe("persistObservedRows", () => {
   });
 
   it("rewrites a session once its work advances", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     const { written } = await run(store, [session("/s/a.jsonl", [ask("a1", "ask a")])]);
 
     const advanced = [session("/s/a.jsonl", [ask("a1", "ask a"), ask("a2", "ask again")])];
@@ -332,7 +339,7 @@ describe("persistObservedRows", () => {
       },
     };
 
-    const { result } = await run(createBrowserIntakeStore(new IntakeBrowserStore(exploding)), [
+    const { result } = await run(browserStore(new IntakeBrowserStore(exploding)), [
       session("/s/a.jsonl", [ask("a1", "ask a")]),
     ]);
 
@@ -341,7 +348,7 @@ describe("persistObservedRows", () => {
   });
 
   it("returns a derivation failure too, not only a storage one", async () => {
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
+    const store = browserStore(new IntakeBrowserStore(new MemoryKeyValueStorage()));
     // A malformed session is exactly as fatal to the view as a failed save, so
     // the guard has to cover building rows and not just writing them.
     const broken = { meta: undefined, follow: undefined } as unknown as FollowedSession;
@@ -362,7 +369,7 @@ describe("persistObservedRows", () => {
         if (fail) throw new Error("transient");
       },
     };
-    const store = createBrowserIntakeStore(new IntakeBrowserStore(flaky));
+    const store = browserStore(new IntakeBrowserStore(flaky));
     const sessions = [session("/s/a.jsonl", [ask("a1", "ask a")])];
     const written = new Map<string, string>();
 
