@@ -64,7 +64,9 @@ Highlights (the verified, maintained inventory is
 - Opt-in background inbox watcher (off by default, desktop-only,
   review gate unchanged)
 - Tauri bundling produces `Mori.app` / `.dmg` (unsigned until the
-  signing workstream lands); CI validates web + Rust on every push
+  signing workstream lands); the repository verification gate is
+  `scripts/check.sh --full`. Remote CI is manual-only; see
+  [docs/git-workflow.md](docs/git-workflow.md#9-verification).
 
 ## Tech Stack
 
@@ -104,11 +106,13 @@ no external accounts.
 ## Validate
 
 ```bash
-npm run check:full     # typecheck + full test suite, run before every commit
-npm run check:release  # adds `npm run build`, run before push / milestone handoff
+scripts/check.sh          # tracked verification gate for the changed scope
+scripts/check.sh --full   # full gate before push / milestone handoff
 ```
 
-Faster paths during iteration:
+The script runs the same underlying checks locally and in manually dispatched
+CI. It also includes style, unused-file and Rust checks when their scope calls
+for them. Faster npm paths during iteration:
 
 ```bash
 npm run check:quick    # typecheck + changed tests only
@@ -116,10 +120,9 @@ npm run test:changed   # git-aware test run
 npm run test:watch     # interactive watch mode
 ```
 
-If `src-tauri/` changes, also run `cargo check` and `cargo test` in
-that directory. See
-[docs/development-validation.md](docs/development-validation.md) for
-the full workflow.
+See [docs/git-workflow.md](docs/git-workflow.md#9-verification) for the
+verification contract and [docs/development-validation.md](docs/development-validation.md)
+for iteration commands.
 
 ## Current Limitations
 
@@ -146,9 +149,10 @@ Start here:
 
 - [Project Goal](docs/mori-project-goal.md) · canonical direction and
   the verified implemented-capability inventory
-- [Production Program](docs/production-program.md) · the governing
-  roadmap: readiness gates G1–G4, product-shell workstreams, open
-  decisions
+- [Context Workspace Architecture](docs/design/mori-context-workspace-architecture.md)
+  · the current decision authority and K1–K4 execution sequence
+- [Production Program](docs/production-program.md) · earlier readiness
+  program, marked for re-baselining before new work is sequenced from it
 - [Production Readiness Audit](docs/production-readiness-audit.md) ·
   dimension-by-dimension audit (2026-07-12)
 - [Autonomous Loop](docs/mori-autonomous-loop.md) · how the
@@ -167,10 +171,8 @@ Reference docs:
 
 ## Roadmap
 
-The governing roadmap is
-[docs/production-program.md](docs/production-program.md): four
-readiness gates (Installable → Trustworthy with real data →
-Competitive at first glance → The moat is the headline) plus the
-product-shell workstreams (web presence, distribution, licensing,
-release management). Open product decisions (source posture, naming,
-language strategy, launch shape) are tracked there as D1–D6.
+For current work, follow the authority order and K1–K4 sequence in
+[docs/design/mori-context-workspace-architecture.md](docs/design/mori-context-workspace-architecture.md).
+The earlier [production program](docs/production-program.md) records its
+readiness gates and open decisions, but is marked for re-baselining; do not
+use it alone to choose the next work item.

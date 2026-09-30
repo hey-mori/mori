@@ -1,7 +1,9 @@
 # Development Validation
 
-This file documents how to validate changes to Mori efficiently. The
-goal is **fast feedback during iteration, full safety before commit**.
+This file documents fast feedback during iteration. The repository's
+verification contract is [`scripts/check.sh`](../scripts/check.sh), described
+in [git-workflow.md](git-workflow.md#9-verification). The npm commands below
+remain useful for iteration, but do not replace that gate.
 Skipping validation is never acceptable; running validation
 indiscriminately wastes time.
 
@@ -29,8 +31,8 @@ and reuses it on subsequent runs.
 | `npm run test:watch`          | `vitest` (interactive watch)                     | Long iteration sessions |
 | `npm run test:changed`        | `vitest run --changed` (git-aware)               | Quick feedback after small edits |
 | `npm run check:quick`         | typecheck + changed-tests                        | During iteration |
-| `npm run check:full`          | typecheck + full test suite                      | **Before every commit** |
-| `npm run check:release`       | typecheck + tests + production build             | Before push / milestone handoff |
+| `npm run check:full`          | typecheck + full test suite                      | Iteration or diagnosis |
+| `npm run check:release`       | typecheck + tests + production build             | Iteration or diagnosis |
 | `npm test`                    | Original alias, equivalent to `test:unit`        | Unchanged for compatibility |
 | `npm run typecheck`           | Original alias, equivalent to `check:types`      | Unchanged for compatibility |
 | `npm run build`               | `tsc && vite build` (production bundle)          | Release preparation |
@@ -60,26 +62,27 @@ terminal · it re-runs only affected tests on save.
 ### Before commit (always)
 
 ```
-npm run check:full
+scripts/check.sh
 ```
 
-This runs `check:types` + the full vitest suite. **Do not commit without
-this passing.** Side effects from cross-file changes routinely surface
-here, even when changed-tests passed.
+The script selects the required checks for the changed scope. **Do not commit
+without this passing.** It covers more than `check:full`, including style and
+the relevant Rust checks.
 
 ### Before push / milestone handoff
 
 ```
-npm run check:release
+scripts/check.sh --full
 ```
 
-This adds `npm run build` on top of `check:full`. Skip-able during
-iteration, mandatory before letting a milestone reach `origin`.
+This widens the gate to the production build, unused-file inventory, and
+relevant Rust pass. It is mandatory before letting a milestone reach `origin`.
 
 ### When desktop / Rust code changed
 
 If you touched `src-tauri/` (Rust sources, Cargo.toml, command surface,
-SQLite schema), also run:
+SQLite schema), the canonical script includes Rust checks. For a focused
+diagnostic run, use:
 
 ```
 cd src-tauri
@@ -134,12 +137,11 @@ When an agent (Claude Code or any contributor) iterates on a milestone:
   `npm run check:quick` or a targeted `npx vitest run <file>` instead.
 - **Do not** run `npm run build` repeatedly during iteration. Run it
   once at the end (or via `check:release`).
-- **Do** run `npm run check:full` once after the milestone is
-  feature-complete, before committing.
-- **Do** run `npm run check:release` once before pushing or handing the
+- **Do** run `scripts/check.sh` before committing.
+- **Do** run `scripts/check.sh --full` before pushing or handing the
   milestone off.
-- **Do** run `cargo check` + `cargo test` whenever desktop code
-  changed.
+- **Do** run `cargo check` + `cargo test` as focused diagnostics when desktop
+  code changes; the canonical script also runs them when required.
 - **Always** report exactly which checks were run, with their results.
   Never claim "tests passed" if only typecheck or a single file ran.
 
