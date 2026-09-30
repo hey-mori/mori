@@ -51,7 +51,8 @@ large and should be split.
    changed.
 5. **Pull request** using the template. Link the issue with `Closes #N` so the
    issue closes on merge and the trail is traceable both directions.
-6. **CI must be green** before merge.
+6. **The local gate must be green** before merge. If CI was dispatched for this
+   change, its result must also be checked (§9).
 7. **Merge, then delete the branch.**
 
 ## 4. Merge policy: merge commit, not squash
@@ -94,7 +95,8 @@ PRs are small enough to read in one sitting. If a PR touches more than a couple
 of areas, it is usually two PRs.
 
 Self-merge is normal here, and is not a substitute for review: the review step
-is the author re-reading the diff against the issue plus a green CI run.
+is the author re-reading the diff against the issue plus a recorded local gate
+result (and a dispatched CI result when one was requested).
 
 ## 6. The direct-to-`main` exception (narrow)
 
@@ -192,26 +194,27 @@ The script widens its own scope automatically: a change to a lockfile, a build
 config, `scripts/`, or a workflow forces the full pass, because those files can
 break an area the diff never mentions.
 
-**The remote CI is manual-only, and that is a platform constraint rather than a
-preference.** Runs get rejected before they start, jobs failing in about two seconds
-with zero steps executed, when this account's Actions allowance is spent. It
-happened from 2026-07-24, cleared, and returned on 2026-08-07 after a day of heavy
-use. Automatic triggers under that condition put a red X on every commit, which
-hides real failures inside noise.
+**The remote CI is manual-only.** Hosted jobs were rejected before starting
+when this account's Actions allowance was spent, producing a red failure with
+zero steps. That happened from 2026-07-24, cleared, and returned on 2026-08-07.
+The Linux verification jobs now use a dedicated self-hosted runner; the macOS
+Rust job still uses a metered hosted runner. Automatic triggers remain disabled
+in the workflow, so no run is implied by a push or a pull request.
 
 So the gate is `scripts/check.sh`, run locally and recorded in the pull request
-under "How it was verified". A hand-started run (`workflow_dispatch`) works
-whenever the allowance does, and is worth asking for when a change touches
+under "How it was verified". A hand-started run (`workflow_dispatch`) adds a
+clean-checkout check when its jobs actually execute; inspect each job's steps
+and result, especially the hosted macOS job. It is worth asking for when a change touches
 dependencies, the toolchain, or the order stages run in. Those are the things a
 local run structurally cannot see, because it uses a working tree that already
 holds whatever earlier work left in it.
 
-Section 3 asks for a green CI before merge. Read that as: green where CI is
-available, and an honest local record where it is not.
+Section 3 requires a green local gate before merge. A dispatched CI run adds a
+clean-checkout signal; record its result separately rather than inferring it
+from the local run.
 
-The `rust` job stays behind `workflow_dispatch`. macOS bills at a 10x multiplier
-and the Rust side is not touched by most changes, so it is asked for rather than
-paid for on every push.
+The macOS Rust job stays behind `workflow_dispatch`. It is asked for when
+needed rather than run on every push.
 
 Stating a rule the tooling cannot enforce would make this document decorative.
 This section says what is actually true.

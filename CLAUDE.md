@@ -27,13 +27,14 @@ Read these before changing code or committing.
 
 ## Branches, PRs, issues
 
-Non-trivial work goes issue → branch → PR → green CI → merge, per
+Non-trivial work goes issue → branch → PR → local verification → merge, per
 [`docs/git-workflow.md`](docs/git-workflow.md). Branches are
 `<type>/<area>-<slug>` and short-lived; merges keep the commits
 (`--no-ff`, never squash) because each commit is already a well-formed
 record. That doc also states the deliberate direct-to-`main` exception
 (the autonomous loop, and tiny `docs:`/`chore:` changes), so `main` is
-protected by convention and CI rather than a hard rule.
+protected by convention and the documented verification gate rather than a
+hard rule. Remote CI is manual-only at present.
 
 ## Autonomy grades
 
@@ -92,13 +93,14 @@ Before running `git commit`, re-check the message against the spec.
 
 ## Validation before committing code changes
 
-- `npm run check:full`
-- `npm run build`
+- `scripts/check.sh` for the changed scope; `scripts/check.sh --full` before
+  pushing or handing off a milestone. This is the same gate CI calls.
 - `git diff --check`
 - `git status --short`
 
-If `src-tauri/` changed, also run `cargo check` and `cargo test` in that
-directory.
+The script includes the Rust pass when `src-tauri/` changed. Record which
+checks actually ran; a manual-only remote workflow is not a substitute for
+the local result.
 
 ## Writing style · non-negotiable
 
