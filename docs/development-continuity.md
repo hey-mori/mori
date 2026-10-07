@@ -284,7 +284,7 @@ regression; the rest of the suite should be green.
 Commit hygiene:
 - Follow [`commit-format.md`](commit-format.md) exactly: `<type>: <imperative
   lower-case summary>`, blank line, then a bullet-only body. Types: `feat`,
-  `fix`, `refactor`, `test`, `docs`, `chore`. No scope.
+  `fix`, `perf`, `refactor`, `test`, `docs`, `chore`. No scope.
 - Commit per validated unit of work. Do not batch unrelated changes.
 - No emoji, no AI footer, no `Co-Authored-By`, no "Generated with" lines.
 - **Never use the em dash `—`** anywhere (UI, code, docs, commits). Use `,` or
