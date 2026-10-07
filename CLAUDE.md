@@ -86,8 +86,9 @@ Every commit MUST follow [`docs/commit-format.md`](docs/commit-format.md).
 That file is the authoritative spec. The short form:
 
 - Subject: `<type>: <imperative lower-case summary>`, no trailing period,
-  under ~70 chars. Type is one of `feat`, `fix`, `refactor`, `test`,
-  `docs`, `chore`.
+  under ~70 chars. Type is one of `feat`, `fix`, `perf`, `refactor`,
+  `test`, `docs`, `chore`. A commit made by `git revert` keeps git's own
+  shape (see `docs/commit-format.md`).
 - One blank line after the subject.
 - Body is a **bullet list only**, each line starting with `- `. No prose
   paragraphs. No blank lines between bullets. 3–7 bullets is typical.
@@ -95,6 +96,10 @@ That file is the authoritative spec. The short form:
   "Generated with" lines, validation logs, or filler.
 
 Before running `git commit`, re-check the message against the spec.
+`scripts/validate-commit-message.sh` is the executable form of it. Run
+`scripts/setup-git-hooks.sh` once per clone so the `commit-msg` hook rejects a
+bad message before the commit exists; `scripts/check.sh` checks the branch's
+commits either way.
 
 ## Validation before committing code changes
 
