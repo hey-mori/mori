@@ -90,6 +90,10 @@ That file is the authoritative spec. The short form:
   "Generated with" lines, validation logs, or filler.
 
 Before running `git commit`, re-check the message against the spec.
+`scripts/validate-commit-message.sh` is the executable form of it. Run
+`scripts/setup-git-hooks.sh` once per clone so the `commit-msg` hook rejects a
+bad message before the commit exists; `scripts/check.sh` checks the branch's
+commits either way.
 
 ## Validation before committing code changes
 

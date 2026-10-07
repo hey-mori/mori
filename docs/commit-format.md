@@ -4,6 +4,12 @@ Every commit in this repository follows one fixed format. It is not a
 preference · treat it as a hard rule, the same way the validation
 contract is a hard rule.
 
+The rule is enforced, not only stated: `scripts/validate-commit-message.sh`
+implements this document, the `commit-msg` hook (installed by
+`scripts/setup-git-hooks.sh`) runs it before a commit exists, and
+`scripts/check.sh` runs it over every commit on the branch. If this document
+and the validator disagree, fix both in the same change.
+
 ## Shape
 
 ```

@@ -190,6 +190,17 @@ scripts/check.sh --full   the above plus build, unused inventory, cargo
 CI must never re-list these commands in YAML. If it did, the local rule and the
 CI rule would drift, and the PR checklist would start meaning two things.
 
+The gate also runs the commit guards: every commit on the branch must pass
+`scripts/validate-commit-message.sh`, and every script and hook must be tracked
+as executable (`100755`), because a Windows checkout does not preserve the bit
+and git silently ignores a hook without it.
+
+Local hooks live in `.githooks/` and are installed once per clone with
+`scripts/setup-git-hooks.sh`: `commit-msg` rejects a malformed message before
+the commit exists, and `pre-push` refuses a direct push to `main` (§6). Hooks
+are a convenience that `--no-verify` or an unconfigured clone skips; the gate is
+the enforcement.
+
 The script widens its own scope automatically: a change to a lockfile, a build
 config, `scripts/`, or a workflow forces the full pass, because those files can
 break an area the diff never mentions.
