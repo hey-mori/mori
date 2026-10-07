@@ -960,7 +960,7 @@ guardrails, not preferences.
 - **Run targeted tests during iteration.** `npm run test:changed`
   or `npx vitest run <path>` for fast feedback.
 - **Run the canonical gate before commit.** `scripts/check.sh`
-  (typecheck, tests, stylelint, prose guard), and
+  (typecheck, tests, stylelint, prose guard, commit guards), and
   `scripts/check.sh --full` before pushing or closing a milestone (adds
   the build, and the Rust pass when `src-tauri/` changed). See
   [git-workflow.md](git-workflow.md) §9.

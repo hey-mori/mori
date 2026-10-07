@@ -51,8 +51,8 @@ large and should be split.
 3. **Commit** per [`commit-format.md`](commit-format.md). Small, meaningful
    commits: the merge preserves them (see §4), so they are the durable record.
 4. **Validate locally** before pushing: `scripts/check.sh --full` (§9). It
-   runs typecheck, tests, stylelint, the prose guard, the build, and the Rust
-   pass when `src-tauri/` changed. `npm run check:full` is narrower (typecheck
+   runs typecheck, tests, stylelint, the prose guard, the commit guards, the
+   build, and the Rust pass when `src-tauri/` changed. `npm run check:full` is narrower (typecheck
    and tests only) and is not the gate.
 5. **Pull request** using the template. Link the issue with `Closes #N` so the
    issue closes on merge and the trail is traceable both directions.
@@ -105,7 +105,10 @@ result (and a dispatched CI result when one was requested).
 
 ## 6. The direct-to-`main` exception (narrow)
 
-Direct commits to `main` are allowed for exactly two cases:
+Direct commits to `main` are allowed for exactly two cases, and both are the
+owner's call. The `pre-push` hook (§9) refuses every push to `main`, so taking
+one of them means bypassing it knowingly with `git push --no-verify`; an agent
+never does that on its own initiative.
 
 - A non-executing documentation fix: a typo, a broken link, a stale path.
 - Restoring an already-broken `main`, where opening a PR would leave the branch
