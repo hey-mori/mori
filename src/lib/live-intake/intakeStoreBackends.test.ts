@@ -61,7 +61,7 @@ function fakeCommands() {
 describe("intake backends", () => {
   it("merges rather than replaces on both backends", async () => {
     for (const store of [
-      createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage())),
+      createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()), () => NOW),
       createSqliteIntakeStore(fakeCommands()),
     ]) {
       await store.saveSessionRows("/s/a.jsonl", [makeRow({ id: "old", title: "이전" })]);
@@ -115,7 +115,7 @@ describe("intake backends", () => {
 
   it("lists distinct project paths on both backends", async () => {
     for (const store of [
-      createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage())),
+      createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()), () => NOW),
       createSqliteIntakeStore(fakeCommands()),
     ]) {
       await store.saveSessionRows("/s/a.jsonl", [makeRow({ id: "a" })]);
@@ -129,7 +129,7 @@ describe("intake backends", () => {
 
   it("clears one session on both backends", async () => {
     for (const store of [
-      createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage())),
+      createBrowserIntakeStore(new IntakeBrowserStore(new MemoryKeyValueStorage()), () => NOW),
       createSqliteIntakeStore(fakeCommands()),
     ]) {
       await store.saveSessionRows("/s/a.jsonl", [makeRow({ id: "a" })]);
