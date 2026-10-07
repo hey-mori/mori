@@ -146,9 +146,10 @@ export function useAutoImportSessions(): void {
               });
               if (notice) pushImportSyncNotification(notice);
 
-              // Dual-write (S2): mirror each registered session as a
-              // provisional agent-session kernel record so it reaches 검색 ·
-              // 캘린더 · 프로젝트. Best-effort and self-contained — a kernel
+              // Dual-write (S2): mirror each registered session as an
+              // agent-session kernel record so it reaches 검색 · 캘린더 · 프로젝트.
+              // A known session is merged, never replaced, so the user's edits
+              // survive its growth. Best-effort and self-contained: a kernel
               // failure never undoes the legacy registration above.
               void upsertAgentSessionRecords(
                 getKernelRepository(),
