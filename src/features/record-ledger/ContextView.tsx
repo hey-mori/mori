@@ -13,8 +13,16 @@
  * row management behind a hover `⋯` / right-click. Right: the selected
  * project's page (v8 §5), ordered by what a returning user asks first.
  */
-import { useEffect, useMemo, useState } from "react";
-import { ArchiveRestore, FolderGit2, FolderPlus, PenLine, Radio, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArchiveRestore,
+  ClipboardList,
+  FolderGit2,
+  FolderPlus,
+  PenLine,
+  Radio,
+  Search,
+} from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { useAppStore } from "../../app/store";
 import { loadStoredSessionSummaries } from "../../app/sessionStore";
@@ -29,6 +37,8 @@ import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
 import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
 import { ProjectCreateModal } from "./ProjectCreateModal";
+import { ProjectContinuationModal } from "./ProjectContinuationModal";
+import { buildProjectContinuationPack } from "../../lib/continuation/projectContinuation";
 import { ProjectLiveSection } from "./ProjectLiveSection";
 import { useProjectLive } from "./useProjectLive";
 import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
@@ -65,6 +75,8 @@ export function ContextView() {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState<{ parentId: string | null } | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
+  const [continuing, setContinuing] = useState(false);
+  const closeContinuation = useCallback(() => setContinuing(false), []);
 
   const openSessionById = (sessionId: string) => {
     void resolveSession(sessionId).then((ok) => {
@@ -213,6 +225,29 @@ export function ContextView() {
     () => (activeGroup ? groupRecordsBySection(activeGroup.records) : []),
     [activeGroup],
   );
+
+  // 이어가기 reads the page's own session list, so what the page shows and what
+  // the pack can cite never disagree. Records come in at EVERY status (the page
+  // shows only live ones) so the pack can count what it leaves out.
+  const continuationPack = useMemo(() => {
+    if (!continuing || !activeGroup) return null;
+    const unfiltered =
+      buildProjectGroups([], contexts, records, relations).find(
+        (group) => group.id === activeGroup.id,
+      )?.records ?? [];
+    return buildProjectContinuationPack({
+      project: { name: activeGroup.name, parentPath: activeGroup.parentPath },
+      sessions: activeGroup.sessions.map((session) => ({
+        id: session.sessionId,
+        title: session.title,
+        startedAt: session.startedAt,
+        savedAt: session.savedAt,
+      })),
+      records: unfiltered,
+      kernelRecordsById: new Map(records.map((record) => [record.id, record])),
+      now: new Date(),
+    });
+  }, [continuing, activeGroup, contexts, records, relations]);
 
   const title = activeContext?.name ?? activeGroup?.name ?? "";
   // Matched by the project's display leaf, the same key a saved session resolves
@@ -387,6 +422,12 @@ export function ContextView() {
           <h2 className="ctx-pane-title">{title}</h2>
           {count > 0 ? <span className="ctx-pane-count">{count}건</span> : null}
           <span className="ctx-pane-sp" />
+          {activeGroup ? (
+            <button type="button" className="ctx-pane-new" onClick={() => setContinuing(true)}>
+              <ClipboardList size={13} aria-hidden="true" />
+              이어가기
+            </button>
+          ) : null}
           {activeContext ? (
             <button
               type="button"
@@ -523,6 +564,10 @@ export function ContextView() {
           )}
         </div>
       </div>
+
+      {continuationPack ? (
+        <ProjectContinuationModal pack={continuationPack} onClose={closeContinuation} />
+      ) : null}
 
       {creating ? (
         <ProjectCreateModal

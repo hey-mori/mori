@@ -1,6 +1,13 @@
 /**
  * Project Memory → resume / follow-up prompt builder.
  *
+ * Retired as the project-level handoff (owner decision, 2026-10-07): the project
+ * continuation pack (`src/lib/continuation/projectContinuation.ts`) is the
+ * canonical one, built from the record kernel rather than the legacy memory view
+ * model. `buildProjectMemoryResumePrompt` has no production caller and is kept,
+ * not deleted, per the retire-don't-delete rule. The helpers below it are still
+ * live: Reports import `isMemoryFlaggedForReview`.
+ *
  * The Memory page used to drive its follow-up prompt from a bespoke
  * helper (`buildFollowUpPrompt`) that read the *active* session view
  * only. With cross-session aggregation, the Memory page now knows
