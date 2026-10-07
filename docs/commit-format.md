@@ -23,8 +23,11 @@ and the validator disagree, fix both in the same change.
 ## Rules
 
 - **Subject line**
-  - Starts with a `type:` prefix · one of `feat`, `fix`, `refactor`,
-    `test`, `docs`, `chore`.
+  - Starts with a `type:` prefix · one of `feat`, `fix`, `perf`,
+    `refactor`, `test`, `docs`, `chore`. `perf` is for a change whose
+    intent is speed or resource use, which is neither a bug fix nor a
+    behaviour-preserving restructure. No other types (`build`, `ci`, …)
+    until a real need is decided.
   - Do not add a scope. Use `feat: ...`, never `feat(scope): ...`.
   - The summary is a lower-case, imperative-mood English phrase
     ("add …", "make …", "stop …"), no trailing period.
@@ -50,6 +53,21 @@ and the validator disagree, fix both in the same change.
     lines, validation logs, or "no changes" filler.
   - phase or section markers in the subject, such as `(P1)`,
     `(P2.5)`, `[Phase 1]`, or similar milestone labels.
+
+## Special cases
+
+Two kinds of commit are written by git or GitHub, not by hand, and keep
+their generated shape. The attribution, emoji, and em-dash bans still
+apply to both.
+
+- **Merge commits:** `Merge pull request #N from …`, `Merge branch '…'
+  into …`, and CI's `Merge <sha> into <sha>`. The body is whatever git
+  or GitHub wrote.
+- **Reverts made by `git revert`:** the subject `Revert "<original
+  subject>"`, then one blank line, then git's own line
+  `This reverts commit <full sha>.`. A reason may follow as a bullet
+  list after one blank line. Any other `Revert …` subject is an ordinary
+  commit and needs a type.
 
 ## Example
 

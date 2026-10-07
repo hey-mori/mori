@@ -24,7 +24,7 @@ and would make the history *less* honest, not more. See §6.
 ```
 
 `<type>` matches the commit-message type vocabulary, so a branch and its commits
-agree: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`. Add `spike/` for
+agree: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `chore`. Add `spike/` for
 throwaway investigation branches that are never merged.
 
 ```

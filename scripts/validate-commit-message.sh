@@ -57,11 +57,51 @@ if grep -qE "^Merge (pull request #[0-9]+ from |branch '|remote-tracking branch 
   exit 0
 fi
 
-if ! grep -qE '^(feat|fix|refactor|test|docs|chore): .+' <<<"$subject"; then
+# Rules shared by the bullet body of a normal commit and of a revert.
+check_bullets() {
+  local body="$1" seen_bullet="" gap="" line
+  while IFS= read -r line; do
+    if [[ -z "$line" ]]; then
+      [[ -n "$seen_bullet" ]] && gap=1
+      continue
+    fi
+    if [[ "$line" != "- "* ]]; then
+      errors+=("body line is not a '- ' bullet: ${line:0:60}")
+      return
+    fi
+    if [[ -n "$gap" ]]; then
+      errors+=("blank line between bullets; the body is one list")
+      return
+    fi
+    seen_bullet=1
+  done <<<"$body"
+}
+
+# `git revert` writes `Revert "<subject>"` and `This reverts commit <full sha>.`.
+# That exact shape is accepted as a special case; any other `Revert ...` subject
+# is an ordinary commit and must carry a type. A reason may follow as bullets.
+if grep -qE '^Revert ".+"$' <<<"$subject"; then
+  revert_second="$(printf '%s\n' "$msg" | sed -n '2p')"
+  revert_line="$(printf '%s\n' "$msg" | sed -n '3p')"
+  if [[ -n "$revert_second" ]]; then
+    errors+=("the subject must be followed by one blank line")
+  fi
+  if ! grep -qE '^This reverts commit ([0-9a-f]{40}|[0-9a-f]{64})\.$' <<<"$revert_line"; then
+    errors+=("a revert must keep git's 'This reverts commit <full sha>.' line under the subject")
+  fi
+  check_bullets "$(printf '%s\n' "$msg" | tail -n +4)"
+  if (( ${#errors[@]} > 0 )); then
+    printf 'commit message: %s\n' "${errors[@]}" >&2
+    exit 1
+  fi
+  exit 0
+fi
+
+if ! grep -qE '^(feat|fix|perf|refactor|test|docs|chore): .+' <<<"$subject"; then
   if grep -qE '^[a-z]+\(' <<<"$subject"; then
     errors+=("subject must not carry a scope: use 'type: summary'")
   else
-    errors+=("subject must start with '<type>: ', type one of feat fix refactor test docs chore")
+    errors+=("subject must start with '<type>: ', type one of feat fix perf refactor test docs chore")
   fi
 else
   summary="${subject#*: }"
@@ -88,23 +128,7 @@ fi
 # The body is one bullet list: every non-blank line is a bullet, and no blank
 # line separates two bullets (a gap makes the log read as paragraphs, the shape
 # the bullet rule exists to prevent; 9dfbe9a1 merged with exactly that).
-seen_bullet=""
-gap=""
-while IFS= read -r line; do
-  if [[ -z "$line" ]]; then
-    [[ -n "$seen_bullet" ]] && gap=1
-    continue
-  fi
-  if [[ "$line" != "- "* ]]; then
-    errors+=("body line is not a '- ' bullet: ${line:0:60}")
-    break
-  fi
-  if [[ -n "$gap" ]]; then
-    errors+=("blank line between bullets; the body is one list")
-    break
-  fi
-  seen_bullet=1
-done <<<"$body"
+check_bullets "$body"
 
 if (( ${#errors[@]} > 0 )); then
   printf 'commit message: %s\n' "${errors[@]}" >&2

@@ -37,7 +37,9 @@ expect accept "a trailing newline after the last bullet" $'fix: do a thing\n\n- 
 expect accept "an acronym later in the summary" 'docs: describe the FTS fallback'
 expect accept "comment lines git strips itself" $'fix: do a thing\n# Please enter the commit message'
 expect reject "no type" 'do a thing'
-expect reject "a type outside the vocabulary" 'perf: make a thing faster'
+expect accept "perf, a type of its own since 2026-10-08" 'perf: load the markdown editor on demand'
+expect reject "a type outside the vocabulary" 'build: bump the bundler'
+expect reject "ci is not a type either" 'ci: run the gate on push'
 expect reject "a scope" 'fix(sessions): do a thing'
 expect reject "an upper-case summary" 'fix: Do a thing'
 expect reject "a trailing period" 'fix: do a thing.'
@@ -62,6 +64,39 @@ expect accept "a GitHub PR merge" $'Merge pull request #137 from swarea/fix/stor
 expect accept "merging main into a branch" "Merge branch 'main' into fix/sessions-kernel-rediscovery-merge"
 expect accept "a CI merge ref" 'Merge 341700c7 into 0fd2af57'
 expect reject "attribution inside a merge commit" $'Merge branch \'main\' into fix/x\n\nCo-Authored-By: Someone <x@example.com>'
+
+# git revert: the canonical generated shape is a special case, nothing wider
+sha=0123456789abcdef0123456789abcdef01234567
+expect accept "a canonical git revert" $'Revert "fix: do a thing"\n\nThis reverts commit '"$sha"'.'
+expect accept "a canonical git revert with a reason as bullets" $'Revert "fix: do a thing"\n\nThis reverts commit '"$sha"$'.\n\n- Restore the old path, which the new one broke on macOS'
+expect reject "a revert without git's sha line (3c1307a8)" $'Revert "fix: do a thing"\n\n- Revert the plugin'
+expect reject "a revert citing an abbreviated sha" $'Revert "fix: do a thing"\n\nThis reverts commit 0123456.'
+expect reject "a revert with a prose reason" $'Revert "fix: do a thing"\n\nThis reverts commit '"$sha"$'.\n\nIt broke the build.'
+expect reject "a Revert subject without git's quotes" 'Revert the single-instance plugin'
+expect reject "attribution inside a revert" $'Revert "fix: do a thing"\n\nThis reverts commit '"$sha"$'.\n\nCo-Authored-By: Someone <x@example.com>'
+
+# The exact message git itself writes for `git revert --no-edit`. The generated
+# message is asserted to BE a revert first, so a failed revert cannot pass by
+# validating the original commit's message instead.
+scratch="$(mktemp -d)"
+revert_msg=""
+if (
+  cd "$scratch" &&
+    git init -q &&
+    echo one >file &&
+    git add file &&
+    git -c user.name=t -c user.email=t@example.com -c core.hooksPath=/dev/null \
+      commit -q -m 'fix: do a thing' &&
+    git -c user.name=t -c user.email=t@example.com -c core.hooksPath=/dev/null \
+      revert --no-edit HEAD >/dev/null
+) 2>/dev/null; then
+  revert_msg="$(git -C "$scratch" log -1 --format=%B)"
+fi
+rm -rf "$scratch"
+rc=0; [[ "$revert_msg" == 'Revert "fix: do a thing"'* ]] || rc=1
+check "git revert --no-edit produced a revert to test" 0 "$rc"
+rc=0; printf '%s' "$revert_msg" | bash "$validator" --stdin >/dev/null 2>&1 || rc=$?
+check "the message real git revert --no-edit writes" 0 "$rc"
 
 # Usage
 rc=0; bash "$validator" >/dev/null 2>&1 || rc=$?
