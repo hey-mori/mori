@@ -25,7 +25,7 @@ Before this refactor, AI session tracking lived under `src/lib/agents/`:
   `autoImportSettings.ts` registered metadata-only drafts so discovered sessions
   appeared in the session workspace.
 - `agentSessionKernel.ts` dual-wrote each discovered session as a thin
-  provisional `agent-session` kernel record.
+  `agent-session` kernel record (created `active` since 2026-10-07).
 
 The Rust readers remain source-specific adapters under `src-tauri/src/<agent>/`.
 They are still explicit, read-only discovery commands rather than daemons.
@@ -57,7 +57,7 @@ Mori-side adapters kept deliberately thin:
   drafts for today's UI;
 - `src/lib/import/agentWorkSessionImport.ts` adapts loaded AI observations to
   existing Import Review candidates;
-- `agentSessionRecordAdapter` bridges AI trace metadata into provisional kernel
+- `agentSessionRecordAdapter` bridges AI trace metadata into active kernel
   records without moving record semantics into Trace;
 - legacy `src/lib/agents/*` files re-export the new modules for compatibility.
 

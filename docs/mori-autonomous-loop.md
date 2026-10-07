@@ -11,22 +11,17 @@ non-goal list. This document governs *how* the loop runs.
 
 ## 1. Operating Goal
 
-Keep building Mori into a real local-first AI work memory product.
+Keep building Mori into the local-first personal context workspace that
+[`mori-project-goal.md`](mori-project-goal.md) §1 defines. The product pipeline
+is the one in that document's §3 (Capture → Parse → Understand → Propose →
+Resolve → Apply → Aggregate → Distill → Reuse), governed by
+[`design/mori-context-workspace-architecture.md`](design/mori-context-workspace-architecture.md).
 
-The product loop is:
-
-```
-Claude / Codex / ChatGPT / CLI / Git / terminal work
-→ explicit capture/import
-→ Preview
-→ Import Review
-→ Timeline / Evidence Hub
-→ Project Memory
-→ Consolidation Review
-→ Accepted Memory
-→ Resume Prompt / Reports
-→ continue work
-```
+An earlier version of this section described the 2026-05 session-centric loop
+(explicit import → Import Review → Evidence Hub → Consolidation Review →
+Accepted Memory → Resume / Reports). That loop is still real code, but it is a
+special case of the pipeline above, not the product's shape; do not choose
+slices by it.
 
 ## 2. Ralph Behavior
 
@@ -88,9 +83,13 @@ Never implement:
 - cloud sync by default
 - OAuth integrations
 - external account reading
-- always-on daemon
+- a reader that runs while the Mori app is closed (tray-resident or
+  autostart); opt-in background observation while the app is open is allowed
+  under the three rails in `mori-project-goal.md` §6
 - scheduled consolidation jobs
-- automatic memory writes without review
+- silent, unattributed, or irreversible writes (graded auto-apply is allowed
+  under the apply policy in `mori-project-goal.md` §6; distilled long-term
+  memory keeps its review gate)
 - Workroom / Session Canvas / pixel-agent UI unless explicitly
   reprioritized
 - Google ADK / Gemini dependency
@@ -99,23 +98,17 @@ Never implement:
 
 ## 5. Validation Contract
 
-Before every commit:
+Before every push, the canonical gate plus the two tree checks:
 
 ```
-npm run check:full
-npm run build
+scripts/check.sh --full
 git diff --check
 git status --short
 ```
 
-If src-tauri changed:
-
-```
-cd src-tauri
-cargo check
-cargo test
-cd ..
-```
+`scripts/check.sh --full` includes the Rust pass when `src-tauri/` changed
+(see [`git-workflow.md`](git-workflow.md) §9). If `cargo` is not available on
+the machine, say so in the pull request; do not call a Rust change verified.
 
 ## 6. Commit Rules
 
@@ -356,7 +349,12 @@ backlog with it.
 
 ## 8. Current Next Slice · Product Maturity Loop
 
-**Program note (2026-07-12).** The governing roadmap is now
+**Superseded program note.** `CLAUDE.md` marks `production-program.md` as
+awaiting re-baseline after the 2026-07-14 identity rewrite: do not sequence new
+work from it or from the backlog below. Pick slices from the architecture doc
+§14 and the owner's current direction. The note is kept as history.
+
+**Program note (2026-07-12).** The governing roadmap was
 [`production-program.md`](production-program.md): readiness gates G1
 (Installable) → G2 (Trustworthy with real data) → G3 (Competitive at
 first glance) → G4 (The moat is the headline), built from

@@ -45,11 +45,11 @@ function ctx(id: string, name: string): KernelContext {
 }
 
 describe("buildAgentSessionRecordInput", () => {
-  it("mirrors a session as a thin, provisional agent-session record keyed by its stable id", () => {
+  it("mirrors a session as a thin, active agent-session record keyed by its stable id", () => {
     const input = buildAgentSessionRecordInput(meta(), []);
     expect(input.id).toBe(autoImportedSessionId(meta()));
     expect(input.schemaId).toBe("agent-session");
-    expect(input.status).toBe("provisional");
+    expect(input.status).toBe("active");
     expect(input.origin).toBe("automation");
     expect(input.title).toBe("Auth 미들웨어 마이그레이션");
     expect(input.timeBasis).toBe("source-observed");
@@ -111,7 +111,7 @@ describe("upsertAgentSessionRecords", () => {
     };
   }
 
-  it("writes one provisional record per session, bound to a matching context", async () => {
+  it("writes one active record per session, bound to a matching context", async () => {
     const repo = fakeRepo();
     const registry = createSchemaRegistry();
     const result = await upsertAgentSessionRecords(repo, registry, [
@@ -119,7 +119,7 @@ describe("upsertAgentSessionRecords", () => {
       meta({ id: "conv-456", title: "리포트 정리", projectName: "other" }),
     ]);
     expect(result).toEqual({ created: 2, updated: 0, unchanged: 0, preserved: 0, failed: 0 });
-    expect(repo.saved.map((r) => r.status)).toEqual(["provisional", "provisional"]);
+    expect(repo.saved.map((r) => r.status)).toEqual(["active", "active"]);
     expect(repo.saved[0]?.contextIds).toEqual(["ctx-mori"]);
     expect(repo.saved[1]?.contextIds).toEqual([]);
   });
@@ -193,14 +193,30 @@ describe("upsertAgentSessionRecords · rediscovery of an existing record", () =>
 
   const grown = meta({ updatedAt: "2026-07-16T11:45:00.000Z", messageCount: 30 });
 
+  it("leaves a record created provisional before the active default as provisional", async () => {
+    const repository = browserRepository();
+    const legacy = createRecord(
+      { ...buildAgentSessionRecordInput(meta(), []), status: "provisional", now: at(T0) },
+      registry,
+    );
+    await repository.saveRecord(legacy.record, legacy.revision);
+
+    await discover(repository, grown, T1);
+
+    const record = await current(repository);
+    expect(record.status).toBe("provisional");
+    expect(record.properties.stepCount).toBe(30);
+  });
+
   it("keeps a status the user chose", async () => {
     const repository = browserRepository();
     await discover(repository, meta(), T0);
-    await userEdit(repository, { status: "active" }, T1);
+    // The user marks an observed session as unsure; growth must not undo that.
+    await userEdit(repository, { status: "provisional" }, T1);
 
     await discover(repository, grown, T2);
 
-    expect((await current(repository)).status).toBe("active");
+    expect((await current(repository)).status).toBe("provisional");
   });
 
   it("does not resurrect a discarded session or write to it", async () => {
@@ -282,7 +298,7 @@ describe("upsertAgentSessionRecords · rediscovery of an existing record", () =>
     const record = await current(repository);
     expect(result).toMatchObject({ created: 0, updated: 1 });
     expect(record.title).toBe("새 제목");
-    expect(record.status).toBe("provisional");
+    expect(record.status).toBe("active");
     expect(record.occurredEnd).toBe("2026-07-16T11:45:00.000Z");
     expect(record.createdAt).toBe(created.createdAt);
     expect(record.capturedAt).toBe(created.capturedAt);
@@ -418,7 +434,7 @@ describe("upsertAgentSessionRecords · desktop row round trip", () => {
     const created = (await repository.getRecord(id)).data as MoriRecord;
     const edited = applyRecordPatch(
       created,
-      { title: "직접 고친 제목", status: "active" },
+      { title: "직접 고친 제목", status: "provisional" },
       "user",
       registry,
       at("2026-07-16T12:00:00.000Z"),
@@ -437,7 +453,7 @@ describe("upsertAgentSessionRecords · desktop row round trip", () => {
     expect(first).toMatchObject({ updated: 1, failed: 0 });
     expect(repeat).toMatchObject({ unchanged: 1, failed: 0 });
     expect(record.title).toBe("직접 고친 제목");
-    expect(record.status).toBe("active");
+    expect(record.status).toBe("provisional");
     expect(record.properties.stepCount).toBe(30);
     expect((await repository.listRevisions(id)).data.map((r) => r.operation)).toEqual([
       "create",

@@ -6,8 +6,12 @@
  *
  * The record is deliberately thin (spec §2): identity, time, agent, and project
  * binding, nothing more. Live status, timeline events, and analysis stay in the
- * 세션 workspace model. Status is `provisional` — visible in the read surfaces,
- * but excluded from external outputs (reports / .mori) until the user confirms.
+ * 세션 workspace model. A new record is `active`: the agent's own log is a direct
+ * observation of the session's identity and times, not an interpretation, so it
+ * is not provisional (owner decision, 2026-10-07; `provisional` is reserved for
+ * interpretations that could be wrong). Rediscovery never changes status, so a
+ * record created provisional before that decision stays so until a backfill or
+ * the user changes it.
  *
  * See `docs/design/session-kernel-dual-write-spec.md`.
  */
@@ -70,7 +74,7 @@ export function buildAgentSessionRecordInput(
     // The session timestamps are real, but a timestamp is not proof the user
     // worked at that exact moment — observed, not user-provided.
     timeBasis: occurredStart ? "source-observed" : "unknown",
-    status: "provisional",
+    status: "active",
     origin: "automation",
     contextIds: matchedContext ? [matchedContext.id] : [],
     properties,
