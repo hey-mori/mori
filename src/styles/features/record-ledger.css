@@ -2496,6 +2496,34 @@
   color: var(--purple);
 }
 
+/* 이어가기 · the continuation preview. The house project modal, widened for a
+   document; the parent class pair outranks the component layer's width. */
+.project-modal.continuation-modal {
+  width: min(680px, calc(100vw - 52px));
+}
+
+.continuation-preview {
+  margin: 0;
+  max-height: min(56vh, 520px);
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft, #fafbfd);
+  color: var(--text);
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
+  font-size: var(--base-font-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.continuation-copy-state {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: var(--base-font-size-sm);
+}
+
 .ctx-pane-body {
   flex: 1;
   min-height: 0;

@@ -1,5 +1,24 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (project continuation pack, slice 1, 2026-10-07)
+
+#144. 프로젝트 gains 이어가기: the canonical project-level handoff (owner decision
+3), previewed and copied from the pane band.
+
+- The capability is pure and lives in `src/lib/continuation/`, so the future
+  local MCP `get_project_context` calls it instead of re-deriving it.
+- It reads the page's own session list plus the project's records at every
+  status, so what it leaves out is counted (확정 전 · 버림/보관 · 비밀 의심) and
+  stated inside the copied text, never shown.
+- Excluded by rule: non-active records, auto-imported sessions without an active
+  kernel record, demo sessions (they fill an empty install), and any item whose
+  text trips `containsLikelySecret`, dropped whole. Note bodies and agent
+  request text never enter the default output.
+- `projectMemoryResumePrompt.ts`'s builder is retired as the project handoff, not
+  deleted; Reports still import a helper from that module.
+- Verified in the browser build with seeded records (light and Night Lake);
+  desktop sessions with real kernel records were not driven.
+
 ## Plan (v8 · 프로젝트/캘린더 surfaces + the layer rule, 2026-07-17)
 
 `v8-project-calendar-surfaces.md`, written after the user showed that clicking
