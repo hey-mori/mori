@@ -11,11 +11,10 @@ back through a pull request. There is no `develop`, no `release/*`, no
 `hotfix/*`. Git Flow's release-train shape solves a problem Mori does not have
 (no versioned boxed releases, no parallel maintained majors).
 
-The adaptation is deliberate and is documented here rather than left implicit:
-Mori is built by one maintainer plus AI agents, one of which (the autonomous
-loop, see [`mori-autonomous-loop.md`](mori-autonomous-loop.md)) commits directly
-to `main` during a session. A rule that pretends otherwise would be broken daily
-and would make the history *less* honest, not more. See §6.
+Mori is built by one maintainer plus AI agents, including the autonomous loop
+([`mori-autonomous-loop.md`](mori-autonomous-loop.md)). Agents follow the same
+branch-and-PR cycle as the maintainer; the only direct-to-`main` cases are the
+narrow ones in §6.
 
 ## 2. Branch naming
 
@@ -41,14 +40,20 @@ large and should be split.
 
 ## 3. The cycle
 
+0. **Preflight.** `git fetch --prune`, then check open pull requests and
+   related issues (`gh pr list`, `gh issue list`) and whether `main` moved.
+   If another branch is already solving the problem, do not start a second
+   one. Sessions run concurrently by design, and on one machine they can even
+   share a working tree, so a HEAD SHA alone does not say what was tested.
 1. **Issue first** for anything non-trivial. It records the *why* and the
    evidence (file:line), so the PR can stay about the change.
 2. **Branch** from an up-to-date `main`.
 3. **Commit** per [`commit-format.md`](commit-format.md). Small, meaningful
    commits: the merge preserves them (see §4), so they are the durable record.
-4. **Validate locally** before pushing: `npm run check:full`, `npm run build`,
-   `npm run style:check`, and `cargo check` / `cargo test` when `src-tauri/`
-   changed.
+4. **Validate locally** before pushing: `scripts/check.sh --full` (§9). It
+   runs typecheck, tests, stylelint, the prose guard, the build, and the Rust
+   pass when `src-tauri/` changed. `npm run check:full` is narrower (typecheck
+   and tests only) and is not the gate.
 5. **Pull request** using the template. Link the issue with `Closes #N` so the
    issue closes on merge and the trail is traceable both directions.
 6. **The local gate must be green** before merge. If CI was dispatched for this

@@ -959,14 +959,14 @@ guardrails, not preferences.
   `connectorSampleFixture.test.ts`.
 - **Run targeted tests during iteration.** `npm run test:changed`
   or `npx vitest run <path>` for fast feedback.
-- **Run full validation before commit.** `npm run check:full`
-  (typecheck + full Vitest suite).
-- **Run a build before handoff or milestone close.**
-  `npm run check:release` (adds `npm run build`).
-- **Use clean commit messages.** Short imperative subject, body that
-  explains what changed and why. No emoji, no AI footer, no
-  `Co-Authored-By: Claude …` lines unless the user explicitly
-  requests them.
+- **Run the canonical gate before commit.** `scripts/check.sh`
+  (typecheck, tests, stylelint, prose guard), and
+  `scripts/check.sh --full` before pushing or closing a milestone (adds
+  the build, and the Rust pass when `src-tauri/` changed). See
+  [git-workflow.md](git-workflow.md) §9.
+- **Use clean commit messages** per [commit-format.md](commit-format.md):
+  a `type:` subject and a bullet-only body. No emoji, no AI footer, no
+  `Co-Authored-By` lines.
 - **Do not push unless explicitly asked.** A green commit on `main`
   is not authorization to `git push`.
 - **Do not start new milestones without approval.** Propose the
@@ -994,19 +994,16 @@ guardrails, not preferences.
   (`npx vitest run <path>`) or `npm run test:changed` for fast
   feedback. Run `npm run check:quick` (typecheck + changed tests)
   when changing types.
-- **Before commit.** Always `npm run check:full`. Both typecheck and
-  full Vitest suite must pass.
-- **Before handoff.** `npm run build` (covered by
-  `npm run check:release`).
-- **If `src-tauri/` changes.** Add `cargo check` and `cargo test`
-  to the validation set. This environment may not have `cargo`
-  available; if so, document the gap honestly rather than skipping
-  silently.
+- **Before commit.** Always `scripts/check.sh`. `npm run check:full`
+  is narrower (typecheck and tests only) and is not the gate.
+- **Before push or handoff.** `scripts/check.sh --full`.
+- **If `src-tauri/` changes.** `--full` runs `cargo check` and
+  `cargo test`. A machine may not have `cargo`; if so, document the
+  gap honestly and do not call the Rust change verified.
 - **Before commit.** Run `git diff --check` and `git status --short`
   to catch whitespace damage and accidental tracked-file changes.
-- **Documentation-only milestones.** Run `npm run check:full` and
-  `npm run build` anyway · both are cheap and catch markdown / link
-  damage indirectly when the build pipeline depends on a doc.
+- **Documentation-only milestones.** Run `scripts/check.sh` anyway ·
+  its prose guard reads the docs.
 
 ## 13. Near-Term Roadmap
 
@@ -1159,10 +1156,9 @@ When a new AI coding session opens against Mori:
    until the user agrees to the proposed milestone and scope.
 5. **Implement in small steps with green validation.** Follow the
    Engineering Working Rules and the Validation Policy. Run targeted
-   tests during iteration; run `npm run check:full` before commit;
-   run `npm run check:release` (or at least `npm run build`) before
-   handoff. If `src-tauri/` changes, add `cargo check` and
-   `cargo test`.
+   tests during iteration; run `scripts/check.sh` before commit and
+   `scripts/check.sh --full` before push or handoff (it adds the Rust
+   pass when `src-tauri/` changed).
 6. **Commit with a clean message and do not push** unless the user
    explicitly asks. No AI footer, no `Co-Authored-By`.
 7. **Stop after each milestone.** Report what shipped, link any

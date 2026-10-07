@@ -31,10 +31,15 @@ Non-trivial work goes issue → branch → PR → local verification → merge, 
 [`docs/git-workflow.md`](docs/git-workflow.md). Branches are
 `<type>/<area>-<slug>` and short-lived; merges keep the commits
 (`--no-ff`, never squash) because each commit is already a well-formed
-record. That doc also states the deliberate direct-to-`main` exception
-(the autonomous loop, and tiny `docs:`/`chore:` changes), so `main` is
+record. Agents, the autonomous loop included, never commit straight to
+`main`; that doc's §6 allows only a non-executing documentation fix or the
+repair of an already-broken `main`, and those are owner calls. `main` is
 protected by convention and the documented verification gate rather than a
 hard rule. Remote CI is manual-only at present.
+
+Before opening an issue or a branch, run `git fetch --prune` and check open
+pull requests and related issues (`gh pr list`, `gh issue list`), so two
+sessions do not solve the same problem or edit the same area at once.
 
 ## Autonomy grades
 
