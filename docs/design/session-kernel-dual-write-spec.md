@@ -65,6 +65,35 @@ existing per-pass sync notification; growth updates write an
 `automation` revision only when the fingerprint changed (the diff
 already gates this), so the 90s cadence cannot spam revisions.
 
+### 2.1 Rediscovery merges, never replaces
+
+A session the kernel already holds is merged into, not rebuilt
+(`planAgentSessionRediscovery` in `agentSessionRecordAdapter.ts`). This
+section was added on 2026-10-07 after the first implementation rebuilt the
+record on every growth and silently reverted user edits.
+
+- **Observed fields** are the title, the body line, the activity time
+  (start, end, and basis as one unit), the project binding, and the
+  `agentId` / `stepCount` properties. Each is merged three-way: if its
+  current value still equals the value automation last wrote to that
+  field, it takes the fresh observation; otherwise the user changed it and
+  it is kept. "Last wrote" is per field: a `rule` create sets every field,
+  a `rule` update only the fields it changed. A whole-record baseline (the
+  newest `rule` revision's `after`) is wrong, because an update carries
+  user-kept values into its `after` and the next poll would then treat
+  them as automation's.
+- **Never changed by discovery:** status, schema, origin, ownership,
+  creation and capture times, and any other property.
+- **Left untouched entirely:** discarded and archived records, a record
+  of another schema under the same id, and a user-edited record with no
+  automation write on record.
+- **Revisions:** a real change writes one `update` revision with actor
+  `rule` and its `before`; an observation that changes nothing writes
+  nothing.
+- **Unreliable reads:** if the existing record or its revisions could
+  only be read from the browser fallback, the session is skipped and
+  counted as failed rather than recreated over the real record.
+
 ## 3. The flood problem (first-class design concern)
 
 Dual-writing makes up to 400 historical sessions appear wherever

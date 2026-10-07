@@ -13,8 +13,18 @@
  */
 import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import { autoImportedSessionId } from "../session/autoImportSessions";
-import { createRecord, type CreateRecordInput } from "./recordFactory";
-import type { KernelContext } from "./kernelTypes";
+import {
+  applyRecordPatch,
+  createRecord,
+  type CreateRecordInput,
+  type RecordPatch,
+} from "./recordFactory";
+import type {
+  KernelContext,
+  KernelRevision,
+  MoriRecord,
+  RecordPropertyValue,
+} from "./kernelTypes";
 import type { KernelRepository } from "./kernelRepository";
 import type { SchemaRegistry } from "./schemaRegistry";
 
@@ -67,21 +77,168 @@ export function buildAgentSessionRecordInput(
   };
 }
 
-export type AgentSessionDualWriteResult = { written: number; failed: number };
+export type AgentSessionDualWriteResult = {
+  /** New records written for sessions the kernel had not seen. */
+  created: number;
+  /** Existing records that took newly observed source facts. */
+  updated: number;
+  /** Existing records the observation would not change: nothing was written. */
+  unchanged: number;
+  /** Existing records left exactly as they are: discarded, archived, another
+   *  schema under the same id, or user-edited with no automation baseline. */
+  preserved: number;
+  failed: number;
+};
+
+/** The fields discovery observes from the source, each merged as one unit. A
+ *  session's time is a unit because the factory validates start, end, and basis
+ *  together, and the user's date editor rewrites them together. */
+export type ObservedFields = {
+  title: string;
+  body: string;
+  time: Pick<MoriRecord, "occurredStart" | "occurredEnd" | "timeBasis">;
+  contextIds: string[];
+  agentId: RecordPropertyValue | undefined;
+  stepCount: RecordPropertyValue | undefined;
+};
+
+function observedFields(record: Pick<
+  MoriRecord,
+  "title" | "body" | "occurredStart" | "occurredEnd" | "timeBasis" | "contextIds" | "properties"
+>): ObservedFields {
+  return {
+    title: record.title,
+    body: record.body,
+    time: {
+      occurredStart: record.occurredStart,
+      occurredEnd: record.occurredEnd,
+      timeBasis: record.timeBasis,
+    },
+    // Revision snapshots are untyped JSON from storage; tolerate a missing list.
+    contextIds: [...(record.contextIds ?? [])].sort(),
+    agentId: record.properties?.agentId,
+    stepCount: record.properties?.stepCount,
+  };
+}
+
+function same(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
 
 /**
- * Upsert an `agent-session` kernel record for each discovered session. Best
- * effort per record: one failure never blocks the rest, and a context-load
- * failure just leaves the batch unbound. The caller has already persisted the
- * legacy drafts, so a kernel failure here degrades to "legacy only", never a
- * lost registration (dual-run doctrine).
+ * What a rediscovery may change on an existing record, as a patch.
+ *
+ * Three-way per observed field: `written` holds, per field, the value
+ * automation last wrote to it; `current` is the record now; `incoming` is the
+ * fresh observation. A field whose current value still equals what automation
+ * wrote is automation's, so it takes the observation; a field that differs was
+ * changed by someone else (the user) and is kept. Status, schema, origin,
+ * ownership, creation and capture times, and any other property are never
+ * discovery's to change.
+ */
+export function planAgentSessionRediscovery(
+  written: ObservedFields,
+  current: MoriRecord,
+  incoming: CreateRecordInput,
+): RecordPatch {
+  const now = observedFields(current);
+  const next = observedFields({
+    title: incoming.title.normalize("NFC"),
+    body: (incoming.body ?? "").normalize("NFC"),
+    occurredStart: incoming.occurredStart,
+    occurredEnd: incoming.occurredEnd,
+    timeBasis: incoming.timeBasis ?? "unknown",
+    contextIds: incoming.contextIds ?? [],
+    properties: incoming.properties ?? {},
+  });
+  const takes = <K extends keyof ObservedFields>(key: K) =>
+    same(now[key], written[key]) && !same(now[key], next[key]);
+
+  const patch: RecordPatch = {};
+  if (takes("title")) patch.title = next.title;
+  if (takes("body")) patch.body = next.body;
+  if (takes("time")) Object.assign(patch, next.time);
+  if (takes("contextIds")) patch.contextIds = next.contextIds;
+
+  const properties = { ...current.properties };
+  let propertiesChanged = false;
+  for (const key of ["agentId", "stepCount"] as const) {
+    if (!takes(key)) continue;
+    if (next[key] === undefined) delete properties[key];
+    else properties[key] = next[key];
+    propertiesChanged = true;
+  }
+  if (propertiesChanged) patch.properties = properties;
+  return patch;
+}
+
+const OBSERVED_KEYS = ["title", "body", "time", "contextIds", "agentId", "stepCount"] as const;
+
+/**
+ * Per observed field, the value automation last wrote to it, read from the
+ * revisions a rule authored: a create sets every field, an update only the
+ * fields it changed. A field an update merely carried over (because the user
+ * owned it) is not a write, which is what keeps a user edit the user's on every
+ * later poll. Null when no automation write is on record.
+ */
+export function automationWrittenFields(
+  revisions: readonly KernelRevision[],
+): ObservedFields | null {
+  const authored = revisions
+    .filter((revision) => revision.actor === "rule" && revision.after)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (authored.length === 0) return null;
+
+  let written: ObservedFields | null = null;
+  for (const revision of authored) {
+    const after = observedFields(revision.after as MoriRecord);
+    if (!written || !revision.before) {
+      written = after;
+      continue;
+    }
+    const before = observedFields(revision.before as MoriRecord);
+    const merged: ObservedFields = { ...written };
+    for (const key of OBSERVED_KEYS) {
+      if (!same(before[key], after[key])) Object.assign(merged, { [key]: after[key] });
+    }
+    written = merged;
+  }
+  return written;
+}
+
+type DualWriteRepository = Pick<
+  KernelRepository,
+  "listContexts" | "getRecord" | "listRevisions" | "saveRecord"
+>;
+
+/**
+ * Upsert an `agent-session` kernel record for each discovered session. A
+ * session the kernel has not seen is created; one it has is merged, never
+ * replaced (`planAgentSessionRediscovery`), so a status, project, title, or
+ * date the user set survives the session growing. A real change writes one
+ * automation `update` revision; an identical observation writes nothing.
+ *
+ * Best effort per record: one failure never blocks the rest, and a
+ * context-load failure just leaves new records unbound. A record whose current
+ * state cannot be read reliably is skipped rather than recreated over it. The
+ * caller has already persisted the legacy drafts, so a kernel failure here
+ * degrades to "legacy only", never a lost registration (dual-run doctrine).
  */
 export async function upsertAgentSessionRecords(
-  repo: Pick<KernelRepository, "listContexts" | "saveRecord">,
+  repo: DualWriteRepository,
   registry: SchemaRegistry,
   metas: readonly AgentWorkSessionMeta[],
+  options: { now?: () => Date } = {},
 ): Promise<AgentSessionDualWriteResult> {
-  if (metas.length === 0) return { written: 0, failed: 0 };
+  const result: AgentSessionDualWriteResult = {
+    created: 0,
+    updated: 0,
+    unchanged: 0,
+    preserved: 0,
+    failed: 0,
+  };
+  if (metas.length === 0) return result;
+  const now = options.now ?? (() => new Date());
 
   let contexts: KernelContext[] = [];
   try {
@@ -90,19 +247,59 @@ export async function upsertAgentSessionRecords(
     contexts = [];
   }
 
-  let written = 0;
-  let failed = 0;
   for (const meta of metas) {
     try {
-      const { record, revision } = createRecord(
-        buildAgentSessionRecordInput(meta, contexts),
-        registry,
-      );
+      const input = buildAgentSessionRecordInput(meta, contexts);
+      const existing = await repo.getRecord(input.id as string);
+      // A desktop read that fell back answered from the browser store, which
+      // may not hold what SQLite holds. A miss there is not proof of absence,
+      // and creating would replace the real record whole.
+      if (existing.fellBack) {
+        result.failed += 1;
+        continue;
+      }
+
+      if (!existing.data) {
+        const { record, revision } = createRecord({ ...input, now }, registry);
+        await repo.saveRecord(record, revision);
+        result.created += 1;
+        continue;
+      }
+
+      const current = existing.data;
+      if (
+        current.schemaId !== "agent-session" ||
+        current.status === "discarded" ||
+        current.status === "archived"
+      ) {
+        result.preserved += 1;
+        continue;
+      }
+
+      const revisions = await repo.listRevisions(current.id);
+      if (revisions.fellBack) {
+        result.failed += 1;
+        continue;
+      }
+      const written = automationWrittenFields(revisions.data);
+      if (!written && revisions.data.some((revision) => revision.actor === "user")) {
+        // The user edited a record whose automation write is not on record, so
+        // no field can be shown to still be automation's.
+        result.preserved += 1;
+        continue;
+      }
+
+      const patch = planAgentSessionRediscovery(written ?? observedFields(current), current, input);
+      if (Object.keys(patch).length === 0) {
+        result.unchanged += 1;
+        continue;
+      }
+      const { record, revision } = applyRecordPatch(current, patch, "rule", registry, now);
       await repo.saveRecord(record, revision);
-      written += 1;
+      result.updated += 1;
     } catch {
-      failed += 1;
+      result.failed += 1;
     }
   }
-  return { written, failed };
+  return result;
 }
