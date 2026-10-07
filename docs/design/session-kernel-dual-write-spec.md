@@ -6,9 +6,12 @@ Status: **core implemented 2026-07-16.** The driver
 (`src/lib/record-kernel/agentSessionRecordAdapter.ts`, id = `autoImportedSessionId`,
 best-effort, context-bound only to an existing match), and the 기록 explorer
 excludes `agent-session` from its default view (opt-in via the 에이전트 세션
-facet chip). Status is `provisional` (not the spec's original `active`) per the
-user's 2026-07-16 decision, so agent sessions show in 검색·캘린더·프로젝트 but
-never cross into reports/.mori until confirmed. Still open: id convergence with
+facet chip). New records are created `active` per the owner's 2026-10-07
+decision: a session read from the agent's own log is an observation, not an
+interpretation, so `provisional` is reserved for interpretations that could be
+wrong. (From 2026-07-16 to 2026-10-07 they were created `provisional`; those
+records keep that status, because rediscovery never changes status (§2.1). A
+separate, explicitly run backfill may promote the untouched ones.) Still open: id convergence with
 the manual capture path (§1), calendar per-day `세션 N` grouping (§3), opt-out
 prune partition (§4), and partial-failure surfacing in the sync notification
 (§5). The implementation contract for slice S2 of
