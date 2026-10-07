@@ -31,10 +31,15 @@ Non-trivial work goes issue → branch → PR → local verification → merge, 
 [`docs/git-workflow.md`](docs/git-workflow.md). Branches are
 `<type>/<area>-<slug>` and short-lived; merges keep the commits
 (`--no-ff`, never squash) because each commit is already a well-formed
-record. That doc also states the deliberate direct-to-`main` exception
-(the autonomous loop, and tiny `docs:`/`chore:` changes), so `main` is
+record. Agents, the autonomous loop included, never commit straight to
+`main`; that doc's §6 allows only a non-executing documentation fix or the
+repair of an already-broken `main`, and those are owner calls. `main` is
 protected by convention and the documented verification gate rather than a
 hard rule. Remote CI is manual-only at present.
+
+Before opening an issue or a branch, run `git fetch --prune` and check open
+pull requests and related issues (`gh pr list`, `gh issue list`), so two
+sessions do not solve the same problem or edit the same area at once.
 
 ## Autonomy grades
 
@@ -81,8 +86,9 @@ Every commit MUST follow [`docs/commit-format.md`](docs/commit-format.md).
 That file is the authoritative spec. The short form:
 
 - Subject: `<type>: <imperative lower-case summary>`, no trailing period,
-  under ~70 chars. Type is one of `feat`, `fix`, `refactor`, `test`,
-  `docs`, `chore`.
+  under ~70 chars. Type is one of `feat`, `fix`, `perf`, `refactor`,
+  `test`, `docs`, `chore`. A commit made by `git revert` keeps git's own
+  shape (see `docs/commit-format.md`).
 - One blank line after the subject.
 - Body is a **bullet list only**, each line starting with `- `. No prose
   paragraphs. No blank lines between bullets. 3–7 bullets is typical.
@@ -90,6 +96,10 @@ That file is the authoritative spec. The short form:
   "Generated with" lines, validation logs, or filler.
 
 Before running `git commit`, re-check the message against the spec.
+`scripts/validate-commit-message.sh` is the executable form of it. Run
+`scripts/setup-git-hooks.sh` once per clone so the `commit-msg` hook rejects a
+bad message before the commit exists; `scripts/check.sh` checks the branch's
+commits either way.
 
 ## Validation before committing code changes
 

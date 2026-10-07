@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
-# The single verification gate. `.gitattributes` keeps this entrypoint LF-only
-# so it remains executable from Windows checkouts as well as CI.
+# The single verification gate. `.gitattributes` keeps it LF-only so bash can
+# read it from a Windows checkout; it is tracked as mode 100755 so it can be run
+# directly as `scripts/check.sh` on Linux and macOS. The "commit guards" step
+# below fails if any script or hook loses that mode.
 #
 # Local runs and CI both call this script, so there is exactly one definition of
 # "verified" and the two cannot drift. CI must never re-list these commands in
@@ -93,6 +95,40 @@ npm run style:check
 
 step "prose"
 npm run check:prose
+
+step "commit guards"
+# Git ignores a hook without the executable bit, silently, and a script without
+# it fails as Permission denied. Windows checkouts do not preserve the bit, so
+# check the tracked mode rather than the working tree's.
+not_executable="$(git ls-files -s -- scripts .githooks \
+  | awk '$1 != "100755" && ($4 ~ /\.sh$/ || $4 ~ /^\.githooks\/[^/]+$/) { print $4 }')"
+if [[ -n "$not_executable" ]]; then
+  echo "not tracked as executable (fix with: git update-index --chmod=+x <file>):" >&2
+  echo "$not_executable" >&2
+  exit 1
+fi
+bash scripts/tests/commit-guards.test.sh
+# The branch's own commits, against docs/commit-format.md. Older history is not
+# re-judged: published commits are never rewritten here.
+policy_base=""
+for ref in main origin/main; do
+  policy_base="$(git merge-base HEAD "$ref" 2>/dev/null || true)"
+  [[ -n "$policy_base" ]] && break
+done
+policy_failed=0
+if [[ -n "$policy_base" ]]; then
+  for sha in $(git rev-list "$policy_base..HEAD"); do
+    if ! git log -1 --format=%B "$sha" | bash scripts/validate-commit-message.sh --stdin; then
+      echo "  in $(git log -1 --format='%h %s' "$sha")" >&2
+      policy_failed=1
+    fi
+  done
+fi
+if [[ "$policy_failed" -eq 1 ]]; then
+  echo "commit policy failed: see docs/commit-format.md" >&2
+  exit 1
+fi
+echo "commit policy: $( [[ -n "$policy_base" ]] && git rev-list --count "$policy_base..HEAD" || echo 0 ) branch commit(s) checked"
 
 if [[ "$FULL" -eq 1 ]]; then
   step "production build"
