@@ -22,6 +22,7 @@ mod package;
 mod repositories;
 mod session;
 mod session_evidence;
+mod repository_identity;
 mod sqlite;
 
 use tauri::Manager;

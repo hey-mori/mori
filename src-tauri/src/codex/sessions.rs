@@ -36,6 +36,8 @@ pub struct CodexSessionMeta {
     pub activity_class: String,
     /// Branch and remote from `session_meta.git`, stated once at session start.
     pub evidence: Option<crate::session_evidence::SessionEvidence>,
+    /// The Git checkout the session's working directory belongs to now.
+    pub repository: Option<crate::repository_identity::RepositoryObservation>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -121,6 +123,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<CodexSessionMeta>, Str
         }
         match parse_session_file(&path, false, &thread_titles) {
             Ok(detail) => {
+                let repository = crate::repository_identity::observe_repository(&detail.project_path, None);
                 out.push(CodexSessionMeta {
                     session_id: detail.session_id,
                     project_path: detail.project_path,
@@ -134,6 +137,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<CodexSessionMeta>, Str
                     source: detail.source,
                     activity_class: detail.activity_class,
                     evidence: detail.evidence,
+                    repository,
                 });
             }
             Err(_) => {
@@ -168,6 +172,7 @@ fn unreadable_codex_meta(path: &Path, reason: &str, modified: SystemTime) -> Cod
         source: String::new(),
         activity_class: "unknown".to_string(),
         evidence: None,
+        repository: None,
     }
 }
 

@@ -84,6 +84,9 @@ pub struct ClaudeCodeSessionMeta {
     /// PR and branch observations with their coverage; `None` when the file
     /// could not be scanned (unknown, not empty).
     pub evidence: Option<crate::session_evidence::SessionEvidence>,
+    /// Which Git checkout the session's work belongs to, and how that is known
+    /// (`repository_identity`). `None` when nothing establishes one.
+    pub repository: Option<crate::repository_identity::RepositoryObservation>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -330,6 +333,14 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 distill_title(&preview.first_user_text, 90)
             };
 
+            let evidence = crate::session_evidence::claude_evidence(&session_path);
+            let repository = crate::repository_identity::observe_repository(
+                &project_label,
+                evidence
+                    .as_ref()
+                    .and_then(|found| found.worktree_origin.as_ref())
+                    .map(|(origin, path)| (origin.as_str(), path.as_str())),
+            );
             out.push(ClaudeCodeSessionMeta {
                 session_id,
                 project_path: project_label.clone(),
@@ -349,7 +360,8 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 token_usage: preview.token_usage,
                 activity_class,
                 entrypoint: preview.entrypoint,
-                evidence: crate::session_evidence::claude_evidence(&session_path),
+                repository,
+                evidence,
             });
         }
     }
