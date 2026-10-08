@@ -26,7 +26,9 @@ import {
 } from "../../lib/commandPalette/commandPalette";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
-import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import type { KernelContext } from "../../lib/record-kernel/kernelTypes";
+import { useSessionResolver } from "../../features/session/useSessionResolver";
+import { recordToEntry, withoutDuplicateSessions } from "./paletteRecords";
 import {
   displayTime,
   schemaLabel,
@@ -57,6 +59,7 @@ export function CommandPalette({
   const navigate = useAppStore((state) => state.navigate);
   const openSession = useAppStore((state) => state.openSession);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
+  const resolveSession = useSessionResolver();
   const requestNewRecord = useAppStore((state) => state.requestNewRecord);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const openLanguageTool = useAppStore((state) => state.openLanguageTool);
@@ -81,7 +84,7 @@ export function CommandPalette({
   const [recordEntries, setRecordEntries] = useState<CommandEntry[]>([]);
   const [recordNote, setRecordNote] = useState<string | null>(null);
   const [recordError, setRecordError] = useState(false);
-  const contextNamesRef = useRef<Map<string, string>>(new Map());
+  const contextsRef = useRef<KernelContext[]>([]);
   const registry = useMemo(() => createSchemaRegistry(), []);
 
   // Reset the input + cursor whenever the palette opens so a fresh trigger
@@ -109,9 +112,7 @@ export function CommandPalette({
       .listContexts()
       .then((result) => {
         if (cancelled) return;
-        contextNamesRef.current = new Map(
-          result.data.map((context) => [context.id, context.name]),
-        );
+        contextsRef.current = result.data;
       })
       .catch(() => {});
     return () => {
@@ -140,9 +141,7 @@ export function CommandPalette({
               (record) =>
                 record.status !== "discarded" && record.status !== "archived",
             )
-            .map((record) =>
-              recordToEntry(record, registry, contextNamesRef.current),
-            );
+            .map((record) => recordToEntry(record, registry, contextsRef.current));
           setRecordEntries(entries);
           setRecordError(false);
           setRecordNote(recordSearchNote(result.source, result.fellBack));
@@ -178,7 +177,7 @@ export function CommandPalette({
   // Record entries are already query-relevant from the FTS pass, so they join
   // the sections directly (groupCommands only buckets + orders, never filters).
   const sections = useMemo(
-    () => groupCommands([...filtered, ...recordEntries]),
+    () => groupCommands([...withoutDuplicateSessions(filtered, recordEntries), ...recordEntries]),
     [filtered, recordEntries],
   );
   // Flatten in display order so arrow-key navigation walks the same list
@@ -201,6 +200,14 @@ export function CommandPalette({
         case "openRecord":
           openRecordInLedger(target.recordId);
           break;
+        case "openAgentSession": {
+          const sessionId = target.sessionId;
+          void resolveSession(sessionId).then((ok) => {
+            if (ok) openSession("flow");
+            else openRecordInLedger(sessionId);
+          });
+          break;
+        }
         case "openSession":
           if (target.sessionId !== activeSessionId) {
             loadBrowserSession(target.sessionId);
@@ -229,6 +236,7 @@ export function CommandPalette({
       navigate,
       onToggleSidebarCollapsed,
       openRecordInLedger,
+      resolveSession,
       requestNewRecord,
       openSession,
       openSettingsSheet,
@@ -390,39 +398,6 @@ function CommandIcon({ entry }: { entry: CommandEntry }) {
     case "settings":
       return <Settings size={13} aria-hidden="true" />;
   }
-}
-
-/** Build a calm palette row from a kernel record: title (or a body snippet)
- *  plus one quiet meta line (schema · activity date · first context name). */
-function recordToEntry(
-  record: MoriRecord,
-  registry: ReturnType<typeof createSchemaRegistry>,
-  contextNames: Map<string, string>,
-): CommandEntry {
-  const label = record.title.trim() || bodySnippet(record.body) || "제목 없음";
-  const activity = displayTime(record);
-  const contextName = record.contextIds
-    .map((id) => contextNames.get(id))
-    .find(Boolean);
-  const hint = [
-    schemaLabel(record, registry),
-    activity.iso ? formatDate(activity.iso) : null,
-    contextName,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  return {
-    id: `record:${record.id}`,
-    group: "record",
-    label,
-    hint: hint || undefined,
-    target: { kind: "openRecord", recordId: record.id },
-  };
-}
-
-function bodySnippet(body: string): string {
-  const clean = body.trim().replace(/\s+/g, " ");
-  return clean.length > 64 ? `${clean.slice(0, 64)}…` : clean;
 }
 
 /** Honest footer for the 기록 section: name the weaker search path so browser

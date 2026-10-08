@@ -25,6 +25,7 @@ import {
 } from "./noteExplorerModel";
 import { displayTime, ledgerVisibleRecords, schemaLabel } from "./recordPresentation";
 import { isDateUndecided } from "./dateResolution";
+import { inProjectScope, resolveProjectScope } from "./projectScope";
 
 export function NoteExplorer({
   ledger,
@@ -38,6 +39,8 @@ export function NoteExplorer({
   onSelect,
   onNew,
   now,
+  projectScopeId = null,
+  onClearProjectScope,
 }: {
   ledger: RecordLedger;
   query: string;
@@ -50,6 +53,9 @@ export function NoteExplorer({
   onSelect: (recordId: string) => void;
   onNew: () => void;
   now: Date;
+  /** A project context id: show only records that durably belong to it. */
+  projectScopeId?: string | null;
+  onClearProjectScope?: () => void;
 }) {
   const [groupMode, setGroupMode] = useState<ExplorerGroupMode>("day");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -63,7 +69,19 @@ export function NoteExplorer({
     record.body.toLowerCase().includes(text) ||
     schemaLabel(record, ledger.registry).toLowerCase().includes(text);
 
-  const visibleRecords = useMemo(() => ledgerVisibleRecords(ledger.records), [ledger.records]);
+  // A project scope narrows the list to the project's durable members (and its
+  // sub-projects), never to look-alikes. A project that is gone or archived
+  // shows that state instead of quietly widening to everything.
+  const scope = useMemo(
+    () => (projectScopeId ? resolveProjectScope(projectScopeId, ledger.contexts) : null),
+    [projectScopeId, ledger.contexts],
+  );
+  const visibleRecords = useMemo(() => {
+    const visible = ledgerVisibleRecords(ledger.records);
+    if (!scope) return visible;
+    if (scope.kind !== "ok") return [];
+    return visible.filter((record) => inProjectScope(record, scope, ledger.contexts, ledger.relations));
+  }, [ledger.records, ledger.contexts, ledger.relations, scope]);
   // Extractions (records derived-from a note) live inside their note's 추출
   // panel, not as separate list rows, so the list stays one row per note.
   const derivedIds = useMemo(
@@ -104,9 +122,9 @@ export function NoteExplorer({
     [candidates, dateUnknown],
   );
   const pinned = useMemo(
-    () => [...candidates, ...dateUnknown].filter(matches),
+    () => (scope ? [] : [...candidates, ...dateUnknown].filter(matches)),
     // matches closes over `text`; recompute when records or query change.
-    [candidates, dateUnknown, text, ledger.registry],
+    [candidates, dateUnknown, text, ledger.registry, scope],
   );
 
   const groups = useMemo(() => {
@@ -117,14 +135,16 @@ export function NoteExplorer({
         !derivedIds.has(record.id) &&
         // 기록 is the notes experience; AI work has its own home (세션). Agent
         // sessions are excluded from the default view so a 400-session backfill
-        // never floods it, but the 에이전트 세션 facet chip still opts them in.
+        // never floods it, but the 에이전트 세션 facet chip still opts them in,
+        // and so does a project scope: there only sessions the operator filed
+        // under the project are members, so they cannot flood it.
         (typeFilter === null
-          ? record.schemaId !== "agent-session"
+          ? scope !== null || record.schemaId !== "agent-session"
           : record.schemaId === typeFilter),
     );
     return buildExplorerGroups(visible, ledger.contexts, ledger.relations, sort, groupMode, now);
     // matches closes over `text`.
-  }, [visibleRecords, ledger.contexts, ledger.relations, sort, groupMode, typeFilter, text, pinnedIds, derivedIds, ledger.registry, now]);
+  }, [visibleRecords, ledger.contexts, ledger.relations, sort, groupMode, typeFilter, text, pinnedIds, derivedIds, ledger.registry, now, scope]);
 
   return (
     <div className="note-explorer">
@@ -155,6 +175,17 @@ export function NoteExplorer({
             onTypeFilter={setTypeFilter}
           />
         </div>
+        {scope ? (
+          <button
+            type="button"
+            className="note-filter-active"
+            onClick={() => onClearProjectScope?.()}
+            aria-label="프로젝트 범위 해제"
+          >
+            {scope.kind === "ok" ? `프로젝트 · ${scope.label}` : "프로젝트를 찾을 수 없음"}
+            <X size={11} aria-hidden="true" />
+          </button>
+        ) : null}
         {activeFacet ? (
           <button
             type="button"
@@ -219,7 +250,13 @@ export function NoteExplorer({
             <p className="note-explorer-empty note-explorer-loading">기록을 불러오는 중…</p>
           ) : (
             <p className="note-explorer-empty">
-              {text ? "조건에 맞는 기록이 없습니다." : "아직 기록이 없습니다."}
+              {scope?.kind === "unavailable"
+                ? "이 프로젝트는 없거나 보관되었습니다."
+                : text
+                  ? "조건에 맞는 기록이 없습니다."
+                  : scope
+                    ? "이 프로젝트에 확정된 기록이 없습니다."
+                    : "아직 기록이 없습니다."}
             </p>
           )
         ) : null}

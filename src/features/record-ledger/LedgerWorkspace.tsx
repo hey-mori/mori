@@ -20,6 +20,7 @@ import { DocumentEditor } from "./DocumentEditor";
 import { isDateUndecided } from "./dateResolution";
 import type { ExplorerSort } from "./noteExplorerModel";
 import { displayTime, ledgerVisibleRecords } from "./recordPresentation";
+import { useSessionResolver } from "../session/useSessionResolver";
 
 export function LedgerWorkspace() {
   const ledger = useRecordLedger();
@@ -36,6 +37,10 @@ export function LedgerWorkspace() {
   const newRecordRequest = useAppStore((state) => state.newRecordRequest);
   const clearNewRecordRequest = useAppStore((state) => state.clearNewRecordRequest);
   const newRecordProjectId = useAppStore((state) => state.newRecordProjectId);
+  const projectScope = useAppStore((state) => state.ledgerProjectScope);
+  const clearProjectScope = useAppStore((state) => state.clearLedgerProjectScope);
+  const openSession = useAppStore((state) => state.openSession);
+  const resolveSession = useSessionResolver();
   // A note requested from a project page is born filed there. It cannot be filed
   // at request time because an untyped note has no record yet, so the intent is
   // held until the first save mints one.
@@ -118,6 +123,21 @@ export function LedgerWorkspace() {
     setSelectedId(recordId);
     setComposing(false);
   };
+  // An agent session row opens the session itself (its transcript and flow),
+  // which is what the row stands for; the thin kernel record is only the
+  // fallback when the session can no longer be resolved, so a found result is
+  // never a dead end.
+  const selectRecord = (recordId: string) => {
+    const record = ledger.records.find((entry) => entry.id === recordId);
+    if (record?.schemaId !== "agent-session") {
+      openRecord(recordId);
+      return;
+    }
+    void resolveSession(recordId).then((ok) => {
+      if (ok) openSession("flow");
+      else openRecord(recordId);
+    });
+  };
   const startNew = () => {
     remount();
     setComposing(true);
@@ -152,7 +172,7 @@ export function LedgerWorkspace() {
     if (reopen) openRecord(id);
   };
 
-  const handleNoteCreated = (recordId: string, paneId: number) => {
+  const handleNoteCreated = (recordId: string, paneId: number, created: MoriRecord) => {
     // Adopt the created id in place: same pane instance, typing continues.
     // Only the pane that is STILL mounted may do so. Navigating away from a
     // brand-new note (clicking a [[wiki-link]] or another row) unmounts its
@@ -164,15 +184,15 @@ export function LedgerWorkspace() {
     setSelectedId(recordId);
 
     // The note now exists, so the project intent held since the request can land.
+    // It files the record the save returned: looking it up in ledger.records
+    // read this render's list, captured before the save's reload, so it always
+    // missed and a note started from a project page was born unfiled.
     const projectId = pendingProjectRef.current;
     pendingProjectRef.current = null;
     if (!projectId) return;
-    const created = ledger.records.find((record) => record.id === recordId);
-    if (created) {
-      void ledger.updateRecord(created, {
-        contextIds: withProject(created, ledger.contexts, projectId),
-      });
-    }
+    void ledger.updateRecord(created, {
+      contextIds: withProject(created, ledger.contexts, projectId),
+    });
   };
 
   // A selected record that vanishes (discarded from the editor) clears the pane.
@@ -220,9 +240,11 @@ export function LedgerWorkspace() {
         selectedId={selectedId}
         candidates={candidates}
         dateUnknown={dateUnknown}
-        onSelect={openRecord}
+        onSelect={selectRecord}
         onNew={startNew}
         now={now}
+        projectScopeId={projectScope}
+        onClearProjectScope={clearProjectScope}
       />
       {showNoteEditor ? (
         <NoteEditorPane

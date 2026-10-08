@@ -28,6 +28,8 @@ export type CommandTarget =
   | { kind: "navigate"; view: ViewKey }
   | { kind: "newRecord" }
   | { kind: "openRecord"; recordId: string }
+  // An agent-session record: open the session, falling back to the record.
+  | { kind: "openAgentSession"; sessionId: string }
   | { kind: "openSession"; sessionId: string; tab?: "overview" | "flow" | "evidence" | "insights" | "report" }
   | { kind: "openSettings"; segment?: SettingsTab }
   | { kind: "toggleSidebarCollapsed" }

@@ -12,6 +12,7 @@ import type {
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { displayTime, schemaLabel } from "./recordPresentation";
 import { stripInlineMarkdown } from "./noteWorkspace";
+import { recordProject } from "./projectScope";
 
 export type ExplorerSort = "date" | "title";
 export type ExplorerGroupMode = "day" | "project" | "recent";
@@ -165,7 +166,8 @@ function sortRecords(records: MoriRecord[], sort: ExplorerSort): MoriRecord[] {
 
 /**
  * Groups records by context. A record in several contexts appears under its
- * first known context; a record in none lands in 기타. Groups are ordered by
+ * project when it has one (a routine listed first never wins over the project),
+ * else its first known context; a record in none lands in 기타. Groups are ordered by
  * their newest record (기타 always last); records within a group follow the
  * sort. Contexts with no records are omitted.
  */
@@ -209,9 +211,9 @@ export function buildExplorerGroups(
 
   for (const record of records) {
     const contextIds = membership.get(record.id);
-    // First known context wins; unknown/none → 기타.
-    let target = NONE_ID;
-    if (contextIds) {
+    // The record's project wins; else the first known context; none → 기타.
+    let target = recordProject(record, contexts, relations)?.id ?? NONE_ID;
+    if (target === NONE_ID && contextIds) {
       for (const id of contextIds) {
         if (contextName.has(id)) {
           target = id;

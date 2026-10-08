@@ -70,6 +70,7 @@ export function ContextView() {
   // calendar and as a 340px textarea from here.
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const requestNewRecord = useAppStore((state) => state.requestNewRecord);
+  const findInProject = useAppStore((state) => state.findInProject);
   const openSession = useAppStore((state) => state.openSession);
   const resolveSession = useSessionResolver();
   const [summaries] = useState(() => safeSummaries());
@@ -457,6 +458,17 @@ export function ContextView() {
             <button type="button" className="ctx-pane-new" onClick={() => setContinuing(true)}>
               <ClipboardList size={13} aria-hidden="true" />
               이어가기
+            </button>
+          ) : null}
+          {activeContext ? (
+            <button
+              type="button"
+              className="ctx-pane-new"
+              onClick={() => findInProject(activeContext.id)}
+              title="이 프로젝트에 확정된 기록과 세션만 찾습니다"
+            >
+              <Search size={13} aria-hidden="true" />
+              이 프로젝트에서 찾기
             </button>
           ) : null}
           {activeContext ? (

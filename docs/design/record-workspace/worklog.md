@@ -1,5 +1,20 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (project-scoped retrieval, 2026-10-08)
+
+#161. A reviewed project membership (#160) was durable but could not be found from 기록 or the palette.
+
+- **이 프로젝트에서 찾기.** A project page action opens 기록 scoped to that project's context id (`ledgerProjectScope` in the app store, so opening a session and coming back keeps it).
+- **What the scope holds.**
+  - Only durable members: `projectScope.ts`, which reads project `contextIds` through `membershipState`, or a `belongs-to` relation.
+  - Sub-projects roll up into their parent.
+  - Confirmed agent sessions are included in the scope; the default view still hides sessions.
+  - A gone or archived project shows its state instead of widening.
+- **Search.** Inside the scope, search filters every loaded record in memory, so a global result cap cannot hide a match.
+- **Opening a session.** An agent-session row opens the session through the resolver, and falls back to the record.
+- **Explorer 프로젝트별.** Grouping uses the record's project, not its first context.
+- **Palette.** Names the project the same way (paths for same-named projects), opens agent sessions as sessions, and drops the duplicate session row.
+
 ## Done (reviewed project membership, 2026-10-08)
 
 #159. The 프로젝트 page placed sessions by their checkout, but no session record ever had a project.
