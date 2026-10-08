@@ -1,5 +1,27 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (project continuity · checkout identity in 프로젝트, 2026-10-08)
+
+#157. 프로젝트 grouping identified a session by its folder's last segment, so:
+
+- a Claude worktree session that started in `~/dev` was filed under a project named `dev`;
+- two different checkouts with the same name merged;
+- the confirmed aliases in `mori.projectConnections.v1` were never read.
+
+Now:
+
+- **Identity is the checkout.** The reader reports which checkout a session belongs to:
+  - the session's own `worktree-state` record (historical), or
+  - current Git worktree metadata.
+  - When the two contradict, no identity is reported.
+- **Grouping.** `buildProjectGroups` groups by that checkout after confirmed aliases. It joins a context by name only when exactly one checkout carries the name. Other same-named checkouts become `candidates`.
+- **Why a session is included.** Every session says why it is included (`inclusion`).
+- **Pack.** 이어가기 shows the worktree or alias basis and counts the name candidates.
+- **No durable writes.** Nothing durable is written: kernel `contextIds` are unchanged.
+- **Finding, owner decision.** The adapter compares `context.name` with the session's full-path `projectName`, so agent-session records never bind.
+
+Also logged here: 2026-10-08 #156 added session outcome evidence to 이어가기 (linked PRs per repository, coverage, non-conversation exclusions).
+
 ## Done (project continuation pack, slice 1, 2026-10-07)
 
 #144. 프로젝트 gains 이어가기: the canonical project-level handoff (owner decision
