@@ -3153,6 +3153,28 @@ mod window_tests {
         println!("detail_read ms={:.2} result={}", started.elapsed().as_secs_f64() * 1000.0, match detail { Ok(d) => format!("ok messages={}", d.messages.len()), Err(e) => e });
     }
 
+    /// Every window, read back by its end cursor, is the same window: on a real
+    /// transcript (read only).
+    /// `MORI_WINDOW_BENCH=/path/to/session.jsonl cargo test --release window_readback_check -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn window_readback_check() {
+        let Ok(path) = std::env::var("MORI_WINDOW_BENCH") else { return };
+        let root = Path::new(&path).parent().and_then(Path::parent).unwrap().to_path_buf();
+        let mut windows = vec![read_session_window_at(&root, &path, None, None, None, WINDOW_BYTES).unwrap()];
+        for _ in 0..70 {
+            let last = windows.last().unwrap();
+            let next = read_session_window_at(&root, &path, Some(last.start_offset), Some(&last.source_id), Some(&last.start_anchor), WINDOW_BYTES).unwrap();
+            windows.push(next);
+        }
+        for (index, w) in windows.iter().enumerate() {
+            let back = read_session_window_with(&root, &path, Some(w.end_offset), Some(&w.source_id), None, Some(&w.end_anchor), WINDOW_BYTES)
+                .unwrap_or_else(|error| panic!("window {index}: {error}"));
+            assert_eq!((back.start_offset, back.end_offset), (w.start_offset, w.end_offset), "window {index}");
+        }
+        println!("{} windows read back identically", windows.len());
+    }
+
     #[test]
     fn the_window_reader_keeps_the_source_root_and_file_type_boundaries() {
         let dir = TempDir::new().unwrap();
