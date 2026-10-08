@@ -290,8 +290,10 @@ describe("navigation races", () => {
 
     const slow = resolve(slowId);
     expect(await resolve(nextId)).toBe("opened");
-    // The first read finishes late, with a whole transcript.
-    finishSlow({ ...meta("slow", "Slow"), messages: [message("s1", "slow session")], claudeDetail: undefined });
+    // The first read finishes late, with a whole, importable transcript.
+    const slowMeta = meta("slow", "Slow");
+    const slowMessages = [message("s1", "slow session")];
+    finishSlow({ ...slowMeta, messages: slowMessages, claudeDetail: { ...slowMeta, filePath: slowMeta.sourceFilePath, messages: slowMessages } });
 
     expect(await slow).toBe("superseded");
     const store = useSessionStore.getState();
@@ -299,6 +301,33 @@ describe("navigation races", () => {
     expect(store.imports).toEqual([]);
     expect(repository.listSessionImports(nextId)).toEqual([]);
     expect(repository.listSessionImports(slowId)).toEqual([]);
+  });
+
+  it("an earlier page that arrives after the user switched sessions is dropped", async () => {
+    const firstId = register(meta("first", "First"));
+    const secondId = register(meta("second", "Second"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    let finishEarlier: (value: ClaudeCodeSessionWindow) => void = () => {};
+    reader.window
+      .mockResolvedValueOnce(window(200, 300, [message("a2", "first recent")]))
+      .mockImplementationOnce(
+        () =>
+          new Promise<ClaudeCodeSessionWindow>((resolve) => {
+            finishEarlier = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(window(0, 100, [message("b1", "second")]));
+    const resolve = resolver();
+
+    await resolve(firstId);
+    const earlier = useSessionStore.getState().loadEarlierSessionWindow();
+    expect(await resolve(secondId)).toBe("opened");
+    finishEarlier(window(100, 200, [message("a1", "first earlier")]));
+    await earlier;
+
+    const state = useSessionStore.getState().sessionWindow;
+    expect(state?.sessionId).toBe(secondId);
+    expect(state && "events" in state ? state.events.map((event) => event.id) : []).toEqual(["b1"]);
   });
 
   it("a window for a session the user left is dropped", async () => {
