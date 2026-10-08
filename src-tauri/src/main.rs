@@ -1,4 +1,5 @@
 mod agent_paths;
+mod agent_text;
 mod antigravity;
 mod browser_relay;
 mod browser_relay_protocol;

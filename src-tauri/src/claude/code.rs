@@ -306,7 +306,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             } else if !preview.generic_title.trim().is_empty() {
                 truncate(&preview.generic_title, 90)
             } else if preview.first_user_text.trim().is_empty() {
-                format!("Claude Code · {}", project_label)
+                untitled_fallback(&preview.command_name, &project_label)
             } else {
                 distill_title(&preview.first_user_text, 90)
             };
@@ -390,7 +390,7 @@ pub(crate) fn read_session_at(
             )
         });
     let title = if parsed.title.trim().is_empty() {
-        format!("Claude Code · {}", project_name)
+        untitled_fallback(&parsed.command_name, &project_name)
     } else {
         distill_title(&parsed.title, 90)
     };
@@ -547,6 +547,8 @@ struct SessionPreview {
     message_count: usize,
     /// Whether the whole file fit inside the preview budget.
     complete: bool,
+    /// The first slash command, for a session that holds nothing else.
+    command_name: String,
     first_user_text: String,
     summary: String,
     ai_title: String,
@@ -600,13 +602,17 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
             }
         }
         let role = detect_role(&value);
-        if role == "human" && preview.first_user_text.is_empty() {
+        if role == "human" && preview.first_user_text.is_empty() && !is_meta_record(&value) {
             // Skip tool-result envelopes and agent boilerplate so the title is
             // the first real human prompt, not "↳ 도구 결과 …" or a continuation
             // notice.
             let content = extract_content(&value);
             if is_titleable_user_text(&content) {
                 preview.first_user_text = content;
+            } else if preview.command_name.is_empty() {
+                if let Some(command) = crate::agent_text::slash_command_name(&content) {
+                    preview.command_name = command;
+                }
             }
         }
         if preview.first_timestamp.is_empty() {
@@ -630,6 +636,8 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
 struct ParsedSession {
     messages: Vec<ClaudeCodeMessage>,
     title: String,
+    /// The first slash command, for a session that holds nothing else.
+    command_name: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
     file_touches: Vec<ClaudeFileTouch>,
@@ -683,6 +691,7 @@ impl TokenAccumulator {
 fn parse_jsonl(text: &str) -> ParsedSession {
     let mut messages: Vec<ClaudeCodeMessage> = Vec::new();
     let mut title = String::new();
+    let mut command_name = String::new();
     let mut summary = String::new();
     let mut ai_title = String::new();
     let mut generic_title = String::new();
@@ -739,8 +748,14 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         if content.trim().is_empty() {
             continue;
         }
-        if role == "human" && title.is_empty() && is_titleable_user_text(&content) {
-            title = content.clone();
+        if role == "human" && title.is_empty() && !is_meta_record(&value) {
+            if is_titleable_user_text(&content) {
+                title = content.clone();
+            } else if command_name.is_empty() {
+                if let Some(command) = crate::agent_text::slash_command_name(&content) {
+                    command_name = command;
+                }
+            }
         }
         let id = value
             .get("uuid")
@@ -787,9 +802,26 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         } else {
             title
         },
+        command_name,
         cwd,
         token_usage: tokens.usage,
         file_touches,
+    }
+}
+
+/// Claude Code marks some harness-written user records `"isMeta": true`.
+fn is_meta_record(value: &Value) -> bool {
+    value.get("isMeta").and_then(Value::as_bool) == Some(true)
+}
+
+/// The title of a session with no request to title it by: the slash command it
+/// ran when there is one (`Claude Code · /model`), else the project. Honest
+/// about what the session holds rather than inventing a summary.
+fn untitled_fallback(command_name: &str, project_label: &str) -> String {
+    if command_name.trim().is_empty() {
+        format!("Claude Code · {project_label}")
+    } else {
+        format!("Claude Code · {}", command_name.trim())
     }
 }
 
@@ -833,11 +865,14 @@ fn is_titleable_user_text(content: &str) -> bool {
         return false;
     }
     let lower = trimmed.to_lowercase();
-    const BOILERPLATE_PREFIXES: [&str; 4] = [
+    // Harness-injected user-role text (`<command-name>`, `<local-command-caveat>`,
+    // `<system-reminder>`, ...) opens with a tag; see `agent_text`.
+    if crate::agent_text::is_harness_envelope(trimmed) {
+        return false;
+    }
+    const BOILERPLATE_PREFIXES: [&str; 2] = [
         "this session is being continued from a previous conversation",
         "caveat: the messages below were generated by the user while running",
-        "<system-reminder>",
-        "<command-name>",
     ];
     if BOILERPLATE_PREFIXES
         .iter()
@@ -1727,6 +1762,53 @@ mod tests {
         assert!(listing[0].file_bytes > 1_000_000);
         assert!(!listing[0].message_count_complete);
         assert!(listing[0].message_count < 1_500);
+    }
+
+    fn raw_user_line(content: &str, meta: bool, at: &str) -> String {
+        let meta_field = if meta { "\"isMeta\":true," } else { "" };
+        format!(
+            "{{\"type\":\"user\",{meta_field}\"cwd\":\"/home/u/dev/home\",\"message\":{{\"role\":\"user\",\"content\":{}}},\"timestamp\":\"{at}\"}}\n",
+            serde_json::to_string(content).unwrap()
+        )
+    }
+
+    #[test]
+    fn titles_by_the_request_after_slash_command_records() {
+        // The shape of the NUC's real slash-command transcripts: a meta caveat,
+        // the command record, its stdout, and only then the request.
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("-home-u-dev-home");
+        let body = [
+            raw_user_line("<local-command-caveat>Caveat: The messages below were generated by the user while running local commands.</local-command-caveat>", true, "2026-09-30T04:21:48Z"),
+            raw_user_line("<command-name>/model</command-name>\n<command-message>model</command-message>", false, "2026-09-30T04:21:49Z"),
+            raw_user_line("<local-command-stdout>Set model to opus</local-command-stdout>", false, "2026-09-30T04:21:50Z"),
+            raw_user_line("홈 서버 백업 스크립트 점검", false, "2026-09-30T04:22:00Z"),
+        ]
+        .concat();
+        let path = write_session(&dir, "command-then-request.jsonl", &body);
+
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].title, "홈 서버 백업 스크립트 점검");
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(detail.title, listing[0].title);
+    }
+
+    #[test]
+    fn titles_a_command_only_session_by_its_command_not_its_path() {
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("-home-u-dev-home");
+        let body = [
+            raw_user_line("<local-command-caveat>Caveat: The messages below were generated by the user while running local commands.</local-command-caveat>", true, "2026-09-30T04:21:48Z"),
+            raw_user_line("<command-name>/model</command-name>\n<command-message>model</command-message>", false, "2026-09-30T04:21:49Z"),
+            raw_user_line("<local-command-stdout>Set model to opus</local-command-stdout>", false, "2026-09-30T04:21:50Z"),
+        ]
+        .concat();
+        let path = write_session(&dir, "command-only.jsonl", &body);
+
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].title, "Claude Code · /model");
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(detail.title, "Claude Code · /model");
     }
 
     #[test]
