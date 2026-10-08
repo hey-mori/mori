@@ -1,5 +1,9 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (long session reopening, 2026-10-08)
+
+#163. Only the open path changed for 기록: `LedgerWorkspace` and `ContextView` read the shared resolver's outcome (`opened` / `unavailable` / `superseded`) instead of a boolean, so a superseded open no longer navigates and a failed transcript read opens the session with an error and retry instead of an empty one. No ledger data, membership, or `contextIds` change.
+
 ## Done (project-scoped retrieval, 2026-10-08)
 
 #161. A reviewed project membership (#160) was durable but could not be found from 기록 or the palette.
