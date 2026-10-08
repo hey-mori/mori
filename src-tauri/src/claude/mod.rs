@@ -23,6 +23,7 @@ pub mod installations;
 /// Format a UNIX timestamp (seconds) as `YYYY-MM-DDTHH:MM:SS`. Shared by
 /// every claude submodule so file timestamps line up with the rest of the
 /// app without pulling in `chrono`.
+/// Unix seconds as an ISO-8601 UTC timestamp with an explicit `Z`.
 pub(crate) fn format_unix_seconds(secs: u64) -> String {
     const SECONDS_PER_DAY: u64 = 86_400;
     let total_days = secs / SECONDS_PER_DAY;
@@ -42,8 +43,11 @@ pub(crate) fn format_unix_seconds(secs: u64) -> String {
         year += 1;
     }
     let (month, day) = month_day(day_of_year as u32, is_leap(year));
+    // The fields are UTC, so the zone is written: an ISO date-time without one
+    // is read as LOCAL time by JavaScript (`Date.parse`), which put every such
+    // value nine hours off in KST.
     format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}",
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
         year, month, day, hour, minute, second
     )
 }
@@ -66,4 +70,18 @@ fn month_day(day_of_year: u32, leap: bool) -> (u32, u32) {
         remaining -= length;
     }
     (12, 31)
+}
+
+#[cfg(test)]
+mod format_tests {
+    use super::format_unix_seconds;
+
+    #[test]
+    fn writes_utc_with_an_explicit_zone() {
+        assert_eq!(format_unix_seconds(0), "1970-01-01T00:00:00Z");
+        // 2026-09-30T04:22:13Z, a real file mtime from the NUC trial.
+        assert_eq!(format_unix_seconds(1_790_742_133), "2026-09-30T04:22:13Z");
+        // Leap day.
+        assert_eq!(format_unix_seconds(1_709_164_800), "2024-02-29T00:00:00Z");
+    }
 }
