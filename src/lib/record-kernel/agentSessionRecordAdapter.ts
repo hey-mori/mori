@@ -58,10 +58,13 @@ export function buildAgentSessionRecordInput(
     : undefined;
 
   const agentLabel = (meta.agentName || meta.agentId || "에이전트").trim();
-  const countLine = meta.messageCount > 0 ? ` · 메시지 ${meta.messageCount}개` : "";
+  // A count read from only the head of a long transcript is a lower bound, so it
+  // is not written as the session's size: a wrong number is worse than none.
+  const knownCount = meta.messageCountComplete !== false && meta.messageCount > 0;
+  const countLine = knownCount ? ` · 메시지 ${meta.messageCount}개` : "";
 
   const properties: CreateRecordInput["properties"] = { agentId: meta.agentId };
-  if (meta.messageCount > 0) properties.stepCount = meta.messageCount;
+  if (knownCount) properties.stepCount = meta.messageCount;
 
   return {
     id: autoImportedSessionId(meta),
@@ -177,6 +180,52 @@ export function planAgentSessionRediscovery(
 }
 
 const OBSERVED_KEYS = ["title", "body", "time", "contextIds", "agentId", "stepCount"] as const;
+
+/**
+ * Does a change between two observations only extend a session (its end time,
+ * its message count, the body line that states the count)? Such growth is the
+ * same fact getting newer, not a new decision, so consecutive growth writes can
+ * share one revision. Anything else (title, project, agent, start, time basis)
+ * stays its own entry.
+ */
+export function isGrowthOnly(before: ObservedFields, after: ObservedFields): boolean {
+  return (
+    same(before.title, after.title) &&
+    same(before.contextIds, after.contextIds) &&
+    same(before.agentId, after.agentId) &&
+    before.time.occurredStart === after.time.occurredStart &&
+    before.time.timeBasis === after.time.timeBasis
+  );
+}
+
+/**
+ * The revision to write for an automation update. When the record's newest
+ * revision is itself a growth-only automation update, and this one is growth
+ * only too, the new write supersedes it: same id, the original `before`, the
+ * newest `after`. A live session polled every 90 seconds then costs one revision
+ * per stretch of growth instead of one per poll, while the record always holds
+ * the exact latest observation. A user edit, a status change, or any non-growth
+ * change in between ends the stretch, so none of those is ever merged away.
+ * Decided from stored revisions, so a restart neither loses nor duplicates it.
+ */
+export function supersedeGrowthRevision(
+  revisions: readonly KernelRevision[],
+  next: KernelRevision,
+): KernelRevision {
+  const latest = [...revisions].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).at(-1);
+  if (!latest || latest.actor !== "rule" || latest.operation !== "update") return next;
+  if (!latest.before || !latest.after || !next.before || !next.after) return next;
+  const latestGrowth = isGrowthOnly(
+    observedFields(latest.before as MoriRecord),
+    observedFields(latest.after as MoriRecord),
+  );
+  const nextGrowth = isGrowthOnly(
+    observedFields(next.before as MoriRecord),
+    observedFields(next.after as MoriRecord),
+  );
+  if (!latestGrowth || !nextGrowth) return next;
+  return { ...next, id: latest.id, before: latest.before };
+}
 
 /**
  * Per observed field, the value automation last wrote to it, read from the
@@ -299,7 +348,7 @@ export async function upsertAgentSessionRecords(
         continue;
       }
       const { record, revision } = applyRecordPatch(current, patch, "rule", registry, now);
-      await repo.saveRecord(record, revision);
+      await repo.saveRecord(record, supersedeGrowthRevision(revisions.data, revision));
       result.updated += 1;
     } catch {
       result.failed += 1;

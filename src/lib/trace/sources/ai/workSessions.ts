@@ -81,6 +81,9 @@ export type AgentWorkSessionMeta = {
   startedAt: string;
   updatedAt: string;
   messageCount: number;
+  /** False when `messageCount` covers only part of the source (a reader that
+   *  previews a long session's head). Absent means complete. */
+  messageCountComplete?: boolean;
   title: string;
   tokenUsage?: ClaudeTokenUsage;
   connectorId?: string;
@@ -284,11 +287,28 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     filePath: session.filePath,
     sourceFilePath: session.filePath,
     startedAt: session.startedAt,
-    updatedAt: session.startedAt,
+    updatedAt: claudeLastActivity(session),
     messageCount: session.messageCount,
+    messageCountComplete: session.messageCountComplete,
     title: session.title,
     tokenUsage: session.tokenUsage,
   };
+}
+
+/**
+ * When a Claude session was last written to: the transcript's modification
+ * time. It is the honest "still being worked on" signal (a resumed session keeps
+ * its first-message start for days), but it is a source observation, not proof
+ * the conversation ended then. Falls back to the start when the file time is
+ * missing, unparseable, or earlier than the first message.
+ */
+export function claudeLastActivity(session: Pick<ClaudeCodeSessionMeta, "startedAt" | "modifiedAt">): string {
+  const modified = session.modifiedAt ?? "";
+  const modifiedMs = Date.parse(modified);
+  const startedMs = Date.parse(session.startedAt);
+  if (!modified || Number.isNaN(modifiedMs)) return session.startedAt;
+  if (!Number.isNaN(startedMs) && modifiedMs < startedMs) return session.startedAt;
+  return modified;
 }
 
 function mapClaudeDesktopMeta(session: ClaudeConversationMeta): AgentWorkSessionMeta {

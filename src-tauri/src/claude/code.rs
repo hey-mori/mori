@@ -62,6 +62,9 @@ pub struct ClaudeCodeSessionMeta {
     /// of a huge session instead of reading the whole history.
     pub file_bytes: u64,
     pub message_count: usize,
+    /// False when the preview stopped at its byte budget, so `message_count`
+    /// counts only the file's head: a lower bound, never the session's total.
+    pub message_count_complete: bool,
     pub title: String,
     pub token_usage: ClaudeTokenUsage,
 }
@@ -317,6 +320,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 modified_at,
                 file_bytes,
                 message_count: preview.message_count,
+                message_count_complete: preview.complete,
                 title,
                 token_usage: preview.token_usage,
             });
@@ -541,6 +545,8 @@ fn parse_jsonl_delta(
 #[derive(Default)]
 struct SessionPreview {
     message_count: usize,
+    /// Whether the whole file fit inside the preview budget.
+    complete: bool,
     first_user_text: String,
     summary: String,
     ai_title: String,
@@ -558,7 +564,7 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
     const PREVIEW_BUDGET: usize = 1_000_000;
     let file = std::fs::File::open(path).ok()?;
     let reader = BufReader::new(file);
-    let mut preview = SessionPreview::default();
+    let mut preview = SessionPreview { complete: true, ..SessionPreview::default() };
     let mut tokens = TokenAccumulator::default();
     let mut bytes_read = 0usize;
     for line_result in reader.lines() {
@@ -567,6 +573,7 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
         };
         bytes_read += line.len() + 1;
         if bytes_read > PREVIEW_BUDGET {
+            preview.complete = false;
             break;
         }
         let trimmed = line.trim();
@@ -1686,6 +1693,40 @@ mod tests {
         assert_eq!(detail.messages[0].content, "Hello");
         assert_eq!(detail.messages[1].role, "assistant");
         assert!(detail.messages[1].content.contains("Hi."));
+    }
+
+    fn user_line(text: &str, at: &str) -> String {
+        format!(
+            "{{\"type\":\"user\",\"cwd\":\"/home/u/dev/mori\",\"message\":{{\"role\":\"user\",\"content\":\"{text}\"}},\"timestamp\":\"{at}\"}}\n"
+        )
+    }
+
+    #[test]
+    fn list_reports_a_complete_message_count_for_a_small_session() {
+        let temp = TempDir::new().unwrap();
+        let body = format!("{}{}", user_line("first", "2026-10-07T13:48:42Z"), user_line("second", "2026-10-07T14:00:00Z"));
+        write_session(&temp.path().join("-home-u-dev-mori"), "small.jsonl", &body);
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].message_count, 2);
+        assert!(listing[0].message_count_complete);
+        // The file time is explicit UTC, so JavaScript cannot read it as local.
+        assert!(listing[0].modified_at.ends_with('Z'));
+    }
+
+    #[test]
+    fn list_marks_the_count_partial_when_the_preview_budget_cuts_a_long_session() {
+        // A session that grew for hours: far more than the 1 MB preview reads.
+        let temp = TempDir::new().unwrap();
+        let filler = "x".repeat(1_000);
+        let mut body = String::new();
+        for minute in 0..1_500 {
+            body.push_str(&user_line(&format!("step {minute} {filler}"), &format!("2026-10-07T{:02}:{:02}:00Z", 13 + minute / 60 % 10, minute % 60)));
+        }
+        write_session(&temp.path().join("-home-u-dev-mori"), "long.jsonl", &body);
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert!(listing[0].file_bytes > 1_000_000);
+        assert!(!listing[0].message_count_complete);
+        assert!(listing[0].message_count < 1_500);
     }
 
     #[test]
