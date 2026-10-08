@@ -50,7 +50,8 @@ Schema `agent-session` as seeded (`agentId`, `stepCount`,
 `tokenCount`): title = session title, body = one honest line (agent +
 count; no synthetic summary), `occurredStart/End` from the session's
 own times with `timeBasis: source-observed`, origin `automation`,
-status `active`, plus the create `Revision` (actor `automation`).
+status `active`, plus the create `Revision` (actor `rule`, the actor
+`actorForOrigin` gives origin `automation`).
 Live status, timeline events, and analysis stay in the 세션 workspace
 model; the cross-lenses need identity, time, agent, and project
 binding, nothing more (audit §3 scoping).
@@ -77,7 +78,8 @@ record on every growth and silently reverted user edits.
 
 - **Observed fields** are the title, the body line, the activity time
   (start, end, and basis as one unit), the project binding, and the
-  `agentId` / `stepCount` properties. Each is merged three-way: if its
+  `agentId` / `stepCount` / `activityClass` / `interaction` /
+  `sessionEvidence` properties (§2.2). Each is merged three-way: if its
   current value still equals the value automation last wrote to that
   field, it takes the fresh observation; otherwise the user changed it and
   it is kept. "Last wrote" is per field: a `rule` create sets every field,
@@ -96,6 +98,47 @@ record on every growth and silently reverted user edits.
 - **Unreliable reads:** if the existing record or its revisions could
   only be read from the browser fallback, the session is skipped and
   counted as failed rather than recreated over the real record.
+
+### 2.2 Session outcome evidence and capture policy (2026-10-08)
+
+Owner-approved after the NUC continuation experiment showed a pack of
+titles alone added nothing a fresh agent could not find in Git.
+
+- **`sessionEvidence`** holds only structural Git observations the
+  source itself recorded, with locators (`segment` = the transcript's
+  own session id, `line` = 1-based record number):
+  - PRs from Claude `pr-link` records, deduplicated by repository and
+    number. Meaning: "this session's source links to this PR". Not
+    authorship, not a merge, not success.
+  - Branch names from Claude records' `gitBranch` and Codex
+    `session_meta.git.branch`, each with first and last sighting.
+    Meaning: "seen in the session's Git context". Not the current
+    branch. `HEAD` (detached) is not recorded.
+  - Repositories named by those sources, and the `continued-in` segment.
+  - `coverage`: `complete` only when the whole source was read. Long
+    transcripts are scanned incrementally (32 MB per file per poll,
+    resumed from the last complete line while the process runs), so a
+    huge history is `partial` for a few polls, and the pack says so.
+- **Never stored:** transcript prose, assistant reports, request text,
+  absolute paths, or counts that move every poll without new meaning.
+  An opt-in, reviewed outcome excerpt is deferred (owner decision,
+  2026-10-08).
+- **`activityClass`** (`conversation`, `command-only`, `empty`,
+  `unknown`) is decided from a complete read only; a cut or failed read
+  is `unknown`. **`interaction`** comes from the source's marker
+  (Claude `entrypoint`: `cli` interactive, `sdk-*` automation; Codex
+  `session_meta.source`: `exec` automation, `cli`/`vscode` interactive),
+  else `unknown`.
+- **Capture policy:** a *new* source a complete read proves `empty` is
+  recognised and counted, not registered (no draft, no record).
+  Command-only and automation sessions keep their records and are left
+  out of the continuation pack with the reason counted. Records that
+  existed before are never removed or discarded by this policy; a
+  backfill happens only through the normal rediscovery merge, once per
+  changed fingerprint.
+- **Revisions:** evidence changes are growth, so they supersede the
+  previous growth revision like an end-time change; a user edit or a
+  status change still ends the stretch.
 
 ## 3. The flood problem (first-class design concern)
 
