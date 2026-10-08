@@ -308,17 +308,18 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
       }),
     );
     expect(pack.sessions[0].evidence).toEqual({
+      // Newest first: a capped list should keep where the work ended.
       prs: [
-        { repository: "acme/app", number: 137 },
-        { repository: "acme/app", number: 139 },
         { repository: "acme/home", number: 139 },
+        { repository: "acme/app", number: 139 },
+        { repository: "acme/app", number: 137 },
       ],
       branches: ["main", "fix/storage"],
       coverage: "complete",
       segments: 1,
     });
     expect(pack.markdown).toContain("- 2026-10-05~2026-10-06 · Claude · 재개 점검 (mori:session/auto-claude-long)");
-    expect(pack.markdown).toContain("  - 기록에 연결된 PR: acme/app #137 #139 · acme/home #139");
+    expect(pack.markdown).toContain("  - 기록에 연결된 PR: acme/home #139 · acme/app #139 #137");
     expect(pack.markdown).toContain("  - 관찰된 브랜치: main, fix/storage");
     expect(pack.markdown).toContain("  - 근거 범위: 기록 전체 확인");
     expect(pack.markdown).toContain("병합됐는지는 확인하지 않았습니다");
@@ -349,7 +350,8 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
     const pack = buildProjectContinuationPack(
       input({ sessions: [evidenced("auto-claude-many", "운영 작업", { sessionEvidence: evidence("seg", { prs, branches }) })] }),
     );
-    expect(pack.markdown).toContain("#119 외 5개");
+    expect(pack.markdown).toContain("acme/infra #124 #123");
+    expect(pack.markdown).toContain("#105 외 5개");
     expect(pack.markdown).toContain("b5 외 3개");
     expect(pack.sessions[0].evidence?.prs).toHaveLength(25);
   });
@@ -395,8 +397,8 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
     const joined = pack.sessions.find((item) => item.ref === "mori:session/auto-claude-part2");
     expect(joined?.evidence).toEqual({
       prs: [
-        { repository: "acme/app", number: 7 },
         { repository: "acme/app", number: 8 },
+        { repository: "acme/app", number: 7 },
       ],
       branches: [],
       coverage: "partial",

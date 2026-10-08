@@ -387,8 +387,10 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
   return { ...pack, markdown: renderContinuationMarkdown(pack) };
 }
 
-/** One session's evidence across its segments. Coverage is complete only when
- *  every segment reported evidence and every one was read to the end. */
+/** One session's evidence across its segments, most recent observation first:
+ *  a handoff needs where the work ended, so a capped list keeps the newest.
+ *  Coverage is complete only when every segment reported evidence and every
+ *  one was read to the end. */
 function mergeEvidence(
   evidences: RecordedSessionEvidence[],
   segments: number,
@@ -397,14 +399,18 @@ function mergeEvidence(
   const prs: ContinuationEvidence["prs"] = [];
   const seenPrs = new Set<string>();
   const branches: string[] = [];
-  for (const evidence of evidences) {
-    for (const pr of [...evidence.prs].sort((a, b) => a.line - b.line)) {
+  // Segments arrive oldest first; walk them newest first, each newest first.
+  for (const evidence of [...evidences].reverse()) {
+    for (const pr of [...evidence.prs].sort((a, b) => b.line - a.line)) {
       const key = `${pr.repository.toLowerCase()}#${pr.number}`;
       if (seenPrs.has(key)) continue;
       seenPrs.add(key);
       prs.push({ repository: pr.repository, number: pr.number });
     }
-    for (const branch of evidence.branches) {
+    const byLastSeen = [...evidence.branches].sort((a, b) =>
+      (b.lastObservedAt || "").localeCompare(a.lastObservedAt || ""),
+    );
+    for (const branch of byLastSeen) {
       if (!branches.includes(branch.name)) branches.push(branch.name);
     }
   }
@@ -413,7 +419,7 @@ function mergeEvidence(
   return { prs, branches, coverage: complete ? "complete" : "partial", segments };
 }
 
-/** `acme/app #7 #9 · acme/home #3`, capped, numbers in first-seen order. */
+/** `acme/app #9 #7 · acme/home #3`, capped, most recent first. */
 function prLine(prs: ContinuationEvidence["prs"]): string {
   const shown = prs.slice(0, EVIDENCE_PR_CAP);
   const byRepo = new Map<string, number[]>();
