@@ -95,6 +95,8 @@ export type SessionInclusion = {
    * projection puts it, and flagged rather than silently refiled).
    */
   review?: "suggested" | "rejected" | "invalid";
+  /** For `invalid`: the missing or archived project the record still names. */
+  invalidContextId?: string;
   /**
    * - `worktree-record`: the session recorded the worktree's origin checkout.
    * - `git-worktree`: the folder is a Git worktree of that checkout (now).
@@ -272,7 +274,7 @@ export function buildProjectGroups(
       project: entry.aliased ? "alias" : contextKey ? "context" : "checkout",
       identity: identityBasis(session),
       ...(membership.kind === "invalid"
-        ? { review: "invalid" as const }
+        ? { review: "invalid" as const, invalidContextId: membership.contextId }
         : wasRejected
           ? { review: "rejected" as const }
           : record && contextKey

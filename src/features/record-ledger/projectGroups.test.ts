@@ -377,7 +377,7 @@ describe("buildProjectGroups · reviewed membership", () => {
       [agentRecord("s", ["ctx-old"])],
       [],
     );
-    expect(groupOf(groups, "s")?.inclusion.s.review).toBe("invalid");
+    expect(groupOf(groups, "s")?.inclusion.s).toMatchObject({ review: "invalid", invalidContextId: "ctx-old" });
   });
 
   it("follows a renamed project by id", () => {

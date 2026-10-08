@@ -103,6 +103,20 @@ export function ContextView() {
     [summaries, contexts, records, relations, connections],
   );
 
+  // Projects a session can be filed under by hand, and the sessions that have a
+  // kernel record to file (auto-imported agent sessions).
+  const liveProjects = useMemo(
+    () =>
+      contexts.filter(
+        (context) => context.type === "project" && !inArchivedSubtree(context.id, contexts),
+      ),
+    [contexts],
+  );
+  const agentSessionIds = useMemo(
+    () => new Set(records.filter((record) => record.schemaId === "agent-session").map((record) => record.id)),
+    [records],
+  );
+
   const groupByContextId = useMemo(() => {
     const map = new Map<string, ProjectGroup>();
     for (const group of groups) if (group.context) map.set(group.context.id, group);
@@ -550,6 +564,8 @@ export function ContextView() {
                           sessionId={session.sessionId}
                           inclusion={activeGroup.inclusion[session.sessionId]}
                           project={activeGroup.context}
+                          projects={liveProjects}
+                          filable={agentSessionIds.has(session.sessionId)}
                           ledger={{ reviewSessionProject }}
                         />
                       </li>

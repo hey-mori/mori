@@ -73,6 +73,12 @@ describe("planMembershipDecision", () => {
     expect(plan(session(), "unfile", "ctx-infra", "ctx-infra")).toEqual({ refused: "stale" });
   });
 
+  it("refiles a session whose project is gone, when the operator names the stale id", () => {
+    const record = session({ contextIds: ["ctx-routine", "ctx-gone"] });
+    expect(plan(record, "confirm", "ctx-home", "ctx-gone")).toMatchObject({ patch: { contextIds: ["ctx-routine", "ctx-home"] } });
+    expect(plan(record, "confirm", "ctx-home", null)).toEqual({ refused: "stale" });
+  });
+
   it("refuses a missing, archived, or non-project target, and a duplicate confirmation", () => {
     expect(plan(session(), "confirm", "ctx-gone", null)).toEqual({ refused: "missing-context" });
     expect(plan(session(), "confirm", "ctx-infra", null, [{ ...infra, archived: true }])).toEqual({ refused: "archived-context" });
