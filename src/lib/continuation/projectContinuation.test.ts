@@ -231,6 +231,7 @@ describe("buildProjectContinuationPack · markdown", () => {
         "",
         "## 근거 범위",
         "- 세션 1개: PR 근거 미기록 1개",
+        "- 사용자가 이 프로젝트로 확정한 세션: 1개",
         "",
       ].join("\n"),
     );
@@ -421,7 +422,7 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
       }),
     );
     expect(pack.coverage.unlinked).toBe(1);
-    expect(pack.markdown).toContain("- 검토된 프로젝트 연결 없이 폴더 경로로만 묶인 세션: 1개");
+    expect(pack.markdown).toContain("- 프로젝트 소속이 확정되지 않은 세션: 1개");
   });
 
   it("separates 'no decisions recorded' from 'no decisions'", () => {
@@ -433,7 +434,7 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
 });
 
 describe("buildProjectContinuationPack · why a session is in the project", () => {
-  it("says a session came in through a Git worktree or a confirmed alias, and nothing about authorship", () => {
+  it("says why a session is in the project, separates reviewed membership, and says nothing about authorship", () => {
     const wt = evidenced("auto-claude-wt", "저장소 접근 작업", { sessionEvidence: evidence("seg-wt", { prs: [["acme/infra", 218]] }) });
     const laptop = evidenced("auto-claude-laptop", "노트북 작업", { sessionEvidence: evidence("seg-l") });
     const plain = evidenced("auto-claude-plain", "기본 작업", { sessionEvidence: evidence("seg-p") }, { contextIds: [] });
@@ -450,14 +451,29 @@ describe("buildProjectContinuationPack · why a session is in the project", () =
     expect(byRef("auto-claude-wt")?.inclusion).toBe("worktree");
     expect(byRef("auto-claude-laptop")?.inclusion).toBe("alias");
     expect(byRef("auto-claude-plain")?.inclusion).toBeUndefined();
-    expect(pack.markdown).toContain("  - 포함 근거: 이 프로젝트 checkout의 Git worktree에서 진행");
-    expect(pack.markdown).toContain("  - 포함 근거: 사용자가 확인한 프로젝트 연결");
-    expect(pack.coverage).toMatchObject({ viaWorktree: 1, viaAlias: 1, unlinked: 2, nameCandidates: 2 });
+    expect(pack.markdown).toContain("  - 포함 근거: 이 프로젝트 checkout의 Git worktree에서 진행 (소속 확정 전)");
+    expect(pack.markdown).toContain("  - 포함 근거: 사용자가 확인한 폴더 연결 (소속 확정 전)");
+    // An alias and a checkout are hints; neither is a reviewed membership.
+    expect(pack.coverage).toMatchObject({ viaWorktree: 1, viaAlias: 1, unlinked: 3, reviewed: 0, nameCandidates: 2 });
     expect(pack.markdown).toContain("- 이름만 같은 다른 checkout의 세션 2개는 확인 전이라 포함하지 않음");
     // The project page's own answer decides the link: a worktree in a folder
     // group is still not a reviewed project link.
-    expect(pack.markdown).toContain("- 검토된 프로젝트 연결 없이 폴더 경로로만 묶인 세션: 2개");
+    expect(pack.markdown).toContain("- 프로젝트 소속이 확정되지 않은 세션: 3개");
     expect(pack.markdown).not.toMatch(/만든|작성한|authored/);
     expect(pack.markdown).not.toContain("/home/");
+  });
+});
+
+describe("buildProjectContinuationPack · reviewed membership", () => {
+  it("says a session is in the project because the operator filed it", () => {
+    const filed = evidenced("auto-claude-filed", "확정된 작업", { sessionEvidence: evidence("seg-f") });
+    const pack = buildProjectContinuationPack({
+      ...input({ sessions: [filed] }),
+      sessions: [{ ...filed.summary, inclusion: { project: "member", identity: "worktree-record" } }],
+    });
+    expect(pack.sessions[0].inclusion).toBe("member");
+    expect(pack.markdown).toContain("  - 포함 근거: 사용자가 이 프로젝트로 확정");
+    expect(pack.markdown).toContain("- 사용자가 이 프로젝트로 확정한 세션: 1개");
+    expect(pack.markdown).not.toContain("소속이 확정되지 않은");
   });
 });

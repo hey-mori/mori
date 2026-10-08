@@ -47,6 +47,7 @@ import {
   projectIdentitiesMatch,
   type ConnectedProject,
 } from "../../lib/projects/projectConnection";
+import { membershipState, rejectedProjects } from "../../lib/record-kernel/projectMembership";
 import { groupRecordsByContext } from "./contextGrouping";
 import { contextChain, CONTEXT_PATH_SEPARATOR } from "./contextTree";
 
@@ -77,12 +78,23 @@ export type ProjectGroup = {
  */
 export type SessionInclusion = {
   /**
-   * - `context`: joined to a project the user made, by an unambiguous name.
+   * - `member`: the operator filed this session's record under the project
+   *   (a reviewed membership in its `contextIds`). Wins over everything below.
+   * - `context`: joined to a project the user made, by an unambiguous name or
+   *   checkout. A suggestion until the operator confirms it.
    * - `alias`: the user confirmed this checkout as another project's alias.
    * - `checkout`: no Mori project; grouped only with sessions of the same
    *   checkout.
    */
-  project: "context" | "alias" | "checkout";
+  project: "member" | "context" | "alias" | "checkout";
+  /**
+   * Review state of the record behind the session, when it has one:
+   * `suggested` (placed by the projection, not yet reviewed), `rejected` (the
+   * operator said this project is not the session's, so it was not joined),
+   * `invalid` (its reviewed project is missing or archived: shown where the
+   * projection puts it, and flagged rather than silently refiled).
+   */
+  review?: "suggested" | "rejected" | "invalid";
   /**
    * - `worktree-record`: the session recorded the worktree's origin checkout.
    * - `git-worktree`: the folder is a Git worktree of that checkout (now).
@@ -163,6 +175,14 @@ export function buildProjectGroups(
     else leafOwners.set(leaf, [key]);
   }
 
+  // The record behind each auto-imported session (same id), for its reviewed
+  // membership. A session without one (a manual import) has only the projection.
+  const sessionRecords = new Map(
+    records.filter((record) => record.schemaId === "agent-session").map((record) => [record.id, record]),
+  );
+  const keyByContextId = new Map<string, string>();
+  for (const group of byKey.values()) if (group.context) keyByContextId.set(group.context.id, group.id);
+
   // Each session's identity: its checkout (or folder), after a confirmed alias.
   const resolved = sessions.map((session) => {
     // Never drop a session · an auto-imported session whose project path did not
@@ -192,6 +212,17 @@ export function buildProjectGroups(
 
   for (const entry of resolved) {
     const { session, label, canonical, leaf } = entry;
+    const record = sessionRecords.get(session.sessionId);
+    const membership = record ? membershipState(record, contexts) : { kind: "none" as const };
+    // A reviewed membership is the operator's answer: it decides the group.
+    const memberKey = membership.kind === "member" ? keyByContextId.get(membership.context.id) : undefined;
+    if (memberKey) {
+      const memberGroup = byKey.get(memberKey)!;
+      memberGroup.sessions.push(session);
+      memberGroup.inclusion[session.sessionId] = { project: "member", identity: identityBasis(session) };
+      continue;
+    }
+    const rejected = record ? rejectedProjects(record) : [];
     const owners = leafOwners.get(leaf) ?? [];
     const ambiguousName = (checkoutsByLeaf.get(leaf)?.size ?? 0) > 1;
     // Resolution order, most certain first:
@@ -205,14 +236,18 @@ export function buildProjectGroups(
     // Only a group backed by a context counts: an unfiled group an earlier
     // session created under the same leaf is not a project the user made.
     const exact = !ambiguousName && byKey.get(leaf)?.context ? leaf : null;
-    const contextKey = exact ?? (!ambiguousName && owners.length === 1 ? owners[0] : null);
+    const proposed = exact ?? (!ambiguousName && owners.length === 1 ? owners[0] : null);
+    // A project the operator rejected for this session is never joined again.
+    const proposedContext = proposed ? byKey.get(proposed)?.context : null;
+    const wasRejected = Boolean(proposedContext && rejected.includes(proposedContext.id));
+    const contextKey = wasRejected ? null : proposed;
     if (ambiguousName) {
       for (const owner of byKey.get(leaf)?.context ? [leaf] : owners) byKey.get(owner)?.candidates.push(session);
     }
     // An unfiled group keys by its leaf, as before, unless the leaf is shared
     // by another checkout: then by the full checkout identity, so the two never
     // merge.
-    const key = contextKey ?? (ambiguousName ? `checkout:${canonical}` : leaf);
+    const key = contextKey ?? (ambiguousName || wasRejected ? `checkout:${canonical}` : leaf);
     let group = byKey.get(key);
     if (!group) {
       const segments = label.replace(/\\/g, "/").split("/").filter(Boolean);
@@ -235,11 +270,24 @@ export function buildProjectGroups(
       // it names then joins a context.
       project: entry.aliased ? "alias" : contextKey ? "context" : "checkout",
       identity: identityBasis(session),
+      ...(membership.kind === "invalid"
+        ? { review: "invalid" as const }
+        : wasRejected
+          ? { review: "rejected" as const }
+          : record && contextKey
+            ? { review: "suggested" as const }
+            : {}),
     };
   }
 
+  // A filed session's record is also a context member; it is listed once, as
+  // the session.
+  const shownSessions = new Set(sessions.map((session) => session.sessionId));
   for (const group of byKey.values()) {
     group.sessions.sort((a, b) => stamp(b) - stamp(a));
+    group.records = group.records.filter(
+      (record) => !(record.schemaId === "agent-session" && shownSessions.has(record.id)),
+    );
   }
 
   return [...byKey.values()].sort(

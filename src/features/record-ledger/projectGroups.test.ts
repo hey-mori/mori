@@ -304,3 +304,86 @@ describe("buildProjectGroups · checkout identity", () => {
     expect(groups[0].context).toBeNull();
   });
 });
+
+// Reviewed membership (2026-10-08): the operator's filing in the record's
+// contextIds decides the group; the projection only suggests.
+describe("buildProjectGroups · reviewed membership", () => {
+  const infraCtx: KernelContext = { id: "ctx-infra", type: "project", name: "infra", createdAt: "x" };
+  const homeCtx: KernelContext = { id: "ctx-home", type: "project", name: "home", createdAt: "x" };
+  const apiCtx: KernelContext = { id: "ctx-api", type: "project", name: "api", createdAt: "x" };
+  const agentRecord = (id: string, contextIds: string[], properties: Record<string, unknown> = {}): MoriRecord => ({
+    ...record(id, contextIds),
+    schemaId: "agent-session",
+    properties: { agentId: "claude", ...properties },
+  });
+  const groupOf = (groups: ReturnType<typeof buildProjectGroups>, id: string) =>
+    groups.find((group) => group.sessions.some((entry) => entry.sessionId === id));
+
+  it("files a session by its reviewed membership over a misleading folder, listed once", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s", sourceLabel: "/home/u/dev/home", sourceRepository: "/home/u/dev/home", sourceRepositoryBasis: "git-checkout" })],
+      [infraCtx, homeCtx],
+      [agentRecord("s", ["ctx-infra"])],
+      [],
+    );
+    const group = groupOf(groups, "s");
+    expect(group?.context?.id).toBe("ctx-infra");
+    expect(group?.inclusion.s).toEqual({ project: "member", identity: "git-checkout" });
+    expect(group?.records).toEqual([]);
+    expect(groups.find((entry) => entry.context?.id === "ctx-home")?.sessions).toEqual([]);
+  });
+
+  it("marks a projection placement as a suggestion until it is reviewed", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "wt", sourceLabel: "/home/u/dev", sourceRepository: "/home/u/dev/infra", sourceRepositoryBasis: "session-record" })],
+      [infraCtx],
+      [agentRecord("wt", [])],
+      [],
+    );
+    expect(groupOf(groups, "wt")?.inclusion.wt).toEqual({ project: "context", identity: "worktree-record", review: "suggested" });
+  });
+
+  it("files only the one of two same-named checkouts the operator confirmed", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "work", sourceLabel: "/srv/work/api" }), session({ sessionId: "play", sourceLabel: "/home/u/play/api" })],
+      [apiCtx],
+      [agentRecord("work", ["ctx-api"]), agentRecord("play", [])],
+      [],
+    );
+    const api = groups.find((group) => group.context?.id === "ctx-api");
+    expect(api?.sessions.map((entry) => entry.sessionId)).toEqual(["work"]);
+    expect(groupOf(groups, "play")?.context).toBeNull();
+  });
+
+  it("never rejoins a project the operator rejected for the session", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "wt", sourceLabel: "/home/u/dev", sourceRepository: "/home/u/dev/infra", sourceRepositoryBasis: "session-record" })],
+      [infraCtx],
+      [agentRecord("wt", [], { projectReview: { rejected: ["ctx-infra"] } })],
+      [],
+    );
+    const group = groupOf(groups, "wt");
+    expect(group?.context).toBeNull();
+    expect(group?.inclusion.wt.review).toBe("rejected");
+  });
+
+  it("flags a membership whose project was archived instead of refiling it by name", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s", sourceLabel: "/home/u/dev/infra" })],
+      [{ ...infraCtx, id: "ctx-old", archived: true }, infraCtx],
+      [agentRecord("s", ["ctx-old"])],
+      [],
+    );
+    expect(groupOf(groups, "s")?.inclusion.s.review).toBe("invalid");
+  });
+
+  it("follows a renamed project by id", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s", sourceLabel: "/home/u/dev/infra" })],
+      [{ ...infraCtx, name: "infra-platform" }],
+      [agentRecord("s", ["ctx-infra"])],
+      [],
+    );
+    expect(groupOf(groups, "s")?.name).toBe("infra-platform");
+  });
+});
