@@ -21,11 +21,13 @@
  * Raw agent request text is deliberately absent: the default output is
  * structure, titles, and references only (owner decision 4, 2026-10-07).
  *
- * Session outcome evidence (v1) adds, per session, only structural Git
- * observations its source recorded: PRs it links to and branch names it saw,
- * with how much of the source was read. They are labelled as observations: a
- * linked PR is not claimed as authored or merged, a seen branch is not claimed
- * as current, and partial coverage is stated, never implied complete. A session
+ * Session outcome evidence (v1) adds, per session, the PRs its source links
+ * to, with how much of the source was read. They are labelled as
+ * observations: a linked PR is not claimed as authored or merged, and partial
+ * coverage is stated, never implied complete. Observed branch names stay on
+ * the record but are not handed off: a branch seen in a shared working tree
+ * can be another session's, and in a fair test agents read them as the
+ * session's own work. A session
  * that is not a person's conversation (only slash commands, a scripted run, or
  * nothing at all) is left out and counted by reason. Physical transcript
  * segments the source links with `continued-in` are shown as one session.
@@ -41,9 +43,10 @@ import { AGENT_REGISTRY } from "../trace/sources/ai/agentRegistry";
 
 export const CONTINUATION_WINDOW_DAYS = 30;
 export const CONTINUATION_SECTION_CAP = 10;
-/** Per session, how many PRs and branches are listed before "외 N개". */
-export const EVIDENCE_PR_CAP = 20;
-export const EVIDENCE_BRANCH_CAP = 6;
+/** Per session and repository, how many PRs are listed before "외 N개". A
+ *  per-repository cap keeps each repository's most recent work visible in a
+ *  session that spans several. */
+export const EVIDENCE_PR_CAP = 10;
 const DECISION_LINE_MAX = 160;
 
 export type ContinuationSessionInput = {
@@ -70,10 +73,9 @@ export type ContinuationInput = {
 
 /** The structural Git observations shown for one session. */
 export type ContinuationEvidence = {
-  /** Linked in the session's source; not proof of authorship or merge. */
+  /** Linked in the session's source, most recent first; not proof of
+   *  authorship or merge. */
   prs: Array<{ repository: string; number: number }>;
-  /** Seen in the session's Git context; not the current branch. */
-  branches: string[];
   coverage: "complete" | "partial";
   /** Transcript segments joined by the source's `continued-in` link. */
   segments: number;
@@ -398,7 +400,6 @@ function mergeEvidence(
   if (evidences.length === 0) return undefined;
   const prs: ContinuationEvidence["prs"] = [];
   const seenPrs = new Set<string>();
-  const branches: string[] = [];
   // Segments arrive oldest first; walk them newest first, each newest first.
   for (const evidence of [...evidences].reverse()) {
     for (const pr of [...evidence.prs].sort((a, b) => b.line - a.line)) {
@@ -407,44 +408,34 @@ function mergeEvidence(
       seenPrs.add(key);
       prs.push({ repository: pr.repository, number: pr.number });
     }
-    const byLastSeen = [...evidence.branches].sort((a, b) =>
-      (b.lastObservedAt || "").localeCompare(a.lastObservedAt || ""),
-    );
-    for (const branch of byLastSeen) {
-      if (!branches.includes(branch.name)) branches.push(branch.name);
-    }
   }
   const complete =
     evidences.length === segments && evidences.every((evidence) => evidence.coverage === "complete");
-  return { prs, branches, coverage: complete ? "complete" : "partial", segments };
+  return { prs, coverage: complete ? "complete" : "partial", segments };
 }
 
-/** `acme/app #9 #7 · acme/home #3`, capped, most recent first. */
+/** `acme/home #3 · acme/app #9 #7 외 4개`: repositories by most recent link,
+ *  each capped to its newest PRs. */
 function prLine(prs: ContinuationEvidence["prs"]): string {
-  const shown = prs.slice(0, EVIDENCE_PR_CAP);
   const byRepo = new Map<string, number[]>();
-  for (const pr of shown) byRepo.set(pr.repository, [...(byRepo.get(pr.repository) ?? []), pr.number]);
-  const text = [...byRepo].map(([repo, numbers]) => `${repo} ${numbers.map((n) => `#${n}`).join(" ")}`).join(" · ");
-  const rest = prs.length - shown.length;
-  return rest > 0 ? `${text} 외 ${rest}개` : text;
+  for (const pr of prs) byRepo.set(pr.repository, [...(byRepo.get(pr.repository) ?? []), pr.number]);
+  return [...byRepo]
+    .map(([repo, numbers]) => {
+      const shown = numbers.slice(0, EVIDENCE_PR_CAP).map((n) => `#${n}`).join(" ");
+      const rest = numbers.length - EVIDENCE_PR_CAP;
+      return `${repo} ${shown}${rest > 0 ? ` 외 ${rest}개` : ""}`;
+    })
+    .join(" · ");
 }
 
 function evidenceLines(evidence: ContinuationEvidence): string[] {
-  const lines: string[] = [];
-  if (evidence.prs.length > 0) lines.push(`  - 기록에 연결된 PR: ${prLine(evidence.prs)}`);
-  if (evidence.branches.length > 0) {
-    const shown = evidence.branches.slice(0, EVIDENCE_BRANCH_CAP).join(", ");
-    const rest = evidence.branches.length - EVIDENCE_BRANCH_CAP;
-    lines.push(`  - 관찰된 브랜치: ${shown}${rest > 0 ? ` 외 ${rest}개` : ""}`);
-  }
   const scope = evidence.coverage === "complete" ? "기록 전체 확인" : "기록 일부만 확인 · 목록이 전부가 아닐 수 있음";
   const segments = evidence.segments > 1 ? ` · 이어진 구간 ${evidence.segments}개` : "";
-  if (evidence.prs.length === 0 && evidence.branches.length === 0) {
-    lines.push(`  - Git 근거: ${evidence.coverage === "complete" ? "기록에 PR·브랜치 없음" : "아직 찾지 못함"} (${scope}${segments})`);
-  } else {
-    lines.push(`  - 근거 범위: ${scope}${segments}`);
+  if (evidence.prs.length === 0) {
+    const found = evidence.coverage === "complete" ? "기록에 연결된 PR 없음" : "아직 찾지 못함";
+    return [`  - 연결된 PR: ${found} (${scope}${segments})`];
   }
-  return lines;
+  return [`  - 기록에 연결된 PR: ${prLine(evidence.prs)}`, `  - 근거 범위: ${scope}${segments}`];
 }
 
 function itemLine(item: ContinuationItem, kind: "session" | "decision" | "task" | "note"): string {
@@ -500,12 +491,12 @@ export function renderContinuationMarkdown(
     const c = pack.coverage;
     if (pack.sessions.length > 0) {
       const parts: string[] = [];
-      if (c.evidenceComplete > 0) parts.push(`Git 근거 전체 확인 ${c.evidenceComplete}개`);
+      if (c.evidenceComplete > 0) parts.push(`PR 근거 전체 확인 ${c.evidenceComplete}개`);
       if (c.evidencePartial > 0) parts.push(`일부만 확인 ${c.evidencePartial}개`);
-      if (c.evidenceMissing > 0) parts.push(`Git 근거 미기록 ${c.evidenceMissing}개`);
+      if (c.evidenceMissing > 0) parts.push(`PR 근거 미기록 ${c.evidenceMissing}개`);
       lines.push(`- 세션 ${pack.sessions.length}개: ${parts.join(" · ")}`);
       if (c.evidenceComplete + c.evidencePartial > 0) lines.push(
-        "- PR은 세션 기록 속 링크입니다. 이 세션이 만들었는지, 병합됐는지는 확인하지 않았습니다. 브랜치는 기록에서 관찰된 이름이며 현재 브랜치가 아닙니다.",
+        "- PR은 세션 기록 속 링크입니다. 이 세션이 만들었는지, 병합됐는지는 확인하지 않았습니다. 목록에 없는 PR이 이 세션과 무관하다는 뜻도 아닙니다.",
       );
     }
     const skipped: string[] = [];

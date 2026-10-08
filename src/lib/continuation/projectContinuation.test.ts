@@ -230,7 +230,7 @@ describe("buildProjectContinuationPack · markdown", () => {
         "제외됨: 확정되지 않은 항목 1개",
         "",
         "## 근거 범위",
-        "- 세션 1개: Git 근거 미기록 1개",
+        "- 세션 1개: PR 근거 미기록 1개",
         "",
       ].join("\n"),
     );
@@ -294,7 +294,7 @@ function evidenced(
 }
 
 describe("buildProjectContinuationPack · session outcome evidence", () => {
-  it("lists the PRs and branches a session's source recorded, labelled as observations", () => {
+  it("lists the PRs a session's source linked, labelled as observations, and no branches", () => {
     const pack = buildProjectContinuationPack(
       input({
         sessions: [
@@ -314,16 +314,18 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
         { repository: "acme/app", number: 139 },
         { repository: "acme/app", number: 137 },
       ],
-      branches: ["main", "fix/storage"],
       coverage: "complete",
       segments: 1,
     });
     expect(pack.markdown).toContain("- 2026-10-05~2026-10-06 · Claude · 재개 점검 (mori:session/auto-claude-long)");
     expect(pack.markdown).toContain("  - 기록에 연결된 PR: acme/home #139 · acme/app #139 #137");
-    expect(pack.markdown).toContain("  - 관찰된 브랜치: main, fix/storage");
+    // Branches seen in a shared working tree can be another session's: they
+    // stay on the record and out of the handoff.
+    expect(pack.markdown).not.toContain("fix/storage");
+    expect(pack.markdown).not.toContain("브랜치");
     expect(pack.markdown).toContain("  - 근거 범위: 기록 전체 확인");
     expect(pack.markdown).toContain("병합됐는지는 확인하지 않았습니다");
-    expect(pack.markdown).toContain("현재 브랜치가 아닙니다");
+    expect(pack.markdown).toContain("목록에 없는 PR이 이 세션과 무관하다는 뜻도 아닙니다");
     // The pack carries no URL, path, or transcript text: references only.
     expect(pack.markdown).not.toContain("https://");
   });
@@ -338,22 +340,23 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
         ],
       }),
     );
-    expect(pack.markdown).toContain("  - Git 근거: 아직 찾지 못함 (기록 일부만 확인 · 목록이 전부가 아닐 수 있음)");
-    expect(pack.markdown).toContain("  - Git 근거: 기록에 PR·브랜치 없음 (기록 전체 확인)");
+    expect(pack.markdown).toContain("  - 연결된 PR: 아직 찾지 못함 (기록 일부만 확인 · 목록이 전부가 아닐 수 있음)");
+    expect(pack.markdown).toContain("  - 연결된 PR: 기록에 연결된 PR 없음 (기록 전체 확인)");
     expect(pack.coverage).toMatchObject({ evidenceComplete: 1, evidencePartial: 1, evidenceMissing: 1 });
-    expect(pack.markdown).toContain("- 세션 3개: Git 근거 전체 확인 1개 · 일부만 확인 1개 · Git 근거 미기록 1개");
+    expect(pack.markdown).toContain("- 세션 3개: PR 근거 전체 확인 1개 · 일부만 확인 1개 · PR 근거 미기록 1개");
   });
 
-  it("caps long PR and branch lists and says how many were left out", () => {
-    const prs = Array.from({ length: 25 }, (_, index): [string, number] => ["acme/infra", 100 + index]);
-    const branches = Array.from({ length: 9 }, (_, index) => `b${index}`);
+  it("caps each repository to its newest PRs so a multi-repository session shows both", () => {
+    // The real shape: one long session linked 162 home PRs and 63 infra PRs,
+    // and a single shared cap showed only home.
+    const home = Array.from({ length: 25 }, (_, index): [string, number] => ["acme/home", 100 + index]);
+    const infra = Array.from({ length: 12 }, (_, index): [string, number] => ["acme/infra", 200 + index]);
     const pack = buildProjectContinuationPack(
-      input({ sessions: [evidenced("auto-claude-many", "운영 작업", { sessionEvidence: evidence("seg", { prs, branches }) })] }),
+      input({ sessions: [evidenced("auto-claude-many", "운영 작업", { sessionEvidence: evidence("seg", { prs: [...infra, ...home] }) })] }),
     );
-    expect(pack.markdown).toContain("acme/infra #124 #123");
-    expect(pack.markdown).toContain("#105 외 5개");
-    expect(pack.markdown).toContain("b5 외 3개");
-    expect(pack.sessions[0].evidence?.prs).toHaveLength(25);
+    expect(pack.markdown).toContain("acme/home #124 #123 #122 #121 #120 #119 #118 #117 #116 #115 외 15개");
+    expect(pack.markdown).toContain("acme/infra #211 #210 #209 #208 #207 #206 #205 #204 #203 #202 외 2개");
+    expect(pack.sessions[0].evidence?.prs).toHaveLength(37);
   });
 
   it("leaves command-only, scripted, and empty sessions out of the handoff and counts each reason", () => {
@@ -400,7 +403,6 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
         { repository: "acme/app", number: 8 },
         { repository: "acme/app", number: 7 },
       ],
-      branches: [],
       coverage: "partial",
       segments: 2,
     });
