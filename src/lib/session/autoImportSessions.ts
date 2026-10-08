@@ -123,10 +123,14 @@ export function agentSessionToStoredDraft(meta: AgentWorkSessionMeta): StoredSes
 /** A cheap change fingerprint for a discovered session — its last-activity time
  *  plus message count. Either changing means the session grew. */
 export function agentSessionFingerprint(
-  meta: Pick<AgentWorkSessionMeta, "updatedAt" | "startedAt" | "messageCount">,
+  meta: Pick<AgentWorkSessionMeta, "updatedAt" | "startedAt" | "messageCount" | "title">,
 ): string {
   const stamp = meta.updatedAt || meta.startedAt || "";
-  return `${stamp}|${meta.messageCount}`;
+  // The title is part of what was observed, not only the source's size and
+  // time: a title the agent adds later (a Codex thread name) or a reader that
+  // now derives a better one must reach the record too. An unchanged source
+  // still fingerprints identically, so this costs no extra writes.
+  return `${stamp}|${meta.messageCount}|${meta.title}`;
 }
 
 export type AutoImportDiff = {

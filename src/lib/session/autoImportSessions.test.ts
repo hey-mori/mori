@@ -120,8 +120,17 @@ describe("diffDiscoveredSessions", () => {
 describe("agentSessionFingerprint · a growing Claude session", () => {
   it("changes when only the transcript's last activity moved, so growth is re-observed", () => {
     // A long session's preview count is capped, so the count alone never moves.
-    const earlier = { startedAt: "2026-10-07T13:48:42Z", updatedAt: "2026-10-07T14:00:00Z", messageCount: 46 };
+    const earlier = { startedAt: "2026-10-07T13:48:42Z", updatedAt: "2026-10-07T14:00:00Z", messageCount: 46, title: "t" };
     const later = { ...earlier, updatedAt: "2026-10-07T15:30:00Z" };
     expect(agentSessionFingerprint(later)).not.toBe(agentSessionFingerprint(earlier));
+  });
+});
+
+describe("agentSessionFingerprint · a re-derived title", () => {
+  it("changes when only the title changed, so an improved reader reaches existing records", () => {
+    const before = { startedAt: "2026-09-02T12:13:57Z", updatedAt: "2026-09-02T12:14:13Z", messageCount: 4, title: "<recommended_plugins> Here is a list of" };
+    const after = { ...before, title: "Inspect repository and environment" };
+    expect(agentSessionFingerprint(after)).not.toBe(agentSessionFingerprint(before));
+    expect(agentSessionFingerprint({ ...before })).toBe(agentSessionFingerprint(before));
   });
 });
