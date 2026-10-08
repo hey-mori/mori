@@ -406,7 +406,10 @@ export function ContextView() {
                   >
                     <span className="ctx-tree-caret is-empty" aria-hidden="true" />
                     <FolderGit2 size={13} aria-hidden="true" className="ctx-tree-icon is-linked" />
-                    <span className="ctx-tree-name">{group.name}</span>
+                    <span className="ctx-tree-name">
+                      {group.parentPath ? <span className="ctx-tree-parent">{group.parentPath}/</span> : null}
+                      {group.name}
+                    </span>
                     <span className="ctx-tree-count">
                       {group.sessions.length + group.records.length}
                     </span>

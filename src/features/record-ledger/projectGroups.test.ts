@@ -365,6 +365,9 @@ describe("buildProjectGroups · reviewed membership", () => {
     const group = groupOf(groups, "wt");
     expect(group?.context).toBeNull();
     expect(group?.inclusion.wt.review).toBe("rejected");
+    // Told apart from the project of the same name by its parent folder.
+    expect(group?.name).toBe("infra");
+    expect(group?.parentPath).toBe("dev");
   });
 
   it("flags a membership whose project was archived instead of refiling it by name", () => {

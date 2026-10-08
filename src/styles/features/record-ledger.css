@@ -2303,6 +2303,12 @@
   opacity: 0.6;
 }
 
+/* The parent folder before a folder group's name, when the name alone is shared. */
+.ctx-tree-parent {
+  color: var(--muted-2);
+  font-weight: 400;
+}
+
 .ctx-tree-name {
   flex: 1;
   min-width: 0;

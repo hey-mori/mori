@@ -254,8 +254,9 @@ export function buildProjectGroups(
       group = {
         id: key,
         name: shortProjectLabel(label),
-        // Two checkouts share this name: their parent folder tells them apart.
-        parentPath: ambiguousName && segments.length > 1 ? segments[segments.length - 2]! : "",
+        // Two checkouts share this name, or the operator rejected the project of
+        // the same name: the parent folder tells the groups apart.
+        parentPath: (ambiguousName || wasRejected) && segments.length > 1 ? segments[segments.length - 2]! : "",
         context: null,
         sessions: [],
         records: [],
