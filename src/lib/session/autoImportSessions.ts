@@ -155,6 +155,23 @@ export function agentSessionFingerprint(
   return `${stamp}|${meta.messageCount}|${meta.title}|${classes}|${evidenceSignature(meta.evidence)}|${repository}`;
 }
 
+/**
+ * Keep a session's established checkout while its source is only partly read.
+ * After an app restart the reader rescans a long transcript from the start
+ * under a budget, and the record that names a worktree's origin can lie past
+ * the first pass. A partial read that found no identity is not evidence that
+ * the identity changed, so the previous observation stands; a complete read,
+ * or a partial one that found an identity of its own, always wins.
+ */
+export function carryForwardRepository(
+  next: AgentWorkSessionMeta,
+  previous: AgentWorkSessionMeta | null | undefined,
+): AgentWorkSessionMeta {
+  const partial = next.evidence !== undefined && next.evidence.complete === false;
+  if (!partial || next.repository || !previous?.repository) return next;
+  return { ...next, repository: previous.repository };
+}
+
 export type AutoImportDiff = {
   /** Discovered sessions that are new or changed since last sync — to upsert. */
   toUpsert: AgentWorkSessionMeta[];

@@ -22,6 +22,7 @@ import {
   agentSessionFingerprint,
   agentSessionToStoredDraft,
   autoImportedSessionId,
+  carryForwardRepository,
   diffDiscoveredSessions,
   seenFingerprintsFromMetas,
 } from "../../lib/session/autoImportSessions";
@@ -116,7 +117,11 @@ export function useAutoImportSessions(): void {
         const discovered = await listAllAgentWorkSessions();
         if (!cancelled) {
           // Bound to the most-recent window so the draft + seen sets stay small.
-          const recent = [...discovered]
+          // A partial rescan does not erase a checkout a fuller read found.
+          const stored = new Map(loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), meta]));
+          const recent = [
+            ...discovered.map((meta) => carryForwardRepository(meta, stored.get(autoImportedSessionId(meta)))),
+          ]
             .sort((a, b) => activityMs(b) - activityMs(a))
             .slice(0, REGISTER_CAP);
 

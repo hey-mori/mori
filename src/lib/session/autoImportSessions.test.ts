@@ -5,6 +5,7 @@ import {
   agentSessionToStoredDraft,
   autoImportedProjectId,
   autoImportedSessionId,
+  carryForwardRepository,
   diffDiscoveredSessions,
   isAutoImportedSessionId,
   isUnreadableAgentSession,
@@ -213,5 +214,29 @@ describe("agentSessionToStoredDraft · repository identity", () => {
     expect(agentSessionFingerprint(meta({ id: "s", repository: repo("/home/u/dev/infra", "git-worktree") }))).toBe(
       agentSessionFingerprint(after),
     );
+  });
+});
+
+describe("carryForwardRepository · a partial rescan after restart", () => {
+  const known = { root: "/home/u/dev/infra", basis: "session-record" as const, worktreePath: "/w", conflict: false };
+  const ev = (complete: boolean) => ({ prs: [], branches: [], repositories: [], complete });
+
+  it("keeps the checkout a fuller read found while the source is only partly read", () => {
+    const previous = meta({ id: "wt", repository: known, evidence: ev(true) });
+    const next = meta({ id: "wt", evidence: ev(false) });
+    expect(carryForwardRepository(next, previous).repository).toEqual(known);
+    // Same fingerprint input as before: the draft is not re-registered without it.
+    expect(agentSessionToStoredDraft(carryForwardRepository(next, previous)).session.sourceRepository).toBe("/home/u/dev/infra");
+  });
+
+  it("lets a complete read decide, even when it finds no checkout", () => {
+    const previous = meta({ id: "wt", repository: known, evidence: ev(true) });
+    expect(carryForwardRepository(meta({ id: "wt", evidence: ev(true) }), previous).repository).toBeUndefined();
+  });
+
+  it("lets a partial read that found its own identity decide", () => {
+    const other = { ...known, root: "/home/u/dev/other", basis: "git-worktree" as const };
+    const previous = meta({ id: "wt", repository: known, evidence: ev(true) });
+    expect(carryForwardRepository(meta({ id: "wt", repository: other, evidence: ev(false) }), previous).repository).toEqual(other);
   });
 });
