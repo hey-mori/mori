@@ -1,5 +1,9 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (session breadcrumb names the reviewed project, 2026-10-08)
+
+#165. 프로젝트 (`ContextView`) now honours `projectContextFocus`, set by the new `openProjectContext(contextId)` app action: a link that names a reviewed project lands on that project by its context id. An id that no longer resolves leaves the normal default, never a namesake. The session breadcrumb uses it; nothing in the ledger's data, membership or `contextIds` changes.
+
 ## Done (long session reopening, 2026-10-08)
 
 #163. Only the open path changed for 기록: `LedgerWorkspace` and `ContextView` read the shared resolver's outcome (`opened` / `unavailable` / `superseded`) instead of a boolean, so a superseded open no longer navigates and a failed transcript read opens the session with an error and retry instead of an empty one. No ledger data, membership, or `contextIds` change.
