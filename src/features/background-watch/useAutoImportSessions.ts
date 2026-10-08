@@ -30,6 +30,7 @@ import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import {
   loadAutoImportMetas,
+  replaceEmptySources,
   upsertAutoImportMetas,
 } from "../../lib/session/autoImportMetaStore";
 import {
@@ -120,6 +121,9 @@ export function useAutoImportSessions(): void {
             .slice(0, REGISTER_CAP);
 
           const diff = diffDiscoveredSessions(recent, seenRef.current);
+          // Empty sources are never registered, so they stay out of `seen` and
+          // reappear here every poll: this is the full current list.
+          replaceEmptySources(diff.emptySources);
           if (diff.toUpsert.length > 0) {
             const written = new Set(
               registerDiscoveredSessions(diff.toUpsert.map(agentSessionToStoredDraft)),

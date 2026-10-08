@@ -86,6 +86,47 @@ export function removeAutoImportMeta(sessionId: string): void {
   }
 }
 
+/** Sources a complete read proved empty in the latest poll, keyed by auto
+ *  session id. Not registered anywhere else, so this is what keeps them counted
+ *  ("내용 없는 세션 N개") instead of silently gone. */
+export const AUTO_IMPORT_EMPTY_SOURCES_KEY = "mori.autoImport.emptySources.v1";
+
+type EmptySource = { label: string; agentId: string };
+
+/** Replace the empty-source list with the latest poll's: it is the current
+ *  observation, so a source that gained content simply drops out of it. */
+export function replaceEmptySources(metas: readonly AgentWorkSessionMeta[]): void {
+  const store = storage();
+  if (!store) return;
+  const map: Record<string, EmptySource> = {};
+  for (const meta of metas) {
+    map[autoImportedSessionId(meta)] = {
+      label: meta.projectPath || meta.projectName || "",
+      agentId: meta.agentId,
+    };
+  }
+  try {
+    store.setItem(AUTO_IMPORT_EMPTY_SOURCES_KEY, JSON.stringify(map));
+  } catch {
+    // Best-effort coverage note; a failed write leaves the previous count.
+  }
+}
+
+/** The project labels of the empty sources the latest poll saw. */
+export function loadEmptySourceLabels(): string[] {
+  const store = storage();
+  if (!store) return [];
+  try {
+    const parsed = JSON.parse(store.getItem(AUTO_IMPORT_EMPTY_SOURCES_KEY) ?? "{}") as Record<string, EmptySource>;
+    if (!parsed || typeof parsed !== "object") return [];
+    return Object.values(parsed)
+      .map((entry) => (entry && typeof entry.label === "string" ? entry.label : ""))
+      .filter((label) => label.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 function activity(meta: AgentWorkSessionMeta): number {
   const stamp = meta.updatedAt || meta.startedAt || "";
   const ms = Date.parse(stamp);
