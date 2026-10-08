@@ -40,6 +40,14 @@ owner-approved step that this tool does not perform. Issue #148.
 Anything unknown fails closed with an error code. The tool never returns a
 partial or zero result in place of an error.
 
+**What the live-directory guard does not cover.** It protects the one storage
+directory resolved for the current user and environment, and it follows
+symlinks and junctions to it. It does not discover other Mori databases on the
+machine: another user's profile, an old storage location, or a hard link.
+Those are not refused. Even then the tool only copies and reads them, never
+writes. The guard is a seatbelt against passing the live file by mistake, not
+a search for every copy.
+
 **Output** is one JSON object: tool version and source commit, applied
 migrations, planner counts (`scanned`, `eligible`, skipped by reason),
 repeatability, integrity, SQL context counts (labelled as such, not planner
@@ -115,9 +123,28 @@ dirty.
 
 ## Run
 
+Do not save the output with `>`. In Windows PowerShell 5.1, `>` writes
+UTF-16LE with a byte-order mark, which most JSON tools cannot read. This block
+writes BOM-less UTF-8, keeps the exit code, and refuses to call a refusal a
+result. It was verified verbatim under PowerShell 5.1 and 7.
+
 ```powershell
-node tools-dist\mori-backfill-dry-run.mjs --snapshot (Join-Path $work "mori-snapshot.sqlite") > dryrun.json
-$LASTEXITCODE
+$node     = "node"   # or the full path to a portable node.exe
+$bundle   = ".\tools-dist\mori-backfill-dry-run.mjs"
+$snapshot = Join-Path $work "mori-snapshot.sqlite"
+$out      = Join-Path $work "dryrun.json"
+
+$utf8 = New-Object System.Text.UTF8Encoding $false
+[Console]::OutputEncoding = $utf8
+$json = & $node $bundle --snapshot $snapshot
+$code = $LASTEXITCODE
+[System.IO.File]::WriteAllText($out, (($json -join "`n") + "`n"), $utf8)
+$report = Get-Content $out -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($code -eq 0 -and -not $report.error -and $report.repeatable -and $report.snapshot.unchangedByRun) {
+  "VALID  scanned=$($report.planner.scanned) eligible=$($report.planner.eligible)"
+} else {
+  "NOT A RESULT  exit=$code  error=$($report.error.code)"
+}
 ```
 
 **Exit codes:**
