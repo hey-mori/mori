@@ -275,6 +275,29 @@ describe("an agent without a window reader", () => {
   });
 });
 
+describe("coverage wording", () => {
+  it("a whole transcript with a skipped oversized record is not called complete", async () => {
+    const id = register(meta("long", "Long"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    reader.window.mockResolvedValueOnce(
+      window(0, 5000, [message("a1", "only")], { omittedRecords: 1, omittedBytes: 4000 }),
+    );
+    await resolver()(id);
+    const html = detailMarkup();
+    expect(html).not.toContain("대화 전체 표시 중");
+    expect(html).toContain("대화 전체 범위 표시 중");
+    expect(html).toContain("너무 큰 기록 1개는 표시하지 않았습니다");
+  });
+
+  it("a whole transcript with nothing skipped is", async () => {
+    const id = register(meta("long", "Long"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    reader.window.mockResolvedValueOnce(window(0, 5000, [message("a1", "only")]));
+    await resolver()(id);
+    expect(detailMarkup()).toContain("대화 전체 표시 중");
+  });
+});
+
 describe("navigation races", () => {
   it("a slow read for a session the user left never lands on the next session", async () => {
     const slowId = register(meta("slow", "Slow"));

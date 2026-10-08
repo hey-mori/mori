@@ -171,7 +171,16 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
 
   const reachedStart = state.startOffset === 0;
   const atLatest = state.released.length === 0;
-  const headline = reachedStart && atLatest ? "대화 전체 표시 중" : atLatest ? "최근 대화 일부 표시 중" : "이전 대화 일부 표시 중";
+  // "전체" only when nothing was left out: an oversized record that was skipped
+  // means the range is whole but its content is not.
+  const headline =
+    reachedStart && atLatest
+      ? state.omittedRecords > 0
+        ? "대화 전체 범위 표시 중"
+        : "대화 전체 표시 중"
+      : atLatest
+        ? "최근 대화 일부 표시 중"
+        : "이전 대화 일부 표시 중";
   const coverage = state.status === "partial" ? coverageLabel(state) : null;
   const pageError = state.pageError;
   return (
