@@ -2884,6 +2884,10 @@
   padding-right: 6px;
 }
 
+.context-session-item:not(:hover):not(:focus-within) .context-review.is-quiet {
+  opacity: 0;
+}
+
 .context-review-chip {
   padding: 1px 6px;
   border: 1px solid var(--gray-200);

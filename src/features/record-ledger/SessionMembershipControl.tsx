@@ -204,9 +204,10 @@ export function SessionMembershipControl({
   }
 
   // No suggestion here (a folder group, or a project the operator rejected):
-  // filing by hand is still one click away.
+  // filing by hand is still one click away, revealed on hover or focus so a
+  // folder of sessions does not repeat it on every row.
   return (
-    <span className="context-review">
+    <span className="context-review is-quiet">
       {chooser}
       {errorLine}
     </span>
