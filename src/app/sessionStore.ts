@@ -32,6 +32,17 @@ import {
   listAllAgentWorkSessions,
 } from "../lib/trace/sources/ai/workSessions";
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
+import { getClaudeCodeSessionWindow } from "../lib/claude/claudeTauri";
+import {
+  classifyWindowError,
+  isLoadedWindow,
+  isTooLargeError,
+  MAX_EMPTY_WINDOW_SKIPS,
+  prependEarlierWindow,
+  windowStateFrom,
+  type LoadedSessionWindow,
+  type SessionWindowState,
+} from "../lib/session/sessionWindow";
 import {
   agentSessionToStoredDraft,
   autoImportedProjectId,
@@ -493,11 +504,25 @@ export type SessionState = {
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
   /**
    * Open an auto-registered (discovered) session by loading its real transcript
-   * on demand: fetch the agent detail, import it as a full session, and retire
-   * the lightweight placeholder. Returns false when the reopen descriptor is
-   * missing or the fetch fails (the caller can fall back to the metadata draft).
+   * on demand: fetch the agent detail and import it onto the placeholder's id.
+   * A Claude Code transcript too large to import opens as a read-only
+   * `sessionWindow` of its recent conversation instead, never imported.
+   *
+   * - `opened`: the transcript (or its recent window) is showing.
+   * - `failed`: the placeholder is open and `sessionWindow` says why the
+   *   transcript could not be read; it is never shown as an empty session.
+   * - `missing`: no reopen descriptor (the caller may open the stored draft).
+   * - `superseded`: another open started meanwhile; this one changed nothing.
    */
-  openDiscoveredSession: (sessionId: string) => Promise<boolean>;
+  openDiscoveredSession: (sessionId: string) => Promise<OpenDiscoveredOutcome>;
+  /**
+   * The read-only window of a long transcript the active session shows in
+   * place of an import, or why it could not be read. Null for every other
+   * session. Transient: never persisted, never analysed.
+   */
+  sessionWindow: SessionWindowState | null;
+  /** Prepend the window before the loaded part of `sessionWindow`. */
+  loadEarlierSessionWindow: () => Promise<void>;
   /**
    * Open an already-saved browser session draft as the active session.
    * Used by the Workspace project hub to continue a previous session.
@@ -629,9 +654,26 @@ export function setSessionPersistenceServiceForSessionStore(service: SessionPers
   lazyPersistenceService = service;
 }
 
+export type OpenDiscoveredOutcome = "opened" | "failed" | "missing" | "superseded";
+
+/**
+ * The window Session Detail shows in place of its tabs: only for the active
+ * session, and only while it has no import (a whole transcript always wins).
+ */
+export function selectActiveSessionWindow(state: SessionState): SessionWindowState | null {
+  const window = state.sessionWindow;
+  if (!window || window.sessionId !== state.draft?.session.id || state.imports.length > 0) return null;
+  return window;
+}
+
+/** Bumped by every discovered-session open; a read that finishes after a newer
+ *  open began must not touch the store (it would land on the wrong session). */
+let discoveredOpenSequence = 0;
+
 export const useSessionStore = create<SessionState>((set, get) => ({
   initialized: false,
   draft: null,
+  sessionWindow: null,
   demoSessionId: null,
   pendingNewSession: null,
   imports: [],
@@ -1448,6 +1490,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     return removed;
   },
   openDiscoveredSession: async (sessionId) => {
+    const token = ++discoveredOpenSequence;
+    // Still the open the user asked for last, on the session it opened?
+    const current = () => token === discoveredOpenSequence && get().draft?.session.id === sessionId;
     let meta = loadAutoImportMeta(sessionId);
     if (!meta) {
       // Self-heal: the reopen descriptor can be missing (a session registered by
@@ -1462,7 +1507,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         // Discovery unavailable (browser) — nothing to heal with.
       }
     }
-    if (!meta) return false;
+    if (token !== discoveredOpenSequence) return "superseded";
+    if (!meta) return "missing";
     // Open the placeholder as the active session first, then apply the real
     // transcript ONTO THE SAME id. Materializing in place (rather than minting a
     // new session id) means a later auto-import poll just refreshes this one row
@@ -1470,20 +1516,74 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!get().loadBrowserSession(sessionId)) {
       // A re-discovered session may have no stored draft yet — create one.
       getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
-      if (!get().loadBrowserSession(sessionId)) return false;
+      if (!get().loadBrowserSession(sessionId)) return "missing";
     }
+    set({ sessionWindow: { sessionId, status: "loading" } });
+    const sourcePath = meta.sourceFilePath;
+    const openWindow = async (): Promise<OpenDiscoveredOutcome> => {
+      try {
+        let state: LoadedSessionWindow = windowStateFrom(sessionId, await getClaudeCodeSessionWindow(sourcePath));
+        // A tail of metadata records shows nothing; read back a little further.
+        for (let skip = 0; state.events.length === 0 && state.status === "partial" && skip < MAX_EMPTY_WINDOW_SKIPS; skip += 1) {
+          state = prependEarlierWindow(
+            state,
+            await getClaudeCodeSessionWindow(sourcePath, {
+              beforeOffset: state.startOffset,
+              sourceId: state.sourceId,
+              anchor: state.startAnchor,
+            }),
+          );
+        }
+        if (!current()) return "superseded";
+        set({ sessionWindow: state });
+        return "opened";
+      } catch (error) {
+        if (!current()) return "superseded";
+        set({ sessionWindow: { sessionId, status: "error", error: classifyWindowError(error) } });
+        return "failed";
+      }
+    };
     try {
       const detail = await getAgentWorkSession(meta);
+      // A late reply for a session the user already left must not be imported
+      // into whichever session is active now.
+      if (!current()) return "superseded";
       const candidate = buildPrimaryImportCandidateFromAgentWorkSession(detail, {
         projectId: autoImportedProjectId(meta),
         sessionId,
         capturedAt: new Date().toISOString(),
       });
       get().addImport(candidate);
-      return true;
-    } catch {
-      // The metadata draft is already open as an honest fallback.
-      return false;
+      set({ sessionWindow: null });
+      return "opened";
+    } catch (error) {
+      if (!current()) return "superseded";
+      // Too large to import whole: show its recent conversation instead. A
+      // partial window is never imported as if it were the session.
+      if (meta.importKind === "claude-code" && isTooLargeError(error)) {
+        return openWindow();
+      }
+      set({ sessionWindow: { sessionId, status: "error", error: classifyWindowError(error) } });
+      return "failed";
+    }
+  },
+  loadEarlierSessionWindow: async () => {
+    const state = get().sessionWindow;
+    if (!isLoadedWindow(state) || state.status === "full" || state.loadingEarlier) return;
+    set({ sessionWindow: { ...state, loadingEarlier: true, earlierError: null } });
+    try {
+      const window = await getClaudeCodeSessionWindow(state.sourcePath, {
+        beforeOffset: state.startOffset,
+        sourceId: state.sourceId,
+        anchor: state.startAnchor,
+      });
+      const latest = get().sessionWindow;
+      if (!isLoadedWindow(latest) || latest.sessionId !== state.sessionId || latest.startOffset !== state.startOffset) return;
+      set({ sessionWindow: prependEarlierWindow(latest, window) });
+    } catch (error) {
+      const latest = get().sessionWindow;
+      if (!isLoadedWindow(latest) || latest.sessionId !== state.sessionId || latest.startOffset !== state.startOffset) return;
+      set({ sessionWindow: { ...latest, loadingEarlier: false, earlierError: classifyWindowError(error) } });
     }
   },
   pauseFollow: () => set({ follow: followReducer(get().follow, { type: "pause" }) }),

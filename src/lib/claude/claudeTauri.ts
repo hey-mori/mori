@@ -14,6 +14,7 @@ import type {
   ClaudeCodeSessionDelta,
   ClaudeCodeSessionDetail,
   ClaudeCodeSessionMeta,
+  ClaudeCodeSessionWindow,
   ClaudeConversationDetail,
   ClaudeConversationMeta,
   ClaudeDesktopDiscovery,
@@ -105,6 +106,40 @@ export async function getClaudeCodeSessionDelta(
   return invokeTauriCommand("get_claude_code_session_delta", {
     sessionPath: trimmed,
     byteOffset: offset,
+  });
+}
+
+/** Where an earlier window ends: the previous window's start and the
+ *  fingerprints that prove it is still the same transcript and record. */
+export type ClaudeCodeWindowCursor = {
+  beforeOffset: number;
+  sourceId: string;
+  anchor: string;
+};
+
+/**
+ * Read one bounded window of a session's history, ending at the transcript's
+ * last complete line, or at `cursor` for earlier history. The read costs at
+ * most one window of bytes whatever the file's size, so it opens transcripts
+ * that {@link getClaudeCodeSession} refuses as too large. A cursor for a
+ * replaced or rewritten file is refused (`SOURCE_CHANGED`), never misread.
+ */
+export async function getClaudeCodeSessionWindow(
+  sessionPath: string,
+  cursor?: ClaudeCodeWindowCursor,
+): Promise<ClaudeCodeSessionWindow> {
+  const trimmed = sessionPath.trim();
+  if (!trimmed) {
+    throw new Error("sessionPath is required.");
+  }
+  if (!isClaudeBridgeAvailable()) {
+    throw new ClaudeBridgeUnavailableError();
+  }
+  return invokeTauriCommand("get_claude_code_session_window", {
+    sessionPath: trimmed,
+    beforeOffset: cursor?.beforeOffset ?? null,
+    sourceId: cursor?.sourceId ?? null,
+    anchor: cursor?.anchor ?? null,
   });
 }
 

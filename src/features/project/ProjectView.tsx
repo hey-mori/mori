@@ -258,8 +258,8 @@ export function ProjectView() {
   const openSessionId = (sessionId: string, tab: Parameters<typeof openSession>[0] = "flow") => {
     // Shared resolver materializes an auto-imported session's transcript, so a
     // discovered session opens full here just like in 세션, never empty.
-    void resolveSession(sessionId).then((ok) => {
-      if (ok) openSession(tab);
+    void resolveSession(sessionId).then((outcome) => {
+      if (outcome === "opened") openSession(tab);
     });
   };
 

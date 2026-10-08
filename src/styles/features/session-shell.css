@@ -652,3 +652,153 @@
   flex-shrink: 0;
 }
 
+
+/* Session source window: the recent conversation of a transcript too long to
+   import, read from its end. A calm single column of messages; the coverage
+   line says it is part of the session, and earlier history loads above. */
+.session-window {
+  display: grid;
+  align-content: start;
+  gap: var(--base-space-4);
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--base-space-6) var(--page-shell-inset) var(--base-space-9);
+}
+
+.session-window-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--base-space-4);
+  flex-wrap: wrap;
+}
+
+.session-window-coverage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--base-text);
+  font-size: var(--base-font-size-sm);
+  font-weight: 600;
+}
+
+.session-window-meta,
+.session-window-start,
+.session-window-omitted,
+.session-window-empty {
+  margin: 0;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.session-window-start {
+  text-align: center;
+}
+
+.session-window-earlier {
+  display: flex;
+  justify-content: center;
+}
+
+.session-window-earlier .is-loading svg,
+.session-window-spin {
+  animation: session-window-spin 0.9s linear infinite;
+}
+
+@keyframes session-window-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.session-window-earlier-error {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  margin: 0;
+  color: var(--base-status-danger);
+  font-size: var(--base-font-size-sm);
+}
+
+.session-window-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--base-space-3);
+  padding: var(--base-space-9) var(--page-shell-inset);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-sm);
+}
+
+.session-window-list {
+  display: grid;
+  gap: var(--base-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-window-message {
+  display: grid;
+  gap: 4px;
+  padding: var(--base-space-3) var(--base-space-4);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+}
+
+.session-window-message.is-user {
+  background: var(--base-surface-subtle);
+}
+
+.session-window-message.is-tool {
+  padding-block: var(--base-space-2);
+  border-style: dashed;
+  background: transparent;
+}
+
+.session-window-message-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--base-space-3);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.session-window-role {
+  color: var(--base-text);
+  font-weight: 600;
+}
+
+.session-window-message.is-tool .session-window-role {
+  color: var(--base-text-muted);
+}
+
+.session-window-text {
+  margin: 0;
+  color: var(--base-text);
+  font-size: var(--base-font-size-sm);
+  line-height: var(--base-line-relaxed);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.session-window-message.is-tool .session-window-text {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.session-window-fold {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  cursor: pointer;
+}
+
+.session-window-fold:hover {
+  color: var(--base-text);
+}

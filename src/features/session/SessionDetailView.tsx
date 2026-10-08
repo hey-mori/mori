@@ -10,6 +10,7 @@ import {
 import { PageShell } from "../../components/layout/PageShell";
 import { useAppStore, type SessionTab } from "../../app/store";
 import {
+  selectActiveSessionWindow,
   selectSessionMode,
   selectSessionView,
   useSessionStore,
@@ -29,6 +30,7 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
  * dynamic would put a chunk fetch in front of the first thing the user sees.
  */
 import { OverviewView } from "./OverviewView";
+import { SessionSourceWindow } from "./SessionSourceWindow";
 
 const TimelineView = lazy(() =>
   import("../timeline/TimelineView").then((m) => ({ default: m.TimelineView })),
@@ -69,6 +71,10 @@ export function SessionDetailView() {
   }, [initialized, hydrate]);
 
   const sessionTab = useAppStore((state) => state.sessionTab);
+  // A transcript too long to import shows its recent conversation (or why it
+  // could not be read) in place of the tabs: analysis, report and the counted
+  // tabs would treat a part of the session as the whole of it.
+  const sessionWindow = useSessionStore(selectActiveSessionWindow);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
 
   // Retired tabs redirect to their new homes: the raw-activity alias to 활동,
@@ -82,11 +88,15 @@ export function SessionDetailView() {
     <PageShell className="session-detail-page" maxWidth="full">
       <div className="session-detail-bar">
         <SessionTitleInline />
-        <SessionTabBar activeTab={sessionTab} onChange={setSessionTab} />
+        {sessionWindow ? null : <SessionTabBar activeTab={sessionTab} onChange={setSessionTab} />}
       </div>
-      <Suspense fallback={<div className="session-tab-loading" role="status" aria-live="polite" />}>
-        <SessionTabContent tab={sessionTab} />
-      </Suspense>
+      {sessionWindow ? (
+        <SessionSourceWindow state={sessionWindow} />
+      ) : (
+        <Suspense fallback={<div className="session-tab-loading" role="status" aria-live="polite" />}>
+          <SessionTabContent tab={sessionTab} />
+        </Suspense>
+      )}
     </PageShell>
   );
 }
