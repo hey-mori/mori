@@ -1,5 +1,5 @@
 {
-  "entry": ["src/main.tsx", "vite.config.ts", "scripts/*.cjs"],
+  "entry": ["src/main.tsx", "vite.config.ts", "scripts/*.cjs", "src/tools/backfill-dry-run/cli.ts"],
   "project": ["src/**/*.{ts,tsx}", "scripts/*.cjs", "vite.config.ts"],
   "ignore": ["dist/**", "src-tauri/**"],
   "ignoreDependencies": ["tailwindcss"],
