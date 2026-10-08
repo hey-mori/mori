@@ -111,6 +111,11 @@ export function agentSessionToStoredDraft(meta: AgentWorkSessionMeta): StoredSes
     status: "complete",
     // Drives the 과거 project-group header + the source chip in the row.
     sourceLabel: meta.projectPath || meta.projectName || undefined,
+    // The checkout the work belongs to, when the source established one and
+    // did not contradict itself. Kept beside the folder, never in its place.
+    ...(meta.repository?.root && !meta.repository.conflict
+      ? { sourceRepository: meta.repository.root, sourceRepositoryBasis: meta.repository.basis }
+      : {}),
   };
   return {
     project,
@@ -126,7 +131,14 @@ export function agentSessionToStoredDraft(meta: AgentWorkSessionMeta): StoredSes
 export function agentSessionFingerprint(
   meta: Pick<
     AgentWorkSessionMeta,
-    "updatedAt" | "startedAt" | "messageCount" | "title" | "activityClass" | "interaction" | "evidence"
+    | "updatedAt"
+    | "startedAt"
+    | "messageCount"
+    | "title"
+    | "activityClass"
+    | "interaction"
+    | "evidence"
+    | "repository"
   >,
 ): string {
   const stamp = meta.updatedAt || meta.startedAt || "";
@@ -137,7 +149,10 @@ export function agentSessionFingerprint(
   // long scan that just completed, changes no timestamp. An unchanged source
   // still fingerprints identically, so this costs no extra writes.
   const classes = `${meta.activityClass ?? ""}|${meta.interaction ?? ""}`;
-  return `${stamp}|${meta.messageCount}|${meta.title}|${classes}|${evidenceSignature(meta.evidence)}`;
+  const repository = meta.repository
+    ? `${meta.repository.conflict ? "!" : ""}${meta.repository.root}:${meta.repository.basis}`
+    : "";
+  return `${stamp}|${meta.messageCount}|${meta.title}|${classes}|${evidenceSignature(meta.evidence)}|${repository}`;
 }
 
 export type AutoImportDiff = {

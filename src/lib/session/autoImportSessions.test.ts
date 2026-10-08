@@ -183,3 +183,35 @@ describe("diffDiscoveredSessions · empty sources (capture policy, 2026-10-08)",
     expect(agentSessionFingerprint(completed)).not.toBe(agentSessionFingerprint(base));
   });
 });
+
+describe("agentSessionToStoredDraft · repository identity", () => {
+  const repo = (root: string, basis: "session-record" | "git-worktree" | "git-checkout" | "", conflict = false) => ({
+    root,
+    basis,
+    worktreePath: "",
+    conflict,
+  });
+
+  it("keeps the established checkout beside the folder, never in its place", () => {
+    const draft = agentSessionToStoredDraft(
+      meta({ id: "wt", projectPath: "/home/u/dev", repository: repo("/home/u/dev/infra", "session-record") }),
+    );
+    expect(draft.session.sourceLabel).toBe("/home/u/dev");
+    expect(draft.session.sourceRepository).toBe("/home/u/dev/infra");
+    expect(draft.session.sourceRepositoryBasis).toBe("session-record");
+  });
+
+  it("records no checkout when the evidence contradicts itself", () => {
+    const draft = agentSessionToStoredDraft(meta({ id: "c", repository: repo("/home/u/dev/infra", "", true) }));
+    expect(draft.session.sourceRepository).toBeUndefined();
+  });
+
+  it("re-observes a session once its checkout becomes known", () => {
+    const before = meta({ id: "s" });
+    const after = meta({ id: "s", repository: repo("/home/u/dev/infra", "git-worktree") });
+    expect(agentSessionFingerprint(after)).not.toBe(agentSessionFingerprint(before));
+    expect(agentSessionFingerprint(meta({ id: "s", repository: repo("/home/u/dev/infra", "git-worktree") }))).toBe(
+      agentSessionFingerprint(after),
+    );
+  });
+});

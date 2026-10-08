@@ -1,5 +1,5 @@
 import type { ClaudeMessage } from "../claude/types";
-import type { SessionEvidence } from "../trace/sources/ai/sessionEvidence";
+import type { RepositoryObservation, SessionEvidence } from "../trace/sources/ai/sessionEvidence";
 
 export type CodexSessionMeta = {
   sessionId: string;
@@ -16,6 +16,7 @@ export type CodexSessionMeta = {
   activityClass?: string;
   /** Branch and remote from `session_meta.git`; null for an unreadable file. */
   evidence?: SessionEvidence | null;
+  repository?: RepositoryObservation | null;
 };
 
 export type CodexSessionDetail = CodexSessionMeta & {

@@ -779,3 +779,14 @@ describe("session outcome evidence across an app restart", () => {
     expect(stored.prs.map((entry) => entry.number)).toEqual([1, 9]);
   });
 });
+
+describe("repository identity stays out of the kernel record", () => {
+  it("writes no path and no project from the observed checkout", () => {
+    const input = buildAgentSessionRecordInput(
+      meta({ projectName: "/home/u/dev", repository: { root: "/home/u/dev/infra", basis: "session-record", worktreePath: "/home/u/dev/infra/.claude/worktrees/x", conflict: false } }),
+      [{ id: "ctx-infra", type: "project", name: "infra", createdAt: "x" }],
+    );
+    expect(JSON.stringify(input)).not.toContain("/home/u/dev/infra");
+    expect(input.contextIds).toEqual([]);
+  });
+});

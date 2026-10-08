@@ -38,6 +38,21 @@ export type SessionEvidence = {
   scannedBytes?: number;
 };
 
+/**
+ * Which Git checkout a session's work belongs to, and how that is known
+ * (`src-tauri/src/repository_identity.rs`). An observation about the source,
+ * never a Mori project assignment and never a claim about what the session did.
+ */
+export type RepositoryObservation = {
+  /** The checkout root, "" when the evidence contradicts itself. */
+  root: string;
+  /** `session-record`: the agent recorded the worktree's origin during the
+   *  session. `git-worktree` / `git-checkout`: what Git metadata says now. */
+  basis: "session-record" | "git-worktree" | "git-checkout" | "";
+  worktreePath: string;
+  conflict: boolean;
+};
+
 /** What a transcript holds, decided from a complete read only; `unknown` when
  *  the read was partial or failed. */
 export type SessionActivityClass = "conversation" | "command-only" | "empty" | "unknown";

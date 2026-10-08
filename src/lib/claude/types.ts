@@ -1,4 +1,4 @@
-import type { SessionEvidence } from "../trace/sources/ai/sessionEvidence";
+import type { RepositoryObservation, SessionEvidence } from "../trace/sources/ai/sessionEvidence";
 
 /**
  * Claude Connections — shared types.
@@ -130,6 +130,9 @@ export type ClaudeCodeSessionMeta = {
   /** PR and branch observations with coverage; null when the file could not be
    *  scanned (unknown, not empty). Absent on older reads. */
   evidence?: SessionEvidence | null;
+  /** The Git checkout the session's work belongs to; null when nothing
+   *  establishes one. Absent on older reads. */
+  repository?: RepositoryObservation | null;
 };
 
 /**

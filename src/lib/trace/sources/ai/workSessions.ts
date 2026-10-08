@@ -21,6 +21,7 @@ import {
   claudeInteraction,
   codexInteraction,
   type SessionActivityClass,
+  type RepositoryObservation,
   type SessionEvidence,
   type SessionInteraction,
 } from "./sessionEvidence";
@@ -103,6 +104,8 @@ export type AgentWorkSessionMeta = {
   interaction?: SessionInteraction;
   /** Structural PR and branch observations, for readers that report them. */
   evidence?: SessionEvidence;
+  /** The Git checkout the session's work belongs to, for readers that report it. */
+  repository?: RepositoryObservation;
 };
 
 export type AgentWorkSessionDetail = AgentWorkSessionMeta & {
@@ -310,6 +313,7 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     activityClass: activityClassOf(session.activityClass),
     interaction: claudeInteraction(session.entrypoint),
     evidence: session.evidence ?? undefined,
+    repository: session.repository ?? undefined,
   };
 }
 
@@ -373,6 +377,7 @@ function mapCodexMeta(session: CodexSessionMeta): AgentWorkSessionMeta {
     activityClass: activityClassOf(session.activityClass),
     interaction: codexInteraction(session.source),
     evidence: session.evidence ?? undefined,
+    repository: session.repository ?? undefined,
   };
 }
 
