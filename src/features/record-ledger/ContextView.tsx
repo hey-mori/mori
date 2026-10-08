@@ -209,6 +209,20 @@ export function ContextView() {
     else setSelection(null);
   }, [tree, groups, contexts, selection]);
 
+  // A link that named a reviewed project (the session breadcrumb) lands on that
+  // project by its context id. It runs after the default above, so the request
+  // wins; an id that no longer resolves leaves the default, never a similarly
+  // named project.
+  const projectContextFocus = useAppStore((state) => state.projectContextFocus);
+  const clearProjectContextFocus = useAppStore((state) => state.clearProjectContextFocus);
+  useEffect(() => {
+    if (!projectContextFocus || loading) return;
+    if (contexts.some((context) => context.id === projectContextFocus && context.type === "project")) {
+      setSelection({ kind: "context", id: projectContextFocus });
+    }
+    clearProjectContextFocus();
+  }, [projectContextFocus, loading, contexts, clearProjectContextFocus]);
+
   const activeContext = useMemo(
     () =>
       selection?.kind === "context"
