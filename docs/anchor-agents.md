@@ -53,6 +53,7 @@ read-only window of its recent conversation instead (#163).
   - The coverage line counts the held part only: "최근 대화 일부 표시 중 · 원본의 1% 미만".
   - "이전 대화 더 보기" prepends the window before the held part.
   - The view holds at most 4 windows (`MAX_RETAINED_WINDOWS`). Measured on the 143 MB transcript with the release build, each window held 115–325 messages and added about 15 MB to the web process; 20 unbounded loads took it from 660 MB to 967 MB.
+  - With the limit, the view stays at a few hundred messages however far back the user reads. Even so, the web process still grew about 4.5 MB per load over 20 loads (from 955 MB to 1046 MB). A bare WebKitGTK page churning the same bounded DOM stays flat, so the remaining growth is in Mori's render or IPC path, and its cause is not identified yet.
   - Past the limit, reading further back lets the newest window go and keeps its cursor. "다음 대화 보기" reads it back (letting the oldest go), and "최신 대화로" re-reads the transcript's current end.
   - After any page, the message being read is put back where it was, found by its id. The conversation is keyed by session and open, so neither a scroll position nor a pending page carries over to another session.
 - **Failures.** A read that fails shows why, never an empty session:
