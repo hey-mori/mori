@@ -70,7 +70,9 @@ export function NoteEditorPane({
   paneId: number;
   /** Fires with the new record id the first time a fresh note is saved, so the
    *  workspace can select it. */
-  onNoteCreated: (recordId: string, paneId: number) => void;
+  /** The created record itself rides along: the workspace's own record list
+   *  is a render behind the save, so it cannot be looked up there yet. */
+  onNoteCreated: (recordId: string, paneId: number, record: MoriRecord) => void;
   /** Fires when this note is thrown away, so the workspace can offer the undo
    *  that this pane cannot: discarding unmounts it. */
   onDiscarded: (recordId: string, title: string) => void;
@@ -184,7 +186,7 @@ export function NoteEditorPane({
       }
       if (created) {
         noteIdRef.current = created.id;
-        onNoteCreated(created.id, paneId);
+        onNoteCreated(created.id, paneId, created);
       }
       return created;
     },

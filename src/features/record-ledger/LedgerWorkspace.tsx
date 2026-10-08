@@ -172,7 +172,7 @@ export function LedgerWorkspace() {
     if (reopen) openRecord(id);
   };
 
-  const handleNoteCreated = (recordId: string, paneId: number) => {
+  const handleNoteCreated = (recordId: string, paneId: number, created: MoriRecord) => {
     // Adopt the created id in place: same pane instance, typing continues.
     // Only the pane that is STILL mounted may do so. Navigating away from a
     // brand-new note (clicking a [[wiki-link]] or another row) unmounts its
@@ -184,15 +184,15 @@ export function LedgerWorkspace() {
     setSelectedId(recordId);
 
     // The note now exists, so the project intent held since the request can land.
+    // It files the record the save returned: looking it up in ledger.records
+    // read this render's list, captured before the save's reload, so it always
+    // missed and a note started from a project page was born unfiled.
     const projectId = pendingProjectRef.current;
     pendingProjectRef.current = null;
     if (!projectId) return;
-    const created = ledger.records.find((record) => record.id === recordId);
-    if (created) {
-      void ledger.updateRecord(created, {
-        contextIds: withProject(created, ledger.contexts, projectId),
-      });
-    }
+    void ledger.updateRecord(created, {
+      contextIds: withProject(created, ledger.contexts, projectId),
+    });
   };
 
   // A selected record that vanishes (discarded from the editor) clears the pane.

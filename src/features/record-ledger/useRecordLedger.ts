@@ -31,6 +31,7 @@ import {
   type RecordPatch,
 } from "../../lib/record-kernel/recordFactory";
 import { coalesceRevision } from "../../lib/record-kernel/revisionCoalescing";
+import { latestRecordFor } from "../../lib/record-kernel/latestRecord";
 import {
   applyMembershipDecision,
   type MembershipDecision,
@@ -595,7 +596,10 @@ export function useRecordLedger(): RecordLedger {
   const updateRecord = useCallback(
     async (record: MoriRecord, patch: RecordPatch) => {
       const repo = getKernelRepository();
-      const { record: next, revision } = applyRecordPatch(record, patch, "user", registry);
+      // Patch the stored record, not this render's copy, so an edit never
+      // reverts a field that changed since (see latestRecordFor).
+      const base = await latestRecordFor(repo, record);
+      const { record: next, revision } = applyRecordPatch(base, patch, "user", registry);
       // One editing burst is one revision, not one per 650ms autosave. Every
       // revision stores a full before+after copy of the record, so appending per
       // burst cost a note 64x its own size. Coalescing reuses the previous
