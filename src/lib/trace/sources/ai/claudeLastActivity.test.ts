@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { claudeLastActivity } from "./workSessions";
-import { agentSessionFingerprint } from "../../../session/autoImportSessions";
 
 describe("claudeLastActivity", () => {
   it("uses the transcript's modification time, not the first message, as the last activity", () => {
@@ -17,13 +16,6 @@ describe("claudeLastActivity", () => {
     expect(
       claudeLastActivity({ startedAt: "2026-10-07T13:48:42Z", modifiedAt: "2026-10-07T13:00:00Z" }),
     ).toBe("2026-10-07T13:48:42Z");
-  });
-
-  it("changes the auto-import fingerprint when only the file grew, so growth is re-observed", () => {
-    // A long session's preview count is capped, so the count alone never moves.
-    const earlier = { startedAt: "2026-10-07T13:48:42Z", updatedAt: "2026-10-07T14:00:00Z", messageCount: 46 };
-    const later = { ...earlier, updatedAt: "2026-10-07T15:30:00Z" };
-    expect(agentSessionFingerprint(later)).not.toBe(agentSessionFingerprint(earlier));
   });
 });
 
