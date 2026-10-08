@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Built by scripts/build-backfill-dry-run.mjs; an artifact, not source.
+tools-dist/
 .DS_Store
 .env
 .env.*
