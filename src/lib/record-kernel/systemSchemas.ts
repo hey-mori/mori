@@ -104,6 +104,9 @@ export const SYSTEM_SCHEMAS: readonly SchemaDefinition[] = [
       { key: "agentId", label: "에이전트", type: "text", required: true },
       { key: "stepCount", label: "단계 수", type: "number" },
       { key: "tokenCount", label: "토큰", type: "number" },
+      { key: "activityClass", label: "세션 내용", type: "text" },
+      { key: "interaction", label: "실행 방식", type: "text" },
+      { key: "sessionEvidence", label: "관찰된 Git 근거", type: "json" },
     ],
   },
   {

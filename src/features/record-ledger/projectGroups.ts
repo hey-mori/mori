@@ -53,7 +53,7 @@ function normalizeKey(label: string): string {
 }
 
 /** A session's key: its leaf, which is all a filesystem path can tell us. */
-function sessionKey(label: string): string {
+export function sessionKey(label: string): string {
   return normalizeKey(shortProjectLabel(label));
 }
 

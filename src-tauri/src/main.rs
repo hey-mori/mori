@@ -21,6 +21,7 @@ mod opencode;
 mod package;
 mod repositories;
 mod session;
+mod session_evidence;
 mod sqlite;
 
 use tauri::Manager;

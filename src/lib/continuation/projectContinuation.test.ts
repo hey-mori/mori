@@ -229,6 +229,9 @@ describe("buildProjectContinuationPack · markdown", () => {
         "",
         "제외됨: 확정되지 않은 항목 1개",
         "",
+        "## 근거 범위",
+        "- 세션 1개: PR 근거 미기록 1개",
+        "",
       ].join("\n"),
     );
     expect(pack.markdown).not.toContain("숨겨질 결정");
@@ -240,5 +243,191 @@ describe("buildProjectContinuationPack · markdown", () => {
     );
     expect(pack.markdown).toContain("이 프로젝트에는 아직 이어갈 확정된 기록이 없습니다.");
     expect(pack.markdown).toContain("제외됨: 확정되지 않은 항목 1개");
+  });
+});
+
+// Session outcome evidence v1. Shapes follow the NUC's real sessions, with
+// invented names: a long session that linked PRs in two repositories, slash
+// command sessions, scripted runs, and segments joined by `continued-in`.
+function evidence(
+  segment: string,
+  parts: {
+    prs?: Array<[string, number]>;
+    branches?: string[];
+    coverage?: "complete" | "partial";
+    continuesIn?: string;
+  } = {},
+) {
+  return {
+    coverage: parts.coverage ?? "complete",
+    segment,
+    prs: (parts.prs ?? []).map(([repository, number], index) => ({
+      repository,
+      number,
+      url: `https://github.com/${repository}/pull/${number}`,
+      firstObservedAt: "2026-10-05T12:00:00.000Z",
+      line: 10 + index,
+    })),
+    branches: (parts.branches ?? []).map((name, index) => ({
+      name,
+      basis: "record",
+      firstObservedAt: "2026-10-05T12:00:00.000Z",
+      lastObservedAt: "2026-10-06T12:00:00.000Z",
+      line: 1 + index,
+    })),
+    repositories: [...new Set((parts.prs ?? []).map(([repository]) => repository))],
+    ...(parts.continuesIn ? { continuesIn: parts.continuesIn } : {}),
+  };
+}
+
+function evidenced(
+  id: string,
+  title: string,
+  properties: Record<string, unknown>,
+  overrides: Partial<MoriRecord> = {},
+) {
+  return session(id, "active", {
+    title,
+    properties: { agentId: "claude", activityClass: "conversation", interaction: "interactive", ...properties },
+    ...overrides,
+  });
+}
+
+describe("buildProjectContinuationPack · session outcome evidence", () => {
+  it("lists the PRs a session's source linked, labelled as observations, and no branches", () => {
+    const pack = buildProjectContinuationPack(
+      input({
+        sessions: [
+          evidenced("auto-claude-long", "재개 점검", {
+            sessionEvidence: evidence("seg-long", {
+              prs: [["acme/app", 137], ["acme/app", 139], ["acme/home", 139]],
+              branches: ["main", "fix/storage"],
+            }),
+          }, { occurredEnd: "2026-10-06T12:00:00.000Z" }),
+        ],
+      }),
+    );
+    expect(pack.sessions[0].evidence).toEqual({
+      // Newest first: a capped list should keep where the work ended.
+      prs: [
+        { repository: "acme/home", number: 139 },
+        { repository: "acme/app", number: 139 },
+        { repository: "acme/app", number: 137 },
+      ],
+      coverage: "complete",
+      segments: 1,
+    });
+    expect(pack.markdown).toContain("- 2026-10-05~2026-10-06 · Claude · 재개 점검 (mori:session/auto-claude-long)");
+    expect(pack.markdown).toContain("  - 기록에 연결된 PR: acme/home #139 · acme/app #139 #137");
+    // Branches seen in a shared working tree can be another session's: they
+    // stay on the record and out of the handoff.
+    expect(pack.markdown).not.toContain("fix/storage");
+    expect(pack.markdown).not.toContain("브랜치");
+    expect(pack.markdown).toContain("  - 근거 범위: 기록 전체 확인");
+    expect(pack.markdown).toContain("병합됐는지는 확인하지 않았습니다");
+    expect(pack.markdown).toContain("목록에 없는 PR이 이 세션과 무관하다는 뜻도 아닙니다");
+    // The pack carries no URL, path, or transcript text: references only.
+    expect(pack.markdown).not.toContain("https://");
+  });
+
+  it("says when a source was only partly read instead of implying the list is complete", () => {
+    const pack = buildProjectContinuationPack(
+      input({
+        sessions: [
+          evidenced("auto-claude-big", "큰 세션", { sessionEvidence: evidence("seg-big", { coverage: "partial" }) }),
+          evidenced("auto-claude-small", "작은 세션", { sessionEvidence: evidence("seg-small") }),
+          evidenced("auto-claude-old", "이전 기록", {}),
+        ],
+      }),
+    );
+    expect(pack.markdown).toContain("  - 연결된 PR: 아직 찾지 못함 (기록 일부만 확인 · 목록이 전부가 아닐 수 있음)");
+    expect(pack.markdown).toContain("  - 연결된 PR: 기록에 연결된 PR 없음 (기록 전체 확인)");
+    expect(pack.coverage).toMatchObject({ evidenceComplete: 1, evidencePartial: 1, evidenceMissing: 1 });
+    expect(pack.markdown).toContain("- 세션 3개: PR 근거 전체 확인 1개 · 일부만 확인 1개 · PR 근거 미기록 1개");
+  });
+
+  it("caps each repository to its newest PRs so a multi-repository session shows both", () => {
+    // The real shape: one long session linked 162 home PRs and 63 infra PRs,
+    // and a single shared cap showed only home.
+    const home = Array.from({ length: 25 }, (_, index): [string, number] => ["acme/home", 100 + index]);
+    const infra = Array.from({ length: 12 }, (_, index): [string, number] => ["acme/infra", 200 + index]);
+    const pack = buildProjectContinuationPack(
+      input({ sessions: [evidenced("auto-claude-many", "운영 작업", { sessionEvidence: evidence("seg", { prs: [...infra, ...home] }) })] }),
+    );
+    expect(pack.markdown).toContain("acme/home #124 #123 #122 #121 #120 #119 #118 #117 #116 #115 외 15개");
+    expect(pack.markdown).toContain("acme/infra #211 #210 #209 #208 #207 #206 #205 #204 #203 #202 외 2개");
+    expect(pack.sessions[0].evidence?.prs).toHaveLength(37);
+  });
+
+  it("leaves command-only, scripted, and empty sessions out of the handoff and counts each reason", () => {
+    const pack = buildProjectContinuationPack({
+      ...input({
+        sessions: [
+          evidenced("auto-claude-talk", "실제 작업", { sessionEvidence: evidence("seg-talk") }),
+          evidenced("auto-claude-model", "Claude Code · /model", { activityClass: "command-only" }),
+          evidenced("auto-claude-probe", "Answer from the repository only", { interaction: "automation" }),
+          evidenced("auto-codex-old-stub", "Claude Code · /home/u/dev/home", { activityClass: "empty" }),
+        ],
+      }),
+      emptySources: 2,
+    });
+    expect(pack.sessions.map((item) => item.ref)).toEqual(["mori:session/auto-claude-talk"]);
+    expect(pack.nonConversation).toEqual({ commandOnly: 1, automation: 1, empty: 3 });
+    expect(pack.markdown).toContain("- 대화가 아니어서 뺀 세션: 명령만 실행 1개 · 자동 실행 1개 · 내용 없음 3개");
+    expect(pack.markdown).not.toContain("/model");
+    expect(pack.markdown).not.toContain("Answer from the repository");
+  });
+
+  it("joins segments only through an explicit continued-in link", () => {
+    const pack = buildProjectContinuationPack(
+      input({
+        sessions: [
+          {
+            ...evidenced("auto-claude-part1", "인증 작업", {
+              sessionEvidence: evidence("seg-1", { prs: [["acme/app", 7]], continuesIn: "seg-2" }),
+            }),
+            summary: { id: "auto-claude-part1", title: "인증 작업", startedAt: "2026-10-04T12:00:00.000Z" },
+          },
+          evidenced("auto-claude-part2", "인증 작업", {
+            sessionEvidence: evidence("seg-2", { prs: [["acme/app", 7], ["acme/app", 8]], coverage: "partial" }),
+          }),
+          // Same title and project, no link: a different session.
+          evidenced("auto-claude-other", "인증 작업", { sessionEvidence: evidence("seg-3") }),
+        ],
+      }),
+    );
+    expect(pack.sessions).toHaveLength(2);
+    const joined = pack.sessions.find((item) => item.ref === "mori:session/auto-claude-part2");
+    expect(joined?.evidence).toEqual({
+      prs: [
+        { repository: "acme/app", number: 8 },
+        { repository: "acme/app", number: 7 },
+      ],
+      coverage: "partial",
+      segments: 2,
+    });
+    expect(joined?.day).toBe("2026-10-04");
+    expect(pack.coverage.joinedSegments).toBe(1);
+    expect(pack.markdown).toContain("이어진 구간 2개");
+  });
+
+  it("does not pretend a session belongs to the project when only its folder joined it", () => {
+    const pack = buildProjectContinuationPack(
+      input({
+        sessions: [
+          evidenced("auto-claude-folder", "폴더로 묶인 세션", { sessionEvidence: evidence("seg-f") }, { contextIds: [] }),
+          evidenced("auto-claude-linked", "연결된 세션", { sessionEvidence: evidence("seg-l") }),
+        ],
+      }),
+    );
+    expect(pack.coverage.unlinked).toBe(1);
+    expect(pack.markdown).toContain("- 검토된 프로젝트 연결 없이 폴더 경로로만 묶인 세션: 1개");
+  });
+
+  it("separates 'no decisions recorded' from 'no decisions'", () => {
+    const pack = buildProjectContinuationPack(
+      input({ sessions: [evidenced("auto-claude-x", "작업", { sessionEvidence: evidence("seg-x") })] }),
+    );
+    expect(pack.markdown).toContain("결정·할 일: Mori에 기록된 항목이 없습니다. 없다는 뜻이 아니라 확인할 기록이 없다는 뜻입니다.");
   });
 });

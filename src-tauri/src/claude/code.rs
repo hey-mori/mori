@@ -73,6 +73,17 @@ pub struct ClaudeCodeSessionMeta {
     pub message_count_complete: bool,
     pub title: String,
     pub token_usage: ClaudeTokenUsage,
+    /// What the transcript holds, decided only from a complete read:
+    /// `conversation` (a user request or an assistant turn), `command-only`
+    /// (slash commands and nothing else), `empty` (no user or assistant record
+    /// at all), or `unknown` (the read was partial or failed, so emptiness is
+    /// not proven).
+    pub activity_class: String,
+    /// The `entrypoint` the agent recorded (`cli`, `sdk-cli`, ...), "" if none.
+    pub entrypoint: String,
+    /// PR and branch observations with their coverage; `None` when the file
+    /// could not be scanned (unknown, not empty).
+    pub evidence: Option<crate::session_evidence::SessionEvidence>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -291,7 +302,9 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             // Cheap preview pass: count lines and grab the first user
             // message for the title. We never load the whole file into
             // memory beyond what we need to show in the list.
-            let preview = preview_session(&session_path).unwrap_or_default();
+            let preview_result = preview_session(&session_path);
+            let activity_class = activity_class(preview_result.as_ref()).to_string();
+            let preview = preview_result.unwrap_or_default();
             let project_label = if preview.cwd.trim().is_empty() {
                 decoded_project_name.clone()
             } else {
@@ -334,6 +347,9 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 message_count_complete: preview.complete,
                 title,
                 token_usage: preview.token_usage,
+                activity_class,
+                entrypoint: preview.entrypoint,
+                evidence: crate::session_evidence::claude_evidence(&session_path),
             });
         }
     }
@@ -561,6 +577,8 @@ struct SessionPreview {
     /// The first slash command, for a session that holds nothing else.
     command_name: String,
     first_user_text: String,
+    assistant_count: usize,
+    entrypoint: String,
     summary: String,
     ai_title: String,
     generic_title: String,
@@ -670,9 +688,37 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
         if role == "human" || role == "assistant" {
             preview.message_count += 1;
         }
+        if role == "assistant" {
+            preview.assistant_count += 1;
+        }
+        if preview.entrypoint.is_empty() {
+            if let Some(entrypoint) = value.get("entrypoint").and_then(Value::as_str) {
+                preview.entrypoint = entrypoint.to_string();
+            }
+        }
     }
     preview.token_usage = tokens.usage;
     Some(preview)
+}
+
+/// What a transcript holds, from its preview. Emptiness is claimed only for a
+/// file the preview read to the end: a cut or failed read is `unknown`, because
+/// a long session whose head shows nothing may hold its work further on.
+fn activity_class(preview: Option<&SessionPreview>) -> &'static str {
+    let Some(preview) = preview else {
+        return "unknown";
+    };
+    if !preview.first_user_text.is_empty() || preview.assistant_count > 0 {
+        return "conversation";
+    }
+    if !preview.complete {
+        return "unknown";
+    }
+    if !preview.command_name.is_empty() {
+        "command-only"
+    } else {
+        "empty"
+    }
 }
 
 struct ParsedSession {
@@ -1806,6 +1852,48 @@ mod tests {
         assert!(listing[0].message_count < 1_500);
         // The end is read from the tail, so growth past the budget is still seen.
         assert_eq!(listing[0].last_activity_at, "2026-10-07T17:59:00Z");
+    }
+
+    fn classify(dir: &TempDir, project: &str, name: &str, body: &str) -> ClaudeCodeSessionMeta {
+        write_session(&dir.path().join(project), name, body);
+        list_sessions_at(dir.path())
+            .unwrap()
+            .into_iter()
+            .find(|meta| meta.session_id == name.trim_end_matches(".jsonl"))
+            .unwrap()
+    }
+
+    #[test]
+    fn classifies_what_a_transcript_holds_only_from_a_complete_read() {
+        let temp = TempDir::new().unwrap();
+        // Agent bookkeeping only, no user or assistant record: a real NUC shape.
+        let empty = classify(&temp, "-home-u-dev-home", "empty.jsonl", "{\"type\":\"mode\"}\n{\"type\":\"permission-mode\"}\n{\"type\":\"system\",\"timestamp\":\"2026-09-30T04:16:36Z\"}\n");
+        assert_eq!(empty.activity_class, "empty");
+        let command = format!(
+            "{}{}",
+            raw_user_line("<local-command-caveat>Caveat</local-command-caveat>", true, "2026-09-30T04:21:48Z"),
+            raw_user_line("<command-name>/model</command-name>\n<command-args></command-args>", false, "2026-09-30T04:21:49Z"),
+        );
+        assert_eq!(classify(&temp, "-home-u-dev-home", "command.jsonl", &command).activity_class, "command-only");
+        let talk = user_line("fix the importer", "2026-10-07T13:48:42Z");
+        let conversation = classify(&temp, "-home-u-dev-mori", "talk.jsonl", &talk);
+        assert_eq!(conversation.activity_class, "conversation");
+        assert!(conversation.evidence.as_ref().unwrap().complete);
+        // A long file whose first megabyte holds no message is not proven empty.
+        let mut long = String::new();
+        let filler = "y".repeat(2_000);
+        for _ in 0..600 {
+            long.push_str(&format!("{{\"type\":\"system\",\"content\":\"{filler}\"}}\n"));
+        }
+        long.push_str(&user_line("late request", "2026-10-07T20:00:00Z"));
+        assert_eq!(classify(&temp, "-home-u-dev-mori", "long.jsonl", &long).activity_class, "unknown");
+    }
+
+    #[test]
+    fn records_the_entrypoint_that_marks_a_scripted_run() {
+        let temp = TempDir::new().unwrap();
+        let body = "{\"type\":\"user\",\"entrypoint\":\"sdk-cli\",\"cwd\":\"/home/u/dev/mori\",\"message\":{\"role\":\"user\",\"content\":\"read only\"},\"timestamp\":\"2026-10-08T05:44:11Z\"}\n";
+        assert_eq!(classify(&temp, "-home-u-dev-mori", "sdk.jsonl", body).entrypoint, "sdk-cli");
     }
 
     #[test]

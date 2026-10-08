@@ -17,6 +17,7 @@
  */
 import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import { autoImportedSessionId } from "../session/autoImportSessions";
+import { readSessionEvidence, recordedSessionEvidence } from "./agentSessionEvidence";
 import {
   applyRecordPatch,
   createRecord,
@@ -65,6 +66,12 @@ export function buildAgentSessionRecordInput(
 
   const properties: CreateRecordInput["properties"] = { agentId: meta.agentId };
   if (knownCount) properties.stepCount = meta.messageCount;
+  // Source classifications and structural Git observations, never prose (see
+  // `agentSessionEvidence.ts`). Absent when the reader does not report them.
+  if (meta.activityClass) properties.activityClass = meta.activityClass;
+  if (meta.interaction) properties.interaction = meta.interaction;
+  const evidence = recordedSessionEvidence(meta.evidence, meta.sessionId);
+  if (evidence) properties.sessionEvidence = evidence;
 
   return {
     id: autoImportedSessionId(meta),
@@ -107,6 +114,9 @@ export type ObservedFields = {
   contextIds: string[];
   agentId: RecordPropertyValue | undefined;
   stepCount: RecordPropertyValue | undefined;
+  activityClass: RecordPropertyValue | undefined;
+  interaction: RecordPropertyValue | undefined;
+  sessionEvidence: RecordPropertyValue | undefined;
 };
 
 function observedFields(record: Pick<
@@ -125,6 +135,9 @@ function observedFields(record: Pick<
     contextIds: [...(record.contextIds ?? [])].sort(),
     agentId: record.properties?.agentId,
     stepCount: record.properties?.stepCount,
+    activityClass: record.properties?.activityClass,
+    interaction: record.properties?.interaction,
+    sessionEvidence: record.properties?.sessionEvidence,
   };
 }
 
@@ -143,6 +156,24 @@ function same(a: unknown, b: unknown): boolean {
  * ownership, creation and capture times, and any other property are never
  * discovery's to change.
  */
+/**
+ * Is `incoming` a partial read of the same segment whose every PR and branch the
+ * complete `stored` evidence already holds? Then it carries nothing new.
+ */
+function isPartialRescanOf(incoming: unknown, stored: unknown): boolean {
+  const next = readSessionEvidence(incoming);
+  const kept = readSessionEvidence(stored);
+  if (!next || !kept) return false;
+  if (next.coverage !== "partial" || kept.coverage !== "complete" || next.segment !== kept.segment) return false;
+  const prKey = (pr: { repository: string; number: number }) => `${pr.repository.toLowerCase()}#${pr.number}`;
+  const keptPrs = new Set(kept.prs.map(prKey));
+  const keptBranches = new Set(kept.branches.map((branch) => branch.name));
+  return next.prs.every((pr) => keptPrs.has(prKey(pr))) && next.branches.every((branch) => keptBranches.has(branch.name));
+}
+
+/** The observed fields that live in `properties`, merged key by key. */
+const PROPERTY_KEYS = ["agentId", "stepCount", "activityClass", "interaction", "sessionEvidence"] as const;
+
 export function planAgentSessionRediscovery(
   written: ObservedFields,
   current: MoriRecord,
@@ -158,6 +189,10 @@ export function planAgentSessionRediscovery(
     contextIds: incoming.contextIds ?? [],
     properties: incoming.properties ?? {},
   });
+  // A partial scan that only re-finds what a complete scan already recorded is
+  // not news: after an app restart the reader rescans a long transcript from
+  // the start, and its first, budget-cut pass must not shrink the record.
+  if (isPartialRescanOf(next.sessionEvidence, now.sessionEvidence)) next.sessionEvidence = now.sessionEvidence;
   const takes = <K extends keyof ObservedFields>(key: K) =>
     same(now[key], written[key]) && !same(now[key], next[key]);
 
@@ -169,7 +204,7 @@ export function planAgentSessionRediscovery(
 
   const properties = { ...current.properties };
   let propertiesChanged = false;
-  for (const key of ["agentId", "stepCount"] as const) {
+  for (const key of PROPERTY_KEYS) {
     if (!takes(key)) continue;
     if (next[key] === undefined) delete properties[key];
     else properties[key] = next[key];
@@ -179,7 +214,17 @@ export function planAgentSessionRediscovery(
   return patch;
 }
 
-const OBSERVED_KEYS = ["title", "body", "time", "contextIds", "agentId", "stepCount"] as const;
+const OBSERVED_KEYS = [
+  "title",
+  "body",
+  "time",
+  "contextIds",
+  "agentId",
+  "stepCount",
+  "activityClass",
+  "interaction",
+  "sessionEvidence",
+] as const;
 
 /**
  * Does a change between two observations only extend a session (its end time,

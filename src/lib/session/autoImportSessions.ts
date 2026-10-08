@@ -16,6 +16,7 @@
  * removed).
  */
 import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
+import { evidenceSignature } from "../trace/sources/ai/sessionEvidence";
 import type { StoredSessionDraft, StoredSessionSummary } from "../storage/storageTypes";
 import type { Project, Session } from "../../domain/types";
 
@@ -123,14 +124,20 @@ export function agentSessionToStoredDraft(meta: AgentWorkSessionMeta): StoredSes
 /** A cheap change fingerprint for a discovered session — its last-activity time
  *  plus message count. Either changing means the session grew. */
 export function agentSessionFingerprint(
-  meta: Pick<AgentWorkSessionMeta, "updatedAt" | "startedAt" | "messageCount" | "title">,
+  meta: Pick<
+    AgentWorkSessionMeta,
+    "updatedAt" | "startedAt" | "messageCount" | "title" | "activityClass" | "interaction" | "evidence"
+  >,
 ): string {
   const stamp = meta.updatedAt || meta.startedAt || "";
   // The title is part of what was observed, not only the source's size and
   // time: a title the agent adds later (a Codex thread name) or a reader that
-  // now derives a better one must reach the record too. An unchanged source
+  // now derives a better one must reach the record too. So are the source
+  // classifications and the Git evidence: a PR linked in an old session, or a
+  // long scan that just completed, changes no timestamp. An unchanged source
   // still fingerprints identically, so this costs no extra writes.
-  return `${stamp}|${meta.messageCount}|${meta.title}`;
+  const classes = `${meta.activityClass ?? ""}|${meta.interaction ?? ""}`;
+  return `${stamp}|${meta.messageCount}|${meta.title}|${classes}|${evidenceSignature(meta.evidence)}`;
 }
 
 export type AutoImportDiff = {
@@ -140,6 +147,9 @@ export type AutoImportDiff = {
   newCount: number;
   /** How many are previously registered but changed. */
   updatedCount: number;
+  /** New sources a complete read proved empty: recognised, counted, and not
+   *  registered (no draft, no record). */
+  emptySources: AgentWorkSessionMeta[];
 };
 
 /**
@@ -154,6 +164,7 @@ export function diffDiscoveredSessions(
   seen: ReadonlyMap<string, string>,
 ): AutoImportDiff {
   const toUpsert: AgentWorkSessionMeta[] = [];
+  const emptySources: AgentWorkSessionMeta[] = [];
   const handled = new Set<string>();
   let newCount = 0;
   let updatedCount = 0;
@@ -167,6 +178,14 @@ export function diffDiscoveredSessions(
     const fingerprint = agentSessionFingerprint(meta);
     const previous = seen.get(id);
     if (previous === undefined) {
+      // Only a source the reader read to the end and found without any user or
+      // assistant record is empty; a partial or failed read is `unknown` and is
+      // registered as before. A session already registered keeps being updated:
+      // the policy governs new observations and never removes old ones.
+      if (meta.activityClass === "empty") {
+        emptySources.push(meta);
+        continue;
+      }
       newCount += 1;
       toUpsert.push(meta);
     } else if (previous !== fingerprint) {
@@ -175,7 +194,7 @@ export function diffDiscoveredSessions(
     }
   }
 
-  return { toUpsert, newCount, updatedCount };
+  return { toUpsert, newCount, updatedCount, emptySources };
 }
 
 /**

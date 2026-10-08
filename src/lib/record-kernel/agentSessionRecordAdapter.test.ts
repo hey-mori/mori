@@ -579,3 +579,203 @@ describe("long-running Claude sessions (NUC trial, 2026-10-08)", () => {
     expect(revisions.map((r) => r.operation)).toEqual(["create", "update"]);
   });
 });
+
+describe("session outcome evidence on the record", () => {
+  const registry = createSchemaRegistry();
+  const at = (iso: string) => () => new Date(iso);
+
+  function repo() {
+    const store = new KernelBrowserStore(new MemoryKeyValueStorage());
+    return new KernelRepository({ runtime: "browser", store });
+  }
+
+  const pr = (repository: string, number: number, firstLine: number) => ({
+    repository,
+    number,
+    url: `https://github.com/${repository}/pull/${number}`,
+    firstObservedAt: "2026-10-07T14:08:13.173Z",
+    firstLine,
+    observations: 1,
+  });
+  const branch = (name: string, lastObservedAt: string) => ({
+    name,
+    basis: "record",
+    firstObservedAt: "2026-10-07T13:48:42.613Z",
+    lastObservedAt,
+    firstLine: 1,
+  });
+  const observed = (
+    updatedAt: string,
+    prs: ReturnType<typeof pr>[],
+    lastBranchAt = updatedAt,
+    extra: Partial<AgentWorkSessionMeta> = {},
+  ) =>
+    meta({
+      sessionId: "segment-1",
+      startedAt: "2026-10-07T13:48:42.613Z",
+      updatedAt,
+      messageCount: 46,
+      messageCountComplete: false,
+      title: "재개 점검",
+      activityClass: "conversation",
+      interaction: "interactive",
+      evidence: {
+        prs,
+        branches: [branch("main", lastBranchAt)],
+        repositories: [...new Set(prs.map((entry) => entry.repository))],
+        complete: true,
+        scannedBytes: 1234,
+      },
+      ...extra,
+    });
+  const id = autoImportedSessionId(observed("x", []));
+  const poll = (repository: KernelRepository, session: AgentWorkSessionMeta, iso: string) =>
+    upsertAgentSessionRecords(repository, registry, [session], { now: at(iso) });
+  const current = async (repository: KernelRepository) => (await repository.getRecord(id)).data as MoriRecord;
+  const trail = async (repository: KernelRepository) => (await repository.listRevisions(id)).data;
+
+  it("stores structured observations with locators, not counts that move every poll", () => {
+    const input = buildAgentSessionRecordInput(
+      observed("2026-10-07T15:00:00Z", [pr("acme/app", 137, 812), { ...pr("acme/app", 139, 990), observations: 7 }]),
+      [],
+    );
+    expect(input.properties).toMatchObject({ activityClass: "conversation", interaction: "interactive" });
+    expect(input.properties?.sessionEvidence).toEqual({
+      coverage: "complete",
+      segment: "segment-1",
+      prs: [
+        { repository: "acme/app", number: 137, url: "https://github.com/acme/app/pull/137", firstObservedAt: "2026-10-07T14:08:13.173Z", line: 812 },
+        { repository: "acme/app", number: 139, url: "https://github.com/acme/app/pull/139", firstObservedAt: "2026-10-07T14:08:13.173Z", line: 990 },
+      ],
+      branches: [
+        { name: "main", basis: "record", firstObservedAt: "2026-10-07T13:48:42.613Z", lastObservedAt: "2026-10-07T15:00:00Z", line: 1 },
+      ],
+      repositories: ["acme/app"],
+    });
+    // No prose: the record body is the same one honest line as before.
+    expect(input.body).toBe("Claude Code 세션");
+  });
+
+  it("writes nothing when the same evidence is observed again, even if links repeated", async () => {
+    const repository = repo();
+    await poll(repository, observed("2026-10-07T15:00:00Z", [pr("acme/app", 137, 812)]), "2026-10-07T15:00:00Z");
+    const repeated = observed("2026-10-07T15:00:00Z", [{ ...pr("acme/app", 137, 812), observations: 9 }]);
+    const result = await poll(repository, repeated, "2026-10-07T15:01:30Z");
+    expect(result).toMatchObject({ unchanged: 1, updated: 0 });
+    expect(await trail(repository)).toHaveLength(1);
+  });
+
+  it("adds newly linked PRs as growth: one superseded update, not one per poll", async () => {
+    const repository = repo();
+    await poll(repository, observed("2026-10-07T15:00:00Z", []), "2026-10-07T15:00:00Z");
+    await poll(repository, observed("2026-10-07T15:30:00Z", [pr("acme/app", 137, 812)]), "2026-10-07T15:30:00Z");
+    await poll(repository, observed("2026-10-07T16:00:00Z", [pr("acme/app", 137, 812), pr("acme/home", 139, 990)]), "2026-10-07T16:00:00Z");
+    const revisions = await trail(repository);
+    expect(revisions.map((r) => [r.actor, r.operation])).toEqual([
+      ["rule", "create"],
+      ["rule", "update"],
+    ]);
+    const stored = (await current(repository)).properties.sessionEvidence as { prs: Array<{ number: number }> };
+    expect(stored.prs.map((entry) => entry.number)).toEqual([137, 139]);
+    // The superseding revision still reverts to the evidence before the stretch.
+    const before = (revisions[1].before as MoriRecord).properties.sessionEvidence as { prs: unknown[] };
+    expect(before.prs).toEqual([]);
+  });
+
+  it("keeps a user's rename and status while evidence keeps arriving", async () => {
+    const repository = repo();
+    await poll(repository, observed("2026-10-07T15:00:00Z", []), "2026-10-07T15:00:00Z");
+    const renamed = applyRecordPatch(await current(repository), { title: "D0-D4 통합" }, "user", registry, at("2026-10-07T15:05:00Z"));
+    await repository.saveRecord(renamed.record, renamed.revision);
+    const parked = applyRecordPatch(await current(repository), { status: "archived" }, "user", registry, at("2026-10-07T15:06:00Z"));
+    await repository.saveRecord(parked.record, parked.revision);
+    const result = await poll(repository, observed("2026-10-07T16:00:00Z", [pr("acme/app", 153, 1500)]), "2026-10-07T16:00:00Z");
+    // An archived record is the user's: automation does not write to it at all.
+    expect(result).toMatchObject({ preserved: 1 });
+    const record = await current(repository);
+    expect(record.title).toBe("D0-D4 통합");
+    expect(record.status).toBe("archived");
+    expect((await trail(repository)).map((r) => [r.actor, r.operation])).toEqual([
+      ["rule", "create"],
+      ["user", "update"],
+      ["user", "status-change"],
+    ]);
+  });
+
+  it("never folds evidence growth into a revision across a user edit", async () => {
+    const repository = repo();
+    await poll(repository, observed("2026-10-07T15:00:00Z", []), "2026-10-07T15:00:00Z");
+    await poll(repository, observed("2026-10-07T15:30:00Z", [pr("acme/app", 137, 812)]), "2026-10-07T15:30:00Z");
+    const renamed = applyRecordPatch(await current(repository), { title: "사용자 제목" }, "user", registry, at("2026-10-07T15:35:00Z"));
+    await repository.saveRecord(renamed.record, renamed.revision);
+    await poll(repository, observed("2026-10-07T16:00:00Z", [pr("acme/app", 137, 812), pr("acme/app", 139, 990)]), "2026-10-07T16:00:00Z");
+    expect((await trail(repository)).map((r) => [r.actor, r.operation])).toEqual([
+      ["rule", "create"],
+      ["rule", "update"],
+      ["user", "update"],
+      ["rule", "update"],
+    ]);
+    expect((await current(repository)).title).toBe("사용자 제목");
+  });
+
+  it("backfills evidence onto a record written before evidence existed, once", async () => {
+    const repository = repo();
+    const legacy = meta({ sessionId: "segment-1", startedAt: "2026-10-07T13:48:42.613Z", updatedAt: "2026-10-07T15:00:00Z", messageCount: 46, messageCountComplete: false, title: "재개 점검" });
+    await poll(repository, legacy, "2026-10-07T15:00:00Z");
+    expect((await current(repository)).properties.sessionEvidence).toBeUndefined();
+    const withEvidence = observed("2026-10-07T15:00:00Z", [pr("acme/app", 137, 812)]);
+    await poll(repository, withEvidence, "2026-10-08T09:00:00Z");
+    await poll(repository, withEvidence, "2026-10-08T09:01:30Z");
+    const revisions = await trail(repository);
+    expect(revisions).toHaveLength(2);
+    expect((await current(repository)).properties).toMatchObject({ activityClass: "conversation", interaction: "interactive" });
+  });
+});
+
+describe("session outcome evidence across an app restart", () => {
+  const registry = createSchemaRegistry();
+  const at = (iso: string) => () => new Date(iso);
+  const repo = () => new KernelRepository({ runtime: "browser", store: new KernelBrowserStore(new MemoryKeyValueStorage()) });
+  const pr = (number: number) => ({
+    repository: "acme/infra",
+    number,
+    url: "",
+    firstObservedAt: "2026-10-01T00:00:00Z",
+    firstLine: number,
+    observations: 1,
+  });
+  const seen = (prs: number[], complete: boolean, extra: Partial<AgentWorkSessionMeta> = {}) =>
+    meta({
+      sessionId: "segment-big",
+      startedAt: "2026-09-09T04:01:18.269Z",
+      updatedAt: "2026-10-08T07:00:00Z",
+      title: "운영 작업",
+      evidence: {
+        prs: prs.map(pr),
+        branches: [{ name: "main", basis: "record", firstObservedAt: "", lastObservedAt: "", firstLine: 1 }],
+        repositories: ["acme/infra"],
+        complete,
+      },
+      ...extra,
+    });
+  const id = autoImportedSessionId(seen([], true));
+
+  it("does not shrink complete evidence when the first pass after a restart is partial", async () => {
+    const repository = repo();
+    await upsertAgentSessionRecords(repository, registry, [seen([1, 2, 3], true)], { now: at("2026-10-08T07:00:00Z") });
+    const result = await upsertAgentSessionRecords(repository, registry, [seen([1], false)], { now: at("2026-10-08T08:00:00Z") });
+    expect(result).toMatchObject({ unchanged: 1, updated: 0 });
+    const stored = (await repository.getRecord(id)).data?.properties.sessionEvidence as { coverage: string; prs: unknown[] };
+    expect(stored.coverage).toBe("complete");
+    expect(stored.prs).toHaveLength(3);
+  });
+
+  it("still records a partial pass that found something new, or a different segment", async () => {
+    const repository = repo();
+    await upsertAgentSessionRecords(repository, registry, [seen([1, 2], true)], { now: at("2026-10-08T07:00:00Z") });
+    await upsertAgentSessionRecords(repository, registry, [seen([1, 9], false)], { now: at("2026-10-08T08:00:00Z") });
+    const stored = (await repository.getRecord(id)).data?.properties.sessionEvidence as { coverage: string; prs: Array<{ number: number }> };
+    expect(stored.coverage).toBe("partial");
+    expect(stored.prs.map((entry) => entry.number)).toEqual([1, 9]);
+  });
+});

@@ -134,3 +134,52 @@ describe("agentSessionFingerprint · a re-derived title", () => {
     expect(agentSessionFingerprint({ ...before })).toBe(agentSessionFingerprint(before));
   });
 });
+
+describe("diffDiscoveredSessions · empty sources (capture policy, 2026-10-08)", () => {
+  const evidence = (prs: number[], complete = true) => ({
+    prs: prs.map((number) => ({
+      repository: "acme/app",
+      number,
+      url: "",
+      firstObservedAt: "",
+      firstLine: number,
+      observations: 1,
+    })),
+    branches: [],
+    repositories: ["acme/app"],
+    complete,
+  });
+
+  it("recognises a new source a complete read proved empty without registering it", () => {
+    const diff = diffDiscoveredSessions(
+      [
+        meta({ id: "stub", activityClass: "empty" }),
+        meta({ id: "cut", activityClass: "unknown" }),
+        meta({ id: "model", activityClass: "command-only" }),
+      ],
+      new Map(),
+    );
+    expect(diff.emptySources.map((entry) => entry.id)).toEqual(["stub"]);
+    // A partial read is not proof of emptiness, and a command is real activity.
+    expect(diff.toUpsert.map((entry) => entry.id)).toEqual(["cut", "model"]);
+    expect(diff.newCount).toBe(2);
+  });
+
+  it("keeps updating a session registered before it was classified empty", () => {
+    const registered = meta({ id: "old-stub" });
+    const seen = new Map([[autoImportedSessionId(registered), agentSessionFingerprint(registered)]]);
+    const diff = diffDiscoveredSessions([meta({ id: "old-stub", activityClass: "empty" })], seen);
+    expect(diff.toUpsert.map((entry) => entry.id)).toEqual(["old-stub"]);
+    expect(diff.emptySources).toEqual([]);
+  });
+
+  it("re-observes a session when a PR is newly linked or its scan completes, not when nothing changed", () => {
+    const base = meta({ id: "s", evidence: evidence([137], false) });
+    const same = meta({ id: "s", evidence: evidence([137], false) });
+    const newPr = meta({ id: "s", evidence: evidence([137, 139], false) });
+    const completed = meta({ id: "s", evidence: evidence([137], true) });
+    expect(agentSessionFingerprint(same)).toBe(agentSessionFingerprint(base));
+    expect(agentSessionFingerprint(newPr)).not.toBe(agentSessionFingerprint(base));
+    expect(agentSessionFingerprint(completed)).not.toBe(agentSessionFingerprint(base));
+  });
+});
