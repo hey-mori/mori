@@ -31,6 +31,11 @@ import {
   type RecordPatch,
 } from "../../lib/record-kernel/recordFactory";
 import { coalesceRevision } from "../../lib/record-kernel/revisionCoalescing";
+import {
+  applyMembershipDecision,
+  type MembershipDecision,
+  type MembershipOutcome,
+} from "../../lib/record-kernel/projectMembership";
 import { deriveNoteTitle } from "./noteWorkspace";
 import {
   canReparent,
@@ -114,6 +119,15 @@ export type RecordLedger = {
   /** Applies a user edit (title, body, type, context, ...) as an audited
    *  revision on top of the record's history. */
   updateRecord: (record: MoriRecord, patch: RecordPatch) => Promise<void>;
+  /** Files, moves, unfiles, or rejects an agent session's project as the
+   *  operator's reviewed decision (`projectMembership.ts`). Reads the record
+   *  fresh and refuses a decision made against a record that has moved. */
+  reviewSessionProject: (args: {
+    recordId: string;
+    decision: MembershipDecision;
+    contextId: string;
+    expectedProjectId: string | null;
+  }) => Promise<MembershipOutcome>;
   /** Note-first (v4): create a `note` record from the just-written text. The
    *  note is the user-owned artifact; its title is the first line. Returns the
    *  created record so the editor can keep editing it. */
@@ -595,6 +609,20 @@ export function useRecordLedger(): RecordLedger {
     [registry, reload],
   );
 
+  const reviewSessionProject = useCallback(
+    async (args: {
+      recordId: string;
+      decision: MembershipDecision;
+      contextId: string;
+      expectedProjectId: string | null;
+    }): Promise<MembershipOutcome> => {
+      const outcome = await applyMembershipDecision(getKernelRepository(), registry, args);
+      await reload();
+      return outcome;
+    },
+    [registry, reload],
+  );
+
   const createDateInferenceRule = useCallback(async () => {
     if (hasLateNightRule(rules)) return;
     const repo = getKernelRepository();
@@ -727,6 +755,7 @@ export function useRecordLedger(): RecordLedger {
     setStatus,
     setActivityDate,
     updateRecord,
+    reviewSessionProject,
     createNote,
     confirmExtraction,
     renameEntity,

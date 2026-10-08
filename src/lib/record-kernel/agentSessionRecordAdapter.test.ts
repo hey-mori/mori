@@ -59,13 +59,11 @@ describe("buildAgentSessionRecordInput", () => {
     expect(input.body).toContain("메시지 12개");
   });
 
-  it("binds only to an existing context matched by project name, never invents one", () => {
-    const bound = buildAgentSessionRecordInput(meta(), [ctx("ctx-mori", "mori")]);
-    expect(bound.contextIds).toEqual(["ctx-mori"]);
-    const unmatched = buildAgentSessionRecordInput(meta({ projectName: "other" }), [
-      ctx("ctx-mori", "mori"),
-    ]);
-    expect(unmatched.contextIds).toEqual([]);
+  it("never binds a project, not even on an exact name match: membership is reviewed", () => {
+    // A name is not an identity (two checkouts can share one), and an automatic
+    // binding could be reapplied after the operator unfiled the session.
+    expect(buildAgentSessionRecordInput(meta(), [ctx("ctx-mori", "mori")]).contextIds).toEqual([]);
+    expect(buildAgentSessionRecordInput(meta({ projectName: "other" }), [ctx("ctx-mori", "mori")]).contextIds).toEqual([]);
   });
 
   it("keeps the activity time unknown (never fabricated) when the session has no start", () => {
@@ -111,7 +109,7 @@ describe("upsertAgentSessionRecords", () => {
     };
   }
 
-  it("writes one active record per session, bound to a matching context", async () => {
+  it("writes one active record per session, filed under no project", async () => {
     const repo = fakeRepo();
     const registry = createSchemaRegistry();
     const result = await upsertAgentSessionRecords(repo, registry, [
@@ -120,7 +118,7 @@ describe("upsertAgentSessionRecords", () => {
     ]);
     expect(result).toEqual({ created: 2, updated: 0, unchanged: 0, preserved: 0, failed: 0 });
     expect(repo.saved.map((r) => r.status)).toEqual(["active", "active"]);
-    expect(repo.saved[0]?.contextIds).toEqual(["ctx-mori"]);
+    expect(repo.saved[0]?.contextIds).toEqual([]);
     expect(repo.saved[1]?.contextIds).toEqual([]);
   });
 
@@ -235,7 +233,7 @@ describe("upsertAgentSessionRecords · rediscovery of an existing record", () =>
   it("keeps the project the user filed the session into", async () => {
     const repository = browserRepository();
     await discover(repository, meta(), T0);
-    expect((await current(repository)).contextIds).toEqual(["ctx-mori"]);
+    expect((await current(repository)).contextIds).toEqual([]);
     await userEdit(repository, { contextIds: ["ctx-work"] }, T1);
 
     await discover(repository, grown, T2);
@@ -309,14 +307,29 @@ describe("upsertAgentSessionRecords · rediscovery of an existing record", () =>
     expect((trail[1]?.before as MoriRecord).title).toBe("Auth 미들웨어 마이그레이션");
   });
 
-  it("binds a newly matching project when the binding is still automation's", async () => {
+  it("neither removes nor replaces a project an older automation wrote", async () => {
+    // Records created before membership became a reviewed decision may carry
+    // an automatic binding. Rediscovery leaves contextIds alone either way.
     const repository = browserRepository();
-    await discover(repository, meta({ projectName: "회사/mori" }), T0);
-    expect((await current(repository)).contextIds).toEqual(["ctx-work"]);
+    const legacy = createRecord(
+      { ...buildAgentSessionRecordInput(meta(), []), contextIds: ["ctx-work"], now: at(T0) },
+      registry,
+    );
+    await repository.saveRecord(legacy.record, legacy.revision);
 
     await discover(repository, { ...grown, projectName: "mori" }, T1);
 
-    expect((await current(repository)).contextIds).toEqual(["ctx-mori"]);
+    expect((await current(repository)).contextIds).toEqual(["ctx-work"]);
+    expect((await current(repository)).occurredEnd).toBe(grown.updatedAt);
+  });
+
+  it("does not reattach a project after the operator unfiled the session", async () => {
+    const repository = browserRepository();
+    await discover(repository, meta(), T0);
+    await userEdit(repository, { contextIds: ["ctx-mori"] }, T1);
+    await userEdit(repository, { contextIds: [] }, T1);
+    await discover(repository, grown, T2);
+    expect((await current(repository)).contextIds).toEqual([]);
   });
 
   it("writes nothing when the observation is identical", async () => {

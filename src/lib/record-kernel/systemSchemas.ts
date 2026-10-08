@@ -107,6 +107,7 @@ export const SYSTEM_SCHEMAS: readonly SchemaDefinition[] = [
       { key: "activityClass", label: "세션 내용", type: "text" },
       { key: "interaction", label: "실행 방식", type: "text" },
       { key: "sessionEvidence", label: "관찰된 Git 근거", type: "json" },
+      { key: "projectReview", label: "프로젝트 검토", type: "json" },
     ],
   },
   {

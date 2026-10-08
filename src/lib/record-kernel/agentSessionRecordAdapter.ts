@@ -39,10 +39,13 @@ import type { SchemaRegistry } from "./schemaRegistry";
  * re-discovery upserts the same record and the manual capture path can converge
  * on it later instead of duplicating.
  *
- * Context binding is best-effort and conservative: bind to an existing context
- * whose name matches the session's project name, never auto-create one (a wrong
- * project guess is exactly the mutation the apply matrix protects). An unmatched
- * session stays unbound and still appears in 캘린더 / 검색.
+ * No project binding. A session's project is the operator's decision
+ * (`projectMembership.ts`), written through a reviewed `user` revision; the
+ * project page may suggest one from the observed checkout, but automation never
+ * writes `contextIds`. The earlier best-effort binding compared a context's name
+ * with the session's full-path project name, so it never matched, and a fixed
+ * comparison would have been a name guess (two checkouts can share a name) that
+ * rediscovery could reapply after the operator unfiled the session.
  */
 export function buildAgentSessionRecordInput(
   meta: AgentWorkSessionMeta,
@@ -52,11 +55,6 @@ export function buildAgentSessionRecordInput(
   const updatedAt = meta.updatedAt || undefined;
   const occurredEnd =
     occurredStart && updatedAt && updatedAt >= occurredStart ? updatedAt : undefined;
-
-  const projectName = (meta.projectName || "").trim();
-  const matchedContext = projectName
-    ? contexts.find((context) => !context.archived && context.name.trim() === projectName)
-    : undefined;
 
   const agentLabel = (meta.agentName || meta.agentId || "에이전트").trim();
   // A count read from only the head of a long transcript is a lower bound, so it
@@ -86,7 +84,7 @@ export function buildAgentSessionRecordInput(
     timeBasis: occurredStart ? "source-observed" : "unknown",
     status: "active",
     origin: "automation",
-    contextIds: matchedContext ? [matchedContext.id] : [],
+    contextIds: [],
     properties,
   };
 }
@@ -200,7 +198,9 @@ export function planAgentSessionRediscovery(
   if (takes("title")) patch.title = next.title;
   if (takes("body")) patch.body = next.body;
   if (takes("time")) Object.assign(patch, next.time);
-  if (takes("contextIds")) patch.contextIds = next.contextIds;
+  // contextIds are never discovery's to change: project membership is a
+  // reviewed operator decision, and whatever a record carries (a filing, an
+  // unfiling, a routine) stays exactly as it is.
 
   const properties = { ...current.properties };
   let propertiesChanged = false;
