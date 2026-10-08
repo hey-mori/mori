@@ -2,7 +2,18 @@ import { describe, expect, it } from "vitest";
 import { claudeLastActivity } from "./workSessions";
 
 describe("claudeLastActivity", () => {
-  it("uses the transcript's modification time, not the first message, as the last activity", () => {
+  it("prefers the last record's time over a file time moved by bookkeeping appends", () => {
+    // NUC trial: a /model session last spoke on 09-30, but its file time read 10-08.
+    expect(
+      claudeLastActivity({
+        startedAt: "2026-09-30T04:21:48.615Z",
+        lastActivityAt: "2026-09-30T04:22:06Z",
+        modifiedAt: "2026-10-08T05:22:05Z",
+      }),
+    ).toBe("2026-09-30T04:22:06Z");
+  });
+
+  it("uses the transcript's modification time when no record time was found", () => {
     expect(
       claudeLastActivity({ startedAt: "2026-10-07T13:48:42.613Z", modifiedAt: "2026-10-07T17:12:05Z" }),
     ).toBe("2026-10-07T17:12:05Z");
@@ -16,6 +27,9 @@ describe("claudeLastActivity", () => {
     expect(
       claudeLastActivity({ startedAt: "2026-10-07T13:48:42Z", modifiedAt: "2026-10-07T13:00:00Z" }),
     ).toBe("2026-10-07T13:48:42Z");
+    expect(
+      claudeLastActivity({ startedAt: "2026-10-07T13:48:42Z", lastActivityAt: "", modifiedAt: "2026-10-07T15:00:00Z" }),
+    ).toBe("2026-10-07T15:00:00Z");
   });
 });
 

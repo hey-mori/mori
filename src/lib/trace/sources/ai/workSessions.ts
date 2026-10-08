@@ -296,19 +296,24 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
 }
 
 /**
- * When a Claude session was last written to: the transcript's modification
- * time. It is the honest "still being worked on" signal (a resumed session keeps
- * its first-message start for days), but it is a source observation, not proof
- * the conversation ended then. Falls back to the start when the file time is
- * missing, unparseable, or earlier than the first message.
+ * When a Claude session last had activity: the timestamp of its last record.
+ * The transcript's file time is only the fallback, because Claude Code appends
+ * untimestamped bookkeeping (`last-prompt`, `cost-state`, `ai-title`) to old
+ * sessions, moving the file time days after the conversation ended. Either is a
+ * source observation, not proof the conversation ended then. Falls back to the
+ * start when neither is usable or a value is earlier than the first message.
  */
-export function claudeLastActivity(session: Pick<ClaudeCodeSessionMeta, "startedAt" | "modifiedAt">): string {
-  const modified = session.modifiedAt ?? "";
-  const modifiedMs = Date.parse(modified);
+export function claudeLastActivity(
+  session: Pick<ClaudeCodeSessionMeta, "startedAt" | "modifiedAt" | "lastActivityAt">,
+): string {
   const startedMs = Date.parse(session.startedAt);
-  if (!modified || Number.isNaN(modifiedMs)) return session.startedAt;
-  if (!Number.isNaN(startedMs) && modifiedMs < startedMs) return session.startedAt;
-  return modified;
+  for (const candidate of [session.lastActivityAt, session.modifiedAt]) {
+    const ms = Date.parse(candidate ?? "");
+    if (!candidate || Number.isNaN(ms)) continue;
+    if (!Number.isNaN(startedMs) && ms < startedMs) continue;
+    return candidate;
+  }
+  return session.startedAt;
 }
 
 function mapClaudeDesktopMeta(session: ClaudeConversationMeta): AgentWorkSessionMeta {

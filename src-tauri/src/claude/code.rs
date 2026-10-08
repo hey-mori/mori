@@ -58,6 +58,12 @@ pub struct ClaudeCodeSessionMeta {
     /// right now" signal (`started_at` is the first message, which a resumed
     /// long-running session keeps even while being worked on today).
     pub modified_at: String,
+    /// Timestamp of the last record that carries one, or "" when none was
+    /// found. Claude Code appends untimestamped bookkeeping records
+    /// (`last-prompt`, `cost-state`, `ai-title`) to old sessions, which moves
+    /// the file time without any conversation, so this is the activity signal
+    /// and `modified_at` only the fallback.
+    pub last_activity_at: String,
     /// File size in bytes. Live Follow uses this to start its tail near the end
     /// of a huge session instead of reading the whole history.
     pub file_bytes: u64,
@@ -318,6 +324,11 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 file_path: session_path.to_string_lossy().to_string(),
                 started_at,
                 modified_at,
+                last_activity_at: if preview.complete {
+                    preview.last_timestamp
+                } else {
+                    tail_last_timestamp(&session_path).unwrap_or_default()
+                },
                 file_bytes,
                 message_count: preview.message_count,
                 message_count_complete: preview.complete,
@@ -554,8 +565,38 @@ struct SessionPreview {
     ai_title: String,
     generic_title: String,
     first_timestamp: String,
+    /// The last timestamp inside the budget; the file's last one only when
+    /// `complete`.
+    last_timestamp: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
+}
+
+/// How much of a session's end `tail_last_timestamp` reads. Large enough to
+/// hold several records even when one carries a long tool result.
+const TAIL_BUDGET: u64 = 256 * 1024;
+
+/// The last timestamp in the final `TAIL_BUDGET` bytes of a session, for a file
+/// too long for the preview to reach its end. `None` when the tail holds no
+/// complete timestamped record, so the caller falls back to the file time.
+fn tail_last_timestamp(path: &Path) -> Option<String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path).ok()?;
+    let len = file.metadata().ok()?.len();
+    let start = len.saturating_sub(TAIL_BUDGET);
+    file.seek(SeekFrom::Start(start)).ok()?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).ok()?;
+    let text = String::from_utf8_lossy(&bytes);
+    let mut lines = text.lines();
+    if start > 0 {
+        // The first line is cut at an arbitrary byte, so it is not a record.
+        lines.next();
+    }
+    lines
+        .rev()
+        .filter_map(|line| serde_json::from_str::<Value>(line.trim()).ok())
+        .find_map(|value| extract_timestamp(&value))
 }
 
 fn preview_session(path: &Path) -> Option<SessionPreview> {
@@ -615,10 +656,11 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
                 }
             }
         }
-        if preview.first_timestamp.is_empty() {
-            if let Some(ts) = extract_timestamp(&value) {
-                preview.first_timestamp = ts;
+        if let Some(ts) = extract_timestamp(&value) {
+            if preview.first_timestamp.is_empty() {
+                preview.first_timestamp = ts.clone();
             }
+            preview.last_timestamp = ts;
         }
         if preview.cwd.is_empty() {
             if let Some(cwd) = extract_cwd(&value) {
@@ -1762,6 +1804,31 @@ mod tests {
         assert!(listing[0].file_bytes > 1_000_000);
         assert!(!listing[0].message_count_complete);
         assert!(listing[0].message_count < 1_500);
+        // The end is read from the tail, so growth past the budget is still seen.
+        assert_eq!(listing[0].last_activity_at, "2026-10-07T17:59:00Z");
+    }
+
+    #[test]
+    fn list_takes_activity_from_the_last_record_not_bookkeeping_appends() {
+        // Claude Code appends untimestamped records to an old session, which
+        // moves the file time days after the conversation ended.
+        let temp = TempDir::new().unwrap();
+        let body = format!(
+            "{}{}{{\"type\":\"last-prompt\",\"sessionId\":\"s\"}}\n{{\"type\":\"cost-state\"}}\n",
+            user_line("first", "2026-09-30T04:21:48.615Z"),
+            user_line("second", "2026-09-30T04:22:06Z"),
+        );
+        write_session(&temp.path().join("-home-u-dev-home"), "old.jsonl", &body);
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].last_activity_at, "2026-09-30T04:22:06Z");
+    }
+
+    #[test]
+    fn tail_read_finds_no_activity_in_a_session_without_timestamps() {
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("-home-u-dev-home");
+        write_session(&dir, "stub.jsonl", "{\"type\":\"ai-title\",\"aiTitle\":\"t\"}\n");
+        assert_eq!(tail_last_timestamp(&dir.join("stub.jsonl")), None);
     }
 
     fn raw_user_line(content: &str, meta: bool, at: &str) -> String {
