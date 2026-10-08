@@ -202,9 +202,9 @@ export function CommandPalette({
           break;
         case "openAgentSession": {
           const sessionId = target.sessionId;
-          void resolveSession(sessionId).then((ok) => {
-            if (ok) openSession("flow");
-            else openRecordInLedger(sessionId);
+          void resolveSession(sessionId).then((outcome) => {
+            if (outcome === "opened") openSession("flow");
+            else if (outcome === "unavailable") openRecordInLedger(sessionId);
           });
           break;
         }

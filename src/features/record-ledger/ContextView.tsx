@@ -85,9 +85,9 @@ export function ContextView() {
   const closeContinuation = useCallback(() => setContinuing(false), []);
 
   const openSessionById = (sessionId: string) => {
-    void resolveSession(sessionId).then((ok) => {
-      if (ok) openSession("flow");
-      else navigate("sessions");
+    void resolveSession(sessionId).then((outcome) => {
+      if (outcome === "opened") openSession("flow");
+      else if (outcome === "unavailable") navigate("sessions");
     });
   };
 

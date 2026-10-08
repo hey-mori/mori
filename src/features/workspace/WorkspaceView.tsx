@@ -131,8 +131,8 @@ export function WorkspaceView() {
   ) => {
     // Shared resolver materializes an auto-imported session's transcript, so a
     // discovered session opens full here just like in 세션, never empty.
-    void resolveSession(row.sessionId).then((ok) => {
-      if (ok) openSessionDetail(tab);
+    void resolveSession(row.sessionId).then((outcome) => {
+      if (outcome === "opened") openSessionDetail(tab);
     });
   };
 

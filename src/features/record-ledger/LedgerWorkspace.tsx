@@ -133,9 +133,9 @@ export function LedgerWorkspace() {
       openRecord(recordId);
       return;
     }
-    void resolveSession(recordId).then((ok) => {
-      if (ok) openSession("flow");
-      else openRecord(recordId);
+    void resolveSession(recordId).then((outcome) => {
+      if (outcome === "opened") openSession("flow");
+      else if (outcome === "unavailable") openRecord(recordId);
     });
   };
   const startNew = () => {

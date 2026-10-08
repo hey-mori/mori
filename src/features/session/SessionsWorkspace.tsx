@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
 import { Loader2, Radio, TriangleAlert } from "lucide-react";
-import { selectSessionSource, useSessionStore } from "../../app/sessionStore";
+import { useSessionStore } from "../../app/sessionStore";
 import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { LiveSessionView } from "../live-session/LiveSessionView";
 import { SessionDetailView } from "./SessionDetailView";
 import { SessionIndex } from "./SessionIndex";
+import { useSessionResolver } from "./useSessionResolver";
 
 /**
  * 세션 · the unified session workspace.
@@ -21,10 +22,7 @@ import { SessionIndex } from "./SessionIndex";
  * experience in the two-experience model (기록 owns "notes · edit").
  */
 export function SessionsWorkspace() {
-  const source = useSessionStore(selectSessionSource);
-  const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
-  const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
-  const openDiscoveredSession = useSessionStore((state) => state.openDiscoveredSession);
+  const resolveSession = useSessionResolver();
   const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
@@ -33,38 +31,20 @@ export function SessionsWorkspace() {
   const [selectedPastId, setSelectedPastId] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<"ready" | "loading" | "error">("ready");
 
-  const isDesktop = source === "desktop-sqlite";
-
   const handleSelectPast = useCallback(
     (sessionId: string) => {
       setSelectedPastId(sessionId);
       setMode("review");
-      setLoadState("ready");
-      if (sessionId === activeSessionId) return;
-      // An auto-registered session is a metadata-only placeholder: load its real
-      // transcript on demand. Show a loading state while the fetch runs, and an
-      // honest error (not a manual-import prompt) if it cannot be reached.
-      if (isAutoImportedSessionId(sessionId)) {
-        setLoadState("loading");
-        void openDiscoveredSession(sessionId).then((ok) => {
-          if (ok) {
-            setLoadState("ready");
-          } else {
-            loadBrowserSession(sessionId);
-            setLoadState("error");
-          }
-        });
-        return;
-      }
-      if (isDesktop) {
-        void loadDesktopSession(sessionId).then((ok) => {
-          if (!ok) loadBrowserSession(sessionId);
-        });
-      } else {
-        loadBrowserSession(sessionId);
-      }
+      // An auto-registered session reads its transcript on demand: show a
+      // loading state while it runs. A transcript that cannot be read opens as
+      // the session with a truthful error and a retry, never as an empty one.
+      setLoadState(isAutoImportedSessionId(sessionId) && sessionId !== activeSessionId ? "loading" : "ready");
+      void resolveSession(sessionId).then((outcome) => {
+        if (outcome === "superseded") return;
+        setLoadState(outcome === "opened" ? "ready" : "error");
+      });
     },
-    [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession, openDiscoveredSession],
+    [activeSessionId, resolveSession],
   );
 
   const handleSelectLive = useCallback(() => {

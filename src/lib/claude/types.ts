@@ -220,3 +220,25 @@ export type ClaudeCodeSessionDelta = {
   fileTouches: ClaudeFileTouch[];
   stats: ClaudeDeltaStats;
 };
+
+/**
+ * One bounded window of a long Claude Code transcript, read from its end.
+ * Mirrors the Rust `ClaudeCodeSessionWindow`. It is part of the session, never
+ * the whole: `events`, `fileTouches` and `stats` count this window only.
+ * Pass `startOffset`, `sourceId` and `startAnchor` back for earlier history.
+ */
+export type ClaudeCodeSessionWindow = {
+  filePath: string;
+  sourceId: string;
+  fileBytes: number;
+  startOffset: number;
+  startAnchor: string;
+  endOffset: number;
+  reachedStart: boolean;
+  events: ClaudeMessage[];
+  fileTouches: ClaudeFileTouch[];
+  stats: ClaudeDeltaStats;
+  /** Records skipped because one alone exceeded a window; counted, not hidden. */
+  omittedRecords: number;
+  omittedBytes: number;
+};
