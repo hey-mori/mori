@@ -17,6 +17,14 @@ import {
 } from "../../../codex/codexTauri";
 import type { CodexSessionMeta } from "../../../codex/types";
 import {
+  activityClassOf,
+  claudeInteraction,
+  codexInteraction,
+  type SessionActivityClass,
+  type SessionEvidence,
+  type SessionInteraction,
+} from "./sessionEvidence";
+import {
   discoverAntigravitySessions,
   getAntigravitySession,
 } from "../../../antigravity/antigravityTauri";
@@ -88,6 +96,13 @@ export type AgentWorkSessionMeta = {
   tokenUsage?: ClaudeTokenUsage;
   connectorId?: string;
   connectorFamily?: string;
+  /** What the source holds, for readers that classify it. Absent means the
+   *  reader does not say, which is not the same as empty. */
+  activityClass?: SessionActivityClass;
+  /** Whether a person drove the session, from the source's own marker. */
+  interaction?: SessionInteraction;
+  /** Structural PR and branch observations, for readers that report them. */
+  evidence?: SessionEvidence;
 };
 
 export type AgentWorkSessionDetail = AgentWorkSessionMeta & {
@@ -292,6 +307,9 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     messageCountComplete: session.messageCountComplete,
     title: session.title,
     tokenUsage: session.tokenUsage,
+    activityClass: activityClassOf(session.activityClass),
+    interaction: claudeInteraction(session.entrypoint),
+    evidence: session.evidence ?? undefined,
   };
 }
 
@@ -352,6 +370,9 @@ function mapCodexMeta(session: CodexSessionMeta): AgentWorkSessionMeta {
     updatedAt: session.updatedAt,
     messageCount: session.messageCount,
     title: session.title,
+    activityClass: activityClassOf(session.activityClass),
+    interaction: codexInteraction(session.source),
+    evidence: session.evidence ?? undefined,
   };
 }
 

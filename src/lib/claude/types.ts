@@ -1,3 +1,5 @@
+import type { SessionEvidence } from "../trace/sources/ai/sessionEvidence";
+
 /**
  * Claude Connections — shared types.
  *
@@ -121,6 +123,13 @@ export type ClaudeCodeSessionMeta = {
   title: string;
   /** Token usage aggregated from the session's assistant messages. */
   tokenUsage?: ClaudeTokenUsage;
+  /** What the transcript holds, from a complete read only. Absent on older reads. */
+  activityClass?: string;
+  /** The agent's recorded `entrypoint` (`cli`, `sdk-cli`, ...), "" if none. */
+  entrypoint?: string;
+  /** PR and branch observations with coverage; null when the file could not be
+   *  scanned (unknown, not empty). Absent on older reads. */
+  evidence?: SessionEvidence | null;
 };
 
 /**

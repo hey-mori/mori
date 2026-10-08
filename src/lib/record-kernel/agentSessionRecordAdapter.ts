@@ -17,6 +17,7 @@
  */
 import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import { autoImportedSessionId } from "../session/autoImportSessions";
+import { recordedSessionEvidence } from "./agentSessionEvidence";
 import {
   applyRecordPatch,
   createRecord,
@@ -65,6 +66,12 @@ export function buildAgentSessionRecordInput(
 
   const properties: CreateRecordInput["properties"] = { agentId: meta.agentId };
   if (knownCount) properties.stepCount = meta.messageCount;
+  // Source classifications and structural Git observations, never prose (see
+  // `agentSessionEvidence.ts`). Absent when the reader does not report them.
+  if (meta.activityClass) properties.activityClass = meta.activityClass;
+  if (meta.interaction) properties.interaction = meta.interaction;
+  const evidence = recordedSessionEvidence(meta.evidence, meta.sessionId);
+  if (evidence) properties.sessionEvidence = evidence;
 
   return {
     id: autoImportedSessionId(meta),
@@ -107,6 +114,9 @@ export type ObservedFields = {
   contextIds: string[];
   agentId: RecordPropertyValue | undefined;
   stepCount: RecordPropertyValue | undefined;
+  activityClass: RecordPropertyValue | undefined;
+  interaction: RecordPropertyValue | undefined;
+  sessionEvidence: RecordPropertyValue | undefined;
 };
 
 function observedFields(record: Pick<
@@ -125,6 +135,9 @@ function observedFields(record: Pick<
     contextIds: [...(record.contextIds ?? [])].sort(),
     agentId: record.properties?.agentId,
     stepCount: record.properties?.stepCount,
+    activityClass: record.properties?.activityClass,
+    interaction: record.properties?.interaction,
+    sessionEvidence: record.properties?.sessionEvidence,
   };
 }
 
@@ -143,6 +156,9 @@ function same(a: unknown, b: unknown): boolean {
  * ownership, creation and capture times, and any other property are never
  * discovery's to change.
  */
+/** The observed fields that live in `properties`, merged key by key. */
+const PROPERTY_KEYS = ["agentId", "stepCount", "activityClass", "interaction", "sessionEvidence"] as const;
+
 export function planAgentSessionRediscovery(
   written: ObservedFields,
   current: MoriRecord,
@@ -169,7 +185,7 @@ export function planAgentSessionRediscovery(
 
   const properties = { ...current.properties };
   let propertiesChanged = false;
-  for (const key of ["agentId", "stepCount"] as const) {
+  for (const key of PROPERTY_KEYS) {
     if (!takes(key)) continue;
     if (next[key] === undefined) delete properties[key];
     else properties[key] = next[key];
@@ -179,7 +195,17 @@ export function planAgentSessionRediscovery(
   return patch;
 }
 
-const OBSERVED_KEYS = ["title", "body", "time", "contextIds", "agentId", "stepCount"] as const;
+const OBSERVED_KEYS = [
+  "title",
+  "body",
+  "time",
+  "contextIds",
+  "agentId",
+  "stepCount",
+  "activityClass",
+  "interaction",
+  "sessionEvidence",
+] as const;
 
 /**
  * Does a change between two observations only extend a session (its end time,
