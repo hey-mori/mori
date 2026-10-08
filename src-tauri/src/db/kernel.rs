@@ -36,8 +36,10 @@ pub struct KernelObjectRow {
     pub saved_at: String,
 }
 
-/// Append-only change history row. Never updated, never deleted: revisions
-/// outlive their record so history survives a record deletion.
+/// Append-only change history row, except that a coalesced burst of same-actor
+/// updates supersedes its own predecessor (see `append_kernel_revisions`).
+/// Never deleted: revisions outlive their record so history survives a record
+/// deletion.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct KernelRevisionRow {
     pub id: String,
@@ -308,21 +310,59 @@ pub fn append_kernel_revisions(
 ) -> Result<KernelWriteResult, String> {
     let tx = conn.transaction().map_err(|error| error.to_string())?;
     for row in rows {
-        tx.execute(
-            "INSERT INTO kernel_revisions (\
-                id, record_id, actor, operation, before_json, after_json, created_at\
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![
-                row.id,
-                row.record_id,
-                row.actor,
-                row.operation,
-                row.before_json,
-                row.after_json,
-                row.created_at,
-            ],
-        )
-        .map_err(|error| error.to_string())?;
+        // Revisions are append-only, with one sanctioned exception: the kernel
+        // coalesces one burst of same-actor plain updates into a single revision
+        // by re-writing it under the same id (`revisionCoalescing.ts`). Only that
+        // shape may replace an existing row. Creates, status changes, and another
+        // record's or actor's revision stay immutable, so re-using their id is
+        // still an error rather than a silent rewrite.
+        let existing: Option<(String, String, String)> = tx
+            .query_row(
+                "SELECT record_id, actor, operation FROM kernel_revisions WHERE id = ?1",
+                params![row.id],
+                |found| Ok((found.get(0)?, found.get(1)?, found.get(2)?)),
+            )
+            .optional()
+            .map_err(|error| error.to_string())?;
+        match existing {
+            None => {
+                tx.execute(
+                    "INSERT INTO kernel_revisions (\
+                        id, record_id, actor, operation, before_json, after_json, created_at\
+                     ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                    params![
+                        row.id,
+                        row.record_id,
+                        row.actor,
+                        row.operation,
+                        row.before_json,
+                        row.after_json,
+                        row.created_at,
+                    ],
+                )
+                .map_err(|error| error.to_string())?;
+            }
+            Some((record_id, actor, operation))
+                if record_id == row.record_id
+                    && actor == row.actor
+                    && operation == "update"
+                    && row.operation == "update" =>
+            {
+                tx.execute(
+                    "UPDATE kernel_revisions \
+                     SET before_json = ?2, after_json = ?3, created_at = ?4 \
+                     WHERE id = ?1",
+                    params![row.id, row.before_json, row.after_json, row.created_at],
+                )
+                .map_err(|error| error.to_string())?;
+            }
+            Some(_) => {
+                return Err(format!(
+                    "revision {} already exists and may not be rewritten",
+                    row.id
+                ));
+            }
+        }
     }
     tx.commit().map_err(|error| error.to_string())?;
     Ok(KernelWriteResult {
@@ -492,7 +532,60 @@ mod tests {
             listed.iter().map(|row| row.id.as_str()).collect::<Vec<_>>(),
             vec!["rev-a", "rev-b"]
         );
-        // Re-appending an existing revision id is a bug, not a rewrite.
-        assert!(append_kernel_revisions(&mut conn, &[revision("rev-a", "2026-07-14T09:00:00Z")]).is_err());
+        // A create can never be rewritten: re-appending its id is a bug.
+        let create = KernelRevisionRow {
+            id: "rev-create".to_string(),
+            operation: "create".to_string(),
+            ..revision("rev-create", "2026-07-14T08:00:00Z")
+        };
+        append_kernel_revisions(&mut conn, &[create.clone()]).expect("append create");
+        assert!(append_kernel_revisions(&mut conn, &[create]).is_err());
+    }
+
+    fn update_row(id: &str, record_id: &str, actor: &str, after: &str, at: &str) -> KernelRevisionRow {
+        KernelRevisionRow {
+            id: id.to_string(),
+            record_id: record_id.to_string(),
+            actor: actor.to_string(),
+            operation: "update".to_string(),
+            before_json: Some("{\"title\":\"start\"}".to_string()),
+            after_json: Some(after.to_string()),
+            created_at: at.to_string(),
+        }
+    }
+
+    #[test]
+    fn a_coalesced_update_supersedes_its_predecessor_in_place() {
+        // The kernel coalesces one burst of same-actor updates into one revision
+        // by re-writing it under the same id (revisionCoalescing.ts). SQLite must
+        // honour that, or the write fails and the revision falls back to the
+        // browser store, splitting history across two stores.
+        let mut conn = kernel_conn();
+        append_kernel_revisions(&mut conn, &[update_row("rev-1", "rec-1", "user", "{\"title\":\"a\"}", "2026-07-14T09:00:00Z")])
+            .expect("first write");
+        append_kernel_revisions(&mut conn, &[update_row("rev-1", "rec-1", "user", "{\"title\":\"ab\"}", "2026-07-14T09:01:00Z")])
+            .expect("superseding write");
+        let listed = list_kernel_revisions(&conn, "rec-1").expect("list");
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].after_json.as_deref(), Some("{\"title\":\"ab\"}"));
+        assert_eq!(listed[0].before_json.as_deref(), Some("{\"title\":\"start\"}"));
+        assert_eq!(listed[0].created_at, "2026-07-14T09:01:00Z");
+    }
+
+    #[test]
+    fn only_a_same_record_same_actor_update_may_be_superseded() {
+        let mut conn = kernel_conn();
+        append_kernel_revisions(&mut conn, &[update_row("rev-1", "rec-1", "user", "{}", "2026-07-14T09:00:00Z")])
+            .expect("first write");
+        // Another record under the same id.
+        assert!(append_kernel_revisions(&mut conn, &[update_row("rev-1", "rec-2", "user", "{}", "2026-07-14T09:01:00Z")]).is_err());
+        // Another actor under the same id.
+        assert!(append_kernel_revisions(&mut conn, &[update_row("rev-1", "rec-1", "rule", "{}", "2026-07-14T09:01:00Z")]).is_err());
+        // A status change may not overwrite an update, nor be overwritten.
+        let status = KernelRevisionRow { operation: "status-change".to_string(), ..update_row("rev-1", "rec-1", "user", "{}", "2026-07-14T09:01:00Z") };
+        assert!(append_kernel_revisions(&mut conn, &[status]).is_err());
+        let listed = list_kernel_revisions(&conn, "rec-1").expect("list");
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].created_at, "2026-07-14T09:00:00Z");
     }
 }
