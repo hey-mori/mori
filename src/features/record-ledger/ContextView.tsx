@@ -32,7 +32,8 @@ import { useSessionResolver } from "../session/useSessionResolver";
 import { useRecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
 import { groupRecordsBySection } from "./contextGrouping";
-import { buildProjectGroups, type ProjectGroup } from "./projectGroups";
+import { buildProjectGroups, sessionKey, type ProjectGroup } from "./projectGroups";
+import { loadEmptySourceLabels } from "../../lib/session/autoImportMetaStore";
 import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
 import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
@@ -245,6 +246,11 @@ export function ContextView() {
       })),
       records: unfiltered,
       kernelRecordsById: new Map(records.map((record) => [record.id, record])),
+      // Empty sources were never registered, so they are counted by the same
+      // leaf key a session joins its project by.
+      emptySources: loadEmptySourceLabels().filter(
+        (label) => sessionKey(label) === activeGroup.name.trim().toLowerCase(),
+      ).length,
       now: new Date(),
     });
   }, [continuing, activeGroup, contexts, records, relations]);

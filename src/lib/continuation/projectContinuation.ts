@@ -21,16 +21,29 @@
  * Raw agent request text is deliberately absent: the default output is
  * structure, titles, and references only (owner decision 4, 2026-10-07).
  *
+ * Session outcome evidence (v1) adds, per session, only structural Git
+ * observations its source recorded: PRs it links to and branch names it saw,
+ * with how much of the source was read. They are labelled as observations: a
+ * linked PR is not claimed as authored or merged, a seen branch is not claimed
+ * as current, and partial coverage is stated, never implied complete. A session
+ * that is not a person's conversation (only slash commands, a scripted run, or
+ * nothing at all) is left out and counted by reason. Physical transcript
+ * segments the source links with `continued-in` are shown as one session.
+ *
  * Pure: no React, no storage, no clock of its own.
  */
 import { containsLikelySecret } from "../connectors/redaction";
 import type { MoriRecord, RecordStatus } from "../record-kernel/kernelTypes";
 import { isDemoSessionId } from "../demo/demoSessionFixtures";
 import { isAutoImportedSessionId } from "../session/autoImportSessions";
+import { readSessionEvidence, type RecordedSessionEvidence } from "../record-kernel/agentSessionEvidence";
 import { AGENT_REGISTRY } from "../trace/sources/ai/agentRegistry";
 
 export const CONTINUATION_WINDOW_DAYS = 30;
 export const CONTINUATION_SECTION_CAP = 10;
+/** Per session, how many PRs and branches are listed before "외 N개". */
+export const EVIDENCE_PR_CAP = 20;
+export const EVIDENCE_BRANCH_CAP = 6;
 const DECISION_LINE_MAX = 160;
 
 export type ContinuationSessionInput = {
@@ -49,7 +62,21 @@ export type ContinuationInput = {
   records: readonly MoriRecord[];
   /** Kernel records by id, used to read an auto-imported session's status. */
   kernelRecordsById: ReadonlyMap<string, MoriRecord>;
+  /** Sources for this project a complete read proved empty, which were never
+   *  registered. Counted so the pack does not imply they do not exist. */
+  emptySources?: number;
   now: Date;
+};
+
+/** The structural Git observations shown for one session. */
+export type ContinuationEvidence = {
+  /** Linked in the session's source; not proof of authorship or merge. */
+  prs: Array<{ repository: string; number: number }>;
+  /** Seen in the session's Git context; not the current branch. */
+  branches: string[];
+  coverage: "complete" | "partial";
+  /** Transcript segments joined by the source's `continued-in` link. */
+  segments: number;
 };
 
 export type ContinuationItem = {
@@ -62,6 +89,35 @@ export type ContinuationItem = {
   agent?: string;
   /** Decisions: one line of what was decided. */
   line?: string;
+  /** Sessions: the last day observed, when it differs from `day`. */
+  lastDay?: string;
+  /** Sessions: Git observations, when the session's source reported them. */
+  evidence?: ContinuationEvidence;
+};
+
+/** Sessions left out because they are not a person's conversation. */
+export type ContinuationNonConversation = {
+  /** Only slash commands such as `/model` or `/login`. */
+  commandOnly: number;
+  /** A scripted run (`claude -p`, `codex exec`). */
+  automation: number;
+  /** No user or assistant record at all, registered or not. */
+  empty: number;
+};
+
+/** How much the session section can be trusted to be complete. */
+export type ContinuationCoverage = {
+  /** Sessions whose Git evidence covers the whole source. */
+  evidenceComplete: number;
+  /** Sessions whose source was only partly read: their lists may be short. */
+  evidencePartial: number;
+  /** Sessions with no Git evidence recorded (an agent that does not report it,
+   *  or a record written before evidence existed). Not "no PRs". */
+  evidenceMissing: number;
+  /** Included sessions with no reviewed project link: joined by folder only. */
+  unlinked: number;
+  /** Segments folded into another session by `continued-in`. */
+  joinedSegments: number;
 };
 
 export type ContinuationExclusions = {
@@ -82,6 +138,8 @@ export type ProjectContinuationPack = {
   openTasks: ContinuationItem[];
   notes: ContinuationItem[];
   excluded: ContinuationExclusions;
+  nonConversation: ContinuationNonConversation;
+  coverage: ContinuationCoverage;
   /** Eligible items left out only by a section cap. */
   overflow: number;
   markdown: string;
@@ -172,7 +230,19 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
     sessionsById.set(record.id, { id: record.id, title: record.title, startedAt: record.occurredStart });
   }
 
-  const sessions: Array<ContinuationItem & { at: number }> = [];
+  const nonConversation: ContinuationNonConversation = {
+    commandOnly: 0,
+    automation: 0,
+    empty: input.emptySources ?? 0,
+  };
+  type Candidate = {
+    session: ContinuationSessionInput;
+    kernel: MoriRecord | undefined;
+    evidence: RecordedSessionEvidence | undefined;
+    when: string | undefined;
+    end: string | undefined;
+  };
+  const candidates: Candidate[] = [];
   for (const session of sessionsById.values()) {
     const when = session.startedAt || session.savedAt;
     if (!inWindow(when)) continue;
@@ -180,13 +250,84 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
     let verdict: Verdict = "include";
     if (kernel) verdict = statusVerdict(kernel.status);
     else if (isAutoImportedSessionId(session.id)) verdict = "unconfirmed";
+    if (verdict === "include" && kernel) {
+      // Not a person's conversation: real activity, but not a handoff.
+      const activity = kernel.properties.activityClass;
+      if (kernel.properties.interaction === "automation") {
+        nonConversation.automation += 1;
+        continue;
+      }
+      if (activity === "command-only") {
+        nonConversation.commandOnly += 1;
+        continue;
+      }
+      if (activity === "empty") {
+        nonConversation.empty += 1;
+        continue;
+      }
+    }
     if (!admit(verdict, [session.title])) continue;
+    candidates.push({
+      session,
+      kernel,
+      evidence: readSessionEvidence(kernel?.properties.sessionEvidence),
+      when,
+      end: kernel?.occurredEnd,
+    });
+  }
+
+  // Fold segments the source links with `continued-in` into the segment they
+  // continue in, following the chain to its last segment. Only an explicit
+  // link joins segments; similar titles or times never do.
+  const bySegment = new Map<string, Candidate>();
+  for (const candidate of candidates) {
+    if (candidate.evidence?.segment) bySegment.set(candidate.evidence.segment, candidate);
+  }
+  const chainEnd = (candidate: Candidate): Candidate => {
+    let current = candidate;
+    const visited = new Set<Candidate>([current]);
+    for (;;) {
+      const next = current.evidence?.continuesIn ? bySegment.get(current.evidence.continuesIn) : undefined;
+      if (!next || visited.has(next)) return current;
+      visited.add(next);
+      current = next;
+    }
+  };
+  const groups = new Map<Candidate, Candidate[]>();
+  for (const candidate of candidates) {
+    const end = chainEnd(candidate);
+    groups.set(end, [...(groups.get(end) ?? []), candidate]);
+  }
+
+  const coverage: ContinuationCoverage = {
+    evidenceComplete: 0,
+    evidencePartial: 0,
+    evidenceMissing: 0,
+    unlinked: 0,
+    joinedSegments: 0,
+  };
+  const sessions: Array<ContinuationItem & { at: number }> = [];
+  for (const [last, members] of groups) {
+    coverage.joinedSegments += members.length - 1;
+    const ordered = [...members].sort((a, b) => stamp(a.when) - stamp(b.when));
+    const first = ordered[0];
+    const evidences = ordered.flatMap((member) => (member.evidence ? [member.evidence] : []));
+    const evidence = mergeEvidence(evidences, ordered.length);
+    if (!evidence) coverage.evidenceMissing += 1;
+    else if (evidence.coverage === "complete") coverage.evidenceComplete += 1;
+    else coverage.evidencePartial += 1;
+    if (!ordered.some((member) => (member.kernel?.contextIds ?? []).length > 0)) coverage.unlinked += 1;
+    const lastSeen = ordered.map((member) => member.end ?? member.when).sort((a, b) => stamp(a) - stamp(b)).at(-1);
+    const day = dayOf(first.when);
+    const lastDay = dayOf(lastSeen);
     sessions.push({
-      ref: `mori:session/${session.id}`,
-      title: session.title.trim() || "제목 없음",
-      day: dayOf(when),
-      agent: agentName(kernel),
-      at: stamp(when),
+      ref: `mori:session/${last.session.id}`,
+      title: last.session.title.trim() || first.session.title.trim() || "제목 없음",
+      day,
+      ...(lastDay && lastDay !== day ? { lastDay } : {}),
+      agent: agentName(last.kernel),
+      ...(evidence ? { evidence } : {}),
+      at: stamp(first.when),
     });
   }
 
@@ -239,19 +380,79 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
     windowDays: CONTINUATION_WINDOW_DAYS,
     ...sections,
     excluded,
+    nonConversation,
+    coverage,
     overflow,
   };
   return { ...pack, markdown: renderContinuationMarkdown(pack) };
 }
 
+/** One session's evidence across its segments. Coverage is complete only when
+ *  every segment reported evidence and every one was read to the end. */
+function mergeEvidence(
+  evidences: RecordedSessionEvidence[],
+  segments: number,
+): ContinuationEvidence | undefined {
+  if (evidences.length === 0) return undefined;
+  const prs: ContinuationEvidence["prs"] = [];
+  const seenPrs = new Set<string>();
+  const branches: string[] = [];
+  for (const evidence of evidences) {
+    for (const pr of [...evidence.prs].sort((a, b) => a.line - b.line)) {
+      const key = `${pr.repository.toLowerCase()}#${pr.number}`;
+      if (seenPrs.has(key)) continue;
+      seenPrs.add(key);
+      prs.push({ repository: pr.repository, number: pr.number });
+    }
+    for (const branch of evidence.branches) {
+      if (!branches.includes(branch.name)) branches.push(branch.name);
+    }
+  }
+  const complete =
+    evidences.length === segments && evidences.every((evidence) => evidence.coverage === "complete");
+  return { prs, branches, coverage: complete ? "complete" : "partial", segments };
+}
+
+/** `acme/app #7 #9 · acme/home #3`, capped, numbers in first-seen order. */
+function prLine(prs: ContinuationEvidence["prs"]): string {
+  const shown = prs.slice(0, EVIDENCE_PR_CAP);
+  const byRepo = new Map<string, number[]>();
+  for (const pr of shown) byRepo.set(pr.repository, [...(byRepo.get(pr.repository) ?? []), pr.number]);
+  const text = [...byRepo].map(([repo, numbers]) => `${repo} ${numbers.map((n) => `#${n}`).join(" ")}`).join(" · ");
+  const rest = prs.length - shown.length;
+  return rest > 0 ? `${text} 외 ${rest}개` : text;
+}
+
+function evidenceLines(evidence: ContinuationEvidence): string[] {
+  const lines: string[] = [];
+  if (evidence.prs.length > 0) lines.push(`  - 기록에 연결된 PR: ${prLine(evidence.prs)}`);
+  if (evidence.branches.length > 0) {
+    const shown = evidence.branches.slice(0, EVIDENCE_BRANCH_CAP).join(", ");
+    const rest = evidence.branches.length - EVIDENCE_BRANCH_CAP;
+    lines.push(`  - 관찰된 브랜치: ${shown}${rest > 0 ? ` 외 ${rest}개` : ""}`);
+  }
+  const scope = evidence.coverage === "complete" ? "기록 전체 확인" : "기록 일부만 확인 · 목록이 전부가 아닐 수 있음";
+  const segments = evidence.segments > 1 ? ` · 이어진 구간 ${evidence.segments}개` : "";
+  if (evidence.prs.length === 0 && evidence.branches.length === 0) {
+    lines.push(`  - Git 근거: ${evidence.coverage === "complete" ? "기록에 PR·브랜치 없음" : "아직 찾지 못함"} (${scope}${segments})`);
+  } else {
+    lines.push(`  - 근거 범위: ${scope}${segments}`);
+  }
+  return lines;
+}
+
 function itemLine(item: ContinuationItem, kind: "session" | "decision" | "task" | "note"): string {
   const parts: string[] = [];
-  if (item.day) parts.push(kind === "task" ? `기한 ${item.day}` : item.day);
+  if (item.day) {
+    const range = item.lastDay ? `${item.day}~${item.lastDay}` : item.day;
+    parts.push(kind === "task" ? `기한 ${item.day}` : range);
+  }
   if (item.agent) parts.push(item.agent);
   parts.push(item.title);
   let line = `- ${parts.join(" · ")}`;
   if (item.line) line += `: ${item.line}`;
-  return `${line} (${item.ref})`;
+  line += ` (${item.ref})`;
+  return item.evidence ? [line, ...evidenceLines(item.evidence)].join("\n") : line;
 }
 
 export function renderContinuationMarkdown(
@@ -285,5 +486,32 @@ export function renderContinuationMarkdown(
   if (pack.excluded.secretLike > 0) notes.push(`비밀 정보로 보이는 항목 ${pack.excluded.secretLike}개`);
   if (notes.length > 0) lines.push("", `제외됨: ${notes.join(" · ")}`);
   if (pack.overflow > 0) lines.push(`표시 한도를 넘어 생략한 항목 ${pack.overflow}개`);
+
+  const other = pack.nonConversation;
+  const consideredSessions = pack.sessions.length + other.commandOnly + other.automation + other.empty;
+  if (consideredSessions > 0) {
+    lines.push("", "## 근거 범위");
+    const c = pack.coverage;
+    if (pack.sessions.length > 0) {
+      const parts: string[] = [];
+      if (c.evidenceComplete > 0) parts.push(`Git 근거 전체 확인 ${c.evidenceComplete}개`);
+      if (c.evidencePartial > 0) parts.push(`일부만 확인 ${c.evidencePartial}개`);
+      if (c.evidenceMissing > 0) parts.push(`Git 근거 미기록 ${c.evidenceMissing}개`);
+      lines.push(`- 세션 ${pack.sessions.length}개: ${parts.join(" · ")}`);
+      if (c.evidenceComplete + c.evidencePartial > 0) lines.push(
+        "- PR은 세션 기록 속 링크입니다. 이 세션이 만들었는지, 병합됐는지는 확인하지 않았습니다. 브랜치는 기록에서 관찰된 이름이며 현재 브랜치가 아닙니다.",
+      );
+    }
+    const skipped: string[] = [];
+    if (other.commandOnly > 0) skipped.push(`명령만 실행 ${other.commandOnly}개`);
+    if (other.automation > 0) skipped.push(`자동 실행 ${other.automation}개`);
+    if (other.empty > 0) skipped.push(`내용 없음 ${other.empty}개`);
+    if (skipped.length > 0) lines.push(`- 대화가 아니어서 뺀 세션: ${skipped.join(" · ")}`);
+    if (c.joinedSegments > 0) lines.push(`- 이어진 기록 구간을 한 세션으로 합침: ${c.joinedSegments}개`);
+    if (c.unlinked > 0) lines.push(`- 검토된 프로젝트 연결 없이 폴더 경로로만 묶인 세션: ${c.unlinked}개`);
+    if (pack.decisions.length === 0 && pack.openTasks.length === 0) {
+      lines.push("- 결정·할 일: Mori에 기록된 항목이 없습니다. 없다는 뜻이 아니라 확인할 기록이 없다는 뜻입니다.");
+    }
+  }
   return `${lines.join("\n")}\n`;
 }
