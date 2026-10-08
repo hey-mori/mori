@@ -3,6 +3,7 @@ import type { KernelContext, KernelRelation } from "../../lib/record-kernel/kern
 import { buildAgentSessionRecordInput } from "../../lib/record-kernel/agentSessionRecordAdapter";
 import { autoImportedSessionId, agentSessionToStoredDraft } from "../../lib/session/autoImportSessions";
 import type { AgentWorkSessionMeta } from "../../lib/trace/sources/ai/workSessions";
+import { recordProject } from "../record-ledger/projectScope";
 import { sessionCrumbs, sessionProjectIdentity } from "./sessionProjectIdentity";
 
 const at = "2026-10-08T00:00:00Z";
@@ -87,15 +88,18 @@ describe("session project identity", () => {
     expect(sessionProjectIdentity(session(["ctx-infra"], {}), contexts)).toMatchObject({ kind: "member" });
   });
 
-  it("a belongs-to relation counts, through the same shared rule", () => {
+  it("a belongs-to relation alone is not a reviewed project, even though the 기록 scope counts it", () => {
+    // "활동으로 기록" writes this relation from the agent's folder, with no review.
     const relation = {
       id: "rel-1",
       type: "belongs-to",
       fromRecordId: "auto-claude-abc",
-      toContextId: "ctx-infra",
+      toContextId: "ctx-dev",
       createdAt: at,
     } as KernelRelation;
-    expect(sessionProjectIdentity(session([]), contexts, [relation])).toMatchObject({ contextId: "ctx-infra" });
+    expect(recordProject(session([]), contexts, [relation])?.id).toBe("ctx-dev");
+    expect(sessionProjectIdentity(session([]), contexts)).toEqual({ kind: "none" });
+    expect(sessionCrumbs(sessionProjectIdentity(session([]), contexts), "dev").lead).toEqual({ kind: "source", sourceKey: "dev" });
   });
 
   it("an unreadable record claims nothing", () => {

@@ -4,17 +4,22 @@
  * Two different facts, never merged into one label:
  *   - the source folder (`Session.sourceLabel`, e.g. "dev"): where the agent
  *     worked. Observed, and shown as such;
- *   - the reviewed project: the operator's decision, read from the session's
- *     kernel record through the one shared rule (`recordProject` /
- *     `membershipState`). A suggestion, a rejection, a matching folder or
- *     repository name never makes a session a member here.
+ *   - the reviewed project: the operator's decision, a project context id in
+ *     the session record's `contextIds` (`membershipState`, the PR #160
+ *     contract). A suggestion, a rejection, a matching folder or repository
+ *     name never makes a session a member here.
+ *
+ * A `belongs-to` relation is deliberately not read. The general 기록 scope
+ * (`recordProject`) counts one, but "활동으로 기록" writes it automatically from
+ * the agent's folder (`captureAgentSession`), so it carries no review and must
+ * not be shown as the project the user confirmed.
  *
  * The record is found by id: an auto-imported session's kernel record id IS its
  * session id (`agentSessionRecordAdapter`), never a title or path match.
  */
-import type { KernelContext, KernelRelation, MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { membershipState } from "../../lib/record-kernel/projectMembership";
-import { projectLabel, recordProject } from "../record-ledger/projectScope";
+import { projectLabel } from "../record-ledger/projectScope";
 
 export type SessionProjectIdentity =
   /** A reviewed project. `label` is its display name, or its path when another
@@ -31,14 +36,12 @@ export type SessionProjectIdentity =
 export function sessionProjectIdentity(
   record: Pick<MoriRecord, "id" | "contextIds"> | null,
   contexts: readonly KernelContext[],
-  relations: readonly KernelRelation[] = [],
 ): SessionProjectIdentity {
   if (!record) return { kind: "unknown" };
   const state = membershipState(record, contexts);
   if (state.kind === "invalid") return { kind: "invalid", reason: state.reason };
-  const project = recordProject(record, contexts, relations);
-  if (!project) return { kind: "none" };
-  return { kind: "member", contextId: project.id, label: projectLabel(project, contexts) };
+  if (state.kind === "none") return { kind: "none" };
+  return { kind: "member", contextId: state.context.id, label: projectLabel(state.context, contexts) };
 }
 
 /**

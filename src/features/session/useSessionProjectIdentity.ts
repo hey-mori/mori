@@ -19,16 +19,10 @@ export function useSessionProjectIdentity(sessionId: string | null): SessionProj
     let cancelled = false;
     void (async () => {
       const repo = getKernelRepository();
-      const [record, contexts, relations] = await Promise.all([
-        repo.getRecord(sessionId),
-        repo.listContexts(),
-        repo.listRelationsForRecord(sessionId),
-      ]);
+      const [record, contexts] = await Promise.all([repo.getRecord(sessionId), repo.listContexts()]);
       if (cancelled) return;
-      const reliable = !record.fellBack && !contexts.fellBack && !relations.fellBack;
-      const value = reliable
-        ? sessionProjectIdentity(record.data, contexts.data, relations.data)
-        : ({ kind: "unknown" } as const);
+      const reliable = !record.fellBack && !contexts.fellBack;
+      const value = reliable ? sessionProjectIdentity(record.data, contexts.data) : ({ kind: "unknown" } as const);
       setIdentity({ sessionId, value });
     })().catch(() => {
       if (!cancelled) setIdentity({ sessionId, value: { kind: "unknown" } });
