@@ -733,9 +733,11 @@
   text-align: center;
 }
 
-.session-window-earlier {
+.session-window-earlier,
+.session-window-newer {
   display: flex;
   justify-content: center;
+  gap: var(--base-space-2);
 }
 
 .session-window-earlier .is-loading svg,

@@ -389,7 +389,13 @@ export type TauriCommandMap = {
     output: ClaudeCodeSessionDelta;
   };
   get_claude_code_session_window: {
-    input: { sessionPath: string; beforeOffset: number | null; sourceId: string | null; anchor: string | null };
+    input: {
+      sessionPath: string;
+      beforeOffset: number | null;
+      sourceId: string | null;
+      anchor: string | null;
+      endAnchor: string | null;
+    };
     output: ClaudeCodeSessionWindow;
   };
   resolve_file_locations: {

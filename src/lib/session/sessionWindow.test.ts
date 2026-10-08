@@ -15,6 +15,7 @@ function win(start: number, end: number, ids: string[], sourceId = "s"): ClaudeC
     fileBytes: 1000,
     startOffset: start,
     startAnchor: `a${start}`,
+    endAnchor: `e${end}`,
     endOffset: end,
     reachedStart: start === 0,
     events: ids.map((id) => ({ id, role: "assistant", content: id, createdAt: "" })),

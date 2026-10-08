@@ -76,6 +76,8 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     openDiscoveredSession: async () => "missing" as const,
     sessionWindow: null,
     loadEarlierSessionWindow: async () => {},
+    loadNewerSessionWindow: async () => {},
+    loadLatestSessionWindow: async () => {},
     loadBrowserSession: () => false,
     renameSession: () => false,
     setNextActionCompletion: () => false,
