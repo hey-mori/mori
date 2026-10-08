@@ -138,7 +138,14 @@ titles alone added nothing a fresh agent could not find in Git.
   changed fingerprint.
 - **Revisions:** evidence changes are growth, so they supersede the
   previous growth revision like an end-time change; a user edit or a
-  status change still ends the stretch.
+  status change still ends the stretch. A partial pass of the same
+  segment that finds nothing new (the first pass after an app restart)
+  does not replace complete evidence.
+- **Continuation pack:** each session lists its linked PRs per
+  repository, newest first, capped at 10 per repository with the rest
+  counted, plus whether its source was read whole. Branch observations
+  stay on the record and out of the pack: in the A/B/C test agents read
+  branches seen in a shared working tree as the session's own work.
 
 ## 3. The flood problem (first-class design concern)
 
