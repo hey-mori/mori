@@ -29,6 +29,8 @@ export type SessionWindowErrorKind =
   | "unavailable"
   /** The reader refused the path (outside the source root, not JSONL). */
   | "refused"
+  /** Over the detailed reader's cap, for an agent with no window reader yet. */
+  | "tooLarge"
   | "error";
 
 export type SessionWindowError = { kind: SessionWindowErrorKind; message: string };
@@ -94,6 +96,7 @@ export function classifyWindowError(error: unknown): SessionWindowError {
     return { kind: "changed", message };
   }
   if (message.startsWith("Refused")) return { kind: "refused", message };
+  if (isTooLargeError(error)) return { kind: "tooLarge", message };
   return { kind: "error", message };
 }
 
@@ -143,9 +146,17 @@ export function prependEarlierWindow(
   };
 }
 
-/** Share of the transcript's bytes the loaded windows cover, 0–100, floored so
- *  a partial view never rounds up to 100. */
-export function loadedPercent(state: LoadedSessionWindow): number {
-  if (state.status === "full" || state.fileBytes <= 0) return 100;
-  return Math.min(99, Math.floor((state.loadedBytes / state.fileBytes) * 100));
+/**
+ * How much of the transcript the loaded windows cover, as the coverage line
+ * says it. A partial view never reads as 100%, and a small but real part never
+ * reads as 0%: under one percent is "1% 미만". Null when the size is unknown,
+ * so nothing is claimed.
+ */
+export function coverageLabel(state: Pick<LoadedSessionWindow, "status" | "loadedBytes" | "fileBytes">): string | null {
+  if (state.status === "full") return "원본 전체";
+  if (!(state.fileBytes > 0)) return null;
+  if (state.loadedBytes <= 0) return "원본의 0%";
+  const percent = (state.loadedBytes / state.fileBytes) * 100;
+  if (percent < 1) return "원본의 1% 미만";
+  return `원본의 약 ${Math.min(99, Math.floor(percent))}%`;
 }

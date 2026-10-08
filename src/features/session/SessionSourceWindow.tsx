@@ -6,7 +6,7 @@ import { InfoHint } from "../../components/ui/InfoHint";
 import { EmptyState } from "../../components/layout/EmptyState";
 import type { ClaudeMessage } from "../../lib/claude/types";
 import {
-  loadedPercent,
+  coverageLabel,
   type SessionWindowError,
   type SessionWindowState,
 } from "../../lib/session/sessionWindow";
@@ -48,7 +48,7 @@ function SessionWindowFailure({ sessionId, error }: { sessionId: string; error: 
       title={copy.title}
       description={copy.description}
       actions={
-        error.kind === "unavailable" ? undefined : (
+        error.kind === "unavailable" || error.kind === "tooLarge" ? undefined : (
           <Button
             icon={RotateCw}
             size="sm"
@@ -78,6 +78,10 @@ const FAILURE_COPY: Record<SessionWindowError["kind"], { title: string; descript
   unavailable: {
     title: "데스크톱 앱에서만 열 수 있습니다",
     description: "브라우저에서는 원본 대화 파일을 읽을 수 없습니다.",
+  },
+  tooLarge: {
+    title: "아직 열 수 없는 긴 대화입니다",
+    description: "이 에이전트의 긴 대화는 아직 나눠 읽지 못합니다. 원본 파일은 그대로입니다.",
   },
   refused: {
     title: "이 파일은 열 수 없습니다",
@@ -134,7 +138,7 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
         </span>
         <span className="session-window-meta">
           메시지 {state.events.length.toLocaleString("ko-KR")}개
-          {partial ? ` · 원본의 약 ${loadedPercent(state)}%` : ""}
+          {partial && coverageLabel(state) ? ` · ${coverageLabel(state)}` : ""}
         </span>
       </header>
 

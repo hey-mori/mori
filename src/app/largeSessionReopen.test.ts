@@ -257,6 +257,22 @@ describe("a session within the import limit", () => {
   });
 });
 
+describe("an agent without a window reader", () => {
+  it("shows an oversized Codex transcript as too large, never as empty and never retried as a window", async () => {
+    const m = { ...meta("codex-long", "Long Codex"), agentId: "codex" as const, importKind: "codex-session" as const };
+    const id = register(m);
+    reader.detail.mockRejectedValue(new Error("Codex session is too large (9437184 bytes > 8388608 byte cap)."));
+
+    expect(await resolver()(id)).toBe("opened");
+
+    expect(reader.window).not.toHaveBeenCalled();
+    const html = detailMarkup();
+    expect(html).toContain("아직 열 수 없는 긴 대화입니다");
+    expect(html).not.toContain("다시 시도");
+    expect(repository.listSessionImports(id)).toEqual([]);
+  });
+});
+
 describe("navigation races", () => {
   it("a slow read for a session the user left never lands on the next session", async () => {
     const slowId = register(meta("slow", "Slow"));
