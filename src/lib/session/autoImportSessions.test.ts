@@ -5,6 +5,7 @@ import {
   agentSessionToStoredDraft,
   autoImportedProjectId,
   autoImportedSessionId,
+  carryForwardRepository,
   diffDiscoveredSessions,
   isAutoImportedSessionId,
   isUnreadableAgentSession,
@@ -181,5 +182,61 @@ describe("diffDiscoveredSessions · empty sources (capture policy, 2026-10-08)",
     expect(agentSessionFingerprint(same)).toBe(agentSessionFingerprint(base));
     expect(agentSessionFingerprint(newPr)).not.toBe(agentSessionFingerprint(base));
     expect(agentSessionFingerprint(completed)).not.toBe(agentSessionFingerprint(base));
+  });
+});
+
+describe("agentSessionToStoredDraft · repository identity", () => {
+  const repo = (root: string, basis: "session-record" | "git-worktree" | "git-checkout" | "", conflict = false) => ({
+    root,
+    basis,
+    worktreePath: "",
+    conflict,
+  });
+
+  it("keeps the established checkout beside the folder, never in its place", () => {
+    const draft = agentSessionToStoredDraft(
+      meta({ id: "wt", projectPath: "/home/u/dev", repository: repo("/home/u/dev/infra", "session-record") }),
+    );
+    expect(draft.session.sourceLabel).toBe("/home/u/dev");
+    expect(draft.session.sourceRepository).toBe("/home/u/dev/infra");
+    expect(draft.session.sourceRepositoryBasis).toBe("session-record");
+  });
+
+  it("records no checkout when the evidence contradicts itself", () => {
+    const draft = agentSessionToStoredDraft(meta({ id: "c", repository: repo("/home/u/dev/infra", "", true) }));
+    expect(draft.session.sourceRepository).toBeUndefined();
+  });
+
+  it("re-observes a session once its checkout becomes known", () => {
+    const before = meta({ id: "s" });
+    const after = meta({ id: "s", repository: repo("/home/u/dev/infra", "git-worktree") });
+    expect(agentSessionFingerprint(after)).not.toBe(agentSessionFingerprint(before));
+    expect(agentSessionFingerprint(meta({ id: "s", repository: repo("/home/u/dev/infra", "git-worktree") }))).toBe(
+      agentSessionFingerprint(after),
+    );
+  });
+});
+
+describe("carryForwardRepository · a partial rescan after restart", () => {
+  const known = { root: "/home/u/dev/infra", basis: "session-record" as const, worktreePath: "/w", conflict: false };
+  const ev = (complete: boolean) => ({ prs: [], branches: [], repositories: [], complete });
+
+  it("keeps the checkout a fuller read found while the source is only partly read", () => {
+    const previous = meta({ id: "wt", repository: known, evidence: ev(true) });
+    const next = meta({ id: "wt", evidence: ev(false) });
+    expect(carryForwardRepository(next, previous).repository).toEqual(known);
+    // Same fingerprint input as before: the draft is not re-registered without it.
+    expect(agentSessionToStoredDraft(carryForwardRepository(next, previous)).session.sourceRepository).toBe("/home/u/dev/infra");
+  });
+
+  it("lets a complete read decide, even when it finds no checkout", () => {
+    const previous = meta({ id: "wt", repository: known, evidence: ev(true) });
+    expect(carryForwardRepository(meta({ id: "wt", evidence: ev(true) }), previous).repository).toBeUndefined();
+  });
+
+  it("lets a partial read that found its own identity decide", () => {
+    const other = { ...known, root: "/home/u/dev/other", basis: "git-worktree" as const };
+    const previous = meta({ id: "wt", repository: known, evidence: ev(true) });
+    expect(carryForwardRepository(meta({ id: "wt", repository: other, evidence: ev(false) }), previous).repository).toEqual(other);
   });
 });

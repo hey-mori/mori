@@ -199,3 +199,108 @@ describe("buildProjectGroups", () => {
     expect(groups[0].records).toHaveLength(1);
   });
 });
+
+// Project continuity (2026-10-08): a session is identified by its checkout, and
+// a name match is never an identity. Shapes follow the NUC's real sessions with
+// invented paths.
+describe("buildProjectGroups · checkout identity", () => {
+  const infraCtx: KernelContext = { id: "ctx-infra", type: "project", name: "infra", createdAt: "x" };
+  const apiCtx: KernelContext = { id: "ctx-api", type: "project", name: "api", createdAt: "x" };
+  const find = (groups: ReturnType<typeof buildProjectGroups>, id: string) =>
+    groups.find((group) => group.sessions.some((entry) => entry.sessionId === id));
+
+  it("files a Claude worktree session under the checkout it came from, not where it started", () => {
+    // Began in ~/dev, entered a worktree of ~/dev/infra: the folder says `dev`.
+    const groups = buildProjectGroups(
+      [
+        session({ sessionId: "main", sourceLabel: "/home/u/dev/infra", sourceRepository: "/home/u/dev/infra", sourceRepositoryBasis: "git-checkout" }),
+        session({ sessionId: "wt", sourceLabel: "/home/u/dev", sourceRepository: "/home/u/dev/infra", sourceRepositoryBasis: "session-record" }),
+      ],
+      [infraCtx],
+      [],
+      [],
+    );
+    const infra = find(groups, "wt");
+    expect(infra?.context?.id).toBe("ctx-infra");
+    expect(infra?.sessions.map((entry) => entry.sessionId).sort()).toEqual(["main", "wt"]);
+    expect(infra?.inclusion.wt).toEqual({ project: "context", identity: "worktree-record" });
+    expect(groups.some((group) => group.name === "dev")).toBe(false);
+  });
+
+  it("puts two worktrees of one repository with their checkout", () => {
+    const groups = buildProjectGroups(
+      [
+        session({ sessionId: "a", sourceLabel: "/home/u/dev/infra/.claude/worktrees/a", sourceRepository: "/home/u/dev/infra", sourceRepositoryBasis: "git-worktree" }),
+        session({ sessionId: "b", sourceLabel: "/home/u/dev/infra-ci-plants", sourceRepository: "/home/u/dev/infra", sourceRepositoryBasis: "git-worktree" }),
+      ],
+      [],
+      [],
+      [],
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].name).toBe("infra");
+    expect(groups[0].inclusion.b).toEqual({ project: "checkout", identity: "git-worktree" });
+  });
+
+  it("keeps two checkouts with the same name apart and joins neither to a project by name", () => {
+    const sessions = [
+      session({ sessionId: "work", sourceLabel: "/srv/work/api" }),
+      session({ sessionId: "play", sourceLabel: "/home/u/play/api" }),
+    ];
+    const unfiled = buildProjectGroups(sessions, [], [], []);
+    expect(unfiled).toHaveLength(2);
+    expect(unfiled.map((group) => group.parentPath).sort()).toEqual(["play", "work"]);
+
+    const withContext = buildProjectGroups(sessions, [apiCtx], [], []);
+    const project = withContext.find((group) => group.context?.id === "ctx-api");
+    expect(project?.sessions).toEqual([]);
+    expect(project?.candidates.map((entry) => entry.sessionId).sort()).toEqual(["play", "work"]);
+    expect(find(withContext, "work")?.context).toBeNull();
+  });
+
+  it("still joins a project by name when only one checkout carries the name", () => {
+    const groups = buildProjectGroups(
+      [session({ sessionId: "s1", sourceLabel: "C:/dev/mori" }), session({ sessionId: "s2", sourceLabel: "c:\\dev\\mori\\" })],
+      [moriCtx],
+      [],
+      [],
+    );
+    const mori = groups.find((group) => group.context?.id === "ctx-mori");
+    expect(mori?.sessions).toHaveLength(2);
+    expect(mori?.candidates).toEqual([]);
+  });
+
+  it("honours an alias the user confirmed, and says so", () => {
+    const connections = [
+      { projectKey: "/home/u/dev/mori", aliases: ["C:/dev/mori"], createdAt: "x", updatedAt: "x" },
+    ];
+    const groups = buildProjectGroups(
+      [
+        session({ sessionId: "nuc", sourceLabel: "/home/u/dev/mori" }),
+        session({ sessionId: "laptop", sourceLabel: "C:/dev/mori" }),
+      ],
+      [moriCtx],
+      [],
+      [],
+      connections,
+    );
+    const mori = groups.find((group) => group.context?.id === "ctx-mori");
+    expect(mori?.sessions.map((entry) => entry.sessionId).sort()).toEqual(["laptop", "nuc"]);
+    expect(mori?.inclusion.laptop).toEqual({ project: "alias", identity: "folder" });
+    expect(mori?.inclusion.nuc).toEqual({ project: "context", identity: "folder" });
+    // Without the confirmation the two same-named checkouts are only candidates.
+    const unconfirmed = buildProjectGroups(
+      [session({ sessionId: "nuc", sourceLabel: "/home/u/dev/mori" }), session({ sessionId: "laptop", sourceLabel: "C:/dev/mori" })],
+      [moriCtx],
+      [],
+      [],
+    );
+    expect(unconfirmed.find((group) => group.context?.id === "ctx-mori")?.sessions).toEqual([]);
+  });
+
+  it("files a session with no established checkout by its folder, unlinked", () => {
+    const groups = buildProjectGroups([session({ sessionId: "s", sourceLabel: "/home/u/dev/home" })], [], [], []);
+    expect(groups[0].inclusion.s).toEqual({ project: "checkout", identity: "folder" });
+    expect(groups[0].context).toBeNull();
+  });
+});

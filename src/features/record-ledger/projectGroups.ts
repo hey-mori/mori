@@ -21,6 +21,19 @@
  * is not attached to either. Guessing would file real work under the wrong
  * project, and being visibly unfiled is recoverable where a silent mis-file is
  * not.
+ *
+ * The same refusal runs the other way (2026-10-08). A session is identified by
+ * its CHECKOUT, not its folder name: the Git checkout the reader established
+ * (a worktree resolves to its main checkout, `Session.sourceRepository`), else
+ * its folder, after any alias the user confirmed (`projectConnection.ts`).
+ * Two different checkouts that share a leaf (`/work/api`, `/play/api`) are two
+ * projects: neither is joined to a context of that name by the name alone,
+ * because a name match is a candidate, not an identity
+ * (`compareProjectIdentities` "basename"). They are counted as candidates.
+ *
+ * Every session also says why it is where it is (`inclusion`), keeping three
+ * things apart: how its checkout is known, whether a Mori project was chosen
+ * for it, and nothing at all about what the session contributed.
  */
 import type {
   KernelContext,
@@ -29,6 +42,11 @@ import type {
 } from "../../lib/record-kernel/kernelTypes";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
+import {
+  normalizeProjectIdentity,
+  projectIdentitiesMatch,
+  type ConnectedProject,
+} from "../../lib/projects/projectConnection";
 import { groupRecordsByContext } from "./contextGrouping";
 import { contextChain, CONTEXT_PATH_SEPARATOR } from "./contextTree";
 
@@ -46,7 +64,41 @@ export type ProjectGroup = {
   sessions: StoredSessionSummary[];
   /** Kernel records belonging to this project's context, newest first. */
   records: MoriRecord[];
+  /** Why each session is in this group, by session id. */
+  inclusion: Record<string, SessionInclusion>;
+  /** Sessions from a different checkout that share this project's name. Not
+   *  included: a name match is a candidate until the user confirms it. */
+  candidates: StoredSessionSummary[];
 };
+
+/**
+ * Why a session is in its group. `project` is the Mori association, `identity`
+ * how the session's checkout is known. Neither says what the session did.
+ */
+export type SessionInclusion = {
+  /**
+   * - `context`: joined to a project the user made, by an unambiguous name.
+   * - `alias`: the user confirmed this checkout as another project's alias.
+   * - `checkout`: no Mori project; grouped only with sessions of the same
+   *   checkout.
+   */
+  project: "context" | "alias" | "checkout";
+  /**
+   * - `worktree-record`: the session recorded the worktree's origin checkout.
+   * - `git-worktree`: the folder is a Git worktree of that checkout (now).
+   * - `git-checkout`: the folder lies inside that checkout (now).
+   * - `folder`: nothing beyond the folder itself.
+   */
+  identity: "worktree-record" | "git-worktree" | "git-checkout" | "folder";
+};
+
+function identityBasis(session: StoredSessionSummary): SessionInclusion["identity"] {
+  if (!session.sourceRepository) return "folder";
+  if (session.sourceRepositoryBasis === "session-record") return "worktree-record";
+  if (session.sourceRepositoryBasis === "git-worktree") return "git-worktree";
+  if (session.sourceRepositoryBasis === "git-checkout") return "git-checkout";
+  return "folder";
+}
 
 function normalizeKey(label: string): string {
   return label.trim().toLowerCase();
@@ -69,6 +121,7 @@ export function buildProjectGroups(
   contexts: readonly KernelContext[],
   records: readonly MoriRecord[],
   relations: readonly KernelRelation[],
+  connections: readonly ConnectedProject[] = [],
 ): ProjectGroup[] {
   const byKey = new Map<string, ProjectGroup>();
 
@@ -101,6 +154,8 @@ export function buildProjectGroups(
       context,
       sessions: [],
       records: [...(recordsByContextId.get(context.id) ?? [])],
+      inclusion: {},
+      candidates: [],
     });
     const leaf = normalizeKey(context.name);
     const owners = leafOwners.get(leaf);
@@ -108,37 +163,79 @@ export function buildProjectGroups(
     else leafOwners.set(leaf, [key]);
   }
 
-  for (const session of sessions) {
+  // Each session's identity: its checkout (or folder), after a confirmed alias.
+  const resolved = sessions.map((session) => {
     // Never drop a session · an auto-imported session whose project path did not
     // resolve still belongs somewhere, so fall back to its project name, then a
     // 기타 bucket. This is what fills 프로젝트 instead of leaving it empty.
-    const label = session.sourceLabel?.trim() || session.projectName?.trim() || "기타";
-    const leaf = sessionKey(label);
+    const own =
+      session.sourceRepository?.trim() ||
+      session.sourceLabel?.trim() ||
+      session.projectName?.trim() ||
+      "기타";
+    const alias = connections.find((entry) =>
+      entry.aliases.some((label) => projectIdentitiesMatch(label, own)),
+    );
+    const label = alias ? alias.projectKey : own;
+    const canonical = normalizeProjectIdentity(label).canonicalKey || "기타";
+    return { session, label, canonical, leaf: sessionKey(label), aliased: Boolean(alias) };
+  });
+
+  // How many distinct checkouts carry each leaf. Two means the name alone
+  // cannot say which one a project of that name is.
+  const checkoutsByLeaf = new Map<string, Set<string>>();
+  for (const entry of resolved) {
+    const set = checkoutsByLeaf.get(entry.leaf) ?? new Set<string>();
+    set.add(entry.canonical);
+    checkoutsByLeaf.set(entry.leaf, set);
+  }
+
+  for (const entry of resolved) {
+    const { session, label, canonical, leaf } = entry;
     const owners = leafOwners.get(leaf) ?? [];
+    const ambiguousName = (checkoutsByLeaf.get(leaf)?.size ?? 0) > 1;
     // Resolution order, most certain first:
     //   1. A context whose whole PATH is this leaf. Not a guess: an exact match.
     //   2. Exactly one context carries the leaf anywhere in the tree.
     //   3. Otherwise the leaf cannot say which, so refuse to guess and leave the
     //      session in its own group, visibly unfiled rather than silently
     //      mis-filed.
-    // Case 1 running first is also what keeps the fallback key collision-free: a
-    // root context named mori is claimed there, so a leaf-keyed session group
-    // named mori can only exist when no context path equals it.
-    const exact = byKey.has(leaf) ? leaf : null;
-    const key = exact ?? (owners.length === 1 ? owners[0] : leaf);
+    // Rules 1 and 2 join by name, so they apply only when one checkout carries
+    // the name; two checkouts sharing it are candidates for that context.
+    // Only a group backed by a context counts: an unfiled group an earlier
+    // session created under the same leaf is not a project the user made.
+    const exact = !ambiguousName && byKey.get(leaf)?.context ? leaf : null;
+    const contextKey = exact ?? (!ambiguousName && owners.length === 1 ? owners[0] : null);
+    if (ambiguousName) {
+      for (const owner of byKey.get(leaf)?.context ? [leaf] : owners) byKey.get(owner)?.candidates.push(session);
+    }
+    // An unfiled group keys by its leaf, as before, unless the leaf is shared
+    // by another checkout: then by the full checkout identity, so the two never
+    // merge.
+    const key = contextKey ?? (ambiguousName ? `checkout:${canonical}` : leaf);
     let group = byKey.get(key);
     if (!group) {
+      const segments = label.replace(/\\/g, "/").split("/").filter(Boolean);
       group = {
         id: key,
         name: shortProjectLabel(label),
-        parentPath: "",
+        // Two checkouts share this name: their parent folder tells them apart.
+        parentPath: ambiguousName && segments.length > 1 ? segments[segments.length - 2]! : "",
         context: null,
         sessions: [],
         records: [],
+        inclusion: {},
+        candidates: [],
       };
       byKey.set(key, group);
     }
     group.sessions.push(session);
+    group.inclusion[session.sessionId] = {
+      // The user's confirmed alias is the reviewed act, even when the project
+      // it names then joins a context.
+      project: entry.aliased ? "alias" : contextKey ? "context" : "checkout",
+      identity: identityBasis(session),
+    };
   }
 
   for (const group of byKey.values()) {

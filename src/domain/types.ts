@@ -155,6 +155,15 @@ export type Session = {
    * (manual Start Session, demo, older imports) simply omit it.
    */
   sourceLabel?: string;
+  /**
+   * The Git checkout the session's work belongs to, when the source
+   * established one (a worktree resolves to its main checkout). An observation
+   * about the source, not a Mori project assignment. Additive.
+   */
+  sourceRepository?: string;
+  /** How `sourceRepository` is known: `session-record`, `git-worktree`, or
+   *  `git-checkout`. */
+  sourceRepositoryBasis?: string;
    /**
    * Optional actor id who created the session. Reserved for a future
    * multi-user workroom model (a Project containing sessions from multiple

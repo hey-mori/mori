@@ -47,6 +47,10 @@ export type StoredSessionSummary = {
    * sidebar switcher's group headers. Undefined for manual sessions.
    */
   sourceLabel?: string;
+  /** The Git checkout the session belongs to and how that is known (see
+   *  `Session.sourceRepository`). Undefined when nothing establishes one. */
+  sourceRepository?: string;
+  sourceRepositoryBasis?: string;
   /**
   /**
    * Reconstructed timeline-event count for the session, derived once from its

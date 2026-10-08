@@ -66,6 +66,11 @@ pub struct SessionEvidence {
     /// none was seen. Links physical segments of one logical session; it is not
     /// Git evidence.
     pub continued_in_session_id: String,
+    /// The checkout a Claude-created worktree came from and the worktree path,
+    /// as the session recorded them (`worktree-state`). Repository identity,
+    /// not Git outcome evidence; never written to a record or a pack.
+    #[serde(skip)]
+    pub worktree_origin: Option<(String, String)>,
     /// True only when the whole source was inspected.
     pub complete: bool,
     pub scanned_bytes: u64,
@@ -171,6 +176,16 @@ struct ClaudeEvidenceRecord {
     pr_url: Option<String>,
     #[serde(rename = "continuedInSessionId")]
     continued_in_session_id: Option<String>,
+    #[serde(rename = "worktreeSession")]
+    worktree_session: Option<WorktreeSession>,
+}
+
+#[derive(Deserialize)]
+struct WorktreeSession {
+    #[serde(rename = "originalCwd")]
+    original_cwd: Option<String>,
+    #[serde(rename = "worktreePath")]
+    worktree_path: Option<String>,
 }
 
 fn pr_number(value: &serde_json::Value) -> Option<u64> {
@@ -283,7 +298,8 @@ fn observe_claude_line(bytes: &[u8], line: u64, evidence: &mut SessionEvidence) 
     // Cheap byte test first: only records naming a branch or a PR are parsed.
     let interesting = contains(bytes, b"\"gitBranch\"")
         || contains(bytes, b"\"pr-link\"")
-        || contains(bytes, b"\"continued-in\"");
+        || contains(bytes, b"\"continued-in\"")
+        || contains(bytes, b"\"worktree-state\"");
     if !interesting {
         return;
     }
@@ -296,6 +312,16 @@ fn observe_claude_line(bytes: &[u8], line: u64, evidence: &mut SessionEvidence) 
         let number = record.pr_number.as_ref().and_then(pr_number);
         if let (false, Some(number)) = (repository.trim().is_empty(), number) {
             evidence.observe_pr(repository.trim(), number, record.pr_url.as_deref().unwrap_or(""), &at, line);
+        }
+    }
+    if record.kind.as_deref() == Some("worktree-state") {
+        // The first record that names both wins: a session enters one worktree.
+        if let Some(session) = record.worktree_session {
+            let origin = session.original_cwd.unwrap_or_default();
+            let path = session.worktree_path.unwrap_or_default();
+            if evidence.worktree_origin.is_none() && !origin.trim().is_empty() && !path.trim().is_empty() {
+                evidence.worktree_origin = Some((origin.trim().to_string(), path.trim().to_string()));
+            }
         }
     }
     if record.kind.as_deref() == Some("continued-in") {
@@ -456,6 +482,24 @@ mod tests {
         .concat();
         let evidence = claude_evidence(&write(&dir, "a.jsonl", &body)).unwrap();
         assert_eq!(evidence.continued_in_session_id, "b");
+    }
+
+    #[test]
+    fn records_the_checkout_a_claude_worktree_came_from() {
+        let dir = TempDir::new().unwrap();
+        let body = [
+            record("user", "main", "2026-09-16T06:15:31Z"),
+            "{\"type\":\"worktree-state\",\"worktreeSession\":{\"originalCwd\":\"/home/u/dev/infra\",\"worktreePath\":\"/home/u/dev/infra/.claude/worktrees/storage\",\"worktreeName\":\"storage\"},\"sessionId\":\"s\"}\n".to_string(),
+            "{\"type\":\"worktree-state\",\"worktreeSession\":null,\"sessionId\":\"s\"}\n".to_string(),
+        ]
+        .concat();
+        let evidence = claude_evidence(&write(&dir, "s.jsonl", &body)).unwrap();
+        assert_eq!(
+            evidence.worktree_origin,
+            Some(("/home/u/dev/infra".to_string(), "/home/u/dev/infra/.claude/worktrees/storage".to_string()))
+        );
+        // It is identity, not outcome evidence: it never serializes.
+        assert!(!serde_json::to_string(&evidence).unwrap().contains("infra"));
     }
 
     #[test]
