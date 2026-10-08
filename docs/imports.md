@@ -140,6 +140,22 @@ User: 코드 블록도 인식돼?
 Assistant: 네, 트리플 백틱 블록을 감지하고 카운트합니다.
 ```
 
+### Reopening an auto-discovered session (#167)
+
+A discovered session is imported when it is first opened. Opening it again reads the transcript again, and that read is stored at most once (`src/lib/import/autoSourceReopen.ts`):
+
+- **Same source.** Two imports are of the same source when the session, the source kind, and the source id without its capture-time suffix all match (`src-claude-code-<session id>`, `src-ai-<agent>-<session id>`). Imports stored by older builds, with their own capture times in their ids, are recognised the same way. A title never decides it.
+- **Unchanged transcript.** Nothing is written, not even `savedAt`.
+- **Grown transcript** (stored event ids are a prefix of the new read):
+  - The new turns are appended to the same import, under its id.
+  - Transcript fields of events the user has not edited take the read's text. Links, relationships and `userModified` events stay as they are.
+  - A last prompt that was still waiting for its reply becomes the answered turn. Its event id changes, and an analysis that referred to it is remapped. If the user edited that prompt, the edit stays and only later turns are added.
+- **Rewritten transcript, or events the user split or merged.** The stored import is kept as it is and not refreshed. No copy is added.
+- **Several stored copies** (made by older builds). None is changed or removed, and no further copy is added. Removing copies is an explicit cleanup that needs the owner's approval. `~/mori-handoff/evidence-2026-10-09-idempotency/import-inventory.mjs` lists them read-only.
+- **Sessions without an agent session id.** The old behaviour stays, because their source id would come from a title.
+- **Large sessions.** Sessions over the 8 MB cap are not affected; they open as read-only windows and are never imported.
+- **Storage.** This path writes browser storage only (`mori.sessionImportEntry.*`). Desktop SQLite `session_imports` is not written on reopen.
+
 ## Git diff import
 
 Paste a unified diff into the **Evidence → 소스 가져오기 → Git diff** tab.
