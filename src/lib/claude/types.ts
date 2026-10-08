@@ -233,6 +233,9 @@ export type ClaudeCodeSessionWindow = {
   fileBytes: number;
   startOffset: number;
   startAnchor: string;
+  /** Fingerprint of the last record before `endOffset`; with `endOffset` it
+   *  reads this same window back after the transcript grows. "" when empty. */
+  endAnchor: string;
   endOffset: number;
   reachedStart: boolean;
   events: ClaudeMessage[];

@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import {
   ChevronRight,
+  Folder,
   FolderGit2,
   GanttChartSquare,
   LayoutDashboard,
   ScrollText,
   Sparkles,
+  TriangleAlert,
 } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { useAppStore, type SessionTab } from "../../app/store";
@@ -31,6 +33,8 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
  */
 import { OverviewView } from "./OverviewView";
 import { SessionSourceWindow } from "./SessionSourceWindow";
+import { sessionCrumbs } from "./sessionProjectIdentity";
+import { useSessionProjectIdentity } from "./useSessionProjectIdentity";
 
 const TimelineView = lazy(() =>
   import("../timeline/TimelineView").then((m) => ({ default: m.TimelineView })),
@@ -117,6 +121,8 @@ function SessionTitleInline() {
   // user actually clicked instead of always "Mori 앱 기획".
   const demoSession = useSessionStore(selectSessionView).session;
   const openProject = useAppStore((state) => state.openProject);
+  const openProjectContext = useAppStore((state) => state.openProjectContext);
+  const identity = useSessionProjectIdentity(draft?.session.id ?? null);
   const context = useMemo(
     () =>
       buildWorkContext({
@@ -126,28 +132,61 @@ function SessionTitleInline() {
       }),
     [draft, demoSession, analysisStatus],
   );
-  const projectLabel = context.projectLabel ?? null;
+  // The agent's working folder is observed source, not the user's project.
+  const { lead, trailingSource } = sessionCrumbs(identity, context.projectLabel ?? null);
   return (
     <nav className="session-detail-breadcrumb" aria-label="현재 위치">
-      {projectLabel ? (
-        <>
-          <button
-            type="button"
-            className="session-detail-crumb"
-            onClick={() => openProject(projectLabel)}
-          >
-            <FolderGit2 size={12} aria-hidden="true" />
-            <span>{shortProjectLabel(projectLabel)}</span>
-          </button>
-          <ChevronRight size={11} className="session-detail-crumb-sep" aria-hidden="true" />
-        </>
+      {lead?.kind === "project" ? (
+        <button
+          type="button"
+          className="session-detail-crumb"
+          title="확정한 프로젝트"
+          onClick={() => openProjectContext(lead.contextId)}
+        >
+          <FolderGit2 size={12} aria-hidden="true" />
+          <span>{lead.label}</span>
+        </button>
+      ) : lead?.kind === "review-needed" ? (
+        <span
+          className="session-detail-crumb is-unavailable"
+          title={
+            lead.reason === "archived"
+              ? "확정했던 프로젝트가 보관되었습니다. 프로젝트에서 다시 확인하세요."
+              : "확정했던 프로젝트를 찾을 수 없습니다. 프로젝트에서 다시 확인하세요."
+          }
+        >
+          <TriangleAlert size={12} aria-hidden="true" />
+          <span>프로젝트 확인 필요</span>
+        </span>
+      ) : lead?.kind === "source" ? (
+        <button
+          type="button"
+          className="session-detail-crumb"
+          title="에이전트 작업 폴더 · 확정한 프로젝트 없음"
+          onClick={() => openProject(lead.sourceKey)}
+        >
+          <Folder size={12} aria-hidden="true" />
+          <span>{shortProjectLabel(lead.sourceKey)}</span>
+        </button>
       ) : null}
+      {lead ? <ChevronRight size={11} className="session-detail-crumb-sep" aria-hidden="true" /> : null}
       <span
         className="session-detail-crumb is-current"
         title={context.sessionTitle}
       >
         {context.sessionTitle}
       </span>
+      {trailingSource ? (
+        <button
+          type="button"
+          className="session-detail-source"
+          title="에이전트 작업 폴더"
+          onClick={() => openProject(trailingSource)}
+        >
+          <Folder size={11} aria-hidden="true" />
+          <span>{shortProjectLabel(trailingSource)}</span>
+        </button>
+      ) : null}
     </nav>
   );
 }

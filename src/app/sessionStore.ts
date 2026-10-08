@@ -34,10 +34,13 @@ import {
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
 import { getClaudeCodeSessionWindow } from "../lib/claude/claudeTauri";
 import {
+  appendNewerWindow,
   classifyWindowError,
+  earlierCursor,
   isLoadedWindow,
   isTooLargeError,
   MAX_EMPTY_WINDOW_SKIPS,
+  newerCursor,
   prependEarlierWindow,
   windowStateFrom,
   type LoadedSessionWindow,
@@ -521,8 +524,12 @@ export type SessionState = {
    * session. Transient: never persisted, never analysed.
    */
   sessionWindow: SessionWindowState | null;
-  /** Prepend the window before the loaded part of `sessionWindow`. */
+  /** Prepend the window before the held part of `sessionWindow`. */
   loadEarlierSessionWindow: () => Promise<void>;
+  /** Read back the newer window the view let go of last. */
+  loadNewerSessionWindow: () => Promise<void>;
+  /** Replace the view with the transcript's current end (an explicit jump). */
+  loadLatestSessionWindow: () => Promise<void>;
   /**
    * Open an already-saved browser session draft as the active session.
    * Used by the Workspace project hub to continue a previous session.
@@ -1522,16 +1529,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const sourcePath = meta.sourceFilePath;
     const openWindow = async (): Promise<OpenDiscoveredOutcome> => {
       try {
-        let state: LoadedSessionWindow = windowStateFrom(sessionId, await getClaudeCodeSessionWindow(sourcePath));
+        let state: LoadedSessionWindow = windowStateFrom(
+          sessionId,
+          await getClaudeCodeSessionWindow(sourcePath),
+          token,
+        );
         // A tail of metadata records shows nothing; read back a little further.
         for (let skip = 0; state.events.length === 0 && state.status === "partial" && skip < MAX_EMPTY_WINDOW_SKIPS; skip += 1) {
           state = prependEarlierWindow(
             state,
-            await getClaudeCodeSessionWindow(sourcePath, {
-              beforeOffset: state.startOffset,
-              sourceId: state.sourceId,
-              anchor: state.startAnchor,
-            }),
+            await getClaudeCodeSessionWindow(sourcePath, earlierCursor(state)),
           );
         }
         if (!current()) return "superseded";
@@ -1567,25 +1574,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return "failed";
     }
   },
-  loadEarlierSessionWindow: async () => {
-    const state = get().sessionWindow;
-    if (!isLoadedWindow(state) || state.status === "full" || state.loadingEarlier) return;
-    set({ sessionWindow: { ...state, loadingEarlier: true, earlierError: null } });
-    try {
-      const window = await getClaudeCodeSessionWindow(state.sourcePath, {
-        beforeOffset: state.startOffset,
-        sourceId: state.sourceId,
-        anchor: state.startAnchor,
-      });
-      const latest = get().sessionWindow;
-      if (!isLoadedWindow(latest) || latest.sessionId !== state.sessionId || latest.startOffset !== state.startOffset) return;
-      set({ sessionWindow: prependEarlierWindow(latest, window) });
-    } catch (error) {
-      const latest = get().sessionWindow;
-      if (!isLoadedWindow(latest) || latest.sessionId !== state.sessionId || latest.startOffset !== state.startOffset) return;
-      set({ sessionWindow: { ...latest, loadingEarlier: false, earlierError: classifyWindowError(error) } });
-    }
-  },
+  loadEarlierSessionWindow: () => pageSessionWindow("earlier"),
+  loadNewerSessionWindow: () => pageSessionWindow("newer"),
+  loadLatestSessionWindow: () => pageSessionWindow("latest"),
   pauseFollow: () => set({ follow: followReducer(get().follow, { type: "pause" }) }),
   resumeFollow: () => set({ follow: followReducer(get().follow, { type: "resume" }) }),
   stopFollow: () => set({ follow: followReducer(get().follow, { type: "stop" }) }),
@@ -1951,6 +1942,61 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     return true;
   },
 }));
+
+/**
+ * One page of a session window, in one direction. Only one runs at a time.
+ * The reply is applied only to the view it was asked for (same session, same
+ * open, same held windows); a reply that does not continue that view means the
+ * transcript changed, and says so instead of splicing.
+ */
+async function pageSessionWindow(direction: "earlier" | "newer" | "latest"): Promise<void> {
+  const { getState, setState } = useSessionStore;
+  const state = getState().sessionWindow;
+  if (!isLoadedWindow(state) || state.paging) return;
+  const cursor =
+    direction === "earlier"
+      ? state.startOffset > 0
+        ? earlierCursor(state)
+        : null
+      : direction === "newer"
+        ? newerCursor(state)
+        : undefined;
+  if (cursor === null) return;
+  setState({ sessionWindow: { ...state, paging: direction, pageError: null } });
+  const sameView = () => {
+    const latest = getState().sessionWindow;
+    return isLoadedWindow(latest) &&
+      latest.sessionId === state.sessionId &&
+      latest.openToken === state.openToken &&
+      latest.spans === state.spans
+      ? latest
+      : null;
+  };
+  try {
+    const window = await getClaudeCodeSessionWindow(state.sourcePath, cursor);
+    const latest = sameView();
+    if (!latest) return;
+    const next =
+      direction === "earlier"
+        ? prependEarlierWindow(latest, window)
+        : direction === "newer"
+          ? appendNewerWindow(latest, window)
+          : windowStateFrom(state.sessionId, window, state.openToken);
+    if (next === latest) {
+      const error = { kind: "changed" as const, message: "SOURCE_CHANGED: the page does not continue the view." };
+      setState({ sessionWindow: { ...latest, paging: null, pageError: { direction, error } } });
+      return;
+    }
+    setState({ sessionWindow: next });
+  } catch (error) {
+    const latest = sameView();
+    if (!latest) return;
+    setState({
+      sessionWindow: { ...latest, paging: null, pageError: { direction, error: classifyWindowError(error) } },
+    });
+  }
+}
+
 
 /**
  * Apply a pure session-metadata transform (rename) to

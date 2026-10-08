@@ -109,12 +109,15 @@ export async function getClaudeCodeSessionDelta(
   });
 }
 
-/** Where an earlier window ends: the previous window's start and the
- *  fingerprints that prove it is still the same transcript and record. */
+/** Where a window ends, and the fingerprints that prove it is still the same
+ *  transcript: the record AT the cursor (`anchor`, for the window before a
+ *  held one) or the record that ENDS at it (`endAnchor`, to read back a window
+ *  the view let go of). At least one is required. */
 export type ClaudeCodeWindowCursor = {
   beforeOffset: number;
   sourceId: string;
-  anchor: string;
+  anchor?: string;
+  endAnchor?: string;
 };
 
 /**
@@ -140,6 +143,7 @@ export async function getClaudeCodeSessionWindow(
     beforeOffset: cursor?.beforeOffset ?? null,
     sourceId: cursor?.sourceId ?? null,
     anchor: cursor?.anchor ?? null,
+    endAnchor: cursor?.endAnchor ?? null,
   });
 }
 

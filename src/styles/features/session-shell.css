@@ -361,6 +361,43 @@
   flex-shrink: 0;
 }
 
+/* A confirmed project that is archived or gone: named as needing review, never
+   a link (there is no live project to go to). */
+.session-detail-crumb.is-unavailable {
+  color: var(--base-status-warning);
+  cursor: default;
+}
+
+.session-detail-crumb.is-unavailable:hover {
+  background: transparent;
+  color: var(--base-status-warning);
+}
+
+/* The agent's working folder, after the title: source information, quieter
+   than the project it is not. */
+.session-detail-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 180px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--base-text-muted-2);
+  font-size: var(--base-font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.session-detail-source:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--base-text-muted);
+}
+
 .session-origin-strip {
   display: inline-flex;
   align-items: center;
@@ -696,9 +733,11 @@
   text-align: center;
 }
 
-.session-window-earlier {
+.session-window-earlier,
+.session-window-newer {
   display: flex;
   justify-content: center;
+  gap: var(--base-space-2);
 }
 
 .session-window-earlier .is-loading svg,

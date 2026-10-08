@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef, useState } from "react";
-import { ChevronUp, FileWarning, Loader2, RotateCw } from "lucide-react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import type { ClaudeMessage } from "../../lib/claude/types";
 import {
   coverageLabel,
+  MAX_RETAINED_WINDOWS,
   type SessionWindowError,
   type SessionWindowState,
 } from "../../lib/session/sessionWindow";
@@ -34,7 +35,9 @@ export function SessionSourceWindow({ state }: { state: SessionWindowState }) {
     );
   }
   if (state.status === "error") return <SessionWindowFailure sessionId={state.sessionId} error={state.error} />;
-  return <SessionWindowConversation state={state} />;
+  // One conversation per session view: refs (reading anchor, first scroll)
+  // never carry from one session or open to the next.
+  return <SessionWindowConversation key={`${state.sessionId}:${state.openToken}`} state={state} />;
 }
 
 function SessionWindowFailure({ sessionId, error }: { sessionId: string; error: SessionWindowError }) {
@@ -95,72 +98,120 @@ const FAILURE_COPY: Record<SessionWindowError["kind"], { title: string; descript
 
 type LoadedState = Extract<SessionWindowState, { status: "partial" | "full" }>;
 
+/** The message the reader is looking at, and where it sits in the scroller. */
+type ReadingAnchor = { sessionId: string; openToken: number; messageId: string; top: number };
+
+function scrollerOf(element: Element | null): Element | null {
+  return element?.closest(".page-shell-scroll") ?? null;
+}
+
+/** The first message at least partly below the scroller's top edge. */
+function readingAnchor(list: Element, scroller: Element, state: LoadedState): ReadingAnchor | null {
+  const top = scroller.getBoundingClientRect().top;
+  for (const item of list.querySelectorAll<HTMLElement>("[data-message-id]")) {
+    const rect = item.getBoundingClientRect();
+    if (rect.bottom > top + 1) {
+      return { sessionId: state.sessionId, openToken: state.openToken, messageId: item.dataset.messageId!, top: rect.top - top };
+    }
+  }
+  return null;
+}
+
 function SessionWindowConversation({ state }: { state: LoadedState }) {
   const loadEarlier = useSessionStore((store) => store.loadEarlierSessionWindow);
-  const resolveSession = useSessionResolver();
-  const listRef = useRef<HTMLDivElement>(null);
-  // Distance from the bottom before an earlier window is prepended, so the
-  // message the user was reading stays where it was.
-  const anchorFromBottom = useRef<number | null>(null);
-  const firstPaint = useRef(true);
+  const loadNewer = useSessionStore((store) => store.loadNewerSessionWindow);
+  const loadLatest = useSessionStore((store) => store.loadLatestSessionWindow);
+  const sectionRef = useRef<HTMLElement>(null);
+  // The message being read when a page was requested. After the page lands,
+  // that same message is put back where it was, whether windows were added
+  // above it or let go of below or above. Keyed to the view it was taken in,
+  // so it is never applied to another session or a reopened view.
+  const anchor = useRef<ReadingAnchor | null>(null);
+  const toBottom = useRef(true);
+  const firstStart = state.spans[0]!.startOffset;
+  const lastEnd = state.spans[state.spans.length - 1]!.endOffset;
 
   useLayoutEffect(() => {
-    const scroller = listRef.current?.closest(".page-shell-scroll");
-    if (!scroller) return;
-    if (firstPaint.current) {
-      // Recent work first: open at the latest message.
-      firstPaint.current = false;
+    const section = sectionRef.current;
+    const scroller = scrollerOf(section);
+    if (!section || !scroller) return;
+    if (toBottom.current) {
+      // Opening, or jumping to the latest: the newest message first.
+      toBottom.current = false;
+      anchor.current = null;
       scroller.scrollTop = scroller.scrollHeight;
       return;
     }
-    if (anchorFromBottom.current !== null) {
-      scroller.scrollTop = scroller.scrollHeight - anchorFromBottom.current;
-      anchorFromBottom.current = null;
-    }
-  }, [state.startOffset]);
+    const saved = anchor.current;
+    anchor.current = null;
+    if (!saved || saved.sessionId !== state.sessionId || saved.openToken !== state.openToken) return;
+    const item = section.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(saved.messageId)}"]`);
+    if (!item) return;
+    const moved = item.getBoundingClientRect().top - scroller.getBoundingClientRect().top - saved.top;
+    scroller.scrollTop += moved;
+  }, [state.sessionId, state.openToken, firstStart, lastEnd]);
 
+  const keepPlace = () => {
+    const section = sectionRef.current;
+    const scroller = scrollerOf(section);
+    anchor.current = section && scroller ? readingAnchor(section, scroller, state) : null;
+  };
   const requestEarlier = () => {
-    const scroller = listRef.current?.closest(".page-shell-scroll");
-    if (scroller) anchorFromBottom.current = scroller.scrollHeight - scroller.scrollTop;
+    keepPlace();
     void loadEarlier();
   };
+  const requestNewer = () => {
+    keepPlace();
+    void loadNewer();
+  };
+  const requestLatest = () => {
+    toBottom.current = true;
+    void loadLatest();
+  };
 
-  const partial = state.status === "partial";
+  const reachedStart = state.startOffset === 0;
+  const atLatest = state.released.length === 0;
+  // "전체" only when nothing was left out: an oversized record that was skipped
+  // means the range is whole but its content is not.
+  const headline =
+    reachedStart && atLatest
+      ? state.omittedRecords > 0
+        ? "대화 전체 범위 표시 중"
+        : "대화 전체 표시 중"
+      : atLatest
+        ? "최근 대화 일부 표시 중"
+        : "이전 대화 일부 표시 중";
+  const coverage = state.status === "partial" ? coverageLabel(state) : null;
+  const pageError = state.pageError;
   return (
-    <section className="session-window" aria-label="원본 대화" ref={listRef}>
+    <section className="session-window" aria-label="원본 대화" ref={sectionRef}>
       <header className="session-window-head">
         <span className="session-window-coverage">
-          {partial ? "최근 대화 일부 표시 중" : "대화 전체 표시 중"}
+          {headline}
           <InfoHint label="표시 범위">
-            이 대화는 한 번에 가져오기에 길어서 끝에서부터 나눠 읽습니다. 표시된 메시지 수는 읽은 부분의
-            수입니다. 분석과 보고서는 전체를 가져온 세션에서만 제공합니다.
+            이 대화는 한 번에 가져오기에 길어서 끝에서부터 나눠 읽습니다. 한 번에 {MAX_RETAINED_WINDOWS}구간까지
+            보여 주고, 더 이전으로 가면 가장 최근 구간을 잠시 내려놓습니다. 내려놓은 구간은 아래의 다음 대화
+            보기로 다시 읽습니다. 표시된 메시지 수는 지금 보이는 부분의 수입니다. 분석과 보고서는 전체를 가져온
+            세션에서만 제공합니다.
           </InfoHint>
         </span>
         <span className="session-window-meta">
-          메시지 {state.events.length.toLocaleString("ko-KR")}개
-          {partial && coverageLabel(state) ? ` · ${coverageLabel(state)}` : ""}
+          메시지 {state.events.length.toLocaleString("ko-KR")}개{coverage ? ` · ${coverage}` : ""}
         </span>
       </header>
 
-      {partial ? (
+      {reachedStart ? (
+        <p className="session-window-start">대화의 시작</p>
+      ) : (
         <div className="session-window-earlier">
-          {state.earlierError ? (
-            <EarlierFailure error={state.earlierError} onRetry={requestEarlier} onReopen={() => void resolveSession(state.sessionId)} />
+          {pageError?.direction === "earlier" ? (
+            <PageFailure error={pageError.error} what="이전 대화" onRetry={requestEarlier} onLatest={requestLatest} />
           ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={state.loadingEarlier ? Loader2 : ChevronUp}
-              className={state.loadingEarlier ? "is-loading" : undefined}
-              disabled={state.loadingEarlier}
-              onClick={requestEarlier}
-            >
-              {state.loadingEarlier ? "이전 대화 읽는 중…" : "이전 대화 더 보기"}
-            </Button>
+            <PageButton busy={state.paging === "earlier"} icon={ChevronUp} onClick={requestEarlier} disabled={state.paging !== null}>
+              {state.paging === "earlier" ? "이전 대화 읽는 중…" : "이전 대화 더 보기"}
+            </PageButton>
           )}
         </div>
-      ) : (
-        <p className="session-window-start">대화의 시작</p>
       )}
 
       {state.omittedRecords > 0 ? (
@@ -178,24 +229,70 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
           ))}
         </ol>
       )}
+
+      {atLatest ? null : (
+        <div className="session-window-newer">
+          {pageError && pageError.direction !== "earlier" ? (
+            <PageFailure error={pageError.error} what="다음 대화" onRetry={requestNewer} onLatest={requestLatest} />
+          ) : (
+            <>
+              <PageButton busy={state.paging === "newer"} icon={ChevronDown} onClick={requestNewer} disabled={state.paging !== null}>
+                {state.paging === "newer" ? "다음 대화 읽는 중…" : "다음 대화 보기"}
+              </PageButton>
+              <PageButton busy={state.paging === "latest"} icon={ChevronsDown} onClick={requestLatest} disabled={state.paging !== null}>
+                최신 대화로
+              </PageButton>
+            </>
+          )}
+        </div>
+      )}
     </section>
   );
 }
 
-function EarlierFailure({
+function PageButton({
+  busy,
+  icon,
+  onClick,
+  disabled,
+  children,
+}: {
+  busy: boolean;
+  icon: typeof ChevronUp;
+  onClick: () => void;
+  disabled: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      icon={busy ? Loader2 : icon}
+      className={busy ? "is-loading" : undefined}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  );
+}
+
+function PageFailure({
   error,
+  what,
   onRetry,
-  onReopen,
+  onLatest,
 }: {
   error: SessionWindowError;
+  what: string;
   onRetry: () => void;
-  onReopen: () => void;
+  onLatest: () => void;
 }) {
   if (error.kind === "changed") {
     return (
       <p className="session-window-earlier-error" role="alert">
-        원본 대화가 바뀌어 이전 부분을 이어 읽을 수 없습니다.
-        <Button size="sm" variant="ghost" icon={RotateCw} onClick={onReopen}>
+        원본 대화가 바뀌어 {what}를 이어 읽을 수 없습니다.
+        <Button size="sm" variant="ghost" icon={RotateCw} onClick={onLatest}>
           최신 대화로 다시 열기
         </Button>
       </p>
@@ -203,7 +300,7 @@ function EarlierFailure({
   }
   return (
     <p className="session-window-earlier-error" role="alert">
-      이전 대화를 읽지 못했습니다.
+      {what}를 읽지 못했습니다.
       <Button size="sm" variant="ghost" icon={RotateCw} onClick={onRetry}>
         다시 시도
       </Button>
@@ -218,7 +315,7 @@ function WindowMessage({ message }: { message: ClaudeMessage }) {
   const long = message.content.length > limit;
   const text = open || !long ? message.content : `${message.content.slice(0, limit)}…`;
   return (
-    <li className={`session-window-message is-${kind}`}>
+    <li className={`session-window-message is-${kind}`} data-message-id={message.id}>
       <div className="session-window-message-head">
         <span className="session-window-role">{ROLE_LABEL[kind]}</span>
         {message.createdAt ? <time dateTime={message.createdAt}>{clockLabel(message.createdAt)}</time> : null}

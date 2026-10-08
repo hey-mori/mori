@@ -13,6 +13,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentWorkSessionMeta } from "../lib/trace/sources/ai/workSessions";
 import type { ClaudeCodeSessionWindow, ClaudeMessage } from "../lib/claude/types";
+import { MAX_RETAINED_WINDOWS } from "../lib/session/sessionWindow";
 
 const reader = vi.hoisted(() => ({
   detail: vi.fn(),
@@ -73,6 +74,7 @@ function window(start: number, end: number, events: ClaudeMessage[], extra: Part
     fileBytes: 140_509_184,
     startOffset: start,
     startAnchor: `anchor-${start}`,
+    endAnchor: `end-${end}`,
     endOffset: end,
     reachedStart: start === 0,
     events,
@@ -221,7 +223,7 @@ describe("reopening a session too long to import", () => {
     await useSessionStore.getState().loadEarlierSessionWindow();
 
     const state = useSessionStore.getState().sessionWindow;
-    expect(state && "earlierError" in state ? state.earlierError?.kind : null).toBe("changed");
+    expect(state && "pageError" in state ? state.pageError?.error.kind : null).toBe("changed");
     expect(state && "events" in state ? state.events.map((event) => event.id) : []).toEqual(["m3"]);
     expect(detailMarkup()).toContain("최신 대화로 다시 열기");
   });
@@ -270,6 +272,29 @@ describe("an agent without a window reader", () => {
     expect(html).toContain("아직 열 수 없는 긴 대화입니다");
     expect(html).not.toContain("다시 시도");
     expect(repository.listSessionImports(id)).toEqual([]);
+  });
+});
+
+describe("coverage wording", () => {
+  it("a whole transcript with a skipped oversized record is not called complete", async () => {
+    const id = register(meta("long", "Long"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    reader.window.mockResolvedValueOnce(
+      window(0, 5000, [message("a1", "only")], { omittedRecords: 1, omittedBytes: 4000 }),
+    );
+    await resolver()(id);
+    const html = detailMarkup();
+    expect(html).not.toContain("대화 전체 표시 중");
+    expect(html).toContain("대화 전체 범위 표시 중");
+    expect(html).toContain("너무 큰 기록 1개는 표시하지 않았습니다");
+  });
+
+  it("a whole transcript with nothing skipped is", async () => {
+    const id = register(meta("long", "Long"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    reader.window.mockResolvedValueOnce(window(0, 5000, [message("a1", "only")]));
+    await resolver()(id);
+    expect(detailMarkup()).toContain("대화 전체 표시 중");
   });
 });
 
@@ -355,5 +380,143 @@ describe("navigation races", () => {
     const state = useSessionStore.getState().sessionWindow;
     expect(state?.sessionId).toBe(secondId);
     expect(state && "events" in state ? state.events.map((event) => event.id) : []).toEqual(["b"]);
+  });
+});
+
+describe("reading a long session back and forth", () => {
+  /** Windows of 100 bytes ending at `end`, one message each, named by start. */
+  const page = (end: number) => window(end - 100, end, [message(`m${end - 100}`, `at ${end - 100}`)]);
+  const held = () => {
+    const state = useSessionStore.getState().sessionWindow;
+    return state && "events" in state ? state : null;
+  };
+  const ids = () => held()?.events.map((event) => event.id) ?? [];
+
+  async function openAt(end: number): Promise<string> {
+    const id = register(meta("long", "Long"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    reader.window.mockResolvedValueOnce(page(end));
+    await resolver()(id);
+    return id;
+  }
+
+  it("B2 · a page in flight leaves the view as it is", async () => {
+    await openAt(1000);
+    let finish: (value: ClaudeCodeSessionWindow) => void = () => {};
+    reader.window.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+    const before = held()!.events;
+    const pending = useSessionStore.getState().loadEarlierSessionWindow();
+    expect(held()!.events).toBe(before);
+    expect(held()!.paging).toBe("earlier");
+    finish(page(900));
+    await pending;
+    expect(ids()).toEqual(["m800", "m900"]);
+  });
+
+  it("B4 · opening the session again does not replace the history being read", async () => {
+    const id = await openAt(1000);
+    reader.window.mockResolvedValueOnce(page(900));
+    await useSessionStore.getState().loadEarlierSessionWindow();
+    const view = held();
+    const calls = reader.window.mock.calls.length;
+    expect(await resolver()(id)).toBe("opened");
+    expect(held()).toBe(view);
+    expect(reader.window.mock.calls.length).toBe(calls);
+  });
+
+  it("an auto-import poll landing mid-page does not disturb the view", async () => {
+    await openAt(1000);
+    let finish: (value: ClaudeCodeSessionWindow) => void = () => {};
+    reader.window.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+    const pending = useSessionStore.getState().loadEarlierSessionWindow();
+    // The poll re-registers this very session's placeholder as it grows.
+    useSessionStore.getState().registerDiscoveredSessions([agentSessionToStoredDraft(meta("long", "Long"))]);
+    finish(page(900));
+    await pending;
+    expect(ids()).toEqual(["m800", "m900"]);
+  });
+
+  it("a page asked for before the session was reopened is dropped, even at the same offsets", async () => {
+    const longId = await openAt(1000);
+    const otherId = register(meta("other", "Other"));
+    let finish: (value: ClaudeCodeSessionWindow) => void = () => {};
+    reader.window.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
+    const pending = useSessionStore.getState().loadEarlierSessionWindow();
+    reader.window.mockResolvedValueOnce(page(500));
+    await resolver()(otherId);
+    reader.window.mockResolvedValueOnce(page(1000));
+    await resolver()(longId);
+    finish(page(900));
+    await pending;
+    expect(held()!.sessionId).toBe(longId);
+    expect(ids()).toEqual(["m900"]);
+  });
+
+  it("B7 · a failed page keeps what is shown and says why", async () => {
+    await openAt(1000);
+    reader.window.mockRejectedValueOnce(new Error("SOURCE_MISSING: gone"));
+    await useSessionStore.getState().loadEarlierSessionWindow();
+    expect(ids()).toEqual(["m900"]);
+    expect(held()!.pageError).toMatchObject({ direction: "earlier", error: { kind: "missing" } });
+    expect(held()!.paging).toBeNull();
+  });
+
+  it("B10 · reading far back holds a bounded number of windows", async () => {
+    await openAt(2000);
+    for (let end = 1900; end >= 1000; end -= 100) {
+      reader.window.mockResolvedValueOnce(page(end));
+      await useSessionStore.getState().loadEarlierSessionWindow();
+    }
+    const view = held()!;
+    expect(view.spans).toHaveLength(MAX_RETAINED_WINDOWS);
+    expect(ids()).toEqual(["m900", "m1000", "m1100", "m1200"]);
+    expect(view.released).toHaveLength(11 - MAX_RETAINED_WINDOWS);
+    expect(view.loadedBytes).toBe(100 * MAX_RETAINED_WINDOWS);
+  });
+
+  it("B11 · every window let go of reads back, in order, by its own cursor", async () => {
+    await openAt(1400);
+    for (const end of [1300, 1200, 1100, 1000, 900]) {
+      reader.window.mockResolvedValueOnce(page(end));
+      await useSessionStore.getState().loadEarlierSessionWindow();
+    }
+    expect(ids()).toEqual(["m800", "m900", "m1000", "m1100"]);
+    for (const end of [1300, 1400]) {
+      reader.window.mockResolvedValueOnce(page(end));
+      await useSessionStore.getState().loadNewerSessionWindow();
+      // The cursor names the record that ended the window, not the record after it.
+      expect(reader.window.mock.calls.at(-1)![1]).toEqual({ beforeOffset: end, sourceId: "src-1", endAnchor: `end-${end}` });
+    }
+    expect(ids()).toEqual(["m1000", "m1100", "m1200", "m1300"]);
+    expect(held()!.released).toHaveLength(0);
+    // Back at the newest window: earlier history is still one page away.
+    expect(held()!.startOffset).toBe(1000);
+  });
+
+  it("최신 대화로 replaces the view with the transcript's current end", async () => {
+    await openAt(1000);
+    for (const end of [900, 800, 700, 600]) {
+      reader.window.mockResolvedValueOnce(page(end));
+      await useSessionStore.getState().loadEarlierSessionWindow();
+    }
+    reader.window.mockResolvedValueOnce(page(1200));
+    await useSessionStore.getState().loadLatestSessionWindow();
+    expect(ids()).toEqual(["m1100"]);
+    expect(held()!.released).toHaveLength(0);
+    expect(reader.window.mock.calls.at(-1)![1]).toBeUndefined();
+  });
+
+  it("a reply that does not continue the view is reported as changed, not left spinning", async () => {
+    await openAt(1400);
+    for (const end of [1300, 1200, 1100, 1000]) {
+      reader.window.mockResolvedValueOnce(page(end));
+      await useSessionStore.getState().loadEarlierSessionWindow();
+    }
+    const before = ids();
+    reader.window.mockResolvedValueOnce(window(1250, 1400, [message("x", "rewritten")]));
+    await useSessionStore.getState().loadNewerSessionWindow();
+    expect(ids()).toEqual(before);
+    expect(held()!.paging).toBeNull();
+    expect(held()!.pageError).toMatchObject({ direction: "newer", error: { kind: "changed" } });
   });
 });

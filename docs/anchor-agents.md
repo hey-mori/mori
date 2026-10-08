@@ -47,9 +47,20 @@ read-only window of its recent conversation instead (#163).
   - `sourceId`: the transcript's first line, so appending keeps it valid;
   - `startAnchor`: the record at the cursor.
   - The projects-root, symlink and JSONL checks are the same as for the detailed reader.
+- **Reading back a window the view let go of.** A window also returns `endAnchor`, the fingerprint of its last record. A cursor at `endOffset` carrying it reads that same window back later, because the record before a cursor never changes as the transcript grows (#165).
 - **The view.** `sessionWindow` in the session store is transient.
   - It is never imported, persisted or analysed. The tabs (analysis, report, sources) are hidden while it shows, because they would treat a part of the session as the whole.
-  - The coverage line counts the loaded part only: "최근 대화 일부 표시 중 · 원본의 1% 미만". "이전 대화 더 보기" prepends the window before the loaded part and keeps the message being read in place.
+  - The coverage line counts the held part only: "최근 대화 일부 표시 중 · 원본의 1% 미만".
+  - "이전 대화 더 보기" prepends the window before the held part.
+  - The view holds at most 4 windows (`MAX_RETAINED_WINDOWS`). Measured on the 143 MB transcript with the release build, each window held 115–325 messages and added about 15 MB to the web process; 20 unbounded loads took it from 660 MB to 967 MB.
+  - With the limit, the view stays at a few hundred messages however far back the user reads. The web process still grows while new history is read (about 6 MB per load at first, slowing to about 2 MB, with flat stretches). Profiling located it, without finding a Mori leak:
+    - The JavaScriptCore heap stays at 20–35 MB (JSC_logGC), and dropped message arrays are collected.
+    - Paging with the list not rendered is flat, so it is not IPC or app state.
+    - Re-rendering windows already seen is flat, and so is an idle period.
+    - Only rendering text not seen before grows memory, which a bare WebKitGTK page shows too, reclaiming in a saw-tooth.
+    - So it is WebKit's rendering caches and allocator, not retained Mori objects.
+  - Past the limit, reading further back lets the newest window go and keeps its cursor. "다음 대화 보기" reads it back (letting the oldest go), and "최신 대화로" re-reads the transcript's current end.
+  - After any page, the message being read is put back where it was, found by its id. The conversation is keyed by session and open, so neither a scroll position nor a pending page carries over to another session.
 - **Failures.** A read that fails shows why, never an empty session:
   - missing, changed, refused or unreadable sources show their reason with "다시 시도";
   - reopening the session also retries.

@@ -166,8 +166,8 @@ export function SessionIndex({
           type="button"
           className="session-index-sort"
           onClick={toggleGroupMode}
-          aria-label={isProjectMode ? "최근 활동순으로 보기" : "프로젝트별로 보기"}
-          title={isProjectMode ? "최근 활동순으로 보기" : "프로젝트별로 보기"}
+          aria-label={isProjectMode ? "최근 활동순으로 보기" : "작업 폴더별로 보기"}
+          title={isProjectMode ? "최근 활동순으로 보기" : "작업 폴더별로 보기"}
         >
           {isProjectMode ? (
             <FolderGit2 size={14} aria-hidden="true" />
@@ -232,7 +232,9 @@ export function SessionIndex({
               key={`${group.bucket}-${group.label}`}
               className="session-index-group"
             >
-              <p className="session-index-label">
+              {/* In folder mode a group is the agent's working folder, not a
+                  confirmed Mori project; the title says which it is. */}
+              <p className="session-index-label" title={isProjectMode ? "에이전트 작업 폴더" : undefined}>
                 {isProjectMode ? shortProjectLabel(group.label) : group.label}
               </p>
               <ul>

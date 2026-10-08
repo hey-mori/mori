@@ -171,6 +171,9 @@ type AppState = {
    *  이 프로젝트에서 찾기. Kept here, not in the explorer, so opening a session
    *  from the scoped list and coming back keeps the scope. */
   ledgerProjectScope: string | null;
+  /** A project (context id) 프로젝트 should select when it next renders, set by
+   *  a link that names a reviewed project. Consumed once, then cleared. */
+  projectContextFocus: string | null;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -256,6 +259,10 @@ type AppState = {
   clearNewRecordRequest: () => void;
   /** Opens 기록 scoped to one project's durable members. */
   findInProject: (projectId: string) => void;
+  /** Open 프로젝트 on a reviewed project, by its durable context id. Unlike
+   *  `openProject`, which takes a source-derived project key. */
+  openProjectContext: (contextId: string) => void;
+  clearProjectContextFocus: () => void;
   clearLedgerProjectScope: () => void;
 };
 
@@ -288,6 +295,7 @@ export const useAppStore = create<AppState>((set) => ({
   newRecordRequest: false,
   newRecordProjectId: null,
   ledgerProjectScope: null,
+  projectContextFocus: null,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -404,5 +412,7 @@ export const useAppStore = create<AppState>((set) => ({
     set({ currentView: "ledger", newRecordRequest: true, newRecordProjectId: projectId ?? null }),
   clearNewRecordRequest: () => set({ newRecordRequest: false }),
   findInProject: (projectId) => set({ currentView: "ledger", ledgerProjectScope: projectId }),
+  openProjectContext: (contextId) => set({ currentView: "contexts", projectContextFocus: contextId }),
+  clearProjectContextFocus: () => set({ projectContextFocus: null }),
   clearLedgerProjectScope: () => set({ ledgerProjectScope: null }),
 }));

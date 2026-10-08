@@ -10,6 +10,12 @@
  * the session's stored draft, and never fed to analysis or a report: those
  * would present a part of the session as the whole. Every count here is the
  * loaded part's own.
+ *
+ * The view holds at most `MAX_RETAINED_WINDOWS` contiguous windows. Reading
+ * further back lets the newest one go and remembers its cursor; "다음 대화
+ * 보기" reads it back exactly (the record before a cursor never changes as the
+ * transcript grows), letting the oldest go. So reading any distance back costs
+ * a bounded amount of memory and DOM, and nothing read is unreachable.
  */
 import type { ClaudeCodeSessionWindow, ClaudeMessage } from "../claude/types";
 
@@ -19,6 +25,12 @@ export const DETAIL_READ_LIMIT_BYTES = 8 * 1024 * 1024;
 /** Windows read back automatically when a window holds nothing to show (a tail
  *  of metadata records). Bounded so a pathological file cannot read forever. */
 export const MAX_EMPTY_WINDOW_SKIPS = 4;
+
+/** Windows the view keeps at once. Measured on a 143 MB transcript in the
+ *  release build, each loaded window added about 15 MB to the web process
+ *  while holding 115–325 messages; four keeps a long read near the cost of
+ *  opening, and is enough context to read across a window boundary. */
+export const MAX_RETAINED_WINDOWS = 4;
 
 export type SessionWindowErrorKind =
   /** The transcript file is gone or cannot be opened. */
@@ -35,26 +47,52 @@ export type SessionWindowErrorKind =
 
 export type SessionWindowError = { kind: SessionWindowErrorKind; message: string };
 
+/** One window the view holds: its source range and how many of the view's
+ *  events it contributed (after dropping ids already shown). */
+export type WindowSpan = {
+  startOffset: number;
+  endOffset: number;
+  startAnchor: string;
+  endAnchor: string;
+  count: number;
+  omittedRecords: number;
+  omittedBytes: number;
+};
+
+/** A newer window the view let go of: its cursor, to read it back exactly. */
+export type ReleasedSpan = { startOffset: number; endOffset: number; endAnchor: string };
+
 export type SessionWindowState =
   | { sessionId: string; status: "loading" }
   /** The transcript could not be read at all: say so, never show it empty. */
   | { sessionId: string; status: "error"; error: SessionWindowError }
   | {
       sessionId: string;
-      /** `full` once the loaded windows reach the transcript's start. */
+      /** Which open this view belongs to. A page requested for an earlier open
+       *  of the same session is never applied to this one. */
+      openToken: number;
+      /** `full` when the view holds the transcript from its start to the end it
+       *  was opened at, with nothing let go of. */
       status: "partial" | "full";
       sourcePath: string;
       sourceId: string;
       fileBytes: number;
-      /** Bytes covered by the loaded windows, from `startOffset` to the end. */
+      /** Oldest first, contiguous, at most `MAX_RETAINED_WINDOWS`. */
+      spans: WindowSpan[];
+      /** Newer windows let go of, the next one last. Empty: the view reaches
+       *  the end the transcript had when it was opened. */
+      released: ReleasedSpan[];
+      /** Bytes the held windows cover. */
       loadedBytes: number;
+      /** The held part's start (the earlier-page cursor). */
       startOffset: number;
       startAnchor: string;
       events: ClaudeMessage[];
       omittedRecords: number;
       omittedBytes: number;
-      loadingEarlier: boolean;
-      earlierError: SessionWindowError | null;
+      /** A page request in flight, and which way. */
+      paging: "earlier" | "newer" | "latest" | null;
+      pageError: { direction: "earlier" | "newer" | "latest"; error: SessionWindowError } | null;
     };
 
 export type LoadedSessionWindow = Extract<SessionWindowState, { status: "partial" | "full" }>;
@@ -100,50 +138,138 @@ export function classifyWindowError(error: unknown): SessionWindowError {
   return { kind: "error", message };
 }
 
-/** The first loaded window, as the latest part of the transcript. */
-export function windowStateFrom(sessionId: string, window: ClaudeCodeSessionWindow): LoadedSessionWindow {
+function spanOf(window: ClaudeCodeSessionWindow, count: number): WindowSpan {
   return {
-    sessionId,
-    status: window.reachedStart ? "full" : "partial",
-    sourcePath: window.filePath,
-    sourceId: window.sourceId,
-    fileBytes: window.fileBytes,
-    loadedBytes: window.endOffset - window.startOffset,
     startOffset: window.startOffset,
+    endOffset: window.endOffset,
     startAnchor: window.startAnchor,
-    events: window.events,
+    endAnchor: window.endAnchor,
+    count,
     omittedRecords: window.omittedRecords,
     omittedBytes: window.omittedBytes,
-    loadingEarlier: false,
-    earlierError: null,
   };
 }
 
+/** Recompute everything derived from the held spans. */
+function withSpans(
+  state: LoadedSessionWindow,
+  spans: WindowSpan[],
+  released: ReleasedSpan[],
+  events: ClaudeMessage[],
+): LoadedSessionWindow {
+  const first = spans[0]!;
+  return {
+    ...state,
+    spans,
+    released,
+    events,
+    status: first.startOffset === 0 && released.length === 0 ? "full" : "partial",
+    startOffset: first.startOffset,
+    startAnchor: first.startAnchor,
+    loadedBytes: spans.reduce((sum, span) => sum + (span.endOffset - span.startOffset), 0),
+    omittedRecords: spans.reduce((sum, span) => sum + span.omittedRecords, 0),
+    omittedBytes: spans.reduce((sum, span) => sum + span.omittedBytes, 0),
+    paging: null,
+    pageError: null,
+  };
+}
+
+/** The first loaded window, as the latest part of the transcript. */
+export function windowStateFrom(sessionId: string, window: ClaudeCodeSessionWindow, openToken = 0): LoadedSessionWindow {
+  const base: LoadedSessionWindow = {
+    sessionId,
+    openToken,
+    status: "partial",
+    sourcePath: window.filePath,
+    sourceId: window.sourceId,
+    fileBytes: window.fileBytes,
+    spans: [],
+    released: [],
+    loadedBytes: 0,
+    startOffset: window.startOffset,
+    startAnchor: window.startAnchor,
+    events: [],
+    omittedRecords: 0,
+    omittedBytes: 0,
+    paging: null,
+    pageError: null,
+  };
+  return withSpans(base, [spanOf(window, window.events.length)], [], window.events);
+}
+
+/** The end of the held part: where a newer window must start. */
+export function heldEnd(state: LoadedSessionWindow): number {
+  return state.spans[state.spans.length - 1]!.endOffset;
+}
+
 /**
- * Prepend an earlier window. It must end exactly where the loaded part begins;
+ * Prepend an earlier window. It must end exactly where the held part begins;
  * anything else is a stale reply (a second click, a reopened session) and is
  * ignored rather than spliced in at the wrong place. Ids already shown are
- * dropped, so no record appears twice.
+ * dropped, so no record appears twice. Past `MAX_RETAINED_WINDOWS` the newest
+ * window is let go of, and its cursor kept.
  */
 export function prependEarlierWindow(
   state: LoadedSessionWindow,
   window: ClaudeCodeSessionWindow,
+  maxWindows = MAX_RETAINED_WINDOWS,
 ): LoadedSessionWindow {
   if (window.sourceId !== state.sourceId || window.endOffset !== state.startOffset) return state;
   const shown = new Set(state.events.map((event) => event.id));
   const earlier = window.events.filter((event) => !shown.has(event.id));
-  return {
-    ...state,
-    status: window.reachedStart ? "full" : "partial",
-    loadedBytes: state.loadedBytes + (window.endOffset - window.startOffset),
-    startOffset: window.startOffset,
-    startAnchor: window.startAnchor,
-    events: [...earlier, ...state.events],
-    omittedRecords: state.omittedRecords + window.omittedRecords,
-    omittedBytes: state.omittedBytes + window.omittedBytes,
-    loadingEarlier: false,
-    earlierError: null,
-  };
+  let spans = [spanOf(window, earlier.length), ...state.spans];
+  let events = [...earlier, ...state.events];
+  const released = [...state.released];
+  while (spans.length > maxWindows) {
+    const newest = spans[spans.length - 1]!;
+    released.push({ startOffset: newest.startOffset, endOffset: newest.endOffset, endAnchor: newest.endAnchor });
+    events = events.slice(0, events.length - newest.count);
+    spans = spans.slice(0, -1);
+  }
+  return withSpans(state, spans, released, events);
+}
+
+/**
+ * Append the newer window the view let go of last. It must be exactly that
+ * window (same range) and continue the held part; anything else is ignored.
+ * Past `MAX_RETAINED_WINDOWS` the oldest window is let go of; it stays one
+ * "이전 대화 더 보기" away.
+ */
+export function appendNewerWindow(
+  state: LoadedSessionWindow,
+  window: ClaudeCodeSessionWindow,
+  maxWindows = MAX_RETAINED_WINDOWS,
+): LoadedSessionWindow {
+  const next = state.released[state.released.length - 1];
+  if (
+    !next ||
+    window.sourceId !== state.sourceId ||
+    window.startOffset !== heldEnd(state) ||
+    window.endOffset !== next.endOffset
+  ) {
+    return state;
+  }
+  const shown = new Set(state.events.map((event) => event.id));
+  const newer = window.events.filter((event) => !shown.has(event.id));
+  let spans = [...state.spans, spanOf(window, newer.length)];
+  let events = [...state.events, ...newer];
+  while (spans.length > maxWindows) {
+    const oldest = spans[0]!;
+    events = events.slice(oldest.count);
+    spans = spans.slice(1);
+  }
+  return withSpans(state, spans, state.released.slice(0, -1), events);
+}
+
+/** The cursor for the window before the held part. */
+export function earlierCursor(state: LoadedSessionWindow) {
+  return { beforeOffset: state.startOffset, sourceId: state.sourceId, anchor: state.startAnchor };
+}
+
+/** The cursor that reads back the newer window let go of last, or null. */
+export function newerCursor(state: LoadedSessionWindow) {
+  const next = state.released[state.released.length - 1];
+  return next ? { beforeOffset: next.endOffset, sourceId: state.sourceId, endAnchor: next.endAnchor } : null;
 }
 
 /**
