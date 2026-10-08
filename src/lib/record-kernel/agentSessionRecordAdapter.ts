@@ -17,7 +17,7 @@
  */
 import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import { autoImportedSessionId } from "../session/autoImportSessions";
-import { recordedSessionEvidence } from "./agentSessionEvidence";
+import { readSessionEvidence, recordedSessionEvidence } from "./agentSessionEvidence";
 import {
   applyRecordPatch,
   createRecord,
@@ -156,6 +156,21 @@ function same(a: unknown, b: unknown): boolean {
  * ownership, creation and capture times, and any other property are never
  * discovery's to change.
  */
+/**
+ * Is `incoming` a partial read of the same segment whose every PR and branch the
+ * complete `stored` evidence already holds? Then it carries nothing new.
+ */
+function isPartialRescanOf(incoming: unknown, stored: unknown): boolean {
+  const next = readSessionEvidence(incoming);
+  const kept = readSessionEvidence(stored);
+  if (!next || !kept) return false;
+  if (next.coverage !== "partial" || kept.coverage !== "complete" || next.segment !== kept.segment) return false;
+  const prKey = (pr: { repository: string; number: number }) => `${pr.repository.toLowerCase()}#${pr.number}`;
+  const keptPrs = new Set(kept.prs.map(prKey));
+  const keptBranches = new Set(kept.branches.map((branch) => branch.name));
+  return next.prs.every((pr) => keptPrs.has(prKey(pr))) && next.branches.every((branch) => keptBranches.has(branch.name));
+}
+
 /** The observed fields that live in `properties`, merged key by key. */
 const PROPERTY_KEYS = ["agentId", "stepCount", "activityClass", "interaction", "sessionEvidence"] as const;
 
@@ -174,6 +189,10 @@ export function planAgentSessionRediscovery(
     contextIds: incoming.contextIds ?? [],
     properties: incoming.properties ?? {},
   });
+  // A partial scan that only re-finds what a complete scan already recorded is
+  // not news: after an app restart the reader rescans a long transcript from
+  // the start, and its first, budget-cut pass must not shrink the record.
+  if (isPartialRescanOf(next.sessionEvidence, now.sessionEvidence)) next.sessionEvidence = now.sessionEvidence;
   const takes = <K extends keyof ObservedFields>(key: K) =>
     same(now[key], written[key]) && !same(now[key], next[key]);
 

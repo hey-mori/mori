@@ -731,3 +731,51 @@ describe("session outcome evidence on the record", () => {
     expect((await current(repository)).properties).toMatchObject({ activityClass: "conversation", interaction: "interactive" });
   });
 });
+
+describe("session outcome evidence across an app restart", () => {
+  const registry = createSchemaRegistry();
+  const at = (iso: string) => () => new Date(iso);
+  const repo = () => new KernelRepository({ runtime: "browser", store: new KernelBrowserStore(new MemoryKeyValueStorage()) });
+  const pr = (number: number) => ({
+    repository: "acme/infra",
+    number,
+    url: "",
+    firstObservedAt: "2026-10-01T00:00:00Z",
+    firstLine: number,
+    observations: 1,
+  });
+  const seen = (prs: number[], complete: boolean, extra: Partial<AgentWorkSessionMeta> = {}) =>
+    meta({
+      sessionId: "segment-big",
+      startedAt: "2026-09-09T04:01:18.269Z",
+      updatedAt: "2026-10-08T07:00:00Z",
+      title: "운영 작업",
+      evidence: {
+        prs: prs.map(pr),
+        branches: [{ name: "main", basis: "record", firstObservedAt: "", lastObservedAt: "", firstLine: 1 }],
+        repositories: ["acme/infra"],
+        complete,
+      },
+      ...extra,
+    });
+  const id = autoImportedSessionId(seen([], true));
+
+  it("does not shrink complete evidence when the first pass after a restart is partial", async () => {
+    const repository = repo();
+    await upsertAgentSessionRecords(repository, registry, [seen([1, 2, 3], true)], { now: at("2026-10-08T07:00:00Z") });
+    const result = await upsertAgentSessionRecords(repository, registry, [seen([1], false)], { now: at("2026-10-08T08:00:00Z") });
+    expect(result).toMatchObject({ unchanged: 1, updated: 0 });
+    const stored = (await repository.getRecord(id)).data?.properties.sessionEvidence as { coverage: string; prs: unknown[] };
+    expect(stored.coverage).toBe("complete");
+    expect(stored.prs).toHaveLength(3);
+  });
+
+  it("still records a partial pass that found something new, or a different segment", async () => {
+    const repository = repo();
+    await upsertAgentSessionRecords(repository, registry, [seen([1, 2], true)], { now: at("2026-10-08T07:00:00Z") });
+    await upsertAgentSessionRecords(repository, registry, [seen([1, 9], false)], { now: at("2026-10-08T08:00:00Z") });
+    const stored = (await repository.getRecord(id)).data?.properties.sessionEvidence as { coverage: string; prs: Array<{ number: number }> };
+    expect(stored.coverage).toBe("partial");
+    expect(stored.prs.map((entry) => entry.number)).toEqual([1, 9]);
+  });
+});
