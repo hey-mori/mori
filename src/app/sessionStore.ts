@@ -32,6 +32,7 @@ import {
   listAllAgentWorkSessions,
 } from "../lib/trace/sources/ai/workSessions";
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
+import { planSourceReopen } from "../lib/import/autoSourceReopen";
 import { getClaudeCodeSessionWindow } from "../lib/claude/claudeTauri";
 import {
   appendNewerWindow,
@@ -1560,7 +1561,29 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         sessionId,
         capturedAt: new Date().toISOString(),
       });
-      get().addImport(candidate);
+      // Reopening reads the transcript again: store it once (#167). The plan
+      // and the write run with no await between them, after the open is
+      // known to be current, so two opens cannot both decide to add.
+      const repository = getRepository();
+      const plan = meta.sessionId
+        ? planSourceReopen(repository.listSessionImports(sessionId), candidate)
+        : ({ kind: "add" } as const);
+      if (plan.kind === "add") {
+        get().addImport(candidate);
+      } else if (plan.kind === "update") {
+        repository.putSessionImports(sessionId, [plan.next]);
+        // An answered prompt took a new event id; the analysis follows it.
+        let analysis = get().analysis;
+        for (const { from, to } of plan.renamed) {
+          if (analysis) analysis = remapEventIdInAnalysis(analysis, from, to);
+        }
+        if (analysis && analysis !== get().analysis) {
+          repository.saveSessionAnalysis(sessionId, analysis);
+          persistMemoryBodyFromAnalysis(repository, sessionId, analysis);
+          set({ analysis });
+        }
+        set({ imports: repository.listSessionImports(sessionId) });
+      }
       set({ sessionWindow: null });
       return "opened";
     } catch (error) {
