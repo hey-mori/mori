@@ -3041,20 +3041,22 @@ mod window_tests {
         let started = std::time::Instant::now();
         let first = read_session_window_at(&root, &path, None, None, None, WINDOW_BYTES).unwrap();
         let open = started.elapsed();
-        let mut pages = vec![(open, first.end_offset - first.start_offset, first.events.len())];
+        let content = |w: &ClaudeCodeSessionWindow| w.events.iter().map(|e| e.content.len()).sum::<usize>();
+        let mut pages = vec![(open, first.end_offset - first.start_offset, first.events.len(), content(&first))];
         let mut last = first.clone();
-        for _ in 0..5 {
+        let page_count: usize = std::env::var("MORI_WINDOW_BENCH_PAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(5);
+        for _ in 0..page_count {
             if last.reached_start {
                 break;
             }
             let started = std::time::Instant::now();
             let next = read_session_window_at(&root, &path, Some(last.start_offset), Some(&last.source_id), Some(&last.start_anchor), WINDOW_BYTES).unwrap();
-            pages.push((started.elapsed(), next.end_offset - next.start_offset, next.events.len()));
+            pages.push((started.elapsed(), next.end_offset - next.start_offset, next.events.len(), content(&next)));
             last = next;
         }
         println!("file_bytes={} window_bytes={WINDOW_BYTES}", first.file_bytes);
-        for (index, (elapsed, bytes, events)) in pages.iter().enumerate() {
-            println!("page={index} ms={:.2} bytes_read={bytes} events={events}", elapsed.as_secs_f64() * 1000.0);
+        for (index, (elapsed, bytes, events, chars)) in pages.iter().enumerate() {
+            println!("page={index} ms={:.2} bytes_read={bytes} events={events} content_bytes={chars}", elapsed.as_secs_f64() * 1000.0);
         }
         let started = std::time::Instant::now();
         let detail = read_session_at(&root, &path);
