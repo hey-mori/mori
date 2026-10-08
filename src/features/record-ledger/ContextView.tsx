@@ -34,6 +34,7 @@ import { LedgerRow } from "./LedgerRow";
 import { groupRecordsBySection } from "./contextGrouping";
 import { buildProjectGroups, sessionKey, type ProjectGroup } from "./projectGroups";
 import { loadEmptySourceLabels } from "../../lib/session/autoImportMetaStore";
+import { loadConnectedProjects } from "../../lib/projects/projectConnection";
 import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
 import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
@@ -70,6 +71,7 @@ export function ContextView() {
   const openSession = useAppStore((state) => state.openSession);
   const resolveSession = useSessionResolver();
   const [summaries] = useState(() => safeSummaries());
+  const [connections] = useState(() => loadConnectedProjects());
 
   const [selection, setSelection] = useState<Selection | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
@@ -93,8 +95,10 @@ export function ContextView() {
         contexts,
         ledgerVisibleRecords(records),
         relations,
+        // Aliases the user confirmed (ProjectView's connection review).
+        connections,
       ),
-    [summaries, contexts, records, relations],
+    [summaries, contexts, records, relations, connections],
   );
 
   const groupByContextId = useMemo(() => {
@@ -243,11 +247,13 @@ export function ContextView() {
         title: session.title,
         startedAt: session.startedAt,
         savedAt: session.savedAt,
+        inclusion: activeGroup.inclusion[session.sessionId],
       })),
       records: unfiltered,
       kernelRecordsById: new Map(records.map((record) => [record.id, record])),
       // Empty sources were never registered, so they are counted by the same
       // leaf key a session joins its project by.
+      nameCandidates: activeGroup.candidates.length,
       emptySources: loadEmptySourceLabels().filter(
         (label) => sessionKey(label) === activeGroup.name.trim().toLowerCase(),
       ).length,

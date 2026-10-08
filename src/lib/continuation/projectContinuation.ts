@@ -55,6 +55,13 @@ export type ContinuationSessionInput = {
   /** ISO start of the session; falls back to `savedAt`. */
   startedAt?: string;
   savedAt?: string;
+  /**
+   * Why the project page put this session in the project (`projectGroups`):
+   * `project` is the Mori association (`context`, `alias`, or `checkout` for
+   * none), `identity` how its checkout is known. Absent for callers that do
+   * not say.
+   */
+  inclusion?: { project: "context" | "alias" | "checkout"; identity: string };
 };
 
 export type ContinuationInput = {
@@ -68,6 +75,9 @@ export type ContinuationInput = {
   /** Sources for this project a complete read proved empty, which were never
    *  registered. Counted so the pack does not imply they do not exist. */
   emptySources?: number;
+  /** Sessions from a different checkout that only share the project's name:
+   *  not included, counted. */
+  nameCandidates?: number;
   now: Date;
 };
 
@@ -95,6 +105,9 @@ export type ContinuationItem = {
   lastDay?: string;
   /** Sessions: Git observations, when the session's source reported them. */
   evidence?: ContinuationEvidence;
+  /** Sessions: why the session is in this project, when it is not simply its
+   *  folder. Never a claim about what the session did. */
+  inclusion?: "worktree" | "alias";
 };
 
 /** Sessions left out because they are not a person's conversation. */
@@ -120,6 +133,13 @@ export type ContinuationCoverage = {
   unlinked: number;
   /** Segments folded into another session by `continued-in`. */
   joinedSegments: number;
+  /** Included because Git or the session's own record ties its worktree to
+   *  this project's checkout. */
+  viaWorktree: number;
+  /** Included through an alias the user confirmed. */
+  viaAlias: number;
+  /** Different checkouts sharing the project's name, left out. */
+  nameCandidates: number;
 };
 
 export type ContinuationExclusions = {
@@ -307,6 +327,9 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
     evidenceMissing: 0,
     unlinked: 0,
     joinedSegments: 0,
+    viaWorktree: 0,
+    viaAlias: 0,
+    nameCandidates: input.nameCandidates ?? 0,
   };
   const sessions: Array<ContinuationItem & { at: number }> = [];
   for (const [last, members] of groups) {
@@ -318,7 +341,19 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
     if (!evidence) coverage.evidenceMissing += 1;
     else if (evidence.coverage === "complete") coverage.evidenceComplete += 1;
     else coverage.evidencePartial += 1;
-    if (!ordered.some((member) => (member.kernel?.contextIds ?? []).length > 0)) coverage.unlinked += 1;
+    // A Mori project link is either the project page's own (a context or a
+    // confirmed alias) or, for callers that do not say, the kernel record's.
+    const inclusions = ordered.flatMap((member) => (member.session.inclusion ? [member.session.inclusion] : []));
+    const linked =
+      inclusions.length > 0
+        ? inclusions.some((entry) => entry.project !== "checkout")
+        : ordered.some((member) => (member.kernel?.contextIds ?? []).length > 0);
+    if (!linked) coverage.unlinked += 1;
+    const viaAlias = inclusions.some((entry) => entry.project === "alias");
+    const viaWorktree =
+      !viaAlias && inclusions.some((entry) => entry.identity === "worktree-record" || entry.identity === "git-worktree");
+    if (viaAlias) coverage.viaAlias += 1;
+    if (viaWorktree) coverage.viaWorktree += 1;
     const lastSeen = ordered.map((member) => member.end ?? member.when).sort((a, b) => stamp(a) - stamp(b)).at(-1);
     const day = dayOf(first.when);
     const lastDay = dayOf(lastSeen);
@@ -329,6 +364,7 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
       ...(lastDay && lastDay !== day ? { lastDay } : {}),
       agent: agentName(last.kernel),
       ...(evidence ? { evidence } : {}),
+      ...(viaAlias ? { inclusion: "alias" as const } : viaWorktree ? { inclusion: "worktree" as const } : {}),
       at: stamp(first.when),
     });
   }
@@ -449,7 +485,11 @@ function itemLine(item: ContinuationItem, kind: "session" | "decision" | "task" 
   let line = `- ${parts.join(" · ")}`;
   if (item.line) line += `: ${item.line}`;
   line += ` (${item.ref})`;
-  return item.evidence ? [line, ...evidenceLines(item.evidence)].join("\n") : line;
+  const extra: string[] = [];
+  if (item.inclusion === "worktree") extra.push("  - 포함 근거: 이 프로젝트 checkout의 Git worktree에서 진행");
+  if (item.inclusion === "alias") extra.push("  - 포함 근거: 사용자가 확인한 프로젝트 연결");
+  if (item.evidence) extra.push(...evidenceLines(item.evidence));
+  return extra.length > 0 ? [line, ...extra].join("\n") : line;
 }
 
 export function renderContinuationMarkdown(
@@ -485,7 +525,8 @@ export function renderContinuationMarkdown(
   if (pack.overflow > 0) lines.push(`표시 한도를 넘어 생략한 항목 ${pack.overflow}개`);
 
   const other = pack.nonConversation;
-  const consideredSessions = pack.sessions.length + other.commandOnly + other.automation + other.empty;
+  const consideredSessions =
+    pack.sessions.length + other.commandOnly + other.automation + other.empty + pack.coverage.nameCandidates;
   if (consideredSessions > 0) {
     lines.push("", "## 근거 범위");
     const c = pack.coverage;
@@ -505,7 +546,12 @@ export function renderContinuationMarkdown(
     if (other.empty > 0) skipped.push(`내용 없음 ${other.empty}개`);
     if (skipped.length > 0) lines.push(`- 대화가 아니어서 뺀 세션: ${skipped.join(" · ")}`);
     if (c.joinedSegments > 0) lines.push(`- 이어진 기록 구간을 한 세션으로 합침: ${c.joinedSegments}개`);
+    if (c.viaWorktree > 0) lines.push(`- Git worktree가 이 프로젝트 checkout으로 확인되어 포함한 세션: ${c.viaWorktree}개`);
+    if (c.viaAlias > 0) lines.push(`- 사용자가 확인한 연결로 포함한 세션: ${c.viaAlias}개`);
     if (c.unlinked > 0) lines.push(`- 검토된 프로젝트 연결 없이 폴더 경로로만 묶인 세션: ${c.unlinked}개`);
+    if (c.nameCandidates > 0) {
+      lines.push(`- 이름만 같은 다른 checkout의 세션 ${c.nameCandidates}개는 확인 전이라 포함하지 않음`);
+    }
     if (pack.decisions.length === 0 && pack.openTasks.length === 0) {
       lines.push("- 결정·할 일: Mori에 기록된 항목이 없습니다. 없다는 뜻이 아니라 확인할 기록이 없다는 뜻입니다.");
     }

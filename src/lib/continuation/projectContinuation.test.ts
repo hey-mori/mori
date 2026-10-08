@@ -431,3 +431,33 @@ describe("buildProjectContinuationPack · session outcome evidence", () => {
     expect(pack.markdown).toContain("결정·할 일: Mori에 기록된 항목이 없습니다. 없다는 뜻이 아니라 확인할 기록이 없다는 뜻입니다.");
   });
 });
+
+describe("buildProjectContinuationPack · why a session is in the project", () => {
+  it("says a session came in through a Git worktree or a confirmed alias, and nothing about authorship", () => {
+    const wt = evidenced("auto-claude-wt", "저장소 접근 작업", { sessionEvidence: evidence("seg-wt", { prs: [["acme/infra", 218]] }) });
+    const laptop = evidenced("auto-claude-laptop", "노트북 작업", { sessionEvidence: evidence("seg-l") });
+    const plain = evidenced("auto-claude-plain", "기본 작업", { sessionEvidence: evidence("seg-p") }, { contextIds: [] });
+    const pack = buildProjectContinuationPack({
+      ...input({ sessions: [wt, laptop, plain] }),
+      sessions: [
+        { ...wt.summary, inclusion: { project: "checkout", identity: "worktree-record" } },
+        { ...laptop.summary, inclusion: { project: "alias", identity: "folder" } },
+        { ...plain.summary, inclusion: { project: "checkout", identity: "folder" } },
+      ],
+      nameCandidates: 2,
+    });
+    const byRef = (id: string) => pack.sessions.find((item) => item.ref === `mori:session/${id}`);
+    expect(byRef("auto-claude-wt")?.inclusion).toBe("worktree");
+    expect(byRef("auto-claude-laptop")?.inclusion).toBe("alias");
+    expect(byRef("auto-claude-plain")?.inclusion).toBeUndefined();
+    expect(pack.markdown).toContain("  - 포함 근거: 이 프로젝트 checkout의 Git worktree에서 진행");
+    expect(pack.markdown).toContain("  - 포함 근거: 사용자가 확인한 프로젝트 연결");
+    expect(pack.coverage).toMatchObject({ viaWorktree: 1, viaAlias: 1, unlinked: 2, nameCandidates: 2 });
+    expect(pack.markdown).toContain("- 이름만 같은 다른 checkout의 세션 2개는 확인 전이라 포함하지 않음");
+    // The project page's own answer decides the link: a worktree in a folder
+    // group is still not a reviewed project link.
+    expect(pack.markdown).toContain("- 검토된 프로젝트 연결 없이 폴더 경로로만 묶인 세션: 2개");
+    expect(pack.markdown).not.toMatch(/만든|작성한|authored/);
+    expect(pack.markdown).not.toContain("/home/");
+  });
+});
