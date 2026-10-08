@@ -316,11 +316,11 @@ pub fn append_kernel_revisions(
         // shape may replace an existing row. Creates, status changes, and another
         // record's or actor's revision stay immutable, so re-using their id is
         // still an error rather than a silent rewrite.
-        let existing: Option<(String, String, String)> = tx
+        let existing: Option<(String, String, String, String)> = tx
             .query_row(
-                "SELECT record_id, actor, operation FROM kernel_revisions WHERE id = ?1",
+                "SELECT record_id, actor, operation, created_at FROM kernel_revisions WHERE id = ?1",
                 params![row.id],
-                |found| Ok((found.get(0)?, found.get(1)?, found.get(2)?)),
+                |found| Ok((found.get(0)?, found.get(1)?, found.get(2)?, found.get(3)?)),
             )
             .optional()
             .map_err(|error| error.to_string())?;
@@ -342,17 +342,23 @@ pub fn append_kernel_revisions(
                 )
                 .map_err(|error| error.to_string())?;
             }
-            Some((record_id, actor, operation))
+            // The superseding write keeps the stored `before`, so the burst still
+            // reverts to where it started whatever the caller sends, and it must
+            // not be older than the row it replaces, so a stale write cannot undo
+            // a newer one. Timestamps are ISO-8601 UTC from one clock, so string
+            // order is time order.
+            Some((record_id, actor, operation, created_at))
                 if record_id == row.record_id
                     && actor == row.actor
                     && operation == "update"
-                    && row.operation == "update" =>
+                    && row.operation == "update"
+                    && row.created_at >= created_at =>
             {
                 tx.execute(
                     "UPDATE kernel_revisions \
-                     SET before_json = ?2, after_json = ?3, created_at = ?4 \
+                     SET after_json = ?2, created_at = ?3 \
                      WHERE id = ?1",
-                    params![row.id, row.before_json, row.after_json, row.created_at],
+                    params![row.id, row.after_json, row.created_at],
                 )
                 .map_err(|error| error.to_string())?;
             }
@@ -587,5 +593,24 @@ mod tests {
         let listed = list_kernel_revisions(&conn, "rec-1").expect("list");
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].created_at, "2026-07-14T09:00:00Z");
+    }
+
+    #[test]
+    fn a_superseding_write_keeps_the_original_before_and_never_goes_back_in_time() {
+        let mut conn = kernel_conn();
+        append_kernel_revisions(&mut conn, &[update_row("rev-1", "rec-1", "user", "{\"title\":\"a\"}", "2026-07-14T09:00:00Z")])
+            .expect("first write");
+        // A caller that sends a different starting point cannot move it.
+        let moved = KernelRevisionRow {
+            before_json: Some("{\"title\":\"a\"}".to_string()),
+            ..update_row("rev-1", "rec-1", "user", "{\"title\":\"ab\"}", "2026-07-14T09:01:00Z")
+        };
+        append_kernel_revisions(&mut conn, &[moved]).expect("superseding write");
+        // A stale write, older than the stored row, may not replace it.
+        assert!(append_kernel_revisions(&mut conn, &[update_row("rev-1", "rec-1", "user", "{\"title\":\"old\"}", "2026-07-14T08:59:00Z")]).is_err());
+        let listed = list_kernel_revisions(&conn, "rec-1").expect("list");
+        assert_eq!(listed[0].before_json.as_deref(), Some("{\"title\":\"start\"}"));
+        assert_eq!(listed[0].after_json.as_deref(), Some("{\"title\":\"ab\"}"));
+        assert_eq!(listed[0].created_at, "2026-07-14T09:01:00Z");
     }
 }
