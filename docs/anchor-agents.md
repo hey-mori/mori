@@ -29,6 +29,36 @@ SQLite key-value. Every reader is bounded (8 MB/file cap), opens databases
 read-only, rejects path-escape, and surfaces an unreadable **placeholder**
 rather than silently dropping a session it cannot parse.
 
+## Long Claude Code transcripts
+
+A Claude Code transcript over the 8 MB cap is not imported. It opens as a
+read-only window of its recent conversation instead (#163).
+
+- **Why they used to open empty.**
+  - `get_claude_code_session` refused the file, after the metadata placeholder was already active.
+  - The shared resolver then reported success, so the session showed "세션에 가져온 소스 없음".
+  - Reopening it was skipped as "already active", so a failed read could never be retried.
+- **The reader.** `get_claude_code_session_window` reads at most 1 MiB, either from the end of the file or before a cursor.
+  - Opening costs one window whatever the file size: about 9 ms on a 143 MB transcript, the same as on 9 and 64 MB files.
+  - A trailing line still being written is not read.
+  - A single record larger than a window is skipped and counted (`omittedRecords`), so earlier history stays reachable.
+  - Records without a `uuid` are named by byte offset, so an id is the same in every window.
+- **The cursor.** It is the previous window's start offset, plus two fingerprints that are refused (`SOURCE_CHANGED`, `INVALID_CURSOR`) when they no longer match, so a cursor is never read at a stale offset:
+  - `sourceId`: the transcript's first line, so appending keeps it valid;
+  - `startAnchor`: the record at the cursor.
+  - The projects-root, symlink and JSONL checks are the same as for the detailed reader.
+- **The view.** `sessionWindow` in the session store is transient.
+  - It is never imported, persisted or analysed. The tabs (analysis, report, sources) are hidden while it shows, because they would treat a part of the session as the whole.
+  - The coverage line counts the loaded part only: "최근 대화 일부 표시 중 · 원본의 1% 미만". "이전 대화 더 보기" prepends the window before the loaded part and keeps the message being read in place.
+- **Failures.** A read that fails shows why, never an empty session:
+  - missing, changed, refused or unreadable sources show their reason with "다시 시도";
+  - reopening the session also retries.
+  - Recovery when a source cannot be read: check that the file still exists under the Claude projects folder, then reopen. A transcript replaced while open reads again from its end.
+- **Races.** Every open takes a sequence token. A read that finishes after a newer open has started changes nothing; before this, a slow read could be imported into whichever session was active.
+- **Other agents.** Codex, Antigravity, Cline and the rest still have only the 8 MB detailed reader.
+  - An oversized transcript from them shows "아직 열 수 없는 긴 대화입니다", with no retry.
+  - A window reader for them is not built. No local Codex transcript over the cap existed to test one against.
+
 ## The four layers
 
 ```
