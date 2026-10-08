@@ -247,13 +247,22 @@ pub fn get_claude_code_session_window(
     before_offset: Option<u64>,
     source_id: Option<String>,
     anchor: Option<String>,
+    end_anchor: Option<String>,
 ) -> Result<ClaudeCodeSessionWindow, String> {
     let trimmed = session_path.trim();
     if trimmed.is_empty() {
         return Err("sessionPath is required.".to_string());
     }
     let root = claude_code_projects_dir()?;
-    read_session_window_at(&root, trimmed, before_offset, source_id.as_deref(), anchor.as_deref(), WINDOW_BYTES)
+    read_session_window_with(
+        &root,
+        trimmed,
+        before_offset,
+        source_id.as_deref(),
+        anchor.as_deref(),
+        end_anchor.as_deref(),
+        WINDOW_BYTES,
+    )
 }
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -2674,6 +2683,11 @@ pub struct ClaudeCodeSessionWindow {
     /// Fingerprint of the record at `start_offset`; pass it back with the
     /// cursor so a rewritten transcript is refused, not read at a stale offset.
     pub start_anchor: String,
+    /// Fingerprint of the last record before `end_offset` ("" for an empty
+    /// window). A cursor at `end_offset` carrying it reads this same window
+    /// again later: the record before a cursor never changes as the
+    /// transcript grows, so a window the view let go of can be restored.
+    pub end_anchor: String,
     pub end_offset: u64,
     /// True when the window begins at the start of the transcript.
     pub reached_start: bool,
@@ -2741,6 +2755,18 @@ fn anchor_at(file: &mut fs::File, offset: u64, len: u64) -> Result<String, Strin
     Ok(fnv_hex(&bytes[..probe]))
 }
 
+/// Fingerprint of the last record that ends at `end` (which sits on a line
+/// boundary), searched no further back than `floor`; "" when there is none.
+fn last_record_anchor(file: &mut fs::File, floor: u64, end: u64, len: u64) -> Result<String, String> {
+    if end <= floor {
+        return Ok(String::new());
+    }
+    let start = record_start_before(file, end - 1)?
+        .ok_or_else(|| "RECORD_TOO_LARGE: a single record exceeds the scan limit.".to_string())?
+        .max(floor);
+    anchor_at(file, start, len)
+}
+
 fn read_range(file: &mut fs::File, start: u64, end: u64) -> Result<Vec<u8>, String> {
     use std::io::{Read, Seek, SeekFrom};
     file.seek(SeekFrom::Start(start)).map_err(|error| error.to_string())?;
@@ -2784,12 +2810,27 @@ pub(crate) fn read_session_window_at(
     anchor: Option<&str>,
     window: u64,
 ) -> Result<ClaudeCodeSessionWindow, String> {
+    read_session_window_with(root, session_path, before, source_id, anchor, None, window)
+}
+
+/// As [`read_session_window_at`], where a cursor may instead (or also) name
+/// the record that ends at it (`end_anchor`), the fingerprint that restores a
+/// window the view let go of.
+pub(crate) fn read_session_window_with(
+    root: &Path,
+    session_path: &str,
+    before: Option<u64>,
+    source_id: Option<&str>,
+    anchor: Option<&str>,
+    end_anchor: Option<&str>,
+    window: u64,
+) -> Result<ClaudeCodeSessionWindow, String> {
     let canonical = resolve_session_path(root, session_path)?;
     let mut file = fs::File::open(&canonical)
         .map_err(|error| format!("SOURCE_UNREADABLE: Failed to open {}: {error}", canonical.display()))?;
     let len = file.metadata().map_err(|error| error.to_string())?.len();
     let id = source_id_of(&mut file)?;
-    if before.is_some() && (source_id.is_none() || anchor.is_none()) {
+    if before.is_some() && (source_id.is_none() || (anchor.is_none() && end_anchor.is_none())) {
         return Err("INVALID_CURSOR: an earlier page needs the source id and anchor it was given.".to_string());
     }
     if let Some(expected) = source_id {
@@ -2810,6 +2851,11 @@ pub(crate) fn read_session_window_at(
             if let Some(expected) = anchor {
                 if expected != anchor_at(&mut file, cursor, len)? {
                     return Err("SOURCE_CHANGED: the record at the cursor is not the one it named.".to_string());
+                }
+            }
+            if let Some(expected) = end_anchor {
+                if expected != last_record_anchor(&mut file, 0, cursor, len)? {
+                    return Err("SOURCE_CHANGED: the record before the cursor is not the one it named.".to_string());
                 }
             }
             cursor
@@ -2858,6 +2904,7 @@ pub(crate) fn read_session_window_at(
         cursor += line.len() as u64 + 1;
     }
     let start_anchor = anchor_at(&mut file, start, len)?;
+    let end_anchor = last_record_anchor(&mut file, start, end, len)?;
     let text = String::from_utf8_lossy(&buffer);
     let (events, file_touches, stats) = parse_jsonl_lines(&text, |index| {
         format!("offset-{}", offsets.get(index).copied().unwrap_or(start))
@@ -2868,6 +2915,7 @@ pub(crate) fn read_session_window_at(
         file_bytes: len,
         start_offset: start,
         start_anchor,
+        end_anchor,
         end_offset: end,
         reached_start: start == 0,
         events,
@@ -3017,6 +3065,48 @@ mod window_tests {
         assert!(error.starts_with("SOURCE_CHANGED"), "{error}");
         // A cursor without its source id and anchor is not accepted at all.
         assert!(read_session_window_at(dir.path(), &path, Some(tail.start_offset), None, None, 250).unwrap_err().starts_with("INVALID_CURSOR"));
+    }
+
+    #[test]
+    fn a_window_let_go_of_reads_back_identically_after_the_transcript_grows() {
+        let dir = TempDir::new().unwrap();
+        let body = [user(0, "a"), user(1, "b"), user(2, "c"), user(3, "d"), assistant_without_id("e")].concat();
+        let (file, path) = session(&dir, &body);
+        let newest = read_session_window_at(dir.path(), &path, None, None, None, 300).unwrap();
+        assert!(!newest.end_anchor.is_empty());
+        // The session keeps running while the view holds older history.
+        let mut handle = fs::OpenOptions::new().append(true).open(&file).unwrap();
+        handle.write_all([user(4, "f"), user(5, "g")].concat().as_bytes()).unwrap();
+        let restored = read_session_window_with(
+            dir.path(),
+            &path,
+            Some(newest.end_offset),
+            Some(&newest.source_id),
+            None,
+            Some(&newest.end_anchor),
+            300,
+        )
+        .unwrap();
+        assert_eq!(restored.start_offset, newest.start_offset);
+        assert_eq!(restored.end_offset, newest.end_offset);
+        let ids = |w: &ClaudeCodeSessionWindow| w.events.iter().map(|e| e.id.clone()).collect::<Vec<_>>();
+        assert_eq!(ids(&restored), ids(&newest));
+    }
+
+    #[test]
+    fn a_rewritten_history_refuses_a_window_that_was_let_go_of() {
+        let dir = TempDir::new().unwrap();
+        let body = [user(0, "a"), user(1, "b"), user(2, "c")].concat();
+        let (file, path) = session(&dir, &body);
+        let newest = read_session_window_at(dir.path(), &path, None, None, None, 300).unwrap();
+        // Same first record (same source id), same length, different history.
+        fs::write(&file, [user(0, "a"), user(1, "x"), user(2, "y")].concat()).unwrap();
+        let error = read_session_window_with(dir.path(), &path, Some(newest.end_offset), Some(&newest.source_id), None, Some(&newest.end_anchor), 300)
+            .unwrap_err();
+        assert!(error.starts_with("SOURCE_CHANGED"), "{error}");
+        // The source id alone is not a cursor.
+        let error = read_session_window_with(dir.path(), &path, Some(newest.end_offset), Some(&newest.source_id), None, None, 300).unwrap_err();
+        assert!(error.starts_with("INVALID_CURSOR"), "{error}");
     }
 
     #[test]
