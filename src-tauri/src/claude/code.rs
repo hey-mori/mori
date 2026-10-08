@@ -238,6 +238,24 @@ pub fn get_claude_code_session_delta(
     read_session_delta_at(&root, trimmed, byte_offset)
 }
 
+/// Read one bounded window of a session's history, ending at `before_offset`
+/// (the end of the file when absent), for a transcript too large to read whole.
+/// See `read_session_window_at`.
+#[tauri::command]
+pub fn get_claude_code_session_window(
+    session_path: String,
+    before_offset: Option<u64>,
+    source_id: Option<String>,
+    anchor: Option<String>,
+) -> Result<ClaudeCodeSessionWindow, String> {
+    let trimmed = session_path.trim();
+    if trimmed.is_empty() {
+        return Err("sessionPath is required.".to_string());
+    }
+    let root = claude_code_projects_dir()?;
+    read_session_window_at(&root, trimmed, before_offset, source_id.as_deref(), anchor.as_deref(), WINDOW_BYTES)
+}
+
 // ─── helpers ───────────────────────────────────────────────────────────────
 
 pub(crate) fn claude_code_projects_dir() -> Result<PathBuf, String> {
@@ -520,6 +538,15 @@ fn tail_new_complete_lines(path: &Path, offset: u64) -> Result<(String, u64), St
 fn parse_jsonl_delta(
     text: &str,
 ) -> (Vec<ClaudeCodeMessage>, Vec<ClaudeFileTouch>, ClaudeDeltaStats) {
+    parse_jsonl_lines(text, |index| format!("line-{index}"))
+}
+
+/// The line parser behind both the delta and the window reader. `fallback_id`
+/// names a record that carries no `uuid` / `id`, from its line index in `text`.
+fn parse_jsonl_lines(
+    text: &str,
+    fallback_id: impl Fn(usize) -> String,
+) -> (Vec<ClaudeCodeMessage>, Vec<ClaudeFileTouch>, ClaudeDeltaStats) {
     let mut messages: Vec<ClaudeCodeMessage> = Vec::new();
     let mut file_touches: Vec<ClaudeFileTouch> = Vec::new();
     let mut touch_ids: Vec<Option<String>> = Vec::new();
@@ -555,7 +582,7 @@ fn parse_jsonl_delta(
             .or_else(|| value.get("id"))
             .and_then(Value::as_str)
             .map(str::to_string)
-            .unwrap_or_else(|| format!("line-{index}"));
+            .unwrap_or_else(|| fallback_id(index));
         let created_at = extract_timestamp(&value).unwrap_or_default();
         let subkind = classify_subkind(&role, &content);
         let stop_reason = extract_stop_reason(&value);
@@ -2615,5 +2642,442 @@ mod tests {
             .expect("touch recorded");
         assert_eq!(touch.additions, 1);
         assert_eq!(touch.deletions, 1);
+    }
+}
+
+// ─── bounded history windows ────────────────────────────────────────────────
+
+/// Bytes one window may read. The cost of opening a session depends on this,
+/// never on the transcript's total size.
+pub const WINDOW_BYTES: u64 = 1024 * 1024;
+/// How far back a single record's start is searched for, in bytes, when one
+/// record is larger than a window. Searched in small chunks, never allocated.
+const RECORD_START_SCAN_LIMIT: u64 = 256 * 1024 * 1024;
+const SOURCE_ID_PROBE: usize = 4096;
+/// Bytes of the record at a cursor that are fingerprinted, so a cursor names a
+/// record and not only a byte position.
+const ANCHOR_PROBE: u64 = 64;
+
+/// One window of a session's history: the complete records between
+/// `start_offset` and `end_offset`, oldest first. It is a view of part of the
+/// transcript, never the whole session: counts here are the window's own.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaudeCodeSessionWindow {
+    pub file_path: String,
+    /// Identifies the transcript's content (its first bytes). A later page
+    /// passes it back; a different value means the file was replaced.
+    pub source_id: String,
+    pub file_bytes: u64,
+    /// Where this window starts; pass it as `before_offset` for earlier history.
+    pub start_offset: u64,
+    /// Fingerprint of the record at `start_offset`; pass it back with the
+    /// cursor so a rewritten transcript is refused, not read at a stale offset.
+    pub start_anchor: String,
+    pub end_offset: u64,
+    /// True when the window begins at the start of the transcript.
+    pub reached_start: bool,
+    pub events: Vec<ClaudeCodeMessage>,
+    pub file_touches: Vec<ClaudeFileTouch>,
+    pub stats: ClaudeDeltaStats,
+    /// Records skipped because one alone was larger than a window. Their bytes
+    /// are counted, never silently dropped.
+    pub omitted_records: usize,
+    pub omitted_bytes: u64,
+}
+
+fn resolve_session_path(root: &Path, session_path: &str) -> Result<PathBuf, String> {
+    let requested = PathBuf::from(session_path);
+    let canonical_root = fs::canonicalize(root)
+        .map_err(|error| format!("Failed to resolve {}: {error}", root.display()))?;
+    let canonical = fs::canonicalize(&requested)
+        .map_err(|error| format!("SOURCE_MISSING: Failed to resolve {}: {error}", requested.display()))?;
+    if !canonical.starts_with(&canonical_root) {
+        return Err("Refused: session path is outside the Claude Code projects directory.".to_string());
+    }
+    if !is_jsonl(&canonical) {
+        return Err("Refused: file is not a Claude Code JSONL session.".to_string());
+    }
+    Ok(canonical)
+}
+
+fn source_id_of(file: &mut fs::File) -> Result<String, String> {
+    use std::io::{Read, Seek, SeekFrom};
+    file.seek(SeekFrom::Start(0)).map_err(|error| error.to_string())?;
+    let mut head = vec![0u8; SOURCE_ID_PROBE];
+    let mut filled = 0;
+    while filled < SOURCE_ID_PROBE {
+        let read = file.read(&mut head[filled..]).map_err(|error| error.to_string())?;
+        if read == 0 {
+            break;
+        }
+        filled += read;
+    }
+    // Hash only up to the end of the first complete line: an append never
+    // changes it, so a session still being written keeps its id while a
+    // replaced or rewritten file gets a new one.
+    let probe = head[..filled]
+        .iter()
+        .position(|&byte| byte == b'\n')
+        .map(|newline| newline + 1)
+        .unwrap_or(filled);
+    Ok(fnv_hex(&head[..probe]))
+}
+
+fn fnv_hex(bytes: &[u8]) -> String {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in bytes {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{hash:016x}")
+}
+
+/// Fingerprint of the record that starts at `offset`: its bytes up to its line
+/// break, at most `ANCHOR_PROBE` of them.
+fn anchor_at(file: &mut fs::File, offset: u64, len: u64) -> Result<String, String> {
+    let bytes = read_range(file, offset, (offset + ANCHOR_PROBE).min(len))?;
+    let probe = bytes.iter().position(|&byte| byte == b'\n').map(|newline| newline + 1).unwrap_or(bytes.len());
+    Ok(fnv_hex(&bytes[..probe]))
+}
+
+fn read_range(file: &mut fs::File, start: u64, end: u64) -> Result<Vec<u8>, String> {
+    use std::io::{Read, Seek, SeekFrom};
+    file.seek(SeekFrom::Start(start)).map_err(|error| error.to_string())?;
+    let mut buffer = vec![0u8; (end - start) as usize];
+    file.read_exact(&mut buffer).map_err(|error| error.to_string())?;
+    Ok(buffer)
+}
+
+/// Offset just after the last line break strictly before `before`, scanning
+/// back in small chunks; 0 when the record runs to the start of the file.
+/// `None` when no line break exists within the scan limit.
+fn record_start_before(file: &mut fs::File, before: u64) -> Result<Option<u64>, String> {
+    const CHUNK: u64 = 64 * 1024;
+    let mut end = before;
+    let floor = before.saturating_sub(RECORD_START_SCAN_LIMIT);
+    while end > floor {
+        let start = end.saturating_sub(CHUNK).max(floor);
+        let chunk = read_range(file, start, end)?;
+        if let Some(position) = chunk.iter().rposition(|&byte| byte == b'\n') {
+            return Ok(Some(start + position as u64 + 1));
+        }
+        end = start;
+    }
+    Ok(if floor == 0 { Some(0) } else { None })
+}
+
+/// Read the complete records that end at or before `before` (the end of the
+/// file when `None`), at most `window` bytes of them.
+///
+/// - The first call drops a trailing line still being written.
+/// - A later call must pass a `before` that sits on a line boundary and the
+///   `source_id` it was given; a cursor past the end, mid-line, or for a
+///   replaced file is refused instead of read as something else.
+/// - A record larger than a window is skipped and counted; the next cursor
+///   moves before it, so history stays navigable.
+pub(crate) fn read_session_window_at(
+    root: &Path,
+    session_path: &str,
+    before: Option<u64>,
+    source_id: Option<&str>,
+    anchor: Option<&str>,
+    window: u64,
+) -> Result<ClaudeCodeSessionWindow, String> {
+    let canonical = resolve_session_path(root, session_path)?;
+    let mut file = fs::File::open(&canonical)
+        .map_err(|error| format!("SOURCE_UNREADABLE: Failed to open {}: {error}", canonical.display()))?;
+    let len = file.metadata().map_err(|error| error.to_string())?.len();
+    let id = source_id_of(&mut file)?;
+    if before.is_some() && (source_id.is_none() || anchor.is_none()) {
+        return Err("INVALID_CURSOR: an earlier page needs the source id and anchor it was given.".to_string());
+    }
+    if let Some(expected) = source_id {
+        if expected != id {
+            return Err("SOURCE_CHANGED: the transcript was replaced since it was opened.".to_string());
+        }
+    }
+
+    // The window's end: a validated cursor, or the end of the last complete line.
+    let mut end = match before {
+        Some(cursor) => {
+            if cursor > len {
+                return Err("SOURCE_CHANGED: the transcript is shorter than the cursor.".to_string());
+            }
+            if cursor > 0 && read_range(&mut file, cursor - 1, cursor)?[0] != b'\n' {
+                return Err("INVALID_CURSOR: the cursor is not at a record boundary.".to_string());
+            }
+            if let Some(expected) = anchor {
+                if expected != anchor_at(&mut file, cursor, len)? {
+                    return Err("SOURCE_CHANGED: the record at the cursor is not the one it named.".to_string());
+                }
+            }
+            cursor
+        }
+        None => len,
+    };
+    if before.is_none() && end > 0 && read_range(&mut file, end - 1, end)?[0] != b'\n' {
+        // A trailing record still being written is not a record yet.
+        end = record_start_before(&mut file, end)?.unwrap_or(0);
+    }
+
+    let mut omitted_records = 0usize;
+    let mut omitted_bytes = 0u64;
+    let window = window.max(1);
+    let mut start = end.saturating_sub(window);
+    let mut buffer = read_range(&mut file, start, end)?;
+    if start > 0 {
+        // The record that straddles the window's start is incomplete here, so
+        // the window begins after its line break.
+        match buffer.iter().position(|&byte| byte == b'\n') {
+            Some(position) if start + (position as u64) + 1 < end => {
+                buffer.drain(..=position);
+                start += position as u64 + 1;
+            }
+            _ => {
+                // One record fills the whole window: skip it, count it, and move
+                // the cursor to its start so earlier history stays reachable.
+                let last_break = end - 1;
+                let record_start = record_start_before(&mut file, last_break)?
+                    .ok_or_else(|| "RECORD_TOO_LARGE: a single record exceeds the scan limit.".to_string())?;
+                omitted_records = 1;
+                omitted_bytes = end - record_start;
+                start = record_start;
+                buffer.clear();
+            }
+        }
+    }
+
+    // A record without its own id is named by its byte offset, so the same line
+    // keeps the same id in every window that contains it. Offsets come from the
+    // raw bytes: decoding replaces invalid sequences and would shift them.
+    let mut offsets = Vec::new();
+    let mut cursor = start;
+    for line in buffer.split(|&byte| byte == b'\n') {
+        offsets.push(cursor);
+        cursor += line.len() as u64 + 1;
+    }
+    let start_anchor = anchor_at(&mut file, start, len)?;
+    let text = String::from_utf8_lossy(&buffer);
+    let (events, file_touches, stats) = parse_jsonl_lines(&text, |index| {
+        format!("offset-{}", offsets.get(index).copied().unwrap_or(start))
+    });
+    Ok(ClaudeCodeSessionWindow {
+        file_path: canonical.to_string_lossy().to_string(),
+        source_id: id,
+        file_bytes: len,
+        start_offset: start,
+        start_anchor,
+        end_offset: end,
+        reached_start: start == 0,
+        events,
+        file_touches,
+        stats,
+        omitted_records,
+        omitted_bytes,
+    })
+}
+
+#[cfg(test)]
+mod window_tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    fn user(index: usize, text: &str) -> String {
+        format!(
+            "{{\"type\":\"user\",\"uuid\":\"u{index}\",\"message\":{{\"role\":\"user\",\"content\":\"{text}\"}},\"timestamp\":\"2026-10-08T00:{:02}:{:02}Z\"}}\n",
+            (index / 60) % 60,
+            index % 60
+        )
+    }
+
+    fn assistant_without_id(text: &str) -> String {
+        format!("{{\"type\":\"assistant\",\"message\":{{\"role\":\"assistant\",\"content\":[{{\"type\":\"text\",\"text\":\"{text}\"}}]}}}}\n")
+    }
+
+    fn session(dir: &TempDir, body: &str) -> (PathBuf, String) {
+        let project = dir.path().join("-home-u-dev-infra");
+        fs::create_dir_all(&project).unwrap();
+        let path = project.join("big.jsonl");
+        fs::write(&path, body).unwrap();
+        let text = path.to_string_lossy().to_string();
+        (path, text)
+    }
+
+    /// Every window from the end back to the start, oldest window first.
+    fn all_windows(root: &Path, path: &str, window: u64) -> Vec<ClaudeCodeSessionWindow> {
+        let first = read_session_window_at(root, path, None, None, None, window).unwrap();
+        let mut windows = vec![first];
+        while !windows.last().unwrap().reached_start {
+            let last = windows.last().unwrap();
+            let next = read_session_window_at(root, path, Some(last.start_offset), Some(&last.source_id), Some(&last.start_anchor), window).unwrap();
+            assert!(next.end_offset == last.start_offset, "windows tile the file");
+            windows.push(next);
+        }
+        windows.reverse();
+        windows
+    }
+
+    #[test]
+    fn a_transcript_larger_than_the_detail_cap_opens_from_its_end_in_bounded_windows() {
+        let dir = TempDir::new().unwrap();
+        let filler = "작업 내용 ".repeat(40);
+        let mut body = String::new();
+        let mut count = 0;
+        while (body.len() as u64) <= MAX_FILE_BYTES + 512 * 1024 {
+            body.push_str(&user(count, &format!("step {count} {filler}")));
+            count += 1;
+        }
+        let (_, path) = session(&dir, &body);
+        // The detailed reader refuses it: the original defect.
+        assert!(read_session_at(dir.path(), &path).unwrap_err().contains("too large"));
+
+        let first = read_session_window_at(dir.path(), &path, None, None, None, WINDOW_BYTES).unwrap();
+        assert!(first.end_offset - first.start_offset <= WINDOW_BYTES);
+        assert!(!first.reached_start);
+        assert_eq!(first.events.last().unwrap().id, format!("u{}", count - 1));
+        assert!(first.events.last().unwrap().content.contains("작업 내용"));
+
+        // Paging back reaches the start, in order, every record exactly once.
+        let ids: Vec<String> = all_windows(dir.path(), &path, WINDOW_BYTES)
+            .into_iter()
+            .flat_map(|window| window.events.into_iter().map(|event| event.id))
+            .collect();
+        let expected: Vec<String> = (0..count).map(|index| format!("u{index}")).collect();
+        assert_eq!(ids, expected);
+    }
+
+    #[test]
+    fn records_without_ids_keep_the_same_id_in_every_window() {
+        let dir = TempDir::new().unwrap();
+        let body = [user(0, "a"), assistant_without_id("첫 답"), user(1, "b"), assistant_without_id("둘째 답")].concat();
+        let (_, path) = session(&dir, &body);
+        let whole = read_session_window_at(dir.path(), &path, None, None, None, 1 << 20).unwrap();
+        let small: Vec<String> = all_windows(dir.path(), &path, 200)
+            .into_iter()
+            .flat_map(|window| window.events.into_iter().map(|event| event.id))
+            .collect();
+        let ids: Vec<String> = whole.events.iter().map(|event| event.id.clone()).collect();
+        assert_eq!(small, ids);
+        assert!(ids.iter().any(|id| id.starts_with("offset-")));
+    }
+
+    #[test]
+    fn a_line_still_being_written_is_not_read() {
+        let dir = TempDir::new().unwrap();
+        let body = format!("{}{}", user(0, "done"), "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"half");
+        let (_, path) = session(&dir, &body);
+        let window = read_session_window_at(dir.path(), &path, None, None, None, WINDOW_BYTES).unwrap();
+        assert_eq!(window.events.len(), 1);
+        assert_eq!(window.end_offset as usize, user(0, "done").len());
+    }
+
+    #[test]
+    fn a_record_larger_than_a_window_is_skipped_and_counted_and_history_continues() {
+        let dir = TempDir::new().unwrap();
+        let huge = user(1, &"x".repeat(3000));
+        let body = [user(0, "before"), huge.clone(), user(2, "after")].concat();
+        let (_, path) = session(&dir, &body);
+        let windows = all_windows(dir.path(), &path, 1000);
+        let omitted: usize = windows.iter().map(|window| window.omitted_records).sum();
+        let bytes: u64 = windows.iter().map(|window| window.omitted_bytes).sum();
+        let ids: Vec<String> = windows.into_iter().flat_map(|window| window.events.into_iter().map(|event| event.id)).collect();
+        assert_eq!(ids, vec!["u0".to_string(), "u2".to_string()]);
+        assert_eq!(omitted, 1);
+        assert_eq!(bytes, huge.len() as u64);
+    }
+
+    #[test]
+    fn a_bad_cursor_or_a_replaced_file_is_refused_not_misread() {
+        let dir = TempDir::new().unwrap();
+        let body = [user(0, "a"), user(1, "b"), user(2, "c")].concat();
+        let (file, path) = session(&dir, &body);
+        let first = read_session_window_at(dir.path(), &path, None, None, None, WINDOW_BYTES).unwrap();
+        let mid_line = (user(0, "a").len() + 3) as u64;
+        assert!(read_session_window_at(dir.path(), &path, Some(mid_line), Some(&first.source_id), Some(&first.start_anchor), 100).unwrap_err().starts_with("INVALID_CURSOR"));
+        assert!(read_session_window_at(dir.path(), &path, Some(u64::MAX), Some(&first.source_id), Some(&first.start_anchor), 100).unwrap_err().starts_with("SOURCE_CHANGED"));
+        fs::write(&file, [user(9, "other"), user(10, "file")].concat()).unwrap();
+        assert!(read_session_window_at(dir.path(), &path, Some(0), Some(&first.source_id), Some(&first.start_anchor), 100).unwrap_err().starts_with("SOURCE_CHANGED"));
+        // Re-reading the latest window of a session that was replaced says so.
+        assert!(read_session_window_at(dir.path(), &path, None, Some(&first.source_id), None, 100).unwrap_err().starts_with("SOURCE_CHANGED"));
+    }
+
+    #[test]
+    fn a_rewrite_that_keeps_the_first_line_is_caught_by_the_cursor_anchor() {
+        let dir = TempDir::new().unwrap();
+        let body = [user(0, "a"), user(1, "b"), user(2, "c"), user(3, "d")].concat();
+        let (file, path) = session(&dir, &body);
+        let tail = read_session_window_at(dir.path(), &path, None, None, None, 250).unwrap();
+        assert!(!tail.reached_start);
+        // Same first record, different history after it: a compacted rewrite.
+        fs::write(&file, [user(0, "a"), user(7, "x"), user(8, "y"), user(9, "z")].concat()).unwrap();
+        let error = read_session_window_at(dir.path(), &path, Some(tail.start_offset), Some(&tail.source_id), Some(&tail.start_anchor), 250)
+            .unwrap_err();
+        assert!(error.starts_with("SOURCE_CHANGED"), "{error}");
+        // A cursor without its source id and anchor is not accepted at all.
+        assert!(read_session_window_at(dir.path(), &path, Some(tail.start_offset), None, None, 250).unwrap_err().starts_with("INVALID_CURSOR"));
+    }
+
+    #[test]
+    fn a_growing_file_keeps_earlier_cursors_valid() {
+        let dir = TempDir::new().unwrap();
+        let body = [user(0, "a"), user(1, "b"), user(2, "c")].concat();
+        let (file, path) = session(&dir, &body);
+        let first = read_session_window_at(dir.path(), &path, None, None, None, 300).unwrap();
+        let mut handle = fs::OpenOptions::new().append(true).open(&file).unwrap();
+        handle.write_all(user(3, "d").as_bytes()).unwrap();
+        let earlier = read_session_window_at(dir.path(), &path, Some(first.start_offset), Some(&first.source_id), Some(&first.start_anchor), 300).unwrap();
+        assert!(earlier.events.iter().all(|event| event.id != "u3"));
+    }
+
+    /// Cost of opening and paging, measured on a real transcript (read only).
+    /// `MORI_WINDOW_BENCH=/path/to/session.jsonl cargo test --release window_bench -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn window_bench() {
+        let Ok(path) = std::env::var("MORI_WINDOW_BENCH") else { return };
+        let root = Path::new(&path).parent().and_then(Path::parent).unwrap().to_path_buf();
+        let started = std::time::Instant::now();
+        let first = read_session_window_at(&root, &path, None, None, None, WINDOW_BYTES).unwrap();
+        let open = started.elapsed();
+        let mut pages = vec![(open, first.end_offset - first.start_offset, first.events.len())];
+        let mut last = first.clone();
+        for _ in 0..5 {
+            if last.reached_start {
+                break;
+            }
+            let started = std::time::Instant::now();
+            let next = read_session_window_at(&root, &path, Some(last.start_offset), Some(&last.source_id), Some(&last.start_anchor), WINDOW_BYTES).unwrap();
+            pages.push((started.elapsed(), next.end_offset - next.start_offset, next.events.len()));
+            last = next;
+        }
+        println!("file_bytes={} window_bytes={WINDOW_BYTES}", first.file_bytes);
+        for (index, (elapsed, bytes, events)) in pages.iter().enumerate() {
+            println!("page={index} ms={:.2} bytes_read={bytes} events={events}", elapsed.as_secs_f64() * 1000.0);
+        }
+        let started = std::time::Instant::now();
+        let detail = read_session_at(&root, &path);
+        println!("detail_read ms={:.2} result={}", started.elapsed().as_secs_f64() * 1000.0, match detail { Ok(d) => format!("ok messages={}", d.messages.len()), Err(e) => e });
+    }
+
+    #[test]
+    fn the_window_reader_keeps_the_source_root_and_file_type_boundaries() {
+        let dir = TempDir::new().unwrap();
+        let (_, _) = session(&dir, &user(0, "a"));
+        let outside = TempDir::new().unwrap();
+        let foreign = outside.path().join("x.jsonl");
+        fs::write(&foreign, user(0, "secret")).unwrap();
+        assert!(read_session_window_at(dir.path(), &foreign.to_string_lossy(), None, None, None, 100).unwrap_err().starts_with("Refused"));
+        let escape = dir.path().join("-home-u-dev-infra").join("link.jsonl");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&foreign, &escape).unwrap();
+        #[cfg(unix)]
+        assert!(read_session_window_at(dir.path(), &escape.to_string_lossy(), None, None, None, 100).unwrap_err().starts_with("Refused"));
+        let text_file = dir.path().join("-home-u-dev-infra").join("notes.txt");
+        fs::write(&text_file, "x\n").unwrap();
+        assert!(read_session_window_at(dir.path(), &text_file.to_string_lossy(), None, None, None, 100).unwrap_err().starts_with("Refused"));
+        let missing = dir.path().join("-home-u-dev-infra").join("gone.jsonl");
+        assert!(read_session_window_at(dir.path(), &missing.to_string_lossy(), None, None, None, 100).unwrap_err().starts_with("SOURCE_MISSING"));
     }
 }

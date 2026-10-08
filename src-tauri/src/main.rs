@@ -208,6 +208,7 @@ fn main() {
             claude::code::discover_claude_code_sessions,
             claude::code::get_claude_code_session,
             claude::code::get_claude_code_session_delta,
+            claude::code::get_claude_code_session_window,
             files::resolve_file_locations,
             files::reveal_path_in_os,
             llm_http::llm_http_request,
