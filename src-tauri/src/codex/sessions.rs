@@ -28,6 +28,14 @@ pub struct CodexSessionMeta {
     pub message_count: usize,
     pub title: String,
     pub originator: String,
+    /// `session_meta.source` (`exec` for a scripted `codex exec` run, `cli`,
+    /// `vscode`, ...), "" when the source does not say.
+    pub source: String,
+    /// `conversation` when any message was read, else `empty`. Codex files are
+    /// parsed whole, so the read is complete.
+    pub activity_class: String,
+    /// Branch and remote from `session_meta.git`, stated once at session start.
+    pub evidence: Option<crate::session_evidence::SessionEvidence>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -42,6 +50,14 @@ pub struct CodexSessionDetail {
     pub message_count: usize,
     pub title: String,
     pub originator: String,
+    /// `session_meta.source` (`exec` for a scripted `codex exec` run, `cli`,
+    /// `vscode`, ...), "" when the source does not say.
+    pub source: String,
+    /// `conversation` when any message was read, else `empty`. Codex files are
+    /// parsed whole, so the read is complete.
+    pub activity_class: String,
+    /// Branch and remote from `session_meta.git`, stated once at session start.
+    pub evidence: Option<crate::session_evidence::SessionEvidence>,
     pub messages: Vec<CodexMessage>,
 }
 
@@ -115,6 +131,9 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<CodexSessionMeta>, Str
                     message_count: detail.message_count,
                     title: detail.title,
                     originator: detail.originator,
+                    source: detail.source,
+                    activity_class: detail.activity_class,
+                    evidence: detail.evidence,
                 });
             }
             Err(_) => {
@@ -146,6 +165,9 @@ fn unreadable_codex_meta(path: &Path, reason: &str, modified: SystemTime) -> Cod
         message_count: 0,
         title: format!("⚠ 읽을 수 없는 세션 · {reason}"),
         originator: "Codex".to_string(),
+        source: String::new(),
+        activity_class: "unknown".to_string(),
+        evidence: None,
     }
 }
 
@@ -210,6 +232,9 @@ fn parse_session_file(
         .unwrap_or_default();
     let mut project_path = String::new();
     let mut originator = "Codex".to_string();
+    let mut source = String::new();
+    let mut git_branch = String::new();
+    let mut git_remote = String::new();
     let mut started_at = String::new();
     let mut updated_at = String::new();
     let mut meta_title = String::new();
@@ -242,6 +267,17 @@ fn parse_session_file(
                 }
                 if let Some(origin) = payload.get("originator").and_then(Value::as_str) {
                     originator = origin.to_string();
+                }
+                if let Some(kind) = payload.get("source").and_then(Value::as_str) {
+                    source = kind.to_string();
+                }
+                if let Some(git) = payload.get("git") {
+                    if let Some(branch) = git.get("branch").and_then(Value::as_str) {
+                        git_branch = branch.to_string();
+                    }
+                    if let Some(remote) = git.get("repository_url").and_then(Value::as_str) {
+                        git_remote = remote.to_string();
+                    }
                 }
                 if meta_title.is_empty() {
                     meta_title = first_nonempty_payload_string(
@@ -296,6 +332,7 @@ fn parse_session_file(
     .map(|value| truncate(value, 90))
     .unwrap_or_else(|| format!("Codex session {}", short_id(&session_id)));
 
+    let evidence = crate::session_evidence::codex_evidence(&git_branch, &git_remote, &started_at);
     Ok(CodexSessionDetail {
         session_id,
         project_name: project_path.clone(),
@@ -306,6 +343,9 @@ fn parse_session_file(
         message_count,
         title,
         originator,
+        source,
+        activity_class: if message_count > 0 { "conversation" } else { "empty" }.to_string(),
+        evidence: Some(evidence),
         messages,
     })
 }
@@ -482,6 +522,28 @@ mod tests {
         assert_eq!(sessions[0].session_id, "s1");
         assert_eq!(sessions[0].message_count, 2);
         assert!(sessions[0].title.contains("Fix import"));
+    }
+
+    #[test]
+    fn reports_a_scripted_run_and_the_git_context_it_started_in() {
+        // The shape of a real `codex exec` probe: source `exec` and a git block.
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("2026").join("09").join("02");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("rollout-exec.jsonl"),
+            "{\"timestamp\":\"2026-09-02T12:13:57Z\",\"type\":\"session_meta\",\"payload\":{\"id\":\"e1\",\"cwd\":\"/home/u/dev/infra\",\"originator\":\"codex_exec\",\"source\":\"exec\",\"git\":{\"commit_hash\":\"abc\",\"branch\":\"feat/x\",\"repository_url\":\"git@github.com:acme/infra.git\"}}}\n\
+             {\"timestamp\":\"2026-09-02T12:13:58Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"Answer briefly\"}]}}\n",
+        )
+        .unwrap();
+        let sessions = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(sessions[0].source, "exec");
+        assert_eq!(sessions[0].activity_class, "conversation");
+        let evidence = sessions[0].evidence.as_ref().unwrap();
+        assert_eq!(evidence.repositories, vec!["acme/infra"]);
+        assert_eq!(evidence.branches[0].name, "feat/x");
+        assert_eq!(evidence.branches[0].basis, "session-meta");
+        assert!(evidence.prs.is_empty());
     }
 
     #[test]
