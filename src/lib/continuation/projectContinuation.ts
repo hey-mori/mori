@@ -57,11 +57,15 @@ export type ContinuationSessionInput = {
   savedAt?: string;
   /**
    * Why the project page put this session in the project (`projectGroups`):
-   * `project` is the Mori association (`context`, `alias`, or `checkout` for
-   * none), `identity` how its checkout is known. Absent for callers that do
-   * not say.
+   * `project` is the Mori association (`member` for a reviewed membership,
+   * `context` for an unreviewed placement, `alias`, or `checkout` for none),
+   * `identity` how its checkout is known. Absent for callers that do not say.
    */
-  inclusion?: { project: "context" | "alias" | "checkout"; identity: string };
+  inclusion?: {
+    project: "member" | "context" | "alias" | "checkout";
+    identity: string;
+    review?: "suggested" | "rejected" | "invalid";
+  };
 };
 
 export type ContinuationInput = {
@@ -107,7 +111,7 @@ export type ContinuationItem = {
   evidence?: ContinuationEvidence;
   /** Sessions: why the session is in this project, when it is not simply its
    *  folder. Never a claim about what the session did. */
-  inclusion?: "worktree" | "alias";
+  inclusion?: "member" | "worktree" | "alias";
 };
 
 /** Sessions left out because they are not a person's conversation. */
@@ -138,6 +142,8 @@ export type ContinuationCoverage = {
   viaWorktree: number;
   /** Included through an alias the user confirmed. */
   viaAlias: number;
+  /** Filed under this project by the operator (reviewed membership). */
+  reviewed: number;
   /** Different checkouts sharing the project's name, left out. */
   nameCandidates: number;
 };
@@ -329,6 +335,7 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
     joinedSegments: 0,
     viaWorktree: 0,
     viaAlias: 0,
+    reviewed: 0,
     nameCandidates: input.nameCandidates ?? 0,
   };
   const sessions: Array<ContinuationItem & { at: number }> = [];
@@ -344,14 +351,19 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
     // A Mori project link is either the project page's own (a context or a
     // confirmed alias) or, for callers that do not say, the kernel record's.
     const inclusions = ordered.flatMap((member) => (member.session.inclusion ? [member.session.inclusion] : []));
-    const linked =
+    // Only a reviewed membership is a project link; an alias or a projection
+    // placement is an organisational hint the operator has not filed.
+    const reviewed =
       inclusions.length > 0
-        ? inclusions.some((entry) => entry.project !== "checkout")
+        ? inclusions.some((entry) => entry.project === "member")
         : ordered.some((member) => (member.kernel?.contextIds ?? []).length > 0);
-    if (!linked) coverage.unlinked += 1;
-    const viaAlias = inclusions.some((entry) => entry.project === "alias");
+    if (!reviewed) coverage.unlinked += 1;
+    else coverage.reviewed += 1;
+    const viaAlias = !reviewed && inclusions.some((entry) => entry.project === "alias");
     const viaWorktree =
-      !viaAlias && inclusions.some((entry) => entry.identity === "worktree-record" || entry.identity === "git-worktree");
+      !reviewed &&
+      !viaAlias &&
+      inclusions.some((entry) => entry.identity === "worktree-record" || entry.identity === "git-worktree");
     if (viaAlias) coverage.viaAlias += 1;
     if (viaWorktree) coverage.viaWorktree += 1;
     const lastSeen = ordered.map((member) => member.end ?? member.when).sort((a, b) => stamp(a) - stamp(b)).at(-1);
@@ -364,7 +376,13 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
       ...(lastDay && lastDay !== day ? { lastDay } : {}),
       agent: agentName(last.kernel),
       ...(evidence ? { evidence } : {}),
-      ...(viaAlias ? { inclusion: "alias" as const } : viaWorktree ? { inclusion: "worktree" as const } : {}),
+      ...(reviewed && inclusions.length > 0
+        ? { inclusion: "member" as const }
+        : viaAlias
+          ? { inclusion: "alias" as const }
+          : viaWorktree
+            ? { inclusion: "worktree" as const }
+            : {}),
       at: stamp(first.when),
     });
   }
@@ -486,8 +504,9 @@ function itemLine(item: ContinuationItem, kind: "session" | "decision" | "task" 
   if (item.line) line += `: ${item.line}`;
   line += ` (${item.ref})`;
   const extra: string[] = [];
-  if (item.inclusion === "worktree") extra.push("  - 포함 근거: 이 프로젝트 checkout의 Git worktree에서 진행");
-  if (item.inclusion === "alias") extra.push("  - 포함 근거: 사용자가 확인한 프로젝트 연결");
+  if (item.inclusion === "member") extra.push("  - 포함 근거: 사용자가 이 프로젝트로 확정");
+  if (item.inclusion === "worktree") extra.push("  - 포함 근거: 이 프로젝트 checkout의 Git worktree에서 진행 (소속 확정 전)");
+  if (item.inclusion === "alias") extra.push("  - 포함 근거: 사용자가 확인한 폴더 연결 (소속 확정 전)");
   if (item.evidence) extra.push(...evidenceLines(item.evidence));
   return extra.length > 0 ? [line, ...extra].join("\n") : line;
 }
@@ -546,9 +565,10 @@ export function renderContinuationMarkdown(
     if (other.empty > 0) skipped.push(`내용 없음 ${other.empty}개`);
     if (skipped.length > 0) lines.push(`- 대화가 아니어서 뺀 세션: ${skipped.join(" · ")}`);
     if (c.joinedSegments > 0) lines.push(`- 이어진 기록 구간을 한 세션으로 합침: ${c.joinedSegments}개`);
+    if (c.reviewed > 0) lines.push(`- 사용자가 이 프로젝트로 확정한 세션: ${c.reviewed}개`);
     if (c.viaWorktree > 0) lines.push(`- Git worktree가 이 프로젝트 checkout으로 확인되어 포함한 세션: ${c.viaWorktree}개`);
-    if (c.viaAlias > 0) lines.push(`- 사용자가 확인한 연결로 포함한 세션: ${c.viaAlias}개`);
-    if (c.unlinked > 0) lines.push(`- 검토된 프로젝트 연결 없이 폴더 경로로만 묶인 세션: ${c.unlinked}개`);
+    if (c.viaAlias > 0) lines.push(`- 사용자가 확인한 폴더 연결로 포함한 세션: ${c.viaAlias}개`);
+    if (c.unlinked > 0) lines.push(`- 프로젝트 소속이 확정되지 않은 세션: ${c.unlinked}개`);
     if (c.nameCandidates > 0) {
       lines.push(`- 이름만 같은 다른 checkout의 세션 ${c.nameCandidates}개는 확인 전이라 포함하지 않음`);
     }

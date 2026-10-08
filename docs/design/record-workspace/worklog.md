@@ -1,5 +1,19 @@
 # Worklog · 기록 Workspace redesign
 
+## Done (reviewed project membership, 2026-10-08)
+
+#159. The 프로젝트 page placed sessions by their checkout, but no session record ever had a project.
+- **The cause.** The adapter compared `context.name` with the session's full-path `projectName`.
+- **What membership means now.** A project is the operator's decision (`projectMembership.ts`):
+  - Each session row in 프로젝트 shows a suggestion with its basis (InfoHint).
+  - **확정** files the record (one `user` revision, read fresh, refused when stale or when the project is archived or missing).
+  - **아님** records a rejection in `projectReview`.
+  - **해제** unfiles and remembers the answer.
+- **Automation never writes `contextIds`.**
+- **Grouping.** `buildProjectGroups` lets a reviewed membership decide the group over the projection. It flags a membership whose project is gone, and never rejoins a rejected project.
+- **Pack.** 이어가기 separates "확정" from a checkout or alias hint.
+- **Write failures.** A write that falls back to browser storage is reported as a failure.
+
 ## Done (project continuity · checkout identity in 프로젝트, 2026-10-08)
 
 #157. 프로젝트 grouping identified a session by its folder's last segment, so:

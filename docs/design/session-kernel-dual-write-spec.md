@@ -56,12 +56,17 @@ Live status, timeline events, and analysis stay in the 세션 workspace
 model; the cross-lenses need identity, time, agent, and project
 binding, nothing more (audit §3 scoping).
 
-Context binding: bind `belongs-to` **only to an already-existing
-context** matched from the session's project name (the existing
-converter path). No auto-created contexts: the apply matrix grades
-new-entity creation away from auto, and a wrong project guess is
-exactly the mutation the matrix protects. Unmatched sessions stay
-unbound (they still appear in 캘린더/검색).
+Context binding (revised 2026-10-08): **automation never binds a
+project.** The original rule bound to an existing context matched from
+the session's project name, but it compared a context *name* with the
+session's full-path project name, so it never matched; a fixed
+comparison would be a name guess (two checkouts can share a name) that
+rediscovery could reapply after the operator unfiled the session.
+Project membership is now the operator's reviewed decision
+(`projectMembership.ts`): the 프로젝트 page suggests a project from the
+observed checkout, and only 확정 writes the project id into
+`contextIds` through a `user` revision. Rediscovery never changes
+`contextIds` (§2.1). Unfiled sessions still appear in 캘린더/검색.
 
 Apply grading: creation is `auto` by the matrix (new record only, not
 sensitive, reversible, origin automation) and is disclosed through the
@@ -79,7 +84,8 @@ record on every growth and silently reverted user edits.
 - **Observed fields** are the title, the body line, the activity time
   (start, end, and basis as one unit), the project binding, and the
   `agentId` / `stepCount` / `activityClass` / `interaction` /
-  `sessionEvidence` properties (§2.2). Each is merged three-way: if its
+  `sessionEvidence` properties (§2.2). The project binding is no longer
+  among them: discovery never writes `contextIds`. Each is merged three-way: if its
   current value still equals the value automation last wrote to that
   field, it takes the fresh observation; otherwise the user changed it and
   it is kept. "Last wrote" is per field: a `rule` create sets every field,

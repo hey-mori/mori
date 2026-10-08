@@ -40,6 +40,7 @@ import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from 
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
 import { ProjectCreateModal } from "./ProjectCreateModal";
 import { ProjectContinuationModal } from "./ProjectContinuationModal";
+import { SessionMembershipControl } from "./SessionMembershipControl";
 import { buildProjectContinuationPack } from "../../lib/continuation/projectContinuation";
 import { ProjectLiveSection } from "./ProjectLiveSection";
 import { useProjectLive } from "./useProjectLive";
@@ -61,6 +62,7 @@ export function ContextView() {
     reparentContext,
     createProjectContext,
     archiveContext,
+    reviewSessionProject,
   } = useRecordLedger();
   const navigate = useAppStore((state) => state.navigate);
   // The door 캘린더 and the command palette already use. 프로젝트 was the only
@@ -99,6 +101,20 @@ export function ContextView() {
         connections,
       ),
     [summaries, contexts, records, relations, connections],
+  );
+
+  // Projects a session can be filed under by hand, and the sessions that have a
+  // kernel record to file (auto-imported agent sessions).
+  const liveProjects = useMemo(
+    () =>
+      contexts.filter(
+        (context) => context.type === "project" && !inArchivedSubtree(context.id, contexts),
+      ),
+    [contexts],
+  );
+  const agentSessionIds = useMemo(
+    () => new Set(records.filter((record) => record.schemaId === "agent-session").map((record) => record.id)),
+    [records],
   );
 
   const groupByContextId = useMemo(() => {
@@ -404,7 +420,10 @@ export function ContextView() {
                   >
                     <span className="ctx-tree-caret is-empty" aria-hidden="true" />
                     <FolderGit2 size={13} aria-hidden="true" className="ctx-tree-icon is-linked" />
-                    <span className="ctx-tree-name">{group.name}</span>
+                    <span className="ctx-tree-name">
+                      {group.parentPath ? <span className="ctx-tree-parent">{group.parentPath}/</span> : null}
+                      {group.name}
+                    </span>
                     <span className="ctx-tree-count">
                       {group.sessions.length + group.records.length}
                     </span>
@@ -527,7 +546,7 @@ export function ContextView() {
                   </p>
                   <ul className="context-session-list">
                     {activeGroup.sessions.map((session) => (
-                      <li key={session.sessionId}>
+                      <li key={session.sessionId} className="context-session-item">
                         <button
                           type="button"
                           className="context-session-row"
@@ -541,6 +560,14 @@ export function ContextView() {
                             {formatClaudeRelativeKo(session.startedAt || session.savedAt)}
                           </span>
                         </button>
+                        <SessionMembershipControl
+                          sessionId={session.sessionId}
+                          inclusion={activeGroup.inclusion[session.sessionId]}
+                          project={activeGroup.context}
+                          projects={liveProjects}
+                          filable={agentSessionIds.has(session.sessionId)}
+                          ledger={{ reviewSessionProject }}
+                        />
                       </li>
                     ))}
                   </ul>
