@@ -20,6 +20,7 @@ import { DocumentEditor } from "./DocumentEditor";
 import { isDateUndecided } from "./dateResolution";
 import type { ExplorerSort } from "./noteExplorerModel";
 import { displayTime, ledgerVisibleRecords } from "./recordPresentation";
+import { useSessionResolver } from "../session/useSessionResolver";
 
 export function LedgerWorkspace() {
   const ledger = useRecordLedger();
@@ -36,6 +37,10 @@ export function LedgerWorkspace() {
   const newRecordRequest = useAppStore((state) => state.newRecordRequest);
   const clearNewRecordRequest = useAppStore((state) => state.clearNewRecordRequest);
   const newRecordProjectId = useAppStore((state) => state.newRecordProjectId);
+  const projectScope = useAppStore((state) => state.ledgerProjectScope);
+  const clearProjectScope = useAppStore((state) => state.clearLedgerProjectScope);
+  const openSession = useAppStore((state) => state.openSession);
+  const resolveSession = useSessionResolver();
   // A note requested from a project page is born filed there. It cannot be filed
   // at request time because an untyped note has no record yet, so the intent is
   // held until the first save mints one.
@@ -117,6 +122,21 @@ export function LedgerWorkspace() {
     if (recordId !== selectedId || composing) remount();
     setSelectedId(recordId);
     setComposing(false);
+  };
+  // An agent session row opens the session itself (its transcript and flow),
+  // which is what the row stands for; the thin kernel record is only the
+  // fallback when the session can no longer be resolved, so a found result is
+  // never a dead end.
+  const selectRecord = (recordId: string) => {
+    const record = ledger.records.find((entry) => entry.id === recordId);
+    if (record?.schemaId !== "agent-session") {
+      openRecord(recordId);
+      return;
+    }
+    void resolveSession(recordId).then((ok) => {
+      if (ok) openSession("flow");
+      else openRecord(recordId);
+    });
   };
   const startNew = () => {
     remount();
@@ -220,9 +240,11 @@ export function LedgerWorkspace() {
         selectedId={selectedId}
         candidates={candidates}
         dateUnknown={dateUnknown}
-        onSelect={openRecord}
+        onSelect={selectRecord}
         onNew={startNew}
         now={now}
+        projectScopeId={projectScope}
+        onClearProjectScope={clearProjectScope}
       />
       {showNoteEditor ? (
         <NoteEditorPane

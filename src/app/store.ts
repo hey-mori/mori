@@ -167,6 +167,10 @@ type AppState = {
   /** The project a requested new note should be filed under, when the request
    *  came from a project page. Null means the note is born unfiled. */
   newRecordProjectId: string | null;
+  /** The project 기록 is scoped to (a context id), set from a project page's
+   *  이 프로젝트에서 찾기. Kept here, not in the explorer, so opening a session
+   *  from the scoped list and coming back keeps the scope. */
+  ledgerProjectScope: string | null;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -250,6 +254,9 @@ type AppState = {
   /** Opens 기록 and starts a new capture (the global create action). */
   requestNewRecord: (projectId?: string) => void;
   clearNewRecordRequest: () => void;
+  /** Opens 기록 scoped to one project's durable members. */
+  findInProject: (projectId: string) => void;
+  clearLedgerProjectScope: () => void;
 };
 
 export const useAppStore = create<AppState>((set) => ({
@@ -280,6 +287,7 @@ export const useAppStore = create<AppState>((set) => ({
   openRecordId: null,
   newRecordRequest: false,
   newRecordProjectId: null,
+  ledgerProjectScope: null,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -395,4 +403,6 @@ export const useAppStore = create<AppState>((set) => ({
   requestNewRecord: (projectId) =>
     set({ currentView: "ledger", newRecordRequest: true, newRecordProjectId: projectId ?? null }),
   clearNewRecordRequest: () => set({ newRecordRequest: false }),
+  findInProject: (projectId) => set({ currentView: "ledger", ledgerProjectScope: projectId }),
+  clearLedgerProjectScope: () => set({ ledgerProjectScope: null }),
 }));
