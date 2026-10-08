@@ -423,7 +423,7 @@ mod tests {
         assert_eq!(detail.messages.len(), 3);
         assert_eq!(detail.messages[0].role, "human");
         assert_eq!(detail.messages[0].content, "Add a retry to the upload client");
-        assert_eq!(detail.messages[0].created_at, "2026-04-30T03:49:15");
+        assert_eq!(detail.messages[0].created_at, "2026-04-30T03:49:15Z");
         assert_eq!(detail.messages[1].role, "assistant");
         assert_eq!(detail.messages[1].content, "Wrapped it in exponential backoff");
         // The plan-mode ask payload is decoded to its response text.

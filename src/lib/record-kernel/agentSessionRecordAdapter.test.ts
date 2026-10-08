@@ -462,3 +462,120 @@ describe("upsertAgentSessionRecords · desktop row round trip", () => {
     ]);
   });
 });
+
+describe("long-running Claude sessions (NUC trial, 2026-10-08)", () => {
+  const registry = createSchemaRegistry();
+  const at = (iso: string) => () => new Date(iso);
+
+  function repo() {
+    const store = new KernelBrowserStore(new MemoryKeyValueStorage());
+    return new KernelRepository({ runtime: "browser", store });
+  }
+
+  // A live session: the first message at 13:48, then hours of growth past the
+  // reader's 1 MB preview, so the count is a lower bound that never moves.
+  const live = (updatedAt: string, extra: Partial<AgentWorkSessionMeta> = {}) =>
+    meta({
+      startedAt: "2026-10-07T13:48:42.613Z",
+      updatedAt,
+      messageCount: 46,
+      messageCountComplete: false,
+      title: "Mori 개발 재개 상태 점검",
+      ...extra,
+    });
+
+  async function poll(repository: KernelRepository, session: AgentWorkSessionMeta, iso: string) {
+    return upsertAgentSessionRecords(repository, registry, [session], { now: at(iso) });
+  }
+
+  async function trail(repository: KernelRepository) {
+    return (await repository.listRevisions(autoImportedSessionId(live("x")))).data;
+  }
+
+  async function current(repository: KernelRepository) {
+    return (await repository.getRecord(autoImportedSessionId(live("x")))).data as MoriRecord;
+  }
+
+  it("does not record a head-only message count as the session's size", () => {
+    const input = buildAgentSessionRecordInput(live("2026-10-07T13:48:42.613Z"), []);
+    expect(input.properties).toEqual({ agentId: "claude" });
+    expect(input.body).not.toContain("메시지");
+    const complete = buildAgentSessionRecordInput(meta({ messageCount: 12 }), []);
+    expect(complete.properties).toMatchObject({ stepCount: 12 });
+  });
+
+  it("tracks the real end time through hours of growth with one growth revision, not one per poll", async () => {
+    const repository = repo();
+    await poll(repository, live("2026-10-07T13:48:42.613Z"), "2026-10-07T13:50:00Z");
+    for (const end of ["2026-10-07T14:00:00Z", "2026-10-07T15:30:00Z", "2026-10-07T17:12:05Z"]) {
+      await poll(repository, live(end), end);
+    }
+
+    const record = await current(repository);
+    expect(record.occurredStart).toBe("2026-10-07T13:48:42.613Z");
+    expect(record.occurredEnd).toBe("2026-10-07T17:12:05Z");
+    const revisions = await trail(repository);
+    expect(revisions.map((r) => [r.actor, r.operation])).toEqual([
+      ["rule", "create"],
+      ["rule", "update"],
+    ]);
+    // The superseding revision keeps the stretch's starting point.
+    expect((revisions[1].before as MoriRecord).occurredEnd).toBe("2026-10-07T13:48:42.613Z");
+    expect((revisions[1].after as MoriRecord).occurredEnd).toBe("2026-10-07T17:12:05Z");
+  });
+
+  it("never merges growth across a user edit, and keeps the edit", async () => {
+    const repository = repo();
+    await poll(repository, live("2026-10-07T13:48:42.613Z"), "2026-10-07T13:50:00Z");
+    await poll(repository, live("2026-10-07T14:00:00Z"), "2026-10-07T14:00:00Z");
+    const edited = applyRecordPatch(await current(repository), { title: "D1-D4 수정" }, "user", registry, at("2026-10-07T14:05:00Z"));
+    await repository.saveRecord(edited.record, edited.revision);
+    await poll(repository, live("2026-10-07T15:30:00Z"), "2026-10-07T15:30:00Z");
+    await poll(repository, live("2026-10-07T16:00:00Z"), "2026-10-07T16:00:00Z");
+
+    const revisions = await trail(repository);
+    expect(revisions.map((r) => [r.actor, r.operation])).toEqual([
+      ["rule", "create"],
+      ["rule", "update"],
+      ["user", "update"],
+      ["rule", "update"],
+    ]);
+    expect((await current(repository)).title).toBe("D1-D4 수정");
+    expect((await current(repository)).occurredEnd).toBe("2026-10-07T16:00:00Z");
+  });
+
+  it("gives a change of title from the source its own revision", async () => {
+    const repository = repo();
+    await poll(repository, live("2026-10-07T13:48:42.613Z"), "2026-10-07T13:50:00Z");
+    await poll(repository, live("2026-10-07T14:00:00Z"), "2026-10-07T14:00:00Z");
+    await poll(repository, live("2026-10-07T15:00:00Z", { title: "Claude가 붙인 새 제목" }), "2026-10-07T15:00:00Z");
+    await poll(repository, live("2026-10-07T16:00:00Z", { title: "Claude가 붙인 새 제목" }), "2026-10-07T16:00:00Z");
+
+    const revisions = await trail(repository);
+    expect(revisions).toHaveLength(4);
+    expect((revisions[2].after as MoriRecord).title).toBe("Claude가 붙인 새 제목");
+  });
+
+  it("writes nothing for an identical poll and stays consistent across a restart", async () => {
+    const repository = repo();
+    await poll(repository, live("2026-10-07T13:48:42.613Z"), "2026-10-07T13:50:00Z");
+    await poll(repository, live("2026-10-07T14:00:00Z"), "2026-10-07T14:00:00Z");
+    const unchanged = await poll(repository, live("2026-10-07T14:00:00Z"), "2026-10-07T14:01:30Z");
+    expect(unchanged).toMatchObject({ unchanged: 1, updated: 0 });
+    // A restart is a fresh call over the same stored revisions.
+    await poll(repository, live("2026-10-07T15:00:00Z"), "2026-10-07T15:00:00Z");
+    expect(await trail(repository)).toHaveLength(2);
+  });
+
+  it("corrects a zone-less start written before the UTC fix, as one automation update", async () => {
+    const repository = repo();
+    // A session with no first-message timestamp: the start fell back to the
+    // file time, written without a zone before the fix.
+    await poll(repository, meta({ startedAt: "2026-09-30T04:22:13", updatedAt: "2026-09-30T04:22:13" }), "2026-10-08T03:00:00Z");
+    await poll(repository, meta({ startedAt: "2026-09-30T04:22:13Z", updatedAt: "2026-09-30T04:22:13Z" }), "2026-10-08T04:00:00Z");
+    const record = (await repository.getRecord(autoImportedSessionId(meta()))).data as MoriRecord;
+    expect(record.occurredStart).toBe("2026-09-30T04:22:13Z");
+    const revisions = (await repository.listRevisions(autoImportedSessionId(meta()))).data;
+    expect(revisions.map((r) => r.operation)).toEqual(["create", "update"]);
+  });
+});

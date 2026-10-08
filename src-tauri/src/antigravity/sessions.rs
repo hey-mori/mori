@@ -470,7 +470,7 @@ mod tests {
         assert_eq!(detail.messages[2].subkind, "tool_use");
         assert_eq!(detail.messages[3].role, "assistant");
         assert_eq!(detail.messages[3].content, "Inline array response");
-        assert_eq!(detail.messages[3].created_at, "2026-04-30T03:49:15");
+        assert_eq!(detail.messages[3].created_at, "2026-04-30T03:49:15Z");
     }
 
     #[test]

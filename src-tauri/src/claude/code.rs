@@ -58,10 +58,19 @@ pub struct ClaudeCodeSessionMeta {
     /// right now" signal (`started_at` is the first message, which a resumed
     /// long-running session keeps even while being worked on today).
     pub modified_at: String,
+    /// Timestamp of the last record that carries one, or "" when none was
+    /// found. Claude Code appends untimestamped bookkeeping records
+    /// (`last-prompt`, `cost-state`, `ai-title`) to old sessions, which moves
+    /// the file time without any conversation, so this is the activity signal
+    /// and `modified_at` only the fallback.
+    pub last_activity_at: String,
     /// File size in bytes. Live Follow uses this to start its tail near the end
     /// of a huge session instead of reading the whole history.
     pub file_bytes: u64,
     pub message_count: usize,
+    /// False when the preview stopped at its byte budget, so `message_count`
+    /// counts only the file's head: a lower bound, never the session's total.
+    pub message_count_complete: bool,
     pub title: String,
     pub token_usage: ClaudeTokenUsage,
 }
@@ -303,7 +312,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             } else if !preview.generic_title.trim().is_empty() {
                 truncate(&preview.generic_title, 90)
             } else if preview.first_user_text.trim().is_empty() {
-                format!("Claude Code · {}", project_label)
+                untitled_fallback(&preview.command_name, &project_label)
             } else {
                 distill_title(&preview.first_user_text, 90)
             };
@@ -315,8 +324,14 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 file_path: session_path.to_string_lossy().to_string(),
                 started_at,
                 modified_at,
+                last_activity_at: if preview.complete {
+                    preview.last_timestamp
+                } else {
+                    tail_last_timestamp(&session_path).unwrap_or_default()
+                },
                 file_bytes,
                 message_count: preview.message_count,
+                message_count_complete: preview.complete,
                 title,
                 token_usage: preview.token_usage,
             });
@@ -386,7 +401,7 @@ pub(crate) fn read_session_at(
             )
         });
     let title = if parsed.title.trim().is_empty() {
-        format!("Claude Code · {}", project_name)
+        untitled_fallback(&parsed.command_name, &project_name)
     } else {
         distill_title(&parsed.title, 90)
     };
@@ -541,13 +556,47 @@ fn parse_jsonl_delta(
 #[derive(Default)]
 struct SessionPreview {
     message_count: usize,
+    /// Whether the whole file fit inside the preview budget.
+    complete: bool,
+    /// The first slash command, for a session that holds nothing else.
+    command_name: String,
     first_user_text: String,
     summary: String,
     ai_title: String,
     generic_title: String,
     first_timestamp: String,
+    /// The last timestamp inside the budget; the file's last one only when
+    /// `complete`.
+    last_timestamp: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
+}
+
+/// How much of a session's end `tail_last_timestamp` reads. Large enough to
+/// hold several records even when one carries a long tool result.
+const TAIL_BUDGET: u64 = 256 * 1024;
+
+/// The last timestamp in the final `TAIL_BUDGET` bytes of a session, for a file
+/// too long for the preview to reach its end. `None` when the tail holds no
+/// complete timestamped record, so the caller falls back to the file time.
+fn tail_last_timestamp(path: &Path) -> Option<String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path).ok()?;
+    let len = file.metadata().ok()?.len();
+    let start = len.saturating_sub(TAIL_BUDGET);
+    file.seek(SeekFrom::Start(start)).ok()?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).ok()?;
+    let text = String::from_utf8_lossy(&bytes);
+    let mut lines = text.lines();
+    if start > 0 {
+        // The first line is cut at an arbitrary byte, so it is not a record.
+        lines.next();
+    }
+    lines
+        .rev()
+        .filter_map(|line| serde_json::from_str::<Value>(line.trim()).ok())
+        .find_map(|value| extract_timestamp(&value))
 }
 
 fn preview_session(path: &Path) -> Option<SessionPreview> {
@@ -558,7 +607,7 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
     const PREVIEW_BUDGET: usize = 1_000_000;
     let file = std::fs::File::open(path).ok()?;
     let reader = BufReader::new(file);
-    let mut preview = SessionPreview::default();
+    let mut preview = SessionPreview { complete: true, ..SessionPreview::default() };
     let mut tokens = TokenAccumulator::default();
     let mut bytes_read = 0usize;
     for line_result in reader.lines() {
@@ -567,6 +616,7 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
         };
         bytes_read += line.len() + 1;
         if bytes_read > PREVIEW_BUDGET {
+            preview.complete = false;
             break;
         }
         let trimmed = line.trim();
@@ -593,19 +643,24 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
             }
         }
         let role = detect_role(&value);
-        if role == "human" && preview.first_user_text.is_empty() {
+        if role == "human" && preview.first_user_text.is_empty() && !is_meta_record(&value) {
             // Skip tool-result envelopes and agent boilerplate so the title is
             // the first real human prompt, not "↳ 도구 결과 …" or a continuation
             // notice.
             let content = extract_content(&value);
             if is_titleable_user_text(&content) {
                 preview.first_user_text = content;
+            } else if preview.command_name.is_empty() {
+                if let Some(command) = crate::agent_text::slash_command_name(&content) {
+                    preview.command_name = command;
+                }
             }
         }
-        if preview.first_timestamp.is_empty() {
-            if let Some(ts) = extract_timestamp(&value) {
-                preview.first_timestamp = ts;
+        if let Some(ts) = extract_timestamp(&value) {
+            if preview.first_timestamp.is_empty() {
+                preview.first_timestamp = ts.clone();
             }
+            preview.last_timestamp = ts;
         }
         if preview.cwd.is_empty() {
             if let Some(cwd) = extract_cwd(&value) {
@@ -623,6 +678,8 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
 struct ParsedSession {
     messages: Vec<ClaudeCodeMessage>,
     title: String,
+    /// The first slash command, for a session that holds nothing else.
+    command_name: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
     file_touches: Vec<ClaudeFileTouch>,
@@ -676,6 +733,7 @@ impl TokenAccumulator {
 fn parse_jsonl(text: &str) -> ParsedSession {
     let mut messages: Vec<ClaudeCodeMessage> = Vec::new();
     let mut title = String::new();
+    let mut command_name = String::new();
     let mut summary = String::new();
     let mut ai_title = String::new();
     let mut generic_title = String::new();
@@ -732,8 +790,14 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         if content.trim().is_empty() {
             continue;
         }
-        if role == "human" && title.is_empty() && is_titleable_user_text(&content) {
-            title = content.clone();
+        if role == "human" && title.is_empty() && !is_meta_record(&value) {
+            if is_titleable_user_text(&content) {
+                title = content.clone();
+            } else if command_name.is_empty() {
+                if let Some(command) = crate::agent_text::slash_command_name(&content) {
+                    command_name = command;
+                }
+            }
         }
         let id = value
             .get("uuid")
@@ -780,9 +844,26 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         } else {
             title
         },
+        command_name,
         cwd,
         token_usage: tokens.usage,
         file_touches,
+    }
+}
+
+/// Claude Code marks some harness-written user records `"isMeta": true`.
+fn is_meta_record(value: &Value) -> bool {
+    value.get("isMeta").and_then(Value::as_bool) == Some(true)
+}
+
+/// The title of a session with no request to title it by: the slash command it
+/// ran when there is one (`Claude Code · /model`), else the project. Honest
+/// about what the session holds rather than inventing a summary.
+fn untitled_fallback(command_name: &str, project_label: &str) -> String {
+    if command_name.trim().is_empty() {
+        format!("Claude Code · {project_label}")
+    } else {
+        format!("Claude Code · {}", command_name.trim())
     }
 }
 
@@ -826,11 +907,14 @@ fn is_titleable_user_text(content: &str) -> bool {
         return false;
     }
     let lower = trimmed.to_lowercase();
-    const BOILERPLATE_PREFIXES: [&str; 4] = [
+    // Harness-injected user-role text (`<command-name>`, `<local-command-caveat>`,
+    // `<system-reminder>`, ...) opens with a tag; see `agent_text`.
+    if crate::agent_text::is_harness_envelope(trimmed) {
+        return false;
+    }
+    const BOILERPLATE_PREFIXES: [&str; 2] = [
         "this session is being continued from a previous conversation",
         "caveat: the messages below were generated by the user while running",
-        "<system-reminder>",
-        "<command-name>",
     ];
     if BOILERPLATE_PREFIXES
         .iter()
@@ -1686,6 +1770,112 @@ mod tests {
         assert_eq!(detail.messages[0].content, "Hello");
         assert_eq!(detail.messages[1].role, "assistant");
         assert!(detail.messages[1].content.contains("Hi."));
+    }
+
+    fn user_line(text: &str, at: &str) -> String {
+        format!(
+            "{{\"type\":\"user\",\"cwd\":\"/home/u/dev/mori\",\"message\":{{\"role\":\"user\",\"content\":\"{text}\"}},\"timestamp\":\"{at}\"}}\n"
+        )
+    }
+
+    #[test]
+    fn list_reports_a_complete_message_count_for_a_small_session() {
+        let temp = TempDir::new().unwrap();
+        let body = format!("{}{}", user_line("first", "2026-10-07T13:48:42Z"), user_line("second", "2026-10-07T14:00:00Z"));
+        write_session(&temp.path().join("-home-u-dev-mori"), "small.jsonl", &body);
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].message_count, 2);
+        assert!(listing[0].message_count_complete);
+        // The file time is explicit UTC, so JavaScript cannot read it as local.
+        assert!(listing[0].modified_at.ends_with('Z'));
+    }
+
+    #[test]
+    fn list_marks_the_count_partial_when_the_preview_budget_cuts_a_long_session() {
+        // A session that grew for hours: far more than the 1 MB preview reads.
+        let temp = TempDir::new().unwrap();
+        let filler = "x".repeat(1_000);
+        let mut body = String::new();
+        for minute in 0..1_500 {
+            body.push_str(&user_line(&format!("step {minute} {filler}"), &format!("2026-10-07T{:02}:{:02}:00Z", 13 + minute / 60 % 10, minute % 60)));
+        }
+        write_session(&temp.path().join("-home-u-dev-mori"), "long.jsonl", &body);
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert!(listing[0].file_bytes > 1_000_000);
+        assert!(!listing[0].message_count_complete);
+        assert!(listing[0].message_count < 1_500);
+        // The end is read from the tail, so growth past the budget is still seen.
+        assert_eq!(listing[0].last_activity_at, "2026-10-07T17:59:00Z");
+    }
+
+    #[test]
+    fn list_takes_activity_from_the_last_record_not_bookkeeping_appends() {
+        // Claude Code appends untimestamped records to an old session, which
+        // moves the file time days after the conversation ended.
+        let temp = TempDir::new().unwrap();
+        let body = format!(
+            "{}{}{{\"type\":\"last-prompt\",\"sessionId\":\"s\"}}\n{{\"type\":\"cost-state\"}}\n",
+            user_line("first", "2026-09-30T04:21:48.615Z"),
+            user_line("second", "2026-09-30T04:22:06Z"),
+        );
+        write_session(&temp.path().join("-home-u-dev-home"), "old.jsonl", &body);
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].last_activity_at, "2026-09-30T04:22:06Z");
+    }
+
+    #[test]
+    fn tail_read_finds_no_activity_in_a_session_without_timestamps() {
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("-home-u-dev-home");
+        write_session(&dir, "stub.jsonl", "{\"type\":\"ai-title\",\"aiTitle\":\"t\"}\n");
+        assert_eq!(tail_last_timestamp(&dir.join("stub.jsonl")), None);
+    }
+
+    fn raw_user_line(content: &str, meta: bool, at: &str) -> String {
+        let meta_field = if meta { "\"isMeta\":true," } else { "" };
+        format!(
+            "{{\"type\":\"user\",{meta_field}\"cwd\":\"/home/u/dev/home\",\"message\":{{\"role\":\"user\",\"content\":{}}},\"timestamp\":\"{at}\"}}\n",
+            serde_json::to_string(content).unwrap()
+        )
+    }
+
+    #[test]
+    fn titles_by_the_request_after_slash_command_records() {
+        // The shape of the NUC's real slash-command transcripts: a meta caveat,
+        // the command record, its stdout, and only then the request.
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("-home-u-dev-home");
+        let body = [
+            raw_user_line("<local-command-caveat>Caveat: The messages below were generated by the user while running local commands.</local-command-caveat>", true, "2026-09-30T04:21:48Z"),
+            raw_user_line("<command-name>/model</command-name>\n<command-message>model</command-message>", false, "2026-09-30T04:21:49Z"),
+            raw_user_line("<local-command-stdout>Set model to opus</local-command-stdout>", false, "2026-09-30T04:21:50Z"),
+            raw_user_line("홈 서버 백업 스크립트 점검", false, "2026-09-30T04:22:00Z"),
+        ]
+        .concat();
+        let path = write_session(&dir, "command-then-request.jsonl", &body);
+
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].title, "홈 서버 백업 스크립트 점검");
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(detail.title, listing[0].title);
+    }
+
+    #[test]
+    fn titles_a_command_only_session_by_its_command_not_its_path() {
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("-home-u-dev-home");
+        let body = [
+            raw_user_line("<local-command-caveat>Caveat: The messages below were generated by the user while running local commands.</local-command-caveat>", true, "2026-09-30T04:21:48Z"),
+            raw_user_line("<command-name>/model</command-name>\n<command-message>model</command-message>", false, "2026-09-30T04:21:49Z"),
+            raw_user_line("<local-command-stdout>Set model to opus</local-command-stdout>", false, "2026-09-30T04:21:50Z"),
+        ]
+        .concat();
+        let path = write_session(&dir, "command-only.jsonl", &body);
+
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].title, "Claude Code · /model");
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(detail.title, "Claude Code · /model");
     }
 
     #[test]

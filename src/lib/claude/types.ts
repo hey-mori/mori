@@ -107,10 +107,16 @@ export type ClaudeCodeSessionMeta = {
   /** Filesystem last-modified time (ISO). The "active right now" signal;
    *  absent on older reads, so treat a missing value as `startedAt`. */
   modifiedAt?: string;
+  /** Timestamp of the session's last timestamped record, "" when none was found. */
+  lastActivityAt?: string;
   /** File size in bytes; lets Live Follow tail from near the end of a huge
    *  session instead of reading the whole history. Absent on older reads. */
   fileBytes?: number;
   messageCount: number;
+  /** False when the reader's preview stopped at its byte budget, so
+   *  `messageCount` is a lower bound for the file's head, not the total.
+   *  Absent on older reads. */
+  messageCountComplete?: boolean;
   /** Best-effort title — the first user message, truncated. */
   title: string;
   /** Token usage aggregated from the session's assistant messages. */

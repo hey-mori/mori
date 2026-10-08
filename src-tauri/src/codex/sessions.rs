@@ -263,7 +263,12 @@ fn parse_session_file(
             continue;
         };
         message_count += 1;
-        if first_user_title.is_empty() && message.role == "human" {
+        // A harness preamble (`<environment_context>`, `<recommended_plugins>`)
+        // is not the user's request; see `agent_text`.
+        if first_user_title.is_empty()
+            && message.role == "human"
+            && !crate::agent_text::is_harness_envelope(&message.content)
+        {
             first_user_title = truncate(&message.content, 90);
         }
         if include_all_messages {
@@ -477,6 +482,26 @@ mod tests {
         assert_eq!(sessions[0].session_id, "s1");
         assert_eq!(sessions[0].message_count, 2);
         assert!(sessions[0].title.contains("Fix import"));
+    }
+
+    #[test]
+    fn titles_a_session_by_the_request_not_the_harness_preamble() {
+        // The shape the NUC's real Codex logs have: preambles in the user role
+        // before the actual request.
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("2026").join("10").join("07");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("rollout-preamble.jsonl"),
+            "{\"timestamp\":\"2026-10-07T14:44:35Z\",\"type\":\"session_meta\",\"payload\":{\"id\":\"s-pre\",\"cwd\":\"/home/u/dev/window\",\"originator\":\"codex_cli_rs\"}}\n\
+             {\"timestamp\":\"2026-10-07T14:44:36Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"<environment_context>\\n  <cwd>/home/u/dev/window</cwd>\\n</environment_context>\"}]}}\n\
+             {\"timestamp\":\"2026-10-07T14:44:37Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"<recommended_plugins> Here is a list of plugins\"}]}}\n\
+             {\"timestamp\":\"2026-10-07T14:44:38Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"Inspect repository and environment\"}]}}\n",
+        )
+        .unwrap();
+
+        let sessions = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(sessions[0].title, "Inspect repository and environment");
     }
 
     #[test]

@@ -81,6 +81,9 @@ export type AgentWorkSessionMeta = {
   startedAt: string;
   updatedAt: string;
   messageCount: number;
+  /** False when `messageCount` covers only part of the source (a reader that
+   *  previews a long session's head). Absent means complete. */
+  messageCountComplete?: boolean;
   title: string;
   tokenUsage?: ClaudeTokenUsage;
   connectorId?: string;
@@ -284,11 +287,33 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     filePath: session.filePath,
     sourceFilePath: session.filePath,
     startedAt: session.startedAt,
-    updatedAt: session.startedAt,
+    updatedAt: claudeLastActivity(session),
     messageCount: session.messageCount,
+    messageCountComplete: session.messageCountComplete,
     title: session.title,
     tokenUsage: session.tokenUsage,
   };
+}
+
+/**
+ * When a Claude session last had activity: the timestamp of its last record.
+ * The transcript's file time is only the fallback, because Claude Code appends
+ * untimestamped bookkeeping (`last-prompt`, `cost-state`, `ai-title`) to old
+ * sessions, moving the file time days after the conversation ended. Either is a
+ * source observation, not proof the conversation ended then. Falls back to the
+ * start when neither is usable or a value is earlier than the first message.
+ */
+export function claudeLastActivity(
+  session: Pick<ClaudeCodeSessionMeta, "startedAt" | "modifiedAt" | "lastActivityAt">,
+): string {
+  const startedMs = Date.parse(session.startedAt);
+  for (const candidate of [session.lastActivityAt, session.modifiedAt]) {
+    const ms = Date.parse(candidate ?? "");
+    if (!candidate || Number.isNaN(ms)) continue;
+    if (!Number.isNaN(startedMs) && ms < startedMs) continue;
+    return candidate;
+  }
+  return session.startedAt;
 }
 
 function mapClaudeDesktopMeta(session: ClaudeConversationMeta): AgentWorkSessionMeta {

@@ -456,11 +456,11 @@ mod tests {
         assert_eq!(detail.messages.len(), 2);
         assert_eq!(detail.messages[0].role, "human");
         assert_eq!(detail.messages[0].content, "Explain the routing");
-        assert_eq!(detail.messages[0].created_at, "2026-04-15T04:29:40");
+        assert_eq!(detail.messages[0].created_at, "2026-04-15T04:29:40Z");
         assert_eq!(detail.messages[1].role, "assistant");
         assert_eq!(detail.messages[1].content, "It uses a trie matcher");
-        assert_eq!(detail.started_at, "2026-04-15T04:29:40");
-        assert_eq!(detail.updated_at, "2026-04-15T04:29:41");
+        assert_eq!(detail.started_at, "2026-04-15T04:29:40Z");
+        assert_eq!(detail.updated_at, "2026-04-15T04:29:41Z");
     }
 
     #[test]
