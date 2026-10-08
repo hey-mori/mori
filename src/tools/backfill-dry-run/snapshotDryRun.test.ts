@@ -11,6 +11,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -223,6 +224,16 @@ describe("snapshot dry run · the live database and the snapshot stay untouched"
     mkdirSync(join(liveDir, "copies"));
     copyFileSync(live, nested);
     await expectCode(runSnapshotDryRun({ snapshotPath: nested, env, provenance }), "SNAPSHOT_IS_LIVE_DB");
+  });
+
+  it("refuses a symlink that leads into the live directory", async () => {
+    const { live, liveDir, home, env } = liveAndSnapshot();
+    const fileLink = join(home, "looks-like-a-snapshot.sqlite");
+    symlinkSync(live, fileLink);
+    await expectCode(runSnapshotDryRun({ snapshotPath: fileLink, env, provenance }), "SNAPSHOT_IS_LIVE_DB");
+    const dirLink = join(home, "backup-dir");
+    symlinkSync(liveDir, dirLink, "dir");
+    await expectCode(runSnapshotDryRun({ snapshotPath: join(dirLink, "mori.sqlite"), env, provenance }), "SNAPSHOT_IS_LIVE_DB");
   });
 
   it("follows a storage override the way the Rust resolver does", async () => {
