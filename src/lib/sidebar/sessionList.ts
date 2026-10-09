@@ -1,4 +1,5 @@
 import type { StoredSessionSummary } from "../storage/storageTypes";
+import { sessionLastActiveAt } from "../session/sessionActivity";
 
 /**
  * Sidebar session list — pure grouping + filtering helpers.
@@ -26,7 +27,8 @@ export type SidebarGroupingMode = "recency" | "project";
 export type SidebarSessionRow = {
   sessionId: string;
   title: string;
-  /** Stable sort key — the more recent of `startedAt` / `savedAt`. */
+  /** When the session was last active (`sessionLastActiveAt`): the more
+   *  recent of `startedAt` / `savedAt`. */
   timestamp: string;
   /** Optional grouping label (Claude project path). */
   sourceLabel?: string;
@@ -65,7 +67,7 @@ const RECENCY_ORDER: RecencyBucket[] = [
 ];
 
 export function toSidebarRow(summary: StoredSessionSummary): SidebarSessionRow {
-  const timestamp = summary.startedAt || summary.savedAt;
+  const timestamp = sessionLastActiveAt(summary);
   return {
     sessionId: summary.sessionId,
     title: summary.title?.trim() || "제목 없음",

@@ -41,6 +41,7 @@ import type {
   MoriRecord,
 } from "../../lib/record-kernel/kernelTypes";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
+import { sessionLastActiveAt } from "../../lib/session/sessionActivity";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import {
   normalizeProjectIdentity,
@@ -299,6 +300,6 @@ export function buildProjectGroups(
 }
 
 function stamp(session: StoredSessionSummary): number {
-  const ms = Date.parse(session.startedAt || session.savedAt || "");
+  const ms = Date.parse(sessionLastActiveAt(session));
   return Number.isNaN(ms) ? 0 : ms;
 }

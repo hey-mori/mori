@@ -1,6 +1,7 @@
 import type { SettingsTab } from "../../app/store";
 import type { ViewKey } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
+import { sessionLastActiveAt } from "../session/sessionActivity";
 import type { ThemeId } from "../settings/themePreference";
 
 /**
@@ -156,8 +157,8 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
   const sessions: CommandEntry[] = [...input.sessions]
     .sort(
       (a, b) =>
-        new Date(b.startedAt || b.savedAt).getTime() -
-        new Date(a.startedAt || a.savedAt).getTime(),
+        new Date(sessionLastActiveAt(b)).getTime() -
+        new Date(sessionLastActiveAt(a)).getTime(),
     )
     .map((summary) => ({
       id: `session:${summary.sessionId}`,

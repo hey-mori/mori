@@ -1,4 +1,5 @@
 import type { StoredSessionSummary } from "../storage/storageTypes";
+import { sessionLastActiveAt } from "../session/sessionActivity";
 import type { ProductStateTone } from "../product-state/productState";
 import { projectIdentitiesMatch } from "../projects/projectConnection";
 
@@ -160,7 +161,7 @@ function toRow(
   return {
     sessionId: summary.sessionId,
     title: summary.title?.trim() || "제목 없음",
-    timestamp: summary.startedAt || summary.savedAt,
+    timestamp: sessionLastActiveAt(summary),
     status: summary.status,
     eventCount: summary.eventCount,
     sourceCount: insight?.sourceCount,

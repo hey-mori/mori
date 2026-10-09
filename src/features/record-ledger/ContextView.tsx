@@ -46,6 +46,7 @@ import { ProjectLiveSection } from "./ProjectLiveSection";
 import { useProjectLive } from "./useProjectLive";
 import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
+import { sessionLastActiveAt } from "../../lib/session/sessionActivity";
 
 /** What the rail has selected. A project the user just made holds nothing yet,
  *  so selection keys on the CONTEXT, never on a group that may not exist. */
@@ -583,7 +584,7 @@ export function ContextView() {
                           </span>
                           <span className="context-session-title">{session.title}</span>
                           <span className="context-session-time">
-                            {formatClaudeRelativeKo(session.startedAt || session.savedAt)}
+                            {formatClaudeRelativeKo(sessionLastActiveAt(session))}
                           </span>
                         </button>
                         <SessionMembershipControl
@@ -672,8 +673,8 @@ function buildRecent(group: ProjectGroup | null): RecentItem[] {
     kind: "session" as const,
     id: session.sessionId,
     title: session.title,
-    at: session.startedAt || session.savedAt || "",
-    when: formatClaudeRelativeKo(session.startedAt || session.savedAt),
+    at: sessionLastActiveAt(session),
+    when: formatClaudeRelativeKo(sessionLastActiveAt(session)),
     dotClass: "",
   }));
   return [...fromRecords, ...fromSessions]

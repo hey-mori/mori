@@ -1,5 +1,6 @@
 import type { ViewKey } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
+import { sessionLastActiveAt } from "../session/sessionActivity";
 import { expandSemanticTerms } from "../project-memory/semanticTerms";
 
 /**
@@ -275,8 +276,8 @@ function recentProjectLabel(sessions: ReadonlyArray<StoredSessionSummary>): stri
       best = session;
       continue;
     }
-    const a = new Date(session.startedAt || session.savedAt).getTime();
-    const b = new Date(best.startedAt || best.savedAt).getTime();
+    const a = new Date(sessionLastActiveAt(session)).getTime();
+    const b = new Date(sessionLastActiveAt(best)).getTime();
     if (a > b) best = session;
   }
   if (!best) return null;
@@ -369,8 +370,8 @@ function matchSessions(
 ): CommandSpaceRow[] {
   const sorted = [...sessions].sort(
     (a, b) =>
-      new Date(b.startedAt || b.savedAt).getTime() -
-      new Date(a.startedAt || a.savedAt).getTime(),
+      new Date(sessionLastActiveAt(b)).getTime() -
+      new Date(sessionLastActiveAt(a)).getTime(),
   );
   if (tokens.length === 0) return sorted.map(toSessionRow);
 

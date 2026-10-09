@@ -38,6 +38,7 @@ import { containsLikelySecret } from "../connectors/redaction";
 import type { MoriRecord, RecordStatus } from "../record-kernel/kernelTypes";
 import { isDemoSessionId } from "../demo/demoSessionFixtures";
 import { isAutoImportedSessionId } from "../session/autoImportSessions";
+import { sessionLastActiveAt } from "../session/sessionActivity";
 import { readSessionEvidence, type RecordedSessionEvidence } from "../record-kernel/agentSessionEvidence";
 import { AGENT_REGISTRY } from "../trace/sources/ai/agentRegistry";
 
@@ -273,7 +274,9 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
   const candidates: Candidate[] = [];
   for (const session of sessionsById.values()) {
     const when = session.startedAt || session.savedAt;
-    if (!inWindow(when)) continue;
+    // A conversation begun before the window and still written to belongs in
+    // it: the window is about recent work, not recent starts (#169).
+    if (!inWindow(sessionLastActiveAt(session))) continue;
     const kernel = input.kernelRecordsById.get(session.id);
     let verdict: Verdict = "include";
     if (kernel) verdict = statusVerdict(kernel.status);
@@ -383,7 +386,7 @@ export function buildProjectContinuationPack(input: ContinuationInput): ProjectC
           : viaWorktree
             ? { inclusion: "worktree" as const }
             : {}),
-      at: stamp(first.when),
+      at: stamp(lastSeen),
     });
   }
 
