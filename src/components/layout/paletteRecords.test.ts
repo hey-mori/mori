@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { CommandEntry } from "../../lib/commandPalette/commandPalette";
-import { recordToEntry, withoutDuplicateSessions } from "./paletteRecords";
+import { passageOnlyRecordIds, recordToEntry, viaSavedPassage, withoutDuplicateSessions } from "./paletteRecords";
 
 const registry = createSchemaRegistry();
 const contexts: KernelContext[] = [
@@ -56,5 +56,28 @@ describe("palette record rows", () => {
   it("carries no path or transcript text beyond the stored title and body (F5)", () => {
     const entry = recordToEntry(record({ contextIds: ["ctx-infra-w"] }), registry, contexts);
     expect(JSON.stringify(entry)).not.toMatch(/\/home\/|worktree/);
+  });
+});
+
+describe("records found through a saved passage", () => {
+  const passages = new Map([
+    ["r-edited", ["재시도 간격은 지수 백오프로 둔다"]],
+    ["r-fts", ["지수 백오프"]],
+    ["r-other", ["관계없는 구절"]],
+  ]);
+
+  it("adds only records the text search missed, up to the room left", () => {
+    expect(passageOnlyRecordIds(passages, "백오프", new Set(["r-fts"]), 8)).toEqual(["r-edited"]);
+    expect(passageOnlyRecordIds(passages, "백오프", new Set(), 1)).toHaveLength(1);
+    expect(passageOnlyRecordIds(passages, "백오프", new Set(), 0)).toEqual([]);
+  });
+
+  it("matches a Korean query typed in another normal form", () => {
+    expect(passageOnlyRecordIds(passages, "백오프".normalize("NFD"), new Set(), 8)).toContain("r-edited");
+  });
+
+  it("says where the match came from", () => {
+    const entry = viaSavedPassage(recordToEntry(record({}), registry, contexts));
+    expect(entry.hint?.startsWith("저장한 구절에서 찾음 · ")).toBe(true);
   });
 });

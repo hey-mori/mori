@@ -990,3 +990,13 @@ focused next step, not rushed:
 - 원본 열기 re-reads to the stored record and requires its id and the excerpt hash before
   showing it; a gone or changed original is said plainly and the excerpt stays. Design:
   `docs/design/passage-capture.md`.
+
+## 2026-10-09 · 저장한 구절에서 찾음 in 기록 search
+
+- A record saved from a conversation and then rewritten used to drop out of 기록 search for
+  the words it was saved from, since search read only the title and body. 기록 search now
+  also matches the saved passage; such a row shows the passage from the hit and a quiet
+  저장한 구절에서 찾음 line under it. The palette does the same.
+- No new field or index: the passage text already lives on its kernel source, read only while
+  searching. Verified in an isolated release runtime on a synthetic transcript. Design:
+  `docs/design/passage-capture.md` §5e.

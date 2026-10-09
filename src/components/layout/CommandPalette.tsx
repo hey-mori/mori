@@ -26,9 +26,10 @@ import {
 } from "../../lib/commandPalette/commandPalette";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
-import type { KernelContext } from "../../lib/record-kernel/kernelTypes";
+import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { savedPassageTexts } from "../../lib/capture/passageSearch";
 import { useSessionResolver } from "../../features/session/useSessionResolver";
-import { recordToEntry, withoutDuplicateSessions } from "./paletteRecords";
+import { passageOnlyRecordIds, recordToEntry, viaSavedPassage, withoutDuplicateSessions } from "./paletteRecords";
 import {
   displayTime,
   schemaLabel,
@@ -85,6 +86,9 @@ export function CommandPalette({
   const [recordNote, setRecordNote] = useState<string | null>(null);
   const [recordError, setRecordError] = useState(false);
   const contextsRef = useRef<KernelContext[]>([]);
+  // Saved passage texts by record, read once per open: a record whose body
+  // was rewritten is still found by the passage it was saved from.
+  const passagesRef = useRef<ReadonlyMap<string, readonly string[]>>(new Map());
   const registry = useMemo(() => createSchemaRegistry(), []);
 
   // Reset the input + cursor whenever the palette opens so a fresh trigger
@@ -115,6 +119,13 @@ export function CommandPalette({
         contextsRef.current = result.data;
       })
       .catch(() => {});
+    const repo = getKernelRepository();
+    Promise.all([repo.listSources(), repo.listSourceLinks()])
+      .then(([sources, links]) => {
+        if (cancelled) return;
+        passagesRef.current = savedPassageTexts(sources.data, links.data);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -134,14 +145,25 @@ export function CommandPalette({
     const handle = setTimeout(() => {
       getKernelRepository()
         .searchRecords(text, 8)
-        .then((result) => {
+        .then(async (result) => {
           if (cancelled) return;
-          const entries = result.data
-            .filter(
-              (record) =>
-                record.status !== "discarded" && record.status !== "archived",
-            )
-            .map((record) => recordToEntry(record, registry, contextsRef.current));
+          const live = (record: MoriRecord | null): record is MoriRecord =>
+            Boolean(record) && record!.status !== "discarded" && record!.status !== "archived";
+          const found = result.data.filter(live);
+          const extraIds = passageOnlyRecordIds(
+            passagesRef.current,
+            text,
+            new Set(result.data.map((record) => record.id)),
+            8 - found.length,
+          );
+          const extra = (
+            await Promise.all(extraIds.map((id) => getKernelRepository().getRecord(id).then((r) => r.data)))
+          ).filter(live);
+          if (cancelled) return;
+          const entries = [
+            ...found.map((record) => recordToEntry(record, registry, contextsRef.current)),
+            ...extra.map((record) => viaSavedPassage(recordToEntry(record, registry, contextsRef.current))),
+          ];
           setRecordEntries(entries);
           setRecordError(false);
           setRecordNote(recordSearchNote(result.source, result.fellBack));
