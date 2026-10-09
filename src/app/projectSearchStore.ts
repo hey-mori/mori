@@ -39,7 +39,8 @@ type ProjectSearchStore = {
   openError: { key: string; outcome: Exclude<SourceHitOutcome, "opened" | "superseded"> } | null;
   /** The session a result last opened, for the way back to these results. */
   openedSessionId: string | null;
-  start: (inventory: Extract<ProjectSearchInventory, { kind: "ok" }>, query: string) => Promise<void>;
+  /** Whole words unless `wholeWords` is false ("부분 일치"). */
+  start: (inventory: Extract<ProjectSearchInventory, { kind: "ok" }>, query: string, wholeWords?: boolean) => Promise<void>;
   more: () => Promise<void>;
   stop: () => void;
   close: () => void;
@@ -78,6 +79,7 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
           ? { beforeOffset: source.cursor.beforeOffset, sourceId: source.sourceId, anchor: source.cursor.anchor }
           : undefined,
         PROJECT_SEARCH_STEP_HITS,
+        search.wholeWords,
       );
       const latest = get().search;
       if (sequence !== searchSequence || !latest) return;
@@ -134,12 +136,12 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
     opening: null,
     openError: null,
     openedSessionId: null,
-    start: async (inventory, query) => {
+    start: async (inventory, query, wholeWords = true) => {
       const phrase = normalizeQuery(query);
       if (!phrase) return;
       const sequence = ++searchSequence;
       openSequence += 1;
-      set({ search: startedProjectSearch(inventory, phrase), opening: null, openError: null, openedSessionId: null });
+      set({ search: startedProjectSearch(inventory, phrase, wholeWords), opening: null, openError: null, openedSessionId: null });
       await run(sequence);
     },
     more: async () => {
@@ -187,6 +189,7 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
         sourceId: source.sourceId,
         hit,
         query: search.query,
+        wholeWords: search.wholeWords,
         stillWanted,
       });
       if (sequence !== openSequence) return "superseded";

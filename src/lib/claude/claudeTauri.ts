@@ -176,6 +176,7 @@ export async function searchClaudeCodeSession(
   query: string,
   cursor?: ClaudeCodeSearchCursor,
   maxHits?: number,
+  wholeWords = false,
 ): Promise<ClaudeCodeSearchBatch> {
   const trimmed = sessionPath.trim();
   if (!trimmed) {
@@ -191,6 +192,7 @@ export async function searchClaudeCodeSession(
     sourceId: cursor?.sourceId ?? null,
     anchor: cursor?.anchor ?? null,
     maxHits: maxHits ?? null,
+    wholeWords,
   });
 }
 

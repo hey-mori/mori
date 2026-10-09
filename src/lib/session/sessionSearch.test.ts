@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ClaudeCodeSearchBatch, ClaudeCodeSearchHit } from "../claude/types";
+import cases from "./phraseCases.json";
 import {
   applySearchBatch,
+  containsPhrase,
+  findPhrase,
   canSearchMore,
   normalizeQuery,
   SEARCH_MAX_HELD_HITS,
@@ -39,7 +42,7 @@ const batch = (scanEnd: number, scanStart: number, hits: ClaudeCodeSearchHit[], 
   unsearchableBytes: 0,
 });
 
-const fresh = (): SessionSearchState => startedSearch({ sessionId: "x", openToken: 1, sourcePath: "/p.jsonl", query: "needle" });
+const fresh = (): SessionSearchState => startedSearch({ sessionId: "x", openToken: 1, sourcePath: "/p.jsonl", query: "needle", wholeWords: true });
 
 describe("search state", () => {
   it("folds steps that continue each other and ignores stale or foreign ones", () => {
@@ -100,5 +103,21 @@ describe("search state", () => {
       { text: "파서", match: true },
     ]);
     expect(splitOnPhrase("<b>needle</b>", "needle")[1]).toEqual({ text: "needle", match: true });
+  });
+});
+
+describe("whole-word and substring matching (shared with the native search)", () => {
+  it("follows the table the native search is tested against", () => {
+    for (const { text, query, words, substring } of cases as { text: string; query: string; words: number; substring: number }[]) {
+      expect(findPhrase(text, query, true)?.length, `words: ${text}`).toBe(words);
+      expect(findPhrase(text, query, false)?.length, `substring: ${text}`).toBe(substring);
+      expect(containsPhrase(text, query, true)).toBe(words > 0);
+    }
+  });
+
+  it("marks only the bounded occurrence", () => {
+    expect(splitOnPhrase("candidate build first, then Candidate B wins", "candidate b", true).filter((part) => part.match)).toEqual([
+      { text: "Candidate B", match: true },
+    ]);
   });
 });

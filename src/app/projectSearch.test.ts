@@ -7,6 +7,7 @@
  * These tests drive the stores the way the 프로젝트 page does.
  */
 import { createElement } from "react";
+import { findPhrase } from "../lib/session/sessionSearch";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentWorkSessionMeta } from "../lib/trace/sources/ai/workSessions";
@@ -37,14 +38,14 @@ vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
     await fake.gate?.({ kind: "window", path, cursor });
     return readWindow(path, cursor);
   },
-  searchClaudeCodeSession: async (path: string, query: string, cursor?: Cursor, maxHits?: number) => {
+  searchClaudeCodeSession: async (path: string, query: string, cursor?: Cursor, maxHits?: number, wholeWords = false) => {
     fake.calls.push({ kind: "search", path, cursor });
     fake.inflight += 1;
     fake.maxInflight = Math.max(fake.maxInflight, fake.inflight);
     try {
       await fake.gate?.({ kind: "search", path, cursor });
       await Promise.resolve();
-      return searchTranscript(path, query, cursor, maxHits ?? 50);
+      return searchTranscript(path, query, cursor, maxHits ?? 50, wholeWords);
     } finally {
       fake.inflight -= 1;
     }
@@ -121,7 +122,7 @@ function readWindow(path: string, cursor?: Cursor): ClaudeCodeSessionWindow {
   return windowOf(path, records.filter((record) => record.end <= before).slice(-WINDOW_RECORDS), records, sourceId, before);
 }
 
-function searchTranscript(path: string, query: string, cursor: Cursor | undefined, maxHits: number): ClaudeCodeSearchBatch {
+function searchTranscript(path: string, query: string, cursor: Cursor | undefined, maxHits: number, wholeWords = false): ClaudeCodeSearchBatch {
   const found = transcript(path);
   const { sourceId, records } = found;
   if (cursor?.sourceId && cursor.sourceId !== sourceId) throw new Error("SOURCE_CHANGED: replaced");
@@ -131,7 +132,7 @@ function searchTranscript(path: string, query: string, cursor: Cursor | undefine
   let scanStart = scanned[scanned.length - 1]?.start ?? 0;
   let hitLimit = false;
   for (const record of scanned) {
-    const at = record.content.toLowerCase().indexOf(query.toLowerCase());
+    const at = findPhrase(record.content, query, wholeWords)?.[0]?.[0] ?? -1;
     if (at === -1) continue;
     hits.push({
       messageId: record.id,
@@ -325,6 +326,18 @@ describe("searching a project's confirmed sessions", () => {
     await useProjectSearchStore.getState().start(inventory(), "absent");
     expect(projectSearchStatusLine(search())).toContain("찾은 대화에서는 없었습니다");
     expect(projectSearchStatusLine(search())).not.toContain("전체에서");
+  });
+
+  it("matches whole words by default and any substring when asked", async () => {
+    const id = session("words", lines(6, { 1: "two candidate backings", 3: "Decision: Candidate B" }), { contextId: "ctx-infra" });
+    await useProjectSearchStore.getState().start(inventory(), "candidate b");
+    expect(hitsOf(id)).toEqual(["words-m3"]);
+    expect(search().wholeWords).toBe(true);
+    await useProjectSearchStore.getState().start(inventory(), "candidate b", false);
+    expect(hitsOf(id)).toEqual(["words-m3", "words-m1"]);
+    // A substring result opens and is checked under the substring rule.
+    expect(await useProjectSearchStore.getState().openHit(id, search().sources[id]!.hits[1]!)).toBe("opened");
+    expect(view().focus).toMatchObject({ messageId: "words-m1", wholeWords: false });
   });
 
   it("never claims the whole project was searched when a record was too large to search", async () => {

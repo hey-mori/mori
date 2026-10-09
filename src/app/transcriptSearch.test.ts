@@ -8,6 +8,7 @@
  * stale replies behave around that jump.
  */
 import { createElement } from "react";
+import { findPhrase } from "../lib/session/sessionSearch";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentWorkSessionMeta } from "../lib/trace/sources/ai/workSessions";
@@ -44,10 +45,10 @@ vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
     await fake.gate?.({ kind: "window", path, cursor });
     return readWindow(path, cursor);
   },
-  searchClaudeCodeSession: async (path: string, query: string, cursor?: Cursor, maxHits?: number) => {
+  searchClaudeCodeSession: async (path: string, query: string, cursor?: Cursor, maxHits?: number, wholeWords = false) => {
     fake.calls.push({ kind: "search", path, cursor });
     await fake.gate?.({ kind: "search", path, cursor });
-    return searchTranscript(path, query, cursor, maxHits ?? 50);
+    return searchTranscript(path, query, cursor, maxHits ?? 50, wholeWords);
   },
 }));
 vi.mock("../lib/session/autoImportMetaStore", async (importOriginal) => ({
@@ -113,7 +114,7 @@ function readWindow(path: string, cursor?: Cursor): ClaudeCodeSessionWindow {
   return windowOf(path, picked, records, sourceId, before);
 }
 
-function searchTranscript(path: string, query: string, cursor: Cursor | undefined, maxHits: number): ClaudeCodeSearchBatch {
+function searchTranscript(path: string, query: string, cursor: Cursor | undefined, maxHits: number, wholeWords = false): ClaudeCodeSearchBatch {
   const { sourceId, records } = transcript(path);
   if (cursor?.sourceId && cursor.sourceId !== sourceId) throw new Error("SOURCE_CHANGED: replaced");
   const end = cursor?.beforeOffset ?? records[records.length - 1]!.end;
@@ -122,7 +123,7 @@ function searchTranscript(path: string, query: string, cursor: Cursor | undefine
   let scanStart = scanned[scanned.length - 1]?.start ?? 0;
   let hitLimit = false;
   for (const record of scanned) {
-    const at = record.content.toLowerCase().indexOf(query.toLowerCase());
+    const at = findPhrase(record.content, query, wholeWords)?.[0]?.[0] ?? -1;
     if (at === -1) continue;
     hits.push({
       messageId: record.id,

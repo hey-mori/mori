@@ -40,6 +40,8 @@ export type SessionSearchState = {
   openToken: number;
   sourcePath: string;
   query: string;
+  /** Whole words (the default) or any substring ("부분 일치"). */
+  wholeWords: boolean;
   status: SessionSearchStatus;
   /** Set by the first step; every later step and every jump must match it. */
   sourceId: string | null;
@@ -63,6 +65,7 @@ export function startedSearch(input: {
   openToken: number;
   sourcePath: string;
   query: string;
+  wholeWords: boolean;
 }): SessionSearchState {
   return {
     ...input,
@@ -172,31 +175,68 @@ export function searchStatusLine(state: SessionSearchState): string {
   }
 }
 
+/** ASCII letters, digits and `_` continue a word (Rust `is_word_char`).
+ *  Hangul and other scripts never form a boundary: a Korean particle attaches
+ *  to its noun. */
+const isWordChar = (char: string | undefined) => char !== undefined && /[A-Za-z0-9_]/.test(char);
+
 /**
- * Does `text` contain `query`, ignoring case? Used to confirm, after a result
- * is opened, that the message shown still holds the phrase.
+ * Where `query` occurs in `text`, ignoring case, as [start, end) indices.
+ * With `wholeWords`, an occurrence is skipped when its first character is a
+ * word character preceded by one, or its last a word character followed by
+ * one, the same rule the native search applies (`find_matches`). Null when
+ * lowercasing changes the text's length (rare scripts), so positions cannot be
+ * mapped back.
  */
-export function containsPhrase(text: string, query: string): boolean {
-  return text.toLocaleLowerCase().includes(query.toLocaleLowerCase());
+export function findPhrase(text: string, query: string, wholeWords: boolean): [number, number][] | null {
+  const lowered = text.toLocaleLowerCase();
+  const needle = query.toLocaleLowerCase();
+  if (!needle) return [];
+  if (lowered.length !== text.length) return null;
+  const firstWord = isWordChar(needle[0]);
+  const lastWord = isWordChar(needle[needle.length - 1]);
+  const found: [number, number][] = [];
+  let from = 0;
+  for (let at = lowered.indexOf(needle); at !== -1; at = lowered.indexOf(needle, from)) {
+    const end = at + needle.length;
+    const bounded =
+      !wholeWords || ((!firstWord || !isWordChar(text[at - 1])) && (!lastWord || !isWordChar(text[end])));
+    if (bounded) {
+      found.push([at, end]);
+      from = end;
+    } else {
+      from = at + 1;
+    }
+  }
+  return found;
 }
 
 /**
- * `text` split into plain and matching parts for marking the phrase, case
- * insensitively. When lowercasing changes the text's length (rare scripts),
- * positions cannot be mapped back, so nothing is marked rather than the wrong
- * span.
+ * Does `text` contain `query` under the search's matching rule? Used to
+ * confirm, after a result is opened, that the message shown still holds the
+ * phrase. Where positions cannot be mapped, plain containment decides, so a
+ * match the native search found is never refused for a script quirk.
  */
-export function splitOnPhrase(text: string, query: string): { text: string; match: boolean }[] {
-  const lowered = text.toLocaleLowerCase();
-  const needle = query.toLocaleLowerCase();
-  if (!needle || lowered.length !== text.length) return [{ text, match: false }];
+export function containsPhrase(text: string, query: string, wholeWords = false): boolean {
+  const found = findPhrase(text, query, wholeWords);
+  return found === null ? text.toLocaleLowerCase().includes(query.toLocaleLowerCase()) : found.length > 0;
+}
+
+/**
+ * `text` split into plain and matching parts for marking the phrase, under the
+ * search's matching rule. Nothing is marked when positions cannot be mapped,
+ * rather than the wrong span.
+ */
+export function splitOnPhrase(text: string, query: string, wholeWords = false): { text: string; match: boolean }[] {
+  const found = findPhrase(text, query, wholeWords);
+  if (!found || found.length === 0) return [{ text, match: false }];
   const parts: { text: string; match: boolean }[] = [];
   let from = 0;
-  for (let at = lowered.indexOf(needle); at !== -1; at = lowered.indexOf(needle, from)) {
-    if (at > from) parts.push({ text: text.slice(from, at), match: false });
-    parts.push({ text: text.slice(at, at + needle.length), match: true });
-    from = at + needle.length;
+  for (const [start, end] of found) {
+    if (start > from) parts.push({ text: text.slice(from, start), match: false });
+    parts.push({ text: text.slice(start, end), match: true });
+    from = end;
   }
   if (from < text.length) parts.push({ text: text.slice(from), match: false });
-  return parts.length > 0 ? parts : [{ text, match: false }];
+  return parts;
 }

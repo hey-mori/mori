@@ -1,0 +1,86 @@
+[
+  {
+    "text": "**Decision: Candidate B, SMB served from nuc-srv**",
+    "query": "candidate b",
+    "words": 1,
+    "substring": 1
+  },
+  {
+    "text": "assessing the two candidate backings against runtime",
+    "query": "candidate b",
+    "words": 0,
+    "substring": 1
+  },
+  {
+    "text": "candidate build first, then Candidate B wins",
+    "query": "candidate b",
+    "words": 1,
+    "substring": 2
+  },
+  {
+    "text": "Gate 4 waits; Gate 40 does not exist",
+    "query": "gate 4",
+    "words": 1,
+    "substring": 2
+  },
+  {
+    "text": "merged PR #174, not PR #1745",
+    "query": "pr #174",
+    "words": 1,
+    "substring": 2
+  },
+  {
+    "text": "the parser never looks at ALLOW/DENY rules",
+    "query": "allow/deny",
+    "words": 1,
+    "substring": 1
+  },
+  {
+    "text": "no Allow/DenyUsers lines",
+    "query": "allow/deny",
+    "words": 0,
+    "substring": 1
+  },
+  {
+    "text": "split on allow/deny once",
+    "query": "/deny",
+    "words": 1,
+    "substring": 1
+  },
+  {
+    "text": "방화벽 파서가 ALLOW를 무시합니다",
+    "query": "파서",
+    "words": 1,
+    "substring": 1
+  },
+  {
+    "text": "read user_session_id and session_id",
+    "query": "session_id",
+    "words": 1,
+    "substring": 2
+  },
+  {
+    "text": "call this.getSession() then getSessionById()",
+    "query": "getsession()",
+    "words": 1,
+    "substring": 1
+  },
+  {
+    "text": "call this.getSession() then getSessionById()",
+    "query": "getsession",
+    "words": 1,
+    "substring": 2
+  },
+  {
+    "text": "ran smb-bootstrap.sh twice",
+    "query": "smb-bootstrap.sh",
+    "words": 1,
+    "substring": 1
+  },
+  {
+    "text": "foo.bar and foo.barx",
+    "query": "foo.bar",
+    "words": 1,
+    "substring": 2
+  }
+]

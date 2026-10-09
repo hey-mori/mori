@@ -62,6 +62,7 @@ export function ProjectTranscriptSearch({
   const store = useProjectSearchStore();
   const search = store.search?.projectId === inventory.projectId ? store.search : null;
   const [query, setQuery] = useState(search?.query ?? "");
+  const [partial, setPartial] = useState(search ? !search.wholeWords : false);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const searching = search?.status === "searching";
   const coverage = search ? projectSearchCoverage(search) : null;
@@ -71,7 +72,13 @@ export function ProjectTranscriptSearch({
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!normalizeQuery(query)) return;
-    void store.start(inventory, query);
+    void store.start(inventory, query, !partial);
+  };
+  const togglePartial = () => {
+    const next = !partial;
+    setPartial(next);
+    // A search already showing is run again under the new rule.
+    if (search && normalizeQuery(query)) void store.start(inventory, query, !next);
   };
   const open = (sessionId: string, hit: ClaudeCodeSearchHit) => {
     // Membership is checked again against what the page holds now.
@@ -109,10 +116,20 @@ export function ProjectTranscriptSearch({
             찾기
           </Button>
         )}
+        <button
+          type="button"
+          className={`search-mode-toggle${partial ? " is-on" : ""}`}
+          aria-pressed={partial}
+          onClick={togglePartial}
+          title="단어 중간에 들어 있는 경우도 찾습니다"
+        >
+          부분 일치
+        </button>
         <InfoHint label="이 프로젝트의 대화에서 찾기">
           이 프로젝트에 확정한 세션의 원본 대화만 찾습니다{inventory.descendants > 0 ? ` (하위 프로젝트 ${inventory.descendants}개 포함)` : ""}.
           제안만 된 세션, 확정하지 않거나 제외한 세션은 찾지 않습니다. 찾기를 누를 때 원본 파일을 읽고, 결과와 검색어는
-          저장하지 않습니다. 대소문자는 구분하지 않고 화면에 보이는 메시지 내용만 찾습니다. 지금은 Claude Code 대화만 찾을 수
+          저장하지 않습니다. 대소문자는 구분하지 않고 화면에 보이는 메시지 내용만 찾습니다. 영문과 숫자는 단어 단위로 찾고,
+          부분 일치를 켜면 단어 중간도 찾습니다. 지금은 Claude Code 대화만 찾을 수
           있습니다.
         </InfoHint>
         <Button size="sm" variant="ghost" icon={X} onClick={onClose} aria-label="닫기" />

@@ -283,6 +283,7 @@ pub async fn search_claude_code_session(
     source_id: Option<String>,
     anchor: Option<String>,
     max_hits: Option<usize>,
+    whole_words: Option<bool>,
 ) -> Result<ClaudeCodeSearchBatch, String> {
     let trimmed = session_path.trim().to_string();
     if trimmed.is_empty() {
@@ -290,7 +291,7 @@ pub async fn search_claude_code_session(
     }
     let root = claude_code_projects_dir()?;
     tauri::async_runtime::spawn_blocking(move || {
-        search_session_at(
+        search_session_matching(
             &root,
             &trimmed,
             &query,
@@ -299,6 +300,7 @@ pub async fn search_claude_code_session(
             anchor.as_deref(),
             max_hits.unwrap_or(SEARCH_MAX_HITS),
             SEARCH_SCAN_BYTES,
+            whole_words.unwrap_or(false),
         )
     })
     .await
@@ -3177,25 +3179,47 @@ fn fold_whitespace(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+/// A character that continues a word for whole-word matching: ASCII letters,
+/// digits and `_`. Hangul and other scripts never form a boundary, because a
+/// Korean particle attaches to its noun ("파서가" holds "파서").
+fn is_word_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
 /// The first match of `needle` (already folded) in `text`, as an original byte
 /// range, and how many non-overlapping matches there are.
-fn find_matches(text: &str, needle: &str) -> Option<((usize, usize), usize)> {
+///
+/// With `whole_words`, a match is skipped when its first character is a word
+/// character preceded by one, or its last character is a word character
+/// followed by one: "candidate b" no longer matches "candidate build", "gate 4"
+/// not "gate 40". Edges that are punctuation or another script match as
+/// before. The frontend applies the same rule (`findPhrase`).
+fn find_matches(text: &str, needle: &str, whole_words: bool) -> Option<((usize, usize), usize)> {
     let (folded, origin) = fold(text);
+    let first_word = needle.chars().next().is_some_and(is_word_char);
+    let last_word = needle.chars().next_back().is_some_and(is_word_char);
     let mut first = None;
     let mut count = 0;
     let mut from = 0;
     while let Some(position) = folded[from..].find(needle) {
         let at = from + position;
+        let end_byte = at + needle.len();
+        let start = origin[at];
+        // The original character holding the match's last folded byte.
+        let last = origin[end_byte - 1];
+        let end = last + text[last..].chars().next().map(char::len_utf8).unwrap_or(0);
+        let bounded = !whole_words
+            || ((!first_word || !text[..start].chars().next_back().is_some_and(is_word_char))
+                && (!last_word || !text[end..].chars().next().is_some_and(is_word_char)));
+        if !bounded {
+            from = at + folded[at..].chars().next().map(char::len_utf8).unwrap_or(1);
+            continue;
+        }
         if first.is_none() {
-            let end_byte = at + needle.len();
-            let start = origin[at];
-            // The original character holding the match's last folded byte.
-            let last = origin[end_byte - 1];
-            let end = last + text[last..].chars().next().map(char::len_utf8).unwrap_or(0);
             first = Some((start, end));
         }
         count += 1;
-        from = at + needle.len();
+        from = end_byte;
     }
     first.map(|range| (range, count))
 }
@@ -3242,6 +3266,23 @@ pub(crate) fn search_session_at(
     anchor: Option<&str>,
     max_hits: usize,
     scan_bytes: u64,
+) -> Result<ClaudeCodeSearchBatch, String> {
+    search_session_matching(root, session_path, query, before, source_id, anchor, max_hits, scan_bytes, false)
+}
+
+/// As [`search_session_at`], matching whole words when `whole_words` is set
+/// (see `find_matches`).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn search_session_matching(
+    root: &Path,
+    session_path: &str,
+    query: &str,
+    before: Option<u64>,
+    source_id: Option<&str>,
+    anchor: Option<&str>,
+    max_hits: usize,
+    scan_bytes: u64,
+    whole_words: bool,
 ) -> Result<ClaudeCodeSearchBatch, String> {
     let query = query.trim();
     if query.is_empty() {
@@ -3320,7 +3361,7 @@ pub(crate) fn search_session_at(
             continue;
         };
         batch.searched_records += 1;
-        if let Some((range, count)) = find_matches(&message.content, &needle) {
+        if let Some((range, count)) = find_matches(&message.content, &needle, whole_words) {
             let (snippet_before, snippet_match, snippet_after) = snippet(&message.content, range);
             batch.hits.push(ClaudeCodeSearchHit {
                 message_id: message.id,
@@ -3937,6 +3978,35 @@ mod search_tests {
         assert!(search_session_at(dir.path(), text.to_str().unwrap(), "needle", None, None, None, 5, SEARCH_SCAN_BYTES).unwrap_err().starts_with("Refused"));
     }
 
+    /// The matching table shared with the frontend (`phraseCases.json`): the
+    /// native search and the view's validation and marks agree on every case.
+    #[test]
+    fn whole_words_and_substring_follow_the_shared_table() {
+        let cases: Vec<serde_json::Value> =
+            serde_json::from_str(include_str!("../../../src/lib/session/phraseCases.json")).unwrap();
+        for case in cases {
+            let text = case["text"].as_str().unwrap();
+            let (needle, _) = fold(case["query"].as_str().unwrap());
+            let count = |words: bool| find_matches(text, &needle, words).map(|(_, count)| count).unwrap_or(0);
+            assert_eq!(count(true) as u64, case["words"].as_u64().unwrap(), "words: {case}");
+            assert_eq!(count(false) as u64, case["substring"].as_u64().unwrap(), "substring: {case}");
+        }
+        // The first match is the bounded one, after a skipped occurrence.
+        let text = "candidate build first, then Candidate B wins";
+        let ((start, end), _) = find_matches(text, "candidate b", true).unwrap();
+        assert_eq!(&text[start..end], "Candidate B");
+    }
+
+    #[test]
+    fn a_whole_word_search_skips_a_longer_word_end_to_end() {
+        let dir = TempDir::new().unwrap();
+        let body = format!("{}{}", user("noise", "two candidate backings", "2026-10-08T00:00:00Z"), user("real", "Decision: Candidate B", "2026-10-08T00:00:01Z"));
+        let path = session(&dir, &body);
+        let words = search_session_matching(dir.path(), &path, "candidate b", None, None, None, 20, SEARCH_SCAN_BYTES, true).unwrap();
+        assert_eq!(ids(&words.hits), vec!["real"]);
+        assert_eq!(ids(&search(dir.path(), &path, "candidate b").hits), vec!["real", "noise"]);
+    }
+
     #[test]
     fn refuses_empty_and_overlong_queries_without_reading() {
         let dir = TempDir::new().unwrap();
@@ -3980,6 +4050,35 @@ mod search_tests {
             let newer = read_session_window_after(&root, &path, window.end_offset, &window.source_id, &window.end_anchor, WINDOW_BYTES).unwrap();
             let shown = window.events.iter().any(|event| event.id == hit.message_id);
             println!("  open first: {:?} shown={shown} window_events={} newer_events={}", open.elapsed(), window.events.len(), newer.events.len());
+        }
+    }
+
+    /// Compare substring and whole-word matching on a real transcript, read
+    /// only: hit counts, and the snippets whole words leaves out.
+    /// `MORI_SEARCH_BENCH=<file> MORI_SEARCH_QUERY=<phrase>`.
+    #[test]
+    #[ignore]
+    fn search_words_bench() {
+        let (Ok(path), Ok(query)) = (std::env::var("MORI_SEARCH_BENCH"), std::env::var("MORI_SEARCH_QUERY")) else { return };
+        let root = Path::new(&path).parent().and_then(Path::parent).unwrap().to_path_buf();
+        let all = |words: bool| {
+            let mut hits = Vec::new();
+            let mut batch = search_session_matching(&root, &path, &query, None, None, None, SEARCH_MAX_HITS, SEARCH_SCAN_BYTES, words).unwrap();
+            hits.extend(batch.hits.clone());
+            while !batch.reached_start {
+                batch = search_session_matching(&root, &path, &query, Some(batch.scan_start), Some(&batch.source_id), Some(&batch.scan_start_anchor), SEARCH_MAX_HITS, SEARCH_SCAN_BYTES, words).unwrap();
+                hits.extend(batch.hits.clone());
+            }
+            hits
+        };
+        let substring = all(false);
+        let words = all(true);
+        let kept: std::collections::HashSet<_> = words.iter().map(|hit| (hit.record_start, hit.message_id.clone())).collect();
+        println!("query={query:?} substring={} words={}", substring.len(), words.len());
+        for hit in substring.iter().filter(|hit| !kept.contains(&(hit.record_start, hit.message_id.clone()))).take(6) {
+            let tail: String = hit.snippet_after.chars().take(12).collect();
+            let head: String = hit.snippet_before.chars().rev().take(12).collect::<Vec<_>>().into_iter().rev().collect();
+            println!("  dropped: …{head}[{}]{tail}…", hit.snippet_match);
         }
     }
 

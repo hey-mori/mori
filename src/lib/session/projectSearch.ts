@@ -155,6 +155,8 @@ export type ProjectSearchState = {
   projectId: string;
   label: string;
   query: string;
+  /** Whole words (the default) or any substring ("부분 일치"). */
+  wholeWords: boolean;
   status: "searching" | "idle" | "stopped";
   entries: ProjectSearchEntry[];
   descendants: number;
@@ -170,12 +172,14 @@ export type ProjectSearchState = {
 export function startedProjectSearch(
   inventory: Extract<ProjectSearchInventory, { kind: "ok" }>,
   query: string,
+  wholeWords = true,
 ): ProjectSearchState {
   const readers = inventory.entries.filter((entry) => entry.kind === "searchable" && !entry.sameSourceAs);
   return {
     projectId: inventory.projectId,
     label: inventory.label,
     query,
+    wholeWords,
     status: "searching",
     entries: inventory.entries,
     descendants: inventory.descendants,
