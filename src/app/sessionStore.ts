@@ -36,7 +36,11 @@ import {
 } from "../lib/trace/sources/ai/workSessions";
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
 import { planSourceReopen } from "../lib/import/autoSourceReopen";
-import { getClaudeCodeSessionWindow, searchClaudeCodeSession } from "../lib/claude/claudeTauri";
+import {
+  claudeCodeSourcePresence,
+  getClaudeCodeSessionWindow,
+  searchClaudeCodeSession,
+} from "../lib/claude/claudeTauri";
 import type { ClaudeCodeSearchHit, ClaudeCodeSessionWindow } from "../lib/claude/types";
 import {
   applySearchBatch,
@@ -537,11 +541,25 @@ export type SessionState = {
    */
   openDiscoveredSession: (sessionId: string) => Promise<OpenDiscoveredOutcome>;
   /**
+   * The active session came back without a read this run (restored at
+   * startup): check, once, that its transcript still exists (an existence
+   * check, nothing is read), and only when it is gone open it the usual way,
+   * so its kept archive or the kept-copy notice shows. Resolves whether a
+   * reopen ran.
+   */
+  recheckRestoredSource: (sessionId: string) => Promise<boolean>;
+  /**
    * The read-only window of a long transcript the active session shows in
    * place of an import, or why it could not be read. Null for every other
    * session. Transient: never persisted, never analysed.
    */
   sessionWindow: SessionWindowState | null;
+  /**
+   * The session whose transcript, read on its last open, no longer continues
+   * what Mori imported (replaced or rewritten at the same path): the import
+   * is kept as stored and the view must not imply the file backs it.
+   */
+  divergedSourceSessionId: string | null;
   /** Prepend the window before the held part of `sessionWindow`. */
   loadEarlierSessionWindow: () => Promise<void>;
   /** Read back the newer window the view let go of last. */
@@ -757,10 +775,10 @@ export function selectActiveSessionWindow(state: SessionState): SessionWindowSta
  * copy is real evidence, so it stays on screen; this says what it is: a copy
  * whose conversation runs to `lastEventAt`, possibly missing anything since.
  *
- * Only a missing source counts. A file too large for this agent's reader, an
- * unavailable bridge or a local write that failed are not "the source is
- * gone", and a transcript that was replaced reads successfully (the kept copy
- * is then kept as stored, without this notice).
+ * Two causes count: the source is missing, or it was read and no longer
+ * continues the import (replaced or rewritten at the same path), so the
+ * import is kept as stored. A file too large for this agent's reader, an
+ * unavailable bridge or a local write that failed are neither.
  *
  * The copy is dated by its newest event, not by when the import was first
  * stored: a reopen that appends new turns keeps the import's original
@@ -768,10 +786,17 @@ export function selectActiveSessionWindow(state: SessionState): SessionWindowSta
  */
 export function selectRetainedSourceNotice(
   state: SessionState,
-): { kind: "missing"; lastEventAt: string } | null {
+): { kind: "missing" | "replaced"; lastEventAt: string } | null {
   const window = state.sessionWindow;
-  if (!window || window.status !== "error" || window.sessionId !== state.draft?.session.id) return null;
-  if (window.error.kind !== "missing") return null;
+  const sessionId = state.draft?.session.id;
+  let kind: "missing" | "replaced";
+  if (window && window.status === "error" && window.sessionId === sessionId && window.error.kind === "missing") {
+    kind = "missing";
+  } else if (!window && sessionId && state.divergedSourceSessionId === sessionId) {
+    kind = "replaced";
+  } else {
+    return null;
+  }
   let lastEventAt: string | null = null;
   for (const entry of state.imports) {
     for (const event of entry.events) {
@@ -779,13 +804,15 @@ export function selectRetainedSourceNotice(
       if (at && (lastEventAt === null || Date.parse(at) > Date.parse(lastEventAt))) lastEventAt = at;
     }
   }
-  return lastEventAt ? { kind: "missing", lastEventAt } : null;
+  return lastEventAt ? { kind, lastEventAt } : null;
 }
 
 /** The notice's parts as primitives, so a component subscribing to them sees a
  *  stable value between renders (an object selector would loop). */
 export const selectRetainedSourceLastEventAt = (state: SessionState): string | null =>
   selectRetainedSourceNotice(state)?.lastEventAt ?? null;
+export const selectRetainedSourceKind = (state: SessionState): "missing" | "replaced" | null =>
+  selectRetainedSourceNotice(state)?.kind ?? null;
 
 /** Why opening a session at a search result did not happen. */
 export type SourceHitOutcome = "opened" | "changed" | "missing" | "failed" | "superseded";
@@ -793,11 +820,14 @@ export type SourceHitOutcome = "opened" | "changed" | "missing" | "failed" | "su
 /** Bumped by every discovered-session open; a read that finishes after a newer
  *  open began must not touch the store (it would land on the wrong session). */
 let discoveredOpenSequence = 0;
+/** Sessions whose source was checked or read this run (see recheckRestoredSource). */
+const sourceCheckedThisRun = new Set<string>();
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   initialized: false,
   draft: null,
   sessionWindow: null,
+  divergedSourceSessionId: null,
   sessionSearch: null,
   demoSessionId: null,
   pendingNewSession: null,
@@ -1608,7 +1638,30 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
     return removed;
   },
+  recheckRestoredSource: async (sessionId) => {
+    if (sourceCheckedThisRun.has(sessionId)) return false;
+    const state = get();
+    // Not the session on screen, or already read this run (its own window).
+    if (state.draft?.session.id !== sessionId || state.sessionWindow?.sessionId === sessionId) return false;
+    const meta = loadAutoImportMeta(sessionId);
+    if (!meta || meta.importKind !== "claude-code" || !meta.sourceFilePath) return false;
+    sourceCheckedThisRun.add(sessionId);
+    let presence: string | undefined;
+    try {
+      [presence] = await claudeCodeSourcePresence([meta.sourceFilePath]);
+    } catch {
+      return false;
+    }
+    // Present or unknown: what is on screen stays. Only a file the system
+    // says is not there is "gone".
+    if (presence !== "missing") return false;
+    const now = get();
+    if (now.draft?.session.id !== sessionId || now.sessionWindow?.sessionId === sessionId) return false;
+    await get().openDiscoveredSession(sessionId);
+    return true;
+  },
   openDiscoveredSession: async (sessionId) => {
+    sourceCheckedThisRun.add(sessionId);
     const token = ++discoveredOpenSequence;
     // Still the open the user asked for last, on the session it opened?
     const current = () => token === discoveredOpenSequence && get().draft?.session.id === sessionId;
@@ -1699,6 +1752,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const plan = meta.sessionId
         ? planSourceReopen(repository.listSessionImports(sessionId), candidate, (eventId) => cited.has(eventId))
         : ({ kind: "add" } as const);
+      // A transcript that no longer continues the import keeps the import as
+      // stored; say so rather than let the readable file vouch for it.
+      set({ divergedSourceSessionId: plan.kind === "keep" && plan.reason === "diverged" ? sessionId : null });
       if (plan.kind === "add") {
         get().addImport(candidate);
       } else if (plan.kind === "update") {
@@ -2162,6 +2218,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (get().draft?.session.id === sessionId) return true;
     // Already showing this demo session — nothing further to load.
     if (!get().draft && get().demoSessionId === sessionId) return true;
+    // "Replaced" is said only by the open that read the transcript.
+    if (get().divergedSourceSessionId) set({ divergedSourceSessionId: null });
     const repository = getRepository();
     const draft = repository.setCurrentSession(sessionId);
     if (!draft) {
@@ -2218,6 +2276,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!service.isDesktop()) {
       return false;
     }
+    if (get().divergedSourceSessionId) set({ divergedSourceSessionId: null });
     const repository = getRepository();
     let loaded;
     try {

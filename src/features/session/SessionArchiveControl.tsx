@@ -12,6 +12,7 @@ import { Archive, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { trapTabKey } from "../../components/ui/focusTrap";
+import { selectRetainedSourceKind, useSessionStore } from "../../app/sessionStore";
 import { loadAutoImportMeta } from "../../lib/session/autoImportMetaStore";
 import { formatArchiveBytes, type KeptArchive } from "../../lib/session/sessionArchive";
 import { estimateCleanup, type CleanupPolicyInput } from "../../lib/session/retentionRisk";
@@ -29,6 +30,14 @@ export function SessionArchiveControl({ sessionId }: { sessionId: string }) {
   const [loaded, setLoaded] = useState(false);
   const [dialog, setDialog] = useState<"keep" | "remove" | null>(null);
   const [policy, setPolicy] = useState<CleanupPolicyInput | null>(null);
+  // Known gone, or replaced by another conversation, this open: there is
+  // nothing of this session left to keep a copy of.
+  const sourceNotThis = useSessionStore((state) => {
+    if (selectRetainedSourceKind(state) !== null) return true;
+    // A placeholder with nothing imported shows the read failure instead.
+    const window = state.sessionWindow;
+    return window?.sessionId === sessionId && window.status === "error" && window.error.kind === "missing";
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +69,7 @@ export function SessionArchiveControl({ sessionId }: { sessionId: string }) {
 
   // Only a Claude Code transcript has a reader that can open a kept copy.
   if (!meta || meta.importKind !== "claude-code" || !meta.sourceFilePath || !loaded) return null;
+  if (!kept && sourceNotThis) return null;
 
   // Only an estimate near or past says anything; otherwise the chip stays plain.
   const cleanup = policy ? estimateCleanup(meta.modifiedAt ?? meta.updatedAt, policy, Date.now()) : null;

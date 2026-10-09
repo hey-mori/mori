@@ -9,12 +9,30 @@
  */
 import { FileWarning } from "lucide-react";
 import { InfoHint } from "../../components/ui/InfoHint";
-import { selectRetainedSourceLastEventAt, useSessionStore } from "../../app/sessionStore";
+import {
+  selectRetainedSourceKind,
+  selectRetainedSourceLastEventAt,
+  useSessionStore,
+} from "../../app/sessionStore";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 
 export function RetainedSourceNotice({ now }: { now?: number } = {}) {
   const lastEventAt = useSessionStore(selectRetainedSourceLastEventAt);
-  if (!lastEventAt) return null;
+  const kind = useSessionStore(selectRetainedSourceKind);
+  if (!lastEventAt || !kind) return null;
+  if (kind === "replaced") {
+    return (
+      <p className="session-retained-notice" role="status">
+        <FileWarning size={13} aria-hidden="true" />
+        원본 대화 파일이 바뀌어 Mori가 가져온 기록을 그대로 보여줍니다 · 마지막 대화{" "}
+        {formatClaudeRelativeKo(lastEventAt, now)}
+        <InfoHint label="가져온 기록 설명">
+          같은 위치의 대화 파일이 더 이상 가져온 대화를 이어 가지 않습니다(덮어쓰였거나 다시 쓰였을 수 있습니다). Mori는
+          가져온 기록을 바꾸지 않고 그대로 둡니다.
+        </InfoHint>
+      </p>
+    );
+  }
   return (
     <p className="session-retained-notice" role="status">
       <FileWarning size={13} aria-hidden="true" />

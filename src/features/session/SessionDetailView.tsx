@@ -84,6 +84,13 @@ export function SessionDetailView() {
   const sessionWindow = useSessionStore(selectActiveSessionWindow);
   const activeSessionId = useSessionStore((state) => state.draft?.session.id ?? null);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
+  const recheckRestoredSource = useSessionStore((state) => state.recheckRestoredSource);
+
+  // A session restored at startup shows without having been read this run;
+  // once visible, check its source still exists (bounded to this session).
+  useEffect(() => {
+    if (activeSessionId) void recheckRestoredSource(activeSessionId);
+  }, [activeSessionId, recheckRestoredSource]);
 
   // Retired tabs redirect to their new homes: the raw-activity alias to 활동,
   // and the former 자료 / 검토 surfaces into the unified 분석 tab.

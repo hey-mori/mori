@@ -74,6 +74,8 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     loadAnalysisSettings: () => DEFAULT_QUICK_PASS_SETTINGS,
     loadDesktopSession: async () => false,
     openDiscoveredSession: async () => "missing" as const,
+    recheckRestoredSource: async () => false,
+    divergedSourceSessionId: null,
     sessionWindow: null,
     loadEarlierSessionWindow: async () => {},
     loadNewerSessionWindow: async () => {},

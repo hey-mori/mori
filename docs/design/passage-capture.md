@@ -200,6 +200,20 @@ Mori may say that a source conversation may soon be removed; it never keeps one 
 - A passage whose source Mori no longer keeps (`notCaptured`) is not matched; a discarded or
   archived record is not shown.
 
+## 5f. When the session on screen is a kept import (implemented)
+
+- One quiet line under the session bar says the view is Mori's import, dated by its newest
+  event, for two causes: the transcript is missing (원본 대화 파일을 찾을 수 없어 …), or it was
+  read and no longer continues the import, replaced or rewritten at the same path (원본 대화
+  파일이 바뀌어 …). The import is then kept as stored; a readable path never vouches for it.
+  "Replaced" is known only to the open that read the file, so it is said until another open of
+  a session, and after a restart only once the session is read again. Unreadable, too large or unavailable sources are neither cause.
+- A session restored at startup was not read this run. When it becomes visible, Mori checks
+  once that its transcript exists (no read); only if it is gone does the normal open run, which
+  shows the kept archive or this line. No other session is checked.
+- Reopening a session that shows the missing line reads it again, so a source that was only
+  briefly unavailable recovers without a separate retry control.
+
 ## 6. Scope
 
 Built (capture slice): single-message or in-message text selection from the transcript viewer;

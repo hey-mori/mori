@@ -18,8 +18,8 @@
  *   index and turn time): the new turns are appended, and the token total and
  *   file touches the reader attaches later are updated. A changed text under
  *   the same id is a rewrite, not growth: the import is kept as stored.
- *   - A last stored turn that was a prompt still waiting for its reply takes
- *     the answered turn. Its id changes (a turn is dated by its reply), so the
+ *   - A last stored turn still waiting for its reply (a prompt, or a tool
+ *     result read while the agent was mid tool loop) takes the answered turn. Its id changes (a turn is dated by its reply), so the
  *     plan names the replaced id for references to follow. The event keeps
  *     its note, links and every other field; only its text and identity come
  *     from the read. If the user edited the prompt, or accepted project memory
@@ -127,13 +127,16 @@ export function planSourceReopen(
       kept.push(enriched ? withFields(stored, fresh, ENRICHMENT_FIELDS) : stored);
       continue;
     }
-    // Only the last stored turn may differ, and only as a prompt that has
-    // since been answered: the same turn, now dated by its reply.
+    // Only the last stored turn may differ, and only as a turn that was
+    // waiting for its reply and has it now: a prompt, or a tool result read
+    // mid tool loop (a tool turn with no reply has no tool name). The same
+    // turn, now dated by its reply.
+    const waiting = stored.actor === "user" || (stored.actor === "tool" && !stored.toolName);
     const answered =
       index === lastIndex &&
       stored.turnIndex !== undefined &&
       stored.turnIndex === fresh.turnIndex &&
-      stored.actor === "user" &&
+      waiting &&
       fresh.actor !== "user" &&
       Date.parse(stored.start) <= Date.parse(fresh.start);
     if (!answered) return { kind: "keep", reason: "diverged", importIds: [existing.id] };
