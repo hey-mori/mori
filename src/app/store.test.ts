@@ -176,3 +176,21 @@ describe("app store — session-centric routing", () => {
     expect(state.startRecordsAgentId).toBeNull();
   });
 });
+
+describe("arriving at 기록 to find", () => {
+  it("findInProject asks once for 기록 검색; the scope outlives the request", () => {
+    useAppStore.setState({ currentView: "contexts", ledgerProjectScope: null, ledgerFindRequest: false });
+    useAppStore.getState().findInProject("ctx-infra");
+    let state = useAppStore.getState();
+    expect(state.currentView).toBe("ledger");
+    expect(state.ledgerProjectScope).toBe("ctx-infra");
+    expect(state.ledgerFindRequest).toBe(true);
+    state.clearLedgerFindRequest();
+    // A later ordinary visit keeps the scope but is not a find request.
+    state.navigate("sessions");
+    state.navigate("ledger");
+    state = useAppStore.getState();
+    expect(state.ledgerProjectScope).toBe("ctx-infra");
+    expect(state.ledgerFindRequest).toBe(false);
+  });
+});

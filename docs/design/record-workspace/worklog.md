@@ -971,3 +971,13 @@ focused next step, not rushed:
 - 28f8291 feat: present structured record proposals for review
 - 1e45d5d docs: record the R1 and R2 vertical slice in the worklog
 - (R3) feat: replace the ledger body with a timeline and context rail
+
+## 2026-10-09 · 이 프로젝트에서 찾기 focuses 기록 검색 (#187)
+
+- Arriving from a project's 이 프로젝트에서 찾기 used to focus the capture editor,
+  so a query typed at once autosaved as a new unfiled note (reproduced in an
+  isolated trial). The arrival now focuses 기록 검색 and holds the editor's
+  autofocus until the user opens or starts a note.
+- Driven by a one-shot `ledgerFindRequest` in the app store, consumed on mount;
+  the project scope itself still persists across visits (#162), and an ordinary
+  later visit opens ready to capture as before.

@@ -49,7 +49,13 @@ export function LedgerWorkspace() {
   // search field takes focus instead of the capture editor. Otherwise the query
   // the user starts typing lands in a fresh note and autosaves as one. The
   // editor takes focus again as soon as the user opens a note or starts one.
-  const [arrivedToFind, setArrivedToFind] = useState(() => Boolean(projectScope));
+  // A one-shot request, not the scope: the scope persists across visits, and
+  // an ordinary later visit to 기록 should open ready to capture again.
+  const [arrivedToFind, setArrivedToFind] = useState(() => useAppStore.getState().ledgerFindRequest);
+  const clearFindRequest = useAppStore((state) => state.clearLedgerFindRequest);
+  useEffect(() => {
+    clearFindRequest();
+  }, [clearFindRequest]);
 
   // Both global entry points route through the same actions the in-workspace
   // controls use, rather than setting state behind their backs. That is what

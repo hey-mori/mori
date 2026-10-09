@@ -63,8 +63,6 @@ export function NoteEditorPane({
   now,
   autoFocusEditor = true,
 }: {
-  /** False when the user came to find something, not to write. */
-  autoFocusEditor?: boolean;
   /** The selected note record, or null for a brand-new note. */
   note: MoriRecord | null;
   ledger: RecordLedger;
@@ -86,6 +84,8 @@ export function NoteEditorPane({
    *  workspace so the current note flushes on the switch. */
   onOpenRecord: (recordId: string) => void;
   now: Date;
+  /** False when the user came to find something, not to write. */
+  autoFocusEditor?: boolean;
 }) {
   const [body, setBody] = useState(note?.body ?? "");
   // The id of the note record this pane is bound to (null until first save).
