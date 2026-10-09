@@ -328,6 +328,17 @@ loop must not manufacture vague polish to avoid this:
 1. Project Memory UX polish · open; needs a concrete defect /
    improvement observed against real captured data.
 2. Queryable Memory extensions · open; needs a clear, safe slice.
+3. Passage-to-record capture · open; needs a design check first. Project
+   search and 현재 상황 now lead to the exact source passage, but a found
+   decision or next action can only reach the record ledger by retyping it
+   (losing its source link) or by recording the whole session as an
+   activity. A user-initiated, review-gated "record this passage" that keeps
+   a source reference is the next real gap (2026-10-09 continuity program).
+4. Kept-copy follow-ups (#190) · open, small: no retry from the notice
+   (the resolver does not re-read an open session that has imports); the
+   session restored at startup is shown without a read, so a deleted source
+   is only noticed on the next open; a replaced transcript keeps its stored
+   copy silently.
 
 Deferred · revisit when a concrete need appears:
 - Evidence / Import Review polish · audited; the Import Review view,
@@ -342,6 +353,13 @@ Deferred · revisit when a concrete need appears:
   being proven in real use.
 - Cloud sync / remote collaboration backend for shared memory · a
   hard non-goal; team memory ships as spec + `.mori` handoff only.
+- Codex project search · measured 2026-10-09: 5 Codex sessions (4.8 MB;
+  four short `codex exec` runs and one interactive session in an unreviewed
+  folder) against 62 Claude Code sessions (462 MB). Every real Codex session
+  opens whole in the existing reader. Revisit when Codex holds real project
+  history.
+- Folder-group way back from a session · one click on 프로젝트 returns to
+  the same group (selection persists); not material.
 
 When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
