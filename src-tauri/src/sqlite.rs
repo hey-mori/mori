@@ -507,10 +507,15 @@ pub fn list_all_session_import_rows(
 pub fn clear_all_sqlite_data(
     state: tauri::State<'_, SqliteState>,
 ) -> Result<ClearAllDataResult, String> {
-    with_connection(&state, |conn, _| {
+    let mut result = with_connection(&state, |conn, _| {
         ensure_migrated(conn)?;
         clear_all_data(conn)
-    })
+    })?;
+    // The kernel no longer records the kept copies, so they go too.
+    if let Ok(root) = crate::claude::archive::archive_root() {
+        result.archives_deleted = crate::claude::archive::remove_all_archives(&root) as u64;
+    }
+    Ok(result)
 }
 
 /// Recovery escape hatch: drop every table INCLUDING the migration ledger and

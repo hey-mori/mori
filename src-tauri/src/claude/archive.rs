@@ -224,6 +224,27 @@ fn is_archive_name(name: &str) -> bool {
     name.len() == 70 && name.ends_with(".jsonl") && name[..64].bytes().all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
+/// A confirmed "delete all data" also deletes every kept copy: once the
+/// kernel's records of them are gone, nothing would name or remove them, and
+/// each is a whole transcript in plaintext. Only archive files and partial
+/// copies are touched; anything else in the folder is left. Best effort: a
+/// file that cannot be removed is skipped, and the count says what went.
+pub(crate) fn remove_all_archives(archive_dir: &Path) -> usize {
+    let Ok(entries) = fs::read_dir(archive_dir) else { return 0 };
+    let mut removed = 0;
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !(is_archive_name(&name) || name.starts_with(".partial-")) {
+            continue;
+        }
+        if entry.file_type().map(|kind| kind.is_file()).unwrap_or(false) && fs::remove_file(entry.path()).is_ok() {
+            removed += 1;
+        }
+    }
+    sync_dir(archive_dir);
+    removed
+}
+
 pub(crate) fn remove_archive_at(archive_dir: &Path, file_name: &str) -> Result<bool, String> {
     if !is_archive_name(file_name) {
         return Err("Refused: not an archive name.".to_string());
@@ -335,6 +356,21 @@ mod tests {
         let (_dir2, projects2, _archives2, path2) = setup(&line(0));
         let inside = projects2.join("archives");
         assert!(archive_session_at(&projects2, &inside, &path2).unwrap_err().contains("inside the agent"));
+    }
+
+    #[test]
+    fn a_full_wipe_removes_every_archive_and_partial_and_nothing_else() {
+        let dir = TempDir::new().unwrap();
+        let archives = dir.path().join("archives");
+        fs::create_dir_all(&archives).unwrap();
+        fs::write(archives.join(format!("{}.jsonl", "a".repeat(64))), "x").unwrap();
+        fs::write(archives.join(format!("{}.jsonl", "b".repeat(64))), "y").unwrap();
+        fs::write(archives.join(".partial-1-2"), "z").unwrap();
+        fs::write(archives.join("notes.txt"), "keep").unwrap();
+        assert_eq!(remove_all_archives(&archives), 3);
+        let left: Vec<String> = fs::read_dir(&archives).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        assert_eq!(left, vec!["notes.txt".to_string()]);
+        assert_eq!(remove_all_archives(&dir.path().join("absent")), 0);
     }
 
     #[test]

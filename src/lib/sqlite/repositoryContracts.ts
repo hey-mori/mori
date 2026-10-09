@@ -70,6 +70,9 @@ export type ClearAllSqliteDataResult = {
    */
   kernelRecordsDeleted: number;
   durableDocumentsDeleted: number;
+  /** Kept transcript copies removed from the archive folder. Absent from
+   *  builds before archives were wiped with the rest. */
+  archivesDeleted?: number;
 };
 
 /** One automatic pre-migration backup file, as returned by list_sqlite_backups. */

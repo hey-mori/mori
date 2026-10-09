@@ -152,6 +152,13 @@ Mori cannot read or search; this keeps one chosen session readable and searchabl
   deletes the file only when no other kept source names the same (content-named) file.
   Partial files of interrupted copies older than an hour are swept on the next copy; an empty
   transcript and an archive folder inside the agent's directory are refused.
+- **Full reset**: 데이터 전체 초기화 deletes every archive file and partial copy along with the
+  kernel's records of them, and its confirmation names 보관한 원본. Pre-migration database
+  snapshots in `backups/` are not touched by it (an open owner decision); they hold the kernel,
+  passage text included, but never archive files.
+- **Not a backup**: an archive lives in Mori's storage folder, usually on the same disk as the
+  original. Neither the pre-migration snapshots nor a `.mori` export include archive bytes, and
+  a `.mori` export carries no 기록 records or saved passages either.
 
 ## 5d. Retention risk (정리될 수 있는 대화, implemented)
 
