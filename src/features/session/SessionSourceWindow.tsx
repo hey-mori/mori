@@ -164,8 +164,12 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
       const items = section.querySelectorAll<HTMLElement>(`[data-message-id="${CSS.escape(focus.messageId)}"]`);
       const item = items[items.length - 1];
       if (item) {
-        const offset = item.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-        scroller.scrollTop += offset - Math.max(0, (scroller.clientHeight - item.offsetHeight) / 2);
+        // Centre the message; a message taller than the view centres its first
+        // marked phrase instead, so the match is on screen, not the message top.
+        const mark = item.offsetHeight > scroller.clientHeight ? item.querySelector<HTMLElement>("mark") : null;
+        const target = mark ?? item;
+        const offset = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        scroller.scrollTop += offset - Math.max(0, (scroller.clientHeight - target.offsetHeight) / 2);
         item.focus({ preventScroll: true });
       }
       return;
