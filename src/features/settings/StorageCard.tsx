@@ -12,6 +12,7 @@ import {
 } from "../../lib/diagnostics/diagnosticsLog";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { SettingsRow, SettingsSection } from "./SettingsPrimitives";
+import { InfoHint } from "../../components/ui/InfoHint";
 
 type StoragePathState =
   | { status: "idle" | "loading"; path: string | null }
@@ -124,6 +125,24 @@ export function StorageCard() {
             ) : undefined
           }
         />
+        {isDesktop ? (
+          <SettingsRow
+            compact
+            label="백업"
+            meta={
+              <span>
+                Mori를 끈 뒤 이 폴더를 통째로 다른 디스크에 복사하세요.{" "}
+                <InfoHint label="백업 설명">
+                  이 폴더에 기록, 저장한 구절, 프로젝트, 세션과 가져온 대화, 보관한 원본(archives), 복구용 스냅샷이
+                  모두 들어 있습니다. Mori가 켜져 있을 때 복사하면 마지막 변경이 빠질 수 있습니다. 복원은 Mori를 끈
+                  상태에서 폴더를 되돌려 놓거나 변경으로 고르면 됩니다. 테마, 분석 엔진 설정(API 키 포함), 알림 같은 기기
+                  설정과 에이전트의 원본 대화 파일은 들어 있지 않습니다. 보관한 원본도 같은 디스크에 있으면 디스크가
+                  고장 날 때 함께 잃습니다.
+                </InfoHint>
+              </span>
+            }
+          />
+        ) : null}
         {notice ? <p className="settings-storage-notice">{notice}</p> : null}
         {lastFallback ? (
           <p className="settings-storage-error" role="alert">
