@@ -737,30 +737,40 @@ export function selectActiveSessionWindow(state: SessionState): SessionWindowSta
 }
 
 /**
- * The session is showing what Mori kept from an earlier read, because reading
- * its source just failed (a transcript the agent deleted, moved or replaced).
- * The kept copy is real evidence, so it stays on screen; this says what it is:
- * a copy as of `capturedAt`, possibly missing anything said since.
+ * The session is showing what Mori kept from an earlier read, because its
+ * source file is gone (the agent deleted or moved the transcript). The kept
+ * copy is real evidence, so it stays on screen; this says what it is: a copy
+ * whose conversation runs to `lastEventAt`, possibly missing anything since.
+ *
+ * Only a missing source counts. A file too large for this agent's reader, an
+ * unavailable bridge or a local write that failed are not "the source is
+ * gone", and a transcript that was replaced reads successfully (the kept copy
+ * is then kept as stored, without this notice).
+ *
+ * The copy is dated by its newest event, not by when the import was first
+ * stored: a reopen that appends new turns keeps the import's original
+ * `savedAt`.
  */
 export function selectRetainedSourceNotice(
   state: SessionState,
-): { kind: SessionWindowError["kind"]; capturedAt: string } | null {
+): { kind: "missing"; lastEventAt: string } | null {
   const window = state.sessionWindow;
   if (!window || window.status !== "error" || window.sessionId !== state.draft?.session.id) return null;
-  if (state.imports.length === 0) return null;
-  const capturedAt = state.imports.reduce(
-    (latest, entry) => (Date.parse(entry.savedAt) > Date.parse(latest) ? entry.savedAt : latest),
-    state.imports[0]!.savedAt,
-  );
-  return { kind: window.error.kind, capturedAt };
+  if (window.error.kind !== "missing") return null;
+  let lastEventAt: string | null = null;
+  for (const entry of state.imports) {
+    for (const event of entry.events) {
+      const at = event.end ?? event.start;
+      if (at && (lastEventAt === null || Date.parse(at) > Date.parse(lastEventAt))) lastEventAt = at;
+    }
+  }
+  return lastEventAt ? { kind: "missing", lastEventAt } : null;
 }
 
 /** The notice's parts as primitives, so a component subscribing to them sees a
  *  stable value between renders (an object selector would loop). */
-export const selectRetainedSourceKind = (state: SessionState): SessionWindowError["kind"] | null =>
-  selectRetainedSourceNotice(state)?.kind ?? null;
-export const selectRetainedSourceCapturedAt = (state: SessionState): string | null =>
-  selectRetainedSourceNotice(state)?.capturedAt ?? null;
+export const selectRetainedSourceLastEventAt = (state: SessionState): string | null =>
+  selectRetainedSourceNotice(state)?.lastEventAt ?? null;
 
 /** Why opening a session at a search result did not happen. */
 export type SourceHitOutcome = "opened" | "changed" | "missing" | "failed" | "superseded";

@@ -1,51 +1,63 @@
 import { describe, expect, it } from "vitest";
 import {
-  selectRetainedSourceCapturedAt,
-  selectRetainedSourceKind,
+  selectRetainedSourceLastEventAt,
   selectRetainedSourceNotice,
   type SessionState,
 } from "./sessionStore";
 
-const imp = (savedAt: string) => ({ savedAt }) as SessionState["imports"][number];
+const imp = (savedAt: string, eventTimes: string[]) =>
+  ({ savedAt, events: eventTimes.map((start) => ({ start })) }) as unknown as SessionState["imports"][number];
 
-function state(partial: Partial<Pick<SessionState, "sessionWindow" | "imports">> & { draftId?: string }): SessionState {
+function state(
+  partial: Partial<Pick<SessionState, "sessionWindow" | "imports">> & { draftId?: string },
+): SessionState {
   return {
-    draft: partial.draftId === undefined ? { session: { id: "s1" } } : { session: { id: partial.draftId } },
+    draft: { session: { id: partial.draftId ?? "s1" } },
     sessionWindow: partial.sessionWindow ?? null,
     imports: partial.imports ?? [],
   } as unknown as SessionState;
 }
 
-const missing = { sessionId: "s1", status: "error" as const, error: { kind: "missing" as const, message: "SOURCE_MISSING" } };
+const failed = (kind: string) => ({ sessionId: "s1", status: "error" as const, error: { kind, message: kind } });
 
 describe("saying a kept copy is on screen", () => {
-  it("names the failure and the newest kept copy when the source read failed", () => {
+  it("dates the copy by its newest event, not by when it was first stored", () => {
+    // Stored three weeks ago, then grown by a reopen yesterday: savedAt stays old.
     const notice = selectRetainedSourceNotice(
-      state({ sessionWindow: missing, imports: [imp("2026-10-08T03:38:37Z"), imp("2026-10-08T04:43:48Z")] }),
+      state({
+        sessionWindow: failed("missing") as SessionState["sessionWindow"],
+        imports: [imp("2026-09-18T00:00:00Z", ["2026-09-18T00:00:00Z", "2026-10-08T06:48:00Z"])],
+      }),
     );
-    expect(notice).toEqual({ kind: "missing", capturedAt: "2026-10-08T04:43:48Z" });
+    expect(notice).toEqual({ kind: "missing", lastEventAt: "2026-10-08T06:48:00Z" });
   });
 
-  it("says nothing when the source was read", () => {
-    expect(selectRetainedSourceNotice(state({ imports: [imp("2026-10-08T04:43:48Z")] }))).toBeNull();
+  it("says nothing for failures that are not a missing source", () => {
+    for (const kind of ["tooLarge", "error", "unavailable", "changed", "refused"]) {
+      expect(
+        selectRetainedSourceNotice(
+          state({ sessionWindow: failed(kind) as SessionState["sessionWindow"], imports: [imp("x", ["2026-10-08T06:48:00Z"])] }),
+        ),
+      ).toBeNull();
+    }
   });
 
-  it("says nothing when there is no kept copy: the failure screen shows instead", () => {
-    expect(selectRetainedSourceNotice(state({ sessionWindow: missing }))).toBeNull();
+  it("says nothing when the source was read, or when there is no kept copy", () => {
+    expect(selectRetainedSourceNotice(state({ imports: [imp("x", ["2026-10-08T06:48:00Z"])] }))).toBeNull();
+    expect(selectRetainedSourceNotice(state({ sessionWindow: failed("missing") as SessionState["sessionWindow"] }))).toBeNull();
   });
 
   it("never attaches another session's failure", () => {
     expect(
-      selectRetainedSourceNotice(state({ draftId: "s2", sessionWindow: missing, imports: [imp("2026-10-08T04:43:48Z")] })),
+      selectRetainedSourceNotice(
+        state({ draftId: "s2", sessionWindow: failed("missing") as SessionState["sessionWindow"], imports: [imp("x", ["2026-10-08T06:48:00Z"])] }),
+      ),
     ).toBeNull();
   });
-});
 
-describe("what a component subscribes to", () => {
-  it("is primitive, so the same state yields the same value (an object would re-render forever)", () => {
-    const s = state({ sessionWindow: missing, imports: [imp("2026-10-08T04:43:48Z")] });
-    expect(selectRetainedSourceKind(s)).toBe(selectRetainedSourceKind(s));
-    expect(typeof selectRetainedSourceKind(s)).toBe("string");
-    expect(selectRetainedSourceCapturedAt(s)).toBe("2026-10-08T04:43:48Z");
+  it("gives a component a primitive, stable between renders", () => {
+    const s = state({ sessionWindow: failed("missing") as SessionState["sessionWindow"], imports: [imp("x", ["2026-10-08T06:48:00Z"])] });
+    expect(selectRetainedSourceLastEventAt(s)).toBe("2026-10-08T06:48:00Z");
+    expect(selectRetainedSourceLastEventAt(s)).toBe(selectRetainedSourceLastEventAt(s));
   });
 });
