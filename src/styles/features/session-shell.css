@@ -863,15 +863,17 @@
 }
 
 /* The window's head line and its search stay in reach while reading: one
-   block pinned just under the sticky session bar. */
+   block pinned just under the sticky session bar. It tucks a few pixels under
+   the bar (opaque, and above it), so no message shows through between them;
+   the block's own padding absorbs the overlap. */
 .session-window-top {
   position: sticky;
-  top: var(--session-detail-bar-height, 52px);
+  top: 44px;
   z-index: 2;
   display: grid;
   gap: var(--base-space-2);
   margin-inline: calc(-1 * var(--base-space-2));
-  padding: var(--base-space-2);
+  padding: var(--base-space-3) var(--base-space-2) var(--base-space-2);
   background: var(--base-bg);
 }
 
