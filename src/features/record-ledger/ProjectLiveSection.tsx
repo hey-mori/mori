@@ -18,7 +18,7 @@
  * InfoHint, not in always-visible prose.
  */
 import type { ReactNode } from "react";
-import { CircleAlert, Hand, Radio } from "lucide-react";
+import { CircleAlert, Hand, History, Radio } from "lucide-react";
 import { withoutPasteMarkers } from "../../lib/session/agentText";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
@@ -68,6 +68,7 @@ export function ProjectLiveSection({
   now = Date.now(),
   openSession,
   unconfirmedObserved = 0,
+  sessionTitleOf,
 }: {
   projection: ProjectProjection | null;
   now?: number;
@@ -79,6 +80,8 @@ export function ProjectLiveSection({
    * there is work Mori saw and did not attribute.
    */
   unconfirmedObserved?: number;
+  /** A session's own title by its source file, for sessions listed by session. */
+  sessionTitleOf?: (sessionKey: string) => string | undefined;
 }) {
   const aside = unconfirmedObserved > 0 ? <UnconfirmedAside count={unconfirmedObserved} /> : null;
   const asideOnly = aside ? (
@@ -93,7 +96,13 @@ export function ProjectLiveSection({
   // The counts are as current as their oldest observation, not their newest:
   // a session seen a minute ago does not make another one's count live.
   const basisAt = projection.countedObservedAt ?? projection.observedAt;
-  const freshness = stale ? "stale" : freshnessOf(basisAt, now);
+  // With nothing counted and sessions set aside, no dot: the observation that
+  // remains is exactly what those sessions moved past.
+  const freshness = stale
+    ? "stale"
+    : projection.countedObservedAt === null && projection.continued.length > 0
+      ? "recent"
+      : freshnessOf(basisAt, now);
   const counts: Array<{ key: string; label: string; value: number }> = [
     { key: "running", label: "진행 중", value: projection.runningCount },
     { key: "waiting", label: "내 확인 대기", value: projection.waitingCount },
@@ -182,9 +191,58 @@ export function ProjectLiveSection({
         </>
       )}
 
+      <ContinuedSessions projection={projection} now={now} openSession={openSession} sessionTitleOf={sessionTitleOf} />
       <RecentWork projection={projection} now={now} openSession={openSession} />
       {aside}
     </section>
+  );
+}
+
+/**
+ * Sessions that went on after Mori last looked. What Mori observed then is
+ * not counted above; each row says only what is known (when the source was
+ * last written, and what was observed before that) and opens the latest reply,
+ * which is the evidence of where the session actually stands.
+ */
+function ContinuedSessions({
+  projection,
+  now,
+  openSession,
+  sessionTitleOf,
+}: {
+  projection: ProjectProjection;
+  now: number;
+  openSession: OpenRequestSession;
+  sessionTitleOf?: (sessionKey: string) => string | undefined;
+}) {
+  if (projection.continued.length === 0) return null;
+  return (
+    <div className="ctx-live-continued">
+      <p className="ctx-live-quiet ctx-live-aside">
+        관측 이후 계속된 세션 {projection.continued.length}
+        <InfoHint label="관측 이후 계속된 세션 설명">
+          Mori가 마지막으로 본 뒤에도 기록이 이어진 세션입니다. 그때 본 상태는 지금을
+          말해주지 않으므로 위 숫자에 넣지 않았습니다. 누르면 최신 메시지부터 엽니다.
+        </InfoHint>
+      </p>
+      <ul className="ctx-live-running">
+        {projection.continued.map((session) => {
+          const then = STATUS_LABEL[session.lastStatus];
+          return (
+            <RequestRow key={session.sessionKey} sessionKey={session.sessionKey} open={openSession}>
+              <History size={12} aria-hidden="true" className="ctx-live-row-icon" />
+              <span className="ctx-live-row-title">
+                {sessionTitleOf?.(session.sessionKey) ?? withoutPasteMarkers(session.lastTitle)}
+              </span>
+              <span className="ctx-live-row-meta">
+                활동 {formatSidebarRelative(session.activeAt, now)}
+                {then ? ` · 관측 당시 ${then}` : ""}
+              </span>
+            </RequestRow>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

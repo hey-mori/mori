@@ -98,10 +98,10 @@ describe("buildProjectProjections", () => {
     it("counts what is running, waiting and blocked while live", () => {
       const out = buildProjectProjections(
         [
-          row({ id: "r", status: "running" }),
-          row({ id: "w", status: "waitingForUser" }),
-          row({ id: "b", status: "blocked" }),
-          row({ id: "c", status: "completed" }),
+          row({ id: "r", sessionKey: "/s/r.jsonl", status: "running" }),
+          row({ id: "w", sessionKey: "/s/w.jsonl", status: "waitingForUser" }),
+          row({ id: "b", sessionKey: "/s/b.jsonl", status: "blocked" }),
+          row({ id: "c", sessionKey: "/s/c.jsonl", status: "completed" }),
         ],
         { now: NOW },
       );
@@ -195,8 +195,8 @@ describe("buildProjectProjections", () => {
     it("puts the longest-running request first", () => {
       const out = buildProjectProjections(
         [
-          row({ id: "short", status: "running", startedAt: ago(2) }),
-          row({ id: "long", status: "running", startedAt: ago(40) }),
+          row({ id: "short", sessionKey: "/s/short.jsonl", status: "running", startedAt: ago(2) }),
+          row({ id: "long", sessionKey: "/s/long.jsonl", status: "running", startedAt: ago(40) }),
         ],
         { now: NOW },
       );
@@ -258,7 +258,7 @@ describe("each request is judged by its own observation", () => {
     const out = buildProjectProjections(
       [
         row({ id: "fresh", sessionKey: "/s/a.jsonl", status: "completed", observedAt: ago(1) }),
-        row({ id: "old-run", sessionKey: "/s/b.jsonl", status: "running", startedAt: ago(60 * 9), observedAt: ago(60 * 8) }),
+        row({ id: "old-run", sessionKey: "/s/c.jsonl", status: "running", startedAt: ago(60 * 9), observedAt: ago(60 * 8) }),
         row({ id: "old-wait", sessionKey: "/s/b.jsonl", status: "waitingForUser", endedAt: ago(60 * 8), observedAt: ago(60 * 8) }),
       ],
       { now: NOW },
@@ -341,5 +341,103 @@ describe("a projection over chosen sessions", () => {
 
   it("is null without rows", () => {
     expect(buildScopedProjection([], { now: NOW, label: "infra" })).toBeNull();
+  });
+});
+
+describe("an observation the session has since moved past", () => {
+  const blockedThen = row({ id: "b", sessionKey: "/s/a.jsonl", status: "blocked", endedAt: ago(125), observedAt: ago(120) });
+  const waitingNow = row({ id: "w", sessionKey: "/s/b.jsonl", status: "waitingForUser", endedAt: ago(31), observedAt: ago(30) });
+  const activeAt = (map: Record<string, string>) => (key: string) => map[key];
+
+  it("stops counting a status once the source was written after it, and lists the session", () => {
+    const out = buildProjectProjections([blockedThen, waitingNow], {
+      now: NOW,
+      sourceActiveAt: activeAt({ "/s/a.jsonl": ago(1) }),
+    })[0]!;
+    expect(out.blockedCount).toBe(0);
+    expect(out.blocked).toEqual([]);
+    expect(out.waitingCount).toBe(1);
+    expect(out.countedObservedAt).toBe(ago(30));
+    expect(out.continued).toEqual([
+      { sessionKey: "/s/a.jsonl", lastTitle: "an ask", lastStatus: "blocked", lastObservedAt: ago(120), activeAt: ago(1) },
+    ]);
+    expect(out.recentRequests.find((r) => r.id === "b")?.status).toBe("unknown");
+    expect(out.lastActivityAt).toBe(ago(1));
+  });
+
+  it("keeps the observation when the source was written before it or within the poll grace", () => {
+    for (const written of [ago(200), ago(119)]) {
+      const out = buildProjectProjections([blockedThen], {
+        now: NOW,
+        sourceActiveAt: activeAt({ "/s/a.jsonl": written }),
+      })[0]!;
+      expect(out.blockedCount).toBe(1);
+      expect(out.continued).toEqual([]);
+    }
+  });
+
+  it("changes nothing when the source activity is unknown", () => {
+    const out = buildProjectProjections([blockedThen], { now: NOW })[0]!;
+    expect(out.blockedCount).toBe(1);
+    expect(out.continued).toEqual([]);
+  });
+
+  it("lists a session that went on long after a stale observation", () => {
+    const old = { ...blockedThen, observedAt: ago(60 * 30), endedAt: ago(60 * 30) };
+    const out = buildProjectProjections([old], {
+      now: NOW,
+      sourceActiveAt: activeAt({ "/s/a.jsonl": ago(60 * 2) }),
+    })[0]!;
+    expect(out.freshness).toBe("stale");
+    expect(out.continued.map((s) => s.sessionKey)).toEqual(["/s/a.jsonl"]);
+  });
+
+  it("judges a session by its newest observation, not its oldest row", () => {
+    const earlier = row({ id: "e", sessionKey: "/s/a.jsonl", status: "completed", endedAt: ago(300), observedAt: ago(300) });
+    const out = buildProjectProjections([earlier, blockedThen], {
+      now: NOW,
+      sourceActiveAt: activeAt({ "/s/a.jsonl": ago(119) }),
+    })[0]!;
+    expect(out.continued).toEqual([]);
+    expect(out.blockedCount).toBe(1);
+  });
+
+  it("applies to a projection over chosen sessions too", () => {
+    const out = buildScopedProjection([blockedThen], {
+      now: NOW,
+      label: "infra",
+      sourceActiveAt: activeAt({ "/s/a.jsonl": ago(1) }),
+    })!;
+    expect(out.blockedCount).toBe(0);
+    expect(out.continued).toHaveLength(1);
+  });
+});
+
+describe("a session's earlier requests", () => {
+  it("counts only the newest request of a session as present", () => {
+    const out = buildProjectProjections(
+      [
+        row({ id: "old", sessionKey: "/s/a.jsonl", status: "blocked", startedAt: ago(200), endedAt: ago(190), observedAt: ago(30) }),
+        row({ id: "new", sessionKey: "/s/a.jsonl", status: "waitingForUser", startedAt: ago(20), endedAt: ago(16), observedAt: ago(1) }),
+      ],
+      { now: NOW },
+    )[0]!;
+    expect(out.blockedCount).toBe(0);
+    expect(out.waitingCount).toBe(1);
+    expect(out.countedObservedAt).toBe(ago(1));
+    // The earlier request's error ending stays visible as history.
+    expect(out.recentRequests.find((r) => r.id === "old")?.status).toBe("blocked");
+  });
+
+  it("never shows an earlier request's stored running as running", () => {
+    const out = buildProjectProjections(
+      [
+        row({ id: "old", sessionKey: "/s/a.jsonl", status: "running", startedAt: ago(200), observedAt: ago(30) }),
+        row({ id: "new", sessionKey: "/s/a.jsonl", status: "completed", startedAt: ago(20), observedAt: ago(1) }),
+      ],
+      { now: NOW },
+    )[0]!;
+    expect(out.runningCount).toBe(0);
+    expect(out.recentRequests.find((r) => r.id === "old")?.status).toBe("unknown");
   });
 });

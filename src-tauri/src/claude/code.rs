@@ -64,6 +64,12 @@ pub struct ClaudeCodeSessionMeta {
     /// the file time without any conversation, so this is the activity signal
     /// and `modified_at` only the fallback.
     pub last_activity_at: String,
+    /// Timestamp of the last user or assistant record (tool steps included),
+    /// or "" when none was found. Unlike `last_activity_at` it ignores the
+    /// records Claude Code writes while nobody is talking (`away_summary`,
+    /// queue operations, PR and file links), so it says when the conversation
+    /// itself last moved.
+    pub last_message_at: String,
     /// File size in bytes. Live Follow uses this to start its tail near the end
     /// of a huge session instead of reading the whole history.
     pub file_bytes: u64,
@@ -418,9 +424,14 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 started_at,
                 modified_at,
                 last_activity_at: if preview.complete {
-                    preview.last_timestamp
+                    preview.last_timestamp.clone()
                 } else {
                     tail_last_timestamp(&session_path).unwrap_or_default()
+                },
+                last_message_at: if preview.complete {
+                    preview.last_message_timestamp.clone()
+                } else {
+                    tail_last_message_timestamp(&session_path).unwrap_or_default()
                 },
                 file_bytes,
                 message_count: preview.message_count,
@@ -688,6 +699,8 @@ struct SessionPreview {
     /// The last timestamp inside the budget; the file's last one only when
     /// `complete`.
     last_timestamp: String,
+    /// The last user or assistant timestamp inside the budget.
+    last_message_timestamp: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
 }
@@ -700,6 +713,19 @@ const TAIL_BUDGET: u64 = 256 * 1024;
 /// too long for the preview to reach its end. `None` when the tail holds no
 /// complete timestamped record, so the caller falls back to the file time.
 fn tail_last_timestamp(path: &Path) -> Option<String> {
+    tail_last_timestamp_where(path, |_| true)
+}
+
+/// The tail's last timestamp on a user or assistant record.
+fn tail_last_message_timestamp(path: &Path) -> Option<String> {
+    tail_last_timestamp_where(path, is_conversation_record)
+}
+
+fn is_conversation_record(value: &Value) -> bool {
+    matches!(detect_role(value).as_str(), "human" | "assistant")
+}
+
+fn tail_last_timestamp_where(path: &Path, keep: impl Fn(&Value) -> bool) -> Option<String> {
     use std::io::{Read, Seek, SeekFrom};
     let mut file = std::fs::File::open(path).ok()?;
     let len = file.metadata().ok()?.len();
@@ -716,6 +742,7 @@ fn tail_last_timestamp(path: &Path) -> Option<String> {
     lines
         .rev()
         .filter_map(|line| serde_json::from_str::<Value>(line.trim()).ok())
+        .filter(|value| keep(value))
         .find_map(|value| extract_timestamp(&value))
 }
 
@@ -779,6 +806,9 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
         if let Some(ts) = extract_timestamp(&value) {
             if preview.first_timestamp.is_empty() {
                 preview.first_timestamp = ts.clone();
+            }
+            if role == "human" || role == "assistant" {
+                preview.last_message_timestamp = ts.clone();
             }
             preview.last_timestamp = ts;
         }
@@ -1963,6 +1993,41 @@ mod tests {
         assert!(listing[0].message_count_complete);
         // The file time is explicit UTC, so JavaScript cannot read it as local.
         assert!(listing[0].modified_at.ends_with('Z'));
+    }
+
+    fn away_summary_line(at: &str) -> String {
+        format!("{{\"type\":\"system\",\"subtype\":\"away_summary\",\"content\":\"while you were away\",\"timestamp\":\"{at}\"}}\n")
+    }
+
+    #[test]
+    fn last_message_ignores_records_written_while_nobody_talks() {
+        let temp = TempDir::new().unwrap();
+        let body = format!(
+            "{}{}",
+            user_line("done, waiting on you", "2026-10-07T14:00:00Z"),
+            away_summary_line("2026-10-07T14:05:00Z")
+        );
+        write_session(&temp.path().join("-home-u-dev-mori"), "idle.jsonl", &body);
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(listing[0].last_activity_at, "2026-10-07T14:05:00Z");
+        assert_eq!(listing[0].last_message_at, "2026-10-07T14:00:00Z");
+    }
+
+    #[test]
+    fn last_message_reads_the_tail_of_a_session_past_the_preview_budget() {
+        let temp = TempDir::new().unwrap();
+        let filler = "x".repeat(1_000);
+        let mut body = String::new();
+        for minute in 0..1_200 {
+            body.push_str(&user_line(&format!("step {minute} {filler}"), &format!("2026-10-07T{:02}:{:02}:00Z", 10 + minute / 60, minute % 60)));
+        }
+        body.push_str(&user_line("last word", "2026-10-07T23:00:00Z"));
+        body.push_str(&away_summary_line("2026-10-07T23:30:00Z"));
+        write_session(&temp.path().join("-home-u-dev-mori"), "long-idle.jsonl", &body);
+        let listing = list_sessions_at(temp.path()).unwrap();
+        assert!(!listing[0].message_count_complete);
+        assert_eq!(listing[0].last_activity_at, "2026-10-07T23:30:00Z");
+        assert_eq!(listing[0].last_message_at, "2026-10-07T23:00:00Z");
     }
 
     #[test]

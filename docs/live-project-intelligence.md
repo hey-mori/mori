@@ -386,6 +386,15 @@ the oldest observation behind them (`countedObservedAt`), so the live dot
 appears only when every counted request was seen moments ago, and a running
 request not seen moments ago is timed only up to when it was seen.
 
+An observation also stops holding once its session's source was written after
+it (more than two minutes later, beyond the poller's cadence). The source's
+last write comes from discovery (an auto-imported session's `savedAt`, never
+restamped by opening it), so no transcript is read for this. Such a session's
+observed status is not counted; the section lists it under 관측 이후 계속된 세션
+with when its source was last written and what was observed before, and opens
+its latest reply, which is the evidence of where it actually stands. This is
+what a returning user sees after Mori was closed while the work went on.
+
 Session rows should support status-first grouping:
 
 - 진행 중

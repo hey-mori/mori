@@ -49,6 +49,8 @@ import { ProjectContinuationModal } from "./ProjectContinuationModal";
 import { SessionMembershipControl } from "./SessionMembershipControl";
 import { buildProjectContinuationPack } from "../../lib/continuation/projectContinuation";
 import { ProjectLiveSection } from "./ProjectLiveSection";
+import { buildSourceActivity, reportedSessionKeys } from "./sourceActivity";
+import { useObservedSessions } from "../live-session/useAmbientObservation";
 import { useConfirmedProjectLive, useProjectLive } from "./useProjectLive";
 import { confirmedLiveScopeFor } from "./confirmedLiveScope";
 import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
@@ -388,11 +390,27 @@ export function ContextView() {
       sessionIdOfFile: (key) => sessionIdByPath.get(key),
     });
   }, [activeContext, loading, searchInventory, records, contexts]);
-  const confirmedLive = useConfirmedProjectLive(liveSources?.scope ?? null);
+  // When each session's conversation last moved, by source file, as discovery
+  // last read it (`lastMessageAt`: the last user or assistant record, not the
+  // bookkeeping the agent writes while nobody talks). A session the live feed
+  // is reporting on is never set aside: its rows are what Mori sees.
+  const { feed: observedFeed } = useObservedSessions();
+  const reportedKeys = useMemo(() => reportedSessionKeys(observedFeed), [observedFeed]);
+  const sourceActivity = useMemo(() => {
+    const summaryById = new Map(summaries.map((summary) => [summary.sessionId, summary]));
+    return buildSourceActivity({
+      metas: loadAutoImportMetas(),
+      reportedKeys,
+      titleOfMeta: (meta) => summaryById.get(autoImportedSessionId(meta))?.title,
+    });
+    // Re-read as the poller publishes, so a session discovered since is known.
+  }, [summaries, reportedKeys]);
+  const sourceActiveAt = sourceActivity.activeAt;
+  const confirmedLive = useConfirmedProjectLive(liveSources?.scope ?? null, sourceActiveAt);
   // A folder group has no reviewed membership: it is matched by the folder's
   // display leaf and refused when two observed folders share it (see
   // `selectProjectPathForLabel`).
-  const folderLive = useProjectLive(activeContext ? null : title || null);
+  const folderLive = useProjectLive(activeContext ? null : title || null, sourceActiveAt);
   const live = activeContext ? confirmedLive.projection : folderLive;
   // A live request names its session by file; the session list knows it by
   // its Mori id. A reviewed project maps through its own members (a file two
@@ -674,6 +692,7 @@ export function ContextView() {
                 projection={live}
                 openSession={openLiveSession}
                 unconfirmedObserved={activeContext ? confirmedLive.unconfirmedObserved : 0}
+                sessionTitleOf={sourceActivity.titleOf}
               />
               {children.length > 0 ? (
                 <section className="ctx-section">

@@ -46,7 +46,14 @@ import { useObservedSessions } from "../live-session/useAmbientObservation";
  *  boundaries it crosses are minutes and hours wide. */
 const FRESHNESS_TICK_MS = 60_000;
 
-export function useProjectLive(label: string | null): ProjectProjection | null {
+/**
+ * When each session's source was last written, by its source file, as the
+ * page knows it from discovery. Lets 현재 상황 set aside an observation the
+ * session has since moved past (see `sourceActiveAt` in the projection).
+ */
+export type SourceActiveAt = (sessionKey: string) => string | undefined;
+
+export function useProjectLive(label: string | null, sourceActiveAt?: SourceActiveAt): ProjectProjection | null {
   const [rows, setRows] = useState<IntakeRequestRow[]>([]);
   const [tick, setTick] = useState(0);
   // Changes only when the poller published something, which #63 made meaningful
@@ -90,11 +97,11 @@ export function useProjectLive(label: string | null): ProjectProjection | null {
     // The rows are already one project's, because the label was resolved to a
     // path before they were read. So there is exactly one projection here, and
     // re-filtering it by label would be a check that cannot fail.
-    const projections = buildProjectProjections(rows, { now: Date.now() });
+    const projections = buildProjectProjections(rows, { now: Date.now(), sourceActiveAt });
     return projections[0] ?? null;
     // `tick` is the point: it is what lets freshness age without new rows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, label, tick]);
+  }, [rows, label, tick, sourceActiveAt]);
 }
 
 /** A reviewed project's observed work: what the hook reads for. */
@@ -175,13 +182,14 @@ export function projectConfirmedLive(
   read: ConfirmedLiveRead | null,
   scope: ConfirmedLiveScope | null,
   now: number,
+  sourceActiveAt?: SourceActiveAt,
 ): ConfirmedProjectLive {
   if (!scope || !read || read.projectId !== scope.projectId) return { projection: null, unconfirmedObserved: 0 };
   const current = new Set(scope.keys);
   return {
     projection: buildScopedProjection(
       read.rows.filter((row) => current.has(row.sessionKey)),
-      { now, label: scope.label },
+      { now, label: scope.label, sourceActiveAt },
     ),
     unconfirmedObserved: read.unconfirmed,
   };
@@ -195,7 +203,10 @@ export function projectConfirmedLive(
  * Pass null while the kernel is loading: an empty member list then means
  * "not known yet", not "no members", and nothing is shown or read.
  */
-export function useConfirmedProjectLive(scope: ConfirmedLiveScope | null): ConfirmedProjectLive {
+export function useConfirmedProjectLive(
+  scope: ConfirmedLiveScope | null,
+  sourceActiveAt?: SourceActiveAt,
+): ConfirmedProjectLive {
   const [read, setRead] = useState<ConfirmedLiveRead | null>(null);
   const [tick, setTick] = useState(0);
   const { snapshot } = useObservedSessions();
@@ -236,9 +247,9 @@ export function useConfirmedProjectLive(scope: ConfirmedLiveScope | null): Confi
   }, [projectId]);
 
   return useMemo(
-    () => projectConfirmedLive(read, scope, Date.now()),
+    () => projectConfirmedLive(read, scope, Date.now(), sourceActiveAt),
     // `tick` lets freshness age without new rows.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [read, projectId, keysKey, label, tick],
+    [read, projectId, keysKey, label, tick, sourceActiveAt],
   );
 }

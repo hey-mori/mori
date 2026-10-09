@@ -24,6 +24,7 @@ export {
   type ProjectRecentRequest,
   type ProjectRunningRequest,
   type ProjectTouchedFile,
+  type ProjectContinuedSession,
 } from "./buildProjectProjection";
 export { IntakeBrowserStore } from "./intakeStore";
 export {
