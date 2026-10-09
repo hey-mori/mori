@@ -859,6 +859,17 @@ storage; the kernel tables joined it additively in `V008` (§12 migration).
   issues + decisions + relationships + artifacts + next actions +
   summaries). `SessionPersistenceService` prefers SQLite as the
   source of truth in desktop mode.
+- **Durable documents and the storage folder (desktop).** Session drafts,
+  analysis, memory bodies, session imports, user projects and project
+  connections are mirrored into `durable_documents` (`V009`) and served from
+  SQLite once it holds every durable key localStorage holds; reopen
+  descriptors are one document per session, merged with the local map every
+  launch. The storage folder (`mori.sqlite` with its WAL, `archives/`,
+  `backups/`) is the documented backup: copied with Mori closed, it restores
+  records, passages, reviewed membership, archives and session reopening on
+  its own. Accepted project memory is still read from localStorage when a
+  session reopens, and preferences and engine settings stay device-local
+  (`docs/design/recoverable-storage.md`).
 - **Connector inbox.** `~/.mori/connectors/` is the only filesystem
   surface Mori reads beyond explicit user paste / file pick. Driven
   by an explicit Refresh button; canonicalised, 8 MB cap, allowed

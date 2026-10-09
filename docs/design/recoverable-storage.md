@@ -14,7 +14,7 @@ in practice, the session list itself lived in WebView localStorage. Bytes surviv
 not. Principle: **durable source bytes and the metadata needed to find and open them share one
 recoverable unit.**
 
-## 2. Ownership map (desktop, verified against main e93b44fe)
+## 2. Ownership map (desktop, before this program, verified against main e93b44fe)
 
 | Data | Where (before) | Class | Needed for |
 |---|---|---|---|
@@ -77,7 +77,7 @@ first render before `prepareDurableReads` decided (it captured "no durable stora
 | A · records | records, contexts, revisions, passages | yes |
 | B · evidence | archives and their source records, source links | yes |
 | C · sessions | session list, imports, reopen descriptors: archived sessions open from the archive, imported sessions show their import | yes (isolated release runtime) |
-| D · working context | reviewed membership, project pages, search | see the acceptance record |
+| D · working context | reviewed membership (a `user` revision on the kernel record), project pages, search in an archive | yes (isolated release runtime, §5) |
 | E · preferences | theme, layout, onboarding, engine settings, current session | **not included** by design |
 
 **Backup:** quit Mori, then copy the whole storage folder (default `~/Mori/Records`, or the
@@ -91,3 +91,22 @@ copies any locally held document that is newer than, or missing from, the restor
 Preferences and engine settings (including any API key) are device-local and are re-entered.
 An archive on the same disk as its original is not an independent backup; agent transcripts are
 not part of Mori's backup.
+
+## 5. Operator acceptance
+
+1. In 설정 › 저장소, note the storage folder; quit Mori.
+2. Copy the whole folder to another disk; keep a checksum list of its files.
+3. On a separate OS user account or an isolated trial home (never over the live folder), put a copy
+   of the backup at the storage location with no Mori app data present, and start Mori.
+4. Check: the 프로젝트 page lists the same sessions; a kept session opens from 보관한 원본 and
+   이 대화에서 찾기 works; a saved passage is found in 기록 and 원본 열기 says plainly when the
+   original is gone; an imported session opens from its import.
+5. Quit and confirm the backup on the other disk still matches its checksum list; the restored
+   folder itself changes once Mori runs. Opening the backup itself with a SQLite tool rewrites
+   `mori.sqlite-shm` (harmless, but it no longer matches), so inspect a copy instead.
+
+Evidence for levels C and D (2026-10-10, synthetic profiles, release build of #221): after a
+storage-only restore, a project page listed the same sessions; a session filed by hand into a
+project other than its source folder stayed there and opened from its kept copy; search inside the
+archive, passage search and an imported session worked; kernel and document rows were
+content-identical before and after the restored launch.

@@ -167,6 +167,16 @@ only · no phase numbers.
   replaced transcripts and retry (#208); a full reset deletes archive files (#210);
   Home opens sessions through the shared resolver and notes show their saved
   passage (#212).
+- Recoverable storage (2026-10-10, design `docs/design/recoverable-storage.md`):
+  the storage folder alone restores records, passages, archives, sessions,
+  imports and reopen descriptors. Session imports and per-session reopen
+  descriptors are durable documents adopted every launch without shrinking
+  what the database holds, and reads go through a per-call storage behind a
+  startup gate (#215); a permanent reset also deletes managed snapshots and
+  reports leftovers, start fresh keeps them and says so (#217); a kept archive
+  is verified by size and hash before it is read, and a replaced original
+  opens the kept copy (#219); 설정 › 저장소 says how to back up and restore
+  the folder (#221).
 - Work Bundle import · composite multi-source preview. `buildWorkBundlePreview`
   (pure) reconstructs several normalized candidates (transcript + Codex/OpenCode
   run JSONL + git diff + terminal log + note) into one work unit (detected
@@ -345,20 +355,23 @@ loop must not manufacture vague polish to avoid this:
 1. Project Memory UX polish · open; needs a concrete defect /
    improvement observed against real captured data.
 2. Queryable Memory extensions · open; needs a clear, safe slice.
-3. Retention follow-ups · open (see `docs/design/passage-capture.md` §5c–§5f):
-   - Owner decisions: whether a full reset also deletes the pre-migration
-     `backups/` snapshots (they keep the kernel, passage text included); whether
-     auto-import reopen descriptors move from app storage into the database, so
-     that backing up the storage folder alone restores session access to archives
-     (today a backup needs `Mori/Records` and the app data folder).
-   - Small: with a kept archive and a replaced transcript present, the import is
-     shown rather than the archive; "replaced" is known only within a run; the
-     session-bar chip estimates from the stored meta without a presence check; a
-     project-scoped retention line is not built.
+3. Retention follow-ups · open, small (see `docs/design/passage-capture.md` §5c–§5f):
+   the session-bar chip estimates from the stored meta without a presence check; a
+   project-scoped retention line is not built.
 4. Durable-context follow-ups · open, small: multi-message excerpts and capture
    from imported timeline cards are not built; the redaction used for a redacted
    passage has no version, so a future pattern change reads old redacted passages
    as "could not verify"; archives exist for Claude Code transcripts only.
+5. Recovery follow-ups · open (see `docs/design/recoverable-storage.md`):
+   project search and the latest-reply open still read a replaced original rather
+   than the kept copy, and the latest-reply open has no kept-copy fallback when the
+   original is gone; the head-fingerprint identity assumes a transcript's first
+   line never changes; accepted project memory is still read from localStorage when a
+   discovered session opens, so after a storage-only restore a reopen can renumber
+   events that SQLite-held accepted memory cites; a folder chosen with 변경 is
+   read in full only after a restart; a restore on a device that still holds data merges rather than rolls
+   back; a cross-machine restore and launch-time cost with large stores are not
+   measured. Preferences and the API key are device-local by design.
 
 Deferred · revisit when a concrete need appears:
 - Evidence / Import Review polish · audited; the Import Review view,
