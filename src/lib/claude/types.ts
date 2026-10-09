@@ -65,6 +65,12 @@ export type ClaudeMessage = {
    * time window cannot give.
    */
   stopReason?: string;
+  /**
+   * Where this message's record sits in its transcript: set by window reads
+   * only. `end` and `anchor` read back to it through the same cursor check a
+   * page uses, so a saved passage can be found again or refused when changed.
+   */
+  record?: { start: number; end: number; anchor: string };
 };
 
 export type ClaudeConversationDetail = ClaudeConversationMeta & {

@@ -173,6 +173,22 @@ pub struct ClaudeCodeMessage {
     /// finished and the agent is waiting for the user — the honest "not working"
     /// signal that a time window cannot give.
     pub stop_reason: String,
+    /// Where this message's record sits in the transcript, set only by window
+    /// reads: enough to name the record again later (passage capture) and to
+    /// refuse a rewritten file, through the same anchor a page cursor uses.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub record: Option<ClaudeRecordSpan>,
+}
+
+/// A record's byte span and anchor in its transcript.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaudeRecordSpan {
+    pub start: u64,
+    /// Just past the record's line break: pass as `before_offset` to read back to it.
+    pub end: u64,
+    /// `anchor_at(start)`: the same fingerprint a window cursor carries.
+    pub anchor: String,
 }
 
 /// Line accounting for a delta read, so a live-follow surface can show parse
@@ -609,7 +625,18 @@ fn parse_jsonl_lines(
     text: &str,
     fallback_id: impl Fn(usize) -> String,
 ) -> (Vec<ClaudeCodeMessage>, Vec<ClaudeFileTouch>, ClaudeDeltaStats) {
+    let (messages, _lines, touches, stats) = parse_jsonl_lines_indexed(text, fallback_id);
+    (messages, touches, stats)
+}
+
+/// `parse_jsonl_lines`, plus the line index each message came from (one line
+/// shows at most one message), so a window can place each message's record.
+fn parse_jsonl_lines_indexed(
+    text: &str,
+    fallback_id: impl Fn(usize) -> String,
+) -> (Vec<ClaudeCodeMessage>, Vec<usize>, Vec<ClaudeFileTouch>, ClaudeDeltaStats) {
     let mut messages: Vec<ClaudeCodeMessage> = Vec::new();
+    let mut message_lines: Vec<usize> = Vec::new();
     let mut file_touches: Vec<ClaudeFileTouch> = Vec::new();
     let mut touch_ids: Vec<Option<String>> = Vec::new();
     let mut patches: std::collections::HashMap<String, (u32, u32, String)> =
@@ -632,6 +659,7 @@ fn parse_jsonl_lines(
         match visible_message(&value, || fallback_id(index)) {
             Some(message) => {
                 messages.push(message);
+                message_lines.push(index);
                 stats.parsed += 1;
             }
             None => stats.skipped += 1,
@@ -646,7 +674,7 @@ fn parse_jsonl_lines(
             }
         }
     }
-    (messages, file_touches, stats)
+    (messages, message_lines, file_touches, stats)
 }
 
 /// The message a record shows in a conversation view, or `None` when it shows
@@ -679,6 +707,7 @@ fn visible_message(value: &Value, fallback_id: impl FnOnce() -> String) -> Optio
         created_at,
         subkind,
         stop_reason,
+        record: None,
     })
 }
 
@@ -993,6 +1022,7 @@ fn parse_jsonl(text: &str) -> ParsedSession {
             created_at,
             subkind,
             stop_reason,
+            record: None,
         });
     }
     // Attach line counts to each touch from its correlated result. The result
@@ -3105,9 +3135,22 @@ fn build_window(
     let end_anchor = last_record_anchor(file, start, end, len)?;
     let reached_end = end >= complete_end(file, len)?;
     let text = String::from_utf8_lossy(buffer);
-    let (events, file_touches, stats) = parse_jsonl_lines(&text, |index| {
+    let (mut events, lines, file_touches, stats) = parse_jsonl_lines_indexed(&text, |index| {
         format!("offset-{}", offsets.get(index).copied().unwrap_or(start))
     });
+    // `text.lines()` and the raw split agree on line indices: lossy decoding
+    // replaces bytes but never adds or removes a line break.
+    for (event, line) in events.iter_mut().zip(lines) {
+        let (Some(&record_start), Some(&next)) = (offsets.get(line), offsets.get(line + 1)) else {
+            continue;
+        };
+        let record_end = next.min(end);
+        event.record = Some(ClaudeRecordSpan {
+            start: record_start,
+            end: record_end,
+            anchor: anchor_at(file, record_start, len)?,
+        });
+    }
     Ok(ClaudeCodeSessionWindow {
         file_path: canonical.to_string_lossy().to_string(),
         source_id: id,
@@ -3520,6 +3563,31 @@ mod window_tests {
         }
         windows.reverse();
         windows
+    }
+
+    #[test]
+    fn a_window_message_names_its_record_so_it_can_be_read_again() {
+        let dir = TempDir::new().unwrap();
+        let body: String = (0..5).map(|index| user(index, &format!("message {index}"))).collect();
+        let (file, path) = session(&dir, &body);
+        let window = read_session_window_at(dir.path(), &path, None, None, None, 1 << 20).unwrap();
+        let picked = window.events.iter().find(|event| event.content == "message 2").unwrap().clone();
+        let record = picked.record.clone().expect("a window message carries its record span");
+        assert_eq!(&body.as_bytes()[record.start as usize..record.end as usize], user(2, "message 2").as_bytes());
+        // Read back to the record through the cursor check a page uses.
+        let again = read_session_window_with(dir.path(), &path, Some(record.end), Some(&window.source_id), None, Some(&record.anchor), 1 << 20).unwrap();
+        let last = again.events.last().unwrap();
+        assert_eq!((last.id.as_str(), last.content.as_str()), ("u2", "message 2"));
+        assert_eq!(last.record.as_ref(), Some(&record));
+        // A record rewritten within its anchored head is refused, not read.
+        fs::write(&file, body.replacen("\"uuid\":\"u2\"", "\"uuid\":\"x2\"", 1)).unwrap();
+        let refused = read_session_window_with(dir.path(), &path, Some(record.end), Some(&window.source_id), None, Some(&record.anchor), 1 << 20);
+        assert!(refused.is_err(), "a rewritten record head under the same offset is refused");
+        // The anchor covers only the head: a change past it reads back, and the
+        // caller must compare the text it saved (passage capture does).
+        fs::write(&file, body.replacen("message 2", "messagE 2", 1)).unwrap();
+        let later = read_session_window_with(dir.path(), &path, Some(record.end), Some(&window.source_id), None, Some(&record.anchor), 1 << 20).unwrap();
+        assert_eq!(later.events.last().unwrap().content, "messagE 2");
     }
 
     #[test]
