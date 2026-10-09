@@ -420,6 +420,49 @@ describe("stale searches and jumps", () => {
     expect(ids()).not.toContain("long-m25");
   });
 
+  it("a result still opening when a new query starts never moves the view", async () => {
+    await openWithSearch({ 5: "alpha passage", 30: "beta passage" });
+    await useSessionStore.getState().searchSessionWindow("alpha");
+    const alphaHit = useSessionStore.getState().sessionSearch!.hits[0]!;
+    const held = deferred();
+    fake.gate = ({ kind }) => (kind === "window" ? held.promise : undefined);
+    const jumping = useSessionStore.getState().openSessionSearchHit(alphaHit);
+    fake.gate = null;
+    // The user moves on: a new query in the same session, run to completion.
+    await useSessionStore.getState().searchSessionWindow("beta");
+    expect(useSessionStore.getState().sessionSearch!.hits.map((hit) => hit.messageId)).toEqual(["long-m30"]);
+    const before = view();
+    held.release();
+    await jumping;
+    expect(view()).toBe(before);
+    expect(view().focus).toBeNull();
+    expect(useSessionStore.getState().sessionSearch!.opening).toBeNull();
+  });
+
+  it("closing a search drops a result still opening; stopping the scan does not", async () => {
+    for (const leave of ["close", "cancel"] as const) {
+      await openWithSearch({ 5: "the needle" });
+      await useSessionStore.getState().searchSessionWindow("needle");
+      const hit = useSessionStore.getState().sessionSearch!.hits[0]!;
+      const held = deferred();
+      fake.gate = ({ kind }) => (kind === "window" ? held.promise : undefined);
+      const jumping = useSessionStore.getState().openSessionSearchHit(hit);
+      fake.gate = null;
+      if (leave === "close") useSessionStore.getState().closeSessionSearch();
+      else useSessionStore.getState().cancelSessionSearch();
+      const before = view();
+      held.release();
+      await jumping;
+      if (leave === "close") {
+        expect(view()).toBe(before);
+        expect(view().focus).toBeNull();
+      } else {
+        // 멈추기 stops scanning; the results it found, and opening one, stay.
+        expect(view().focus?.messageId).toBe("long-m5");
+      }
+    }
+  });
+
   it("a jump that replies after another session opened does nothing", async () => {
     makeTranscript("a", contents(40, { 3: "needle in a" }));
     makeTranscript("b", contents(40));

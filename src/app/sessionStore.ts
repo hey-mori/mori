@@ -2048,8 +2048,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 /** Bumped by every search start, continue, cancel and close, and by every
  *  session open: a step that finishes after that must not touch the store. */
 let searchSequence = 0;
-/** Bumped by every result opened, and by every session open or search close:
- *  only the last jump asked for may move the view. */
+/** Bumped by every result opened, and by everything that ends or replaces a
+ *  search (a new query, closing it, another session opening): only the last
+ *  jump asked for, from the search still showing, may move the view. Stopping
+ *  a search only stops its scan; what it found, and opening one of those
+ *  results, stays valid. */
 let jumpSequence = 0;
 
 /** Does the search belong to the view that is open now (same session, same open)? */
@@ -2065,6 +2068,9 @@ async function startSessionSearch(query: string): Promise<void> {
   const window = getState().sessionWindow;
   if (!phrase || !isLoadedWindow(window)) return;
   const sequence = ++searchSequence;
+  // A new query replaces the old results: a result of theirs still opening
+  // must not move the view.
+  jumpSequence += 1;
   setState({
     sessionSearch: startedSearch({
       sessionId: window.sessionId,
