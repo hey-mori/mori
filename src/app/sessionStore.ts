@@ -736,6 +736,32 @@ export function selectActiveSessionWindow(state: SessionState): SessionWindowSta
   return window;
 }
 
+/**
+ * The session is showing what Mori kept from an earlier read, because reading
+ * its source just failed (a transcript the agent deleted, moved or replaced).
+ * The kept copy is real evidence, so it stays on screen; this says what it is:
+ * a copy as of `capturedAt`, possibly missing anything said since.
+ */
+export function selectRetainedSourceNotice(
+  state: SessionState,
+): { kind: SessionWindowError["kind"]; capturedAt: string } | null {
+  const window = state.sessionWindow;
+  if (!window || window.status !== "error" || window.sessionId !== state.draft?.session.id) return null;
+  if (state.imports.length === 0) return null;
+  const capturedAt = state.imports.reduce(
+    (latest, entry) => (Date.parse(entry.savedAt) > Date.parse(latest) ? entry.savedAt : latest),
+    state.imports[0]!.savedAt,
+  );
+  return { kind: window.error.kind, capturedAt };
+}
+
+/** The notice's parts as primitives, so a component subscribing to them sees a
+ *  stable value between renders (an object selector would loop). */
+export const selectRetainedSourceKind = (state: SessionState): SessionWindowError["kind"] | null =>
+  selectRetainedSourceNotice(state)?.kind ?? null;
+export const selectRetainedSourceCapturedAt = (state: SessionState): string | null =>
+  selectRetainedSourceNotice(state)?.capturedAt ?? null;
+
 /** Why opening a session at a search result did not happen. */
 export type SourceHitOutcome = "opened" | "changed" | "missing" | "failed" | "superseded";
 

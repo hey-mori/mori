@@ -1025,3 +1025,15 @@
   background: var(--base-surface-subtle);
   color: var(--base-text);
 }
+
+/* A kept copy is on screen because the source could not be read: said once,
+   quietly, above the session's tabs. */
+.session-retained-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 var(--page-shell-inset) var(--base-space-3);
+  color: var(--muted);
+  font-size: var(--base-font-size-xs);
+}
