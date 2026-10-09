@@ -26,7 +26,9 @@ import { useSessionResolver } from "../session/useSessionResolver";
 export function LedgerWorkspace() {
   const ledger = useRecordLedger();
   const [query, setQuery] = useState("");
-  const passages = useSavedPassageTexts(query.trim().length > 0, ledger.records);
+  // Passages are saved outside 기록, so only a record added while searching
+  // (not an autosave of an existing one) can bring a new one.
+  const passages = useSavedPassageTexts(query.trim().length > 0, ledger.records.length);
   const [sort, setSort] = useState<ExplorerSort>("date");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // 기록 opens ready to capture (approved design: capture/organize/review are one

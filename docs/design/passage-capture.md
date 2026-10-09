@@ -190,8 +190,13 @@ Mori may say that a source conversation may soon be removed; it never keeps one 
   text). A row found only that way says 저장한 구절에서 찾음 and shows the passage from the
   hit; the palette adds such records after its text-search results, up to the same 8.
 - No field, index, export or copy is added. 기록 reads the passages only while a search is
-  active (again when the ledger changes); the palette reads them once per open. Matching is a
-  case-insensitive substring over NFC text, like 기록's title and body matching.
+  active (again when a record is added); the palette reads them once per open and a query waits
+  for that read. Passage matching is a case-insensitive substring over NFC text with whitespace
+  collapsed, like 기록's title and body matching. The palette's own results come from the text
+  index, which matches whole words in any order; a passage needs the words in order, and a row
+  whose body holds the query inside a longer word is shown without the passage label.
+- A redacted passage's placeholder (such as `[REDACTED openai key]`) is part of its kept text,
+  so it can match a search for those words; the hidden value never can.
 - A passage whose source Mori no longer keeps (`notCaptured`) is not matched; a discarded or
   archived record is not shown.
 

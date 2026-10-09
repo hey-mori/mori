@@ -1,7 +1,7 @@
 /**
  * The saved passage texts of each record, read only while 기록 is searching,
  * so a record whose body was rewritten is still found by the words it was
- * saved from. Re-read when the ledger changes (`version`) during a search.
+ * saved from. Re-read when `version` changes during a search.
  */
 import { useEffect, useState } from "react";
 import { savedPassageTexts } from "../../lib/capture/passageSearch";

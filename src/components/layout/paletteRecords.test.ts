@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { CommandEntry } from "../../lib/commandPalette/commandPalette";
-import { passageOnlyRecordIds, recordToEntry, viaSavedPassage, withoutDuplicateSessions } from "./paletteRecords";
+import { passageOnlyRecordIds, recordTextHolds, recordToEntry, viaSavedPassage, withoutDuplicateSessions } from "./paletteRecords";
 
 const registry = createSchemaRegistry();
 const contexts: KernelContext[] = [
@@ -74,6 +74,11 @@ describe("records found through a saved passage", () => {
 
   it("matches a Korean query typed in another normal form", () => {
     expect(passageOnlyRecordIds(passages, "백오프".normalize("NFD"), new Set(), 8)).toContain("r-edited");
+  });
+
+  it("knows a body holding the query inside a longer word is the record's own text", () => {
+    expect(recordTextHolds({ title: "t", body: "> 재시도 간격은 지수 백오프로 둔다" }, "백오프")).toBe(true);
+    expect(recordTextHolds({ title: "t", body: "we chose hourly rotation" }, "백오프")).toBe(false);
   });
 
   it("says where the match came from", () => {

@@ -29,7 +29,14 @@ import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { savedPassageTexts } from "../../lib/capture/passageSearch";
 import { useSessionResolver } from "../../features/session/useSessionResolver";
-import { passageOnlyRecordIds, recordToEntry, viaSavedPassage, withoutDuplicateSessions } from "./paletteRecords";
+import {
+  PASSAGE_SCAN_CAP,
+  passageOnlyRecordIds,
+  recordTextHolds,
+  recordToEntry,
+  viaSavedPassage,
+  withoutDuplicateSessions,
+} from "./paletteRecords";
 import {
   displayTime,
   schemaLabel,
@@ -87,8 +94,9 @@ export function CommandPalette({
   const [recordError, setRecordError] = useState(false);
   const contextsRef = useRef<KernelContext[]>([]);
   // Saved passage texts by record, read once per open: a record whose body
-  // was rewritten is still found by the passage it was saved from.
-  const passagesRef = useRef<ReadonlyMap<string, readonly string[]>>(new Map());
+  // was rewritten is still found by the passage it was saved from. Held as
+  // the read itself, so a query typed before it lands still waits for it.
+  const passagesRef = useRef<Promise<ReadonlyMap<string, readonly string[]>>>(Promise.resolve(new Map()));
   const registry = useMemo(() => createSchemaRegistry(), []);
 
   // Reset the input + cursor whenever the palette opens so a fresh trigger
@@ -120,12 +128,9 @@ export function CommandPalette({
       })
       .catch(() => {});
     const repo = getKernelRepository();
-    Promise.all([repo.listSources(), repo.listSourceLinks()])
-      .then(([sources, links]) => {
-        if (cancelled) return;
-        passagesRef.current = savedPassageTexts(sources.data, links.data);
-      })
-      .catch(() => {});
+    passagesRef.current = Promise.all([repo.listSources(), repo.listSourceLinks()])
+      .then(([sources, links]) => savedPassageTexts(sources.data, links.data))
+      .catch(() => new Map());
     return () => {
       cancelled = true;
     };
@@ -150,19 +155,30 @@ export function CommandPalette({
           const live = (record: MoriRecord | null): record is MoriRecord =>
             Boolean(record) && record!.status !== "discarded" && record!.status !== "archived";
           const found = result.data.filter(live);
+          const passages = await passagesRef.current;
+          if (cancelled) return;
+          // Liveness is known only after the read, so collect past the room
+          // left and cut after dropping discarded or archived records.
           const extraIds = passageOnlyRecordIds(
-            passagesRef.current,
+            passages,
             text,
             new Set(result.data.map((record) => record.id)),
-            8 - found.length,
+            PASSAGE_SCAN_CAP,
           );
           const extra = (
             await Promise.all(extraIds.map((id) => getKernelRepository().getRecord(id).then((r) => r.data)))
-          ).filter(live);
+          )
+            .filter(live)
+            .slice(0, Math.max(0, 8 - found.length));
           if (cancelled) return;
           const entries = [
             ...found.map((record) => recordToEntry(record, registry, contextsRef.current)),
-            ...extra.map((record) => viaSavedPassage(recordToEntry(record, registry, contextsRef.current))),
+            // Text search matches whole words; a body holding the query inside
+            // a longer word was missed by it but is still the record's own text.
+            ...extra.map((record) => {
+              const entry = recordToEntry(record, registry, contextsRef.current);
+              return recordTextHolds(record, text) ? entry : viaSavedPassage(entry);
+            }),
           ];
           setRecordEntries(entries);
           setRecordError(false);

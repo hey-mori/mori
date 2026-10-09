@@ -21,7 +21,8 @@ export function savedPassageTexts(
     if (source.kind !== "agent-session" || !source.locator?.startsWith(PASSAGE_KEY_PREFIX)) continue;
     // Only what Mori still keeps; a source marked not captured holds nothing to find.
     if (source.retention !== "retained" && source.retention !== "redacted") continue;
-    const text = source.rawBody?.trim();
+    // One line, NFC: matched and shown the same way, whatever the line breaks.
+    const text = source.rawBody?.replace(/\s+/g, " ").trim();
     if (text) textBySource.set(source.id, text.normalize("NFC"));
   }
   const byRecord = new Map<string, string[]>();
@@ -37,8 +38,9 @@ export function savedPassageTexts(
 
 /** The first saved passage holding `needle` (already NFC and lower case). */
 export function matchingPassage(texts: readonly string[] | undefined, needle: string): string | null {
-  if (!texts || !needle) return null;
-  return texts.find((text) => text.toLowerCase().includes(needle)) ?? null;
+  const flat = needle.replace(/\s+/g, " ");
+  if (!texts || !flat.trim()) return null;
+  return texts.find((text) => text.toLowerCase().includes(flat)) ?? null;
 }
 
 /** Text before the hit: none, since list rows are narrow and clip the end. */
@@ -48,7 +50,7 @@ const LEAD = 0;
  *  on one line, so the hit survives a narrow row clipping the end. */
 export function passageSnippet(text: string, needle: string, width = 72): string {
   const flat = text.replace(/\s+/g, " ").trim();
-  const at = needle ? flat.toLowerCase().indexOf(needle) : -1;
+  const at = needle ? flat.toLowerCase().indexOf(needle.replace(/\s+/g, " ")) : -1;
   if (at < 0) return flat.length <= width ? flat : `${flat.slice(0, width - 1)}…`;
   if (at <= LEAD && flat.length <= width) return flat;
   const start = Math.max(0, at - LEAD);

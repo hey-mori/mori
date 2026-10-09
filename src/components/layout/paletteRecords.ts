@@ -55,6 +55,17 @@ export function recordToEntry(
   };
 }
 
+/** How many passage-matched records the palette reads before cutting to the
+ *  rows it has room for. */
+export const PASSAGE_SCAN_CAP = 40;
+
+/** Whether the record's own title or body holds the query as typed. */
+export function recordTextHolds(record: Pick<MoriRecord, "title" | "body">, query: string): boolean {
+  const needle = query.trim().normalize("NFC").toLowerCase();
+  if (!needle) return false;
+  return `${record.title}\n${record.body}`.normalize("NFC").toLowerCase().includes(needle);
+}
+
 /** The same row, saying it was found through the passage it was saved from. */
 export function viaSavedPassage(entry: CommandEntry): CommandEntry {
   return { ...entry, hint: entry.hint ? `${PASSAGE_MATCH_LABEL} · ${entry.hint}` : PASSAGE_MATCH_LABEL };
