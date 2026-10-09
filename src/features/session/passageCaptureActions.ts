@@ -8,6 +8,7 @@ import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTy
 import { membershipState } from "../../lib/record-kernel/projectMembership";
 import {
   findExistingPassageRecord,
+  passageSourceKey,
   type PassageCommitPlan,
   type PassageDraft,
 } from "../../lib/capture/passageCapture";
@@ -24,18 +25,27 @@ export type PassageCaptureContext = {
 
 export async function loadPassageCaptureContext(draft: PassageDraft): Promise<PassageCaptureContext> {
   const repo = getKernelRepository();
-  const [contexts, sources, links, records] = await Promise.all([
+  const [contexts, session, sources, links] = await Promise.all([
     repo.listContexts(),
+    repo.getRecord(draft.locator.sessionId),
     repo.listSources(),
     repo.listSourceLinks(),
-    repo.listRecords(),
   ]);
-  const session = records.data.find((record) => record.id === draft.locator.sessionId) ?? null;
-  const membership = session ? membershipState(session, contexts.data) : null;
+  // Only the records linked to a source at this passage's place are read.
+  const key = passageSourceKey(draft.locator);
+  const candidateIds = new Set(
+    links.data
+      .filter((link) => sources.data.some((source) => source.id === link.sourceId && source.locator === key))
+      .map((link) => link.recordId),
+  );
+  const candidates = (await Promise.all([...candidateIds].map((id) => repo.getRecord(id))))
+    .map((result) => result.data)
+    .filter((record): record is MoriRecord => record !== null);
+  const membership = session.data ? membershipState(session.data, contexts.data) : null;
   return {
     contexts: contexts.data,
     defaultProjectId: membership?.kind === "member" ? membership.context.id : null,
-    existing: findExistingPassageRecord(draft, sources.data, links.data, records.data),
+    existing: findExistingPassageRecord(draft, sources.data, links.data, candidates),
   };
 }
 

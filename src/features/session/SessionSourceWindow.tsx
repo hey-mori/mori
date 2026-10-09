@@ -31,8 +31,13 @@ const CAPTURE_REFUSAL: Record<PassageDraftRefusal, string> = {
   "not-a-message": "도구 실행 결과는 기록으로 남길 수 없습니다.",
   empty: "남길 내용이 없습니다.",
   "too-long": "메시지가 너무 깁니다. 남길 부분을 선택한 뒤 다시 눌러 주세요.",
-  "selection-outside": "선택한 글이 이 메시지 안에 있지 않습니다.",
+  "selection-outside": "선택한 글이 이 메시지 안에 있지 않습니다. 남길 메시지 안에서만 선택해 주세요.",
+  "mixed-tool": "도구 실행이 섞인 메시지입니다. 남길 부분을 선택한 뒤 다시 눌러 주세요.",
 };
+
+/** What the reader selected, relative to one message: nothing, a span of its
+ *  text (with where it starts), or something that is not wholly inside it. */
+type MessageSelection = { text: string; from: number } | "outside" | undefined;
 
 /** Characters of a message shown before it folds; keeps a long window's DOM small. */
 const CLIP_CHARS = 700;
@@ -223,8 +228,14 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
   const sessionTitle = useSessionStore((store) => store.draft?.session.title ?? "");
   const [captureDraft, setCaptureDraft] = useState<PassageDraft | null>(null);
   const [captureRefusal, setCaptureRefusal] = useState<string | null>(null);
-  const capturePassage = (message: ClaudeMessage, selection: string | undefined) => {
+  const capturePassage = (message: ClaudeMessage, selection: MessageSelection) => {
     setCaptureRefusal(null);
+    // A selection that reaches outside the message is refused, never widened
+    // to the whole message behind the reader's back.
+    if (selection === "outside") {
+      setCaptureRefusal(CAPTURE_REFUSAL["selection-outside"]);
+      return;
+    }
     void buildPassageDraft({ sessionId: state.sessionId, sourceId: state.sourceId, message, selection }).then((result) => {
       if ("draft" in result) setCaptureDraft(result.draft);
       else setCaptureRefusal(CAPTURE_REFUSAL[result.refused]);
@@ -417,18 +428,23 @@ function WindowMessage({
   message: ClaudeMessage;
   focus: { query: string; wholeWords: boolean; seq: number } | null;
   /** Opens 기록으로 남기기 for this message, with the text selected in it. */
-  onCapture?: (message: ClaudeMessage, selection: string | undefined) => void;
+  onCapture?: (message: ClaudeMessage, selection: MessageSelection) => void;
 }) {
   const textRef = useRef<HTMLParagraphElement>(null);
-  // Read on press, before the click moves focus: a selection inside this
-  // message's text narrows the excerpt; anything else means the whole message.
-  const selectedHere = (): string | undefined => {
+  // A selection wholly inside this message's text narrows the excerpt, and its
+  // start is measured in the rendered text (each text node is a slice of the
+  // message, marks and folding included), so a repeated phrase keeps its own
+  // place. No selection means the whole message; any other selection refuses.
+  const selectedHere = (): MessageSelection => {
     const selection = typeof window === "undefined" ? null : window.getSelection();
     const text = textRef.current;
-    if (!selection || selection.isCollapsed || !text) return undefined;
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0 || !text) return undefined;
     const range = selection.getRangeAt(0);
-    if (!text.contains(range.commonAncestorContainer)) return undefined;
-    return selection.toString();
+    if (!text.contains(range.startContainer) || !text.contains(range.endContainer)) return "outside";
+    const before = document.createRange();
+    before.setStart(text, 0);
+    before.setEnd(range.startContainer, range.startOffset);
+    return { text: range.toString(), from: before.toString().length };
   };
   // Only what someone wrote: tool calls and their output are not messages.
   const capturable = onCapture && message.record && (messageKind(message) === "user" || messageKind(message) === "assistant");
@@ -458,17 +474,9 @@ function WindowMessage({
             type="button"
             className="session-window-capture"
             title="이 메시지를 기록으로 남깁니다. 일부를 선택하면 그 부분만 남깁니다."
-            onMouseDown={(event) => {
-              // Keep the reader's selection: it is the excerpt.
-              event.preventDefault();
-              onCapture(message, selectedHere());
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onCapture(message, selectedHere());
-              }
-            }}
+            // Pressing must not clear the reader's selection: it is the excerpt.
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => onCapture(message, selectedHere())}
           >
             <BookmarkPlus size={12} aria-hidden="true" />
             기록으로 남기기

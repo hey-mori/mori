@@ -47,9 +47,9 @@ preserved; a source reference is not a promise that the source will exist.
 
 1. **Capture a decision.** Search "Candidate B" → open the passage → 기록으로 남기기 on that
    message (or on a text selection inside it) → preview shows the exact excerpt, a record
-   type (결정 by default for an assistant reply that states one, otherwise 노트), a title and
-   body prefilled from the excerpt, and the project → the user edits → 저장 → a record exists,
-   linked to a retained excerpt source.
+   type (노트 by default; the user picks 결정), a title and body prefilled from the excerpt,
+   and the project → the user edits → 저장 → a record exists, linked to a retained excerpt
+   source.
 2. **Capture an unresolved action.** Same flow from a latest reply opened in 현재 상황,
    type 할 일. The record is an open task the user created; Mori does not claim it is still
    outstanding upstream.
@@ -82,15 +82,19 @@ preserved; a source reference is not a promise that the source will exist.
   and is the key that a second save of the same passage is matched by.
 - **Link** (`SourceLink`, role `origin`): `locator` is a versioned
   `mori-passage:v1:{…}` holding the Mori session id, the transcript fingerprint
-  (`sourceId`), the record's byte span and 64-byte anchor, the message id, the excerpt's
-  character range inside the message, and the excerpt hash. `parsePassageLocator` rejects
-  anything malformed.
+  (`sourceId`, a hash of its first line: it detects a replaced file, not an edited one), the
+  record's byte span and 64-byte anchor, the message id, the excerpt's character range inside
+  the message, and the excerpt hash. When the user hid a likely secret, the kept text, the
+  source hash and the locator hash are all of the redacted form (`redacted: true`); nothing
+  derived from the hidden text is stored. `parsePassageLocator` rejects anything malformed.
 - **Record**: origin `user`, status active, its create revision the user's;
   `occurredStart` is the message time (`source-exact`), or unknown when the message has none.
   Its body starts as the quoted excerpt so kernel search finds the words.
 - **Position**: transcript windows now return each message's record span and anchor (the
-  anchor the page cursor already uses). The anchor covers only a record's first 64 bytes,
-  so re-verifying a passage also compares the re-read text with the saved excerpt hash.
+  anchor the page cursor already uses). In real Claude Code transcripts a record's first 64
+  bytes hold its `parentUuid`, not its own id or text, so the anchor alone proves little:
+  re-opening a passage also requires the same message id and the excerpt hash at the saved
+  range.
 - No table, migration or index was added. Two repository reads (`listSources`,
   `listSourceLinks`) serve the duplicate check.
 
@@ -98,10 +102,12 @@ preserved; a source reference is not a promise that the source will exist.
 
 | Case | Behaviour |
 | - | - |
-| Message without a record position | refused with a reason; nothing written |
+| Message without a record position | no action offered |
 | Tool call or tool output | no action offered |
+| Message mixing text with a tool call | the whole message is refused; the user selects the part to keep |
 | Message over 20,000 characters | refused until the user selects a part |
-| Selection outside the message | refused |
+| Selection not wholly inside the message | refused (never widened to the whole message) |
+| Phrase repeated in the message | kept at the occurrence the user selected (measured in the rendered text) |
 | Likely secret | flagged; 가리기 on by default (retention `redacted`, body prefill redacted too) |
 | Same passage saved again | the preview offers the existing record |
 | Cancel | nothing written |
@@ -110,9 +116,10 @@ preserved; a source reference is not a promise that the source will exist.
 
 ## 6. Scope
 
-Built: single-message or in-message text selection from the transcript viewer; record types
-from the existing schemas; retained excerpt as a kernel source; provenance display with
-original navigation and honest missing/changed states; record search over the excerpt.
+Built (capture slice): single-message or in-message text selection from the transcript viewer;
+record types from the existing schemas; retained excerpt as a kernel source; record search
+through the record body (prefilled with the excerpt; a body the user rewrites is what search
+then sees). Next slice: provenance display with 원본 열기 and honest missing/changed states.
 
 Not built: multi-message excerpts (no workflow yet needs them); automatic or bulk capture;
 AI summarisation of the excerpt; capture from imported timeline cards (they are a kept copy,

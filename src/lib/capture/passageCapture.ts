@@ -47,8 +47,13 @@ export type PassageLocatorV1 = {
   /** Character range of the excerpt inside the message's visible text. */
   from: number;
   to: number;
-  /** SHA-256 (hex) of the excerpt as it appeared in the source. */
+  /** SHA-256 (hex) of the excerpt as kept: the source text, or its redacted
+   *  form when `redacted` (a hash of the hidden original would let anyone
+   *  confirm a guessed secret). */
   excerptHash: string;
+  /** Set when the kept excerpt is redacted: a re-read is compared after the
+   *  same redaction. */
+  redacted?: true;
 };
 
 const LOCATOR_PREFIX = "mori-passage:v1:";
@@ -75,6 +80,7 @@ export function parsePassageLocator(value: string | undefined): PassageLocatorV1
   if (!isCount(l.start) || !isCount(l.end) || !isCount(l.from) || !isCount(l.to)) return null;
   if ((l.end as number) <= (l.start as number) || (l.to as number) <= (l.from as number)) return null;
   if (typeof l.excerptHash !== "string" || !/^[0-9a-f]{64}$/.test(l.excerptHash)) return null;
+  if (l.redacted !== undefined && l.redacted !== true) return null;
   return l as unknown as PassageLocatorV1;
 }
 
@@ -94,8 +100,12 @@ export type PassageDraftInput = {
   sessionId: string;
   sourceId: string;
   message: ClaudeMessage;
-  /** Text the user selected inside this message, when they selected any. */
-  selection?: string;
+  /**
+   * Text the user selected inside this message, with where it starts in the
+   * message's visible text when the viewer could tell (a repeated phrase is
+   * then kept at the occurrence the user chose, not the first one).
+   */
+  selection?: { text: string; from?: number };
 };
 
 export type PassageDraft = {
@@ -109,6 +119,8 @@ export type PassageDraft = {
   secretLikely: boolean;
   /** Prefill for the editable record fields. */
   suggestedTitle: string;
+  /** SHA-256 of the excerpt after redaction, when redaction changes it. */
+  redactedHash?: string;
 };
 
 export type PassageDraftRefusal =
@@ -116,7 +128,11 @@ export type PassageDraftRefusal =
   | "not-a-message"
   | "empty"
   | "too-long"
-  | "selection-outside";
+  | "selection-outside"
+  | "mixed-tool";
+
+/** How the viewer renders a tool call inside a message's visible text. */
+const TOOL_LINE = /(^|\n)🔧 /;
 
 /**
  * The preview for one message, or why it cannot be captured. A selection must
@@ -137,14 +153,22 @@ export async function buildPassageDraft(
     return { refused: "not-a-message" };
   }
   const content = message.content;
-  const selection = input.selection?.trim() ?? "";
+  const raw = input.selection?.text ?? "";
+  const selection = raw.trim();
   let from = 0;
   let to = content.length;
   if (selection) {
-    const at = content.indexOf(selection);
+    // Where the viewer says it starts, past any whitespace the trim dropped;
+    // the first occurrence only when the viewer could not say.
+    const hinted = input.selection?.from === undefined ? -1 : input.selection.from + (raw.length - raw.trimStart().length);
+    const at = hinted >= 0 && content.slice(hinted, hinted + selection.length) === selection ? hinted : content.indexOf(selection);
     if (at < 0) return { refused: "selection-outside" };
     from = at;
     to = at + selection.length;
+  } else if (TOOL_LINE.test(content)) {
+    // A record that mixes text with a tool call: the call line (paths,
+    // commands) is not something anyone wrote to keep. The user selects.
+    return { refused: "mixed-tool" };
   }
   const excerpt = content.slice(from, to);
   if (!excerpt.trim()) return { refused: "empty" };
@@ -162,6 +186,8 @@ export async function buildPassageDraft(
     to,
     excerptHash: await sha256Hex(excerpt),
   };
+  const secretLikely = containsLikelySecret(excerpt);
+  const redacted = secretLikely ? redactText(excerpt) : null;
   return {
     draft: {
       locator,
@@ -169,8 +195,9 @@ export async function buildPassageDraft(
       partial: from > 0 || to < content.length,
       messageAt: message.createdAt || undefined,
       role: message.role === "human" ? "human" : "assistant",
-      secretLikely: containsLikelySecret(excerpt),
+      secretLikely,
       suggestedTitle: titleFrom(excerpt),
+      redactedHash: redacted && redacted.replacementCount > 0 ? await sha256Hex(redacted.redacted) : undefined,
     },
   };
 }
@@ -221,16 +248,21 @@ export function planPassageCommit(
   now: () => Date = () => new Date(),
 ): PassageCommitPlan {
   const capturedAt = now().toISOString();
-  const kept = edits.redact ? redactText(draft.excerpt) : null;
+  const kept = edits.redact && draft.redactedHash ? redactText(draft.excerpt).redacted : null;
+  // A redacted save keeps nothing derived from the hidden text: the stored
+  // hash and the locator's both name the redacted form.
+  const locator: PassageLocatorV1 = kept
+    ? { ...draft.locator, excerptHash: draft.redactedHash!, redacted: true }
+    : draft.locator;
   const source: KernelSource = {
     id: createKernelId("src"),
     kind: "agent-session",
-    locator: passageSourceKey(draft.locator),
-    rawBody: kept ? kept.redacted : draft.excerpt,
-    contentHash: draft.locator.excerptHash,
+    locator: passageSourceKey(locator),
+    rawBody: kept ?? draft.excerpt,
+    contentHash: locator.excerptHash,
     publishedAt: draft.messageAt,
     capturedAt,
-    retention: kept && kept.replacementCount > 0 ? "redacted" : "retained",
+    retention: kept ? "redacted" : "retained",
   };
   const properties: MoriRecord["properties"] = {};
   if (edits.schemaId === "task") properties.done = false;
@@ -254,7 +286,7 @@ export function planPassageCommit(
     sourceId: source.id,
     recordId: created.record.id,
     role: "origin",
-    locator: formatPassageLocator(draft.locator),
+    locator: formatPassageLocator(locator),
   };
   return { source, created, link };
 }
@@ -270,9 +302,11 @@ export function findExistingPassageRecord(
   records: readonly MoriRecord[],
 ): MoriRecord | null {
   const key = passageSourceKey(draft.locator);
+  // The same place AND the same text: a passage rewritten in place is new.
+  const hashes = new Set([draft.locator.excerptHash, draft.redactedHash].filter(Boolean));
   const sourceIds = new Set(
     sources
-      .filter((source) => source.kind === "agent-session" && source.locator === key && source.contentHash === draft.locator.excerptHash)
+      .filter((source) => source.kind === "agent-session" && source.locator === key && hashes.has(source.contentHash ?? ""))
       .map((source) => source.id),
   );
   if (sourceIds.size === 0) return null;

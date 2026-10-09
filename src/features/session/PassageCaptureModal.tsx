@@ -71,11 +71,17 @@ export function PassageCaptureModal({
     };
   }, [draft]);
 
+  // A save in flight finishes before the dialog can go: closing mid-save would
+  // leave the user unsure whether anything was kept.
+  const savingRef = useRef(false);
+  const close = () => {
+    if (!savingRef.current) onClose();
+  };
   useEffect(() => {
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        if (!savingRef.current) onClose();
         return;
       }
       trapTabKey(event, dialogRef.current);
@@ -107,19 +113,24 @@ export function PassageCaptureModal({
   const save = async () => {
     if (!canSave) return;
     setPhase("saving");
+    savingRef.current = true;
     try {
       const plan = planPassageCommit(draft, { schemaId, title, body, contextId: projectId || null, redact }, registry);
       const recordId = await commitPassage(plan);
+      savingRef.current = false;
       onClose();
       openRecordInLedger(recordId);
     } catch {
+      savingRef.current = false;
       setPhase("failed");
     }
   };
+  // What 저장 keeps, exactly: the redacted form while 가리기 is on.
+  const kept = redact && draft.redactedHash ? redactText(draft.excerpt).redacted : draft.excerpt;
 
   return (
     <div className="settings-sheet-layer" role="presentation">
-      <div className="settings-sheet-scrim" onClick={onClose} aria-hidden="true" />
+      <div className="settings-sheet-scrim" onClick={close} aria-hidden="true" />
       <div
         ref={dialogRef}
         className="project-modal passage-capture-modal"
@@ -137,7 +148,7 @@ export function PassageCaptureModal({
               제목과 내용은 고쳐도 저장한 구절은 바뀌지 않습니다.
             </InfoHint>
           </div>
-          <button type="button" className="settings-sheet-close" onClick={onClose} aria-label="닫기">
+          <button type="button" className="settings-sheet-close" onClick={close} aria-label="닫기">
             <X size={16} aria-hidden="true" />
           </button>
         </header>
@@ -165,7 +176,7 @@ export function PassageCaptureModal({
               {draft.partial ? " · 메시지 일부" : ""}
               {sessionTitle ? ` · ${sessionTitle}` : ""}
             </p>
-            <blockquote className="passage-capture-quote">{draft.excerpt}</blockquote>
+            <blockquote className="passage-capture-quote">{kept}</blockquote>
           </section>
 
           {draft.secretLikely ? (
@@ -188,13 +199,12 @@ export function PassageCaptureModal({
             </label>
           ) : null}
 
-          <div className="passage-capture-types" role="radiogroup" aria-label="기록 종류">
+          <div className="passage-capture-types" role="group" aria-label="기록 종류">
             {PASSAGE_RECORD_TYPES.map((type) => (
               <button
                 key={type}
                 type="button"
-                role="radio"
-                aria-checked={schemaId === type}
+                aria-pressed={schemaId === type}
                 className={schemaId === type ? "passage-capture-type is-selected" : "passage-capture-type"}
                 onClick={() => setSchemaId(type)}
               >
@@ -207,7 +217,13 @@ export function PassageCaptureModal({
             <span>
               제목 <em className="is-required">필수</em>
             </span>
-            <input style={{ margin: 0 }} value={title} maxLength={200} onChange={(event) => setTitle(event.target.value)} />
+            <input
+              autoFocus
+              style={{ margin: 0 }}
+              value={title}
+              maxLength={200}
+              onChange={(event) => setTitle(event.target.value)}
+            />
           </label>
 
           <label className="project-modal-field">
@@ -242,7 +258,7 @@ export function PassageCaptureModal({
         </div>
 
         <footer className="project-modal-foot">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" disabled={phase === "saving"} onClick={close}>
             취소
           </Button>
           <Button variant="primary" disabled={!canSave} onClick={() => void save()}>

@@ -29,8 +29,13 @@ const message = (overrides: Partial<ClaudeMessage> = {}): ClaudeMessage => ({
   ...overrides,
 });
 
-async function draftOf(overrides: Partial<ClaudeMessage> = {}, selection?: string): Promise<PassageDraft> {
-  const result = await buildPassageDraft({ sessionId: "auto-claude-abc", sourceId: "src-fp", message: message(overrides), selection });
+async function draftOf(overrides: Partial<ClaudeMessage> = {}, selection?: string, from?: number): Promise<PassageDraft> {
+  const result = await buildPassageDraft({
+    sessionId: "auto-claude-abc",
+    sourceId: "src-fp",
+    message: message(overrides),
+    selection: selection === undefined ? undefined : { text: selection, from },
+  });
   if (!("draft" in result)) throw new Error(`refused: ${result.refused}`);
   return result.draft;
 }
@@ -61,15 +66,32 @@ describe("what a passage keeps", () => {
     expect(message().content.slice(draft.locator.from, draft.locator.to)).toBe(draft.excerpt);
   });
 
+  it("keeps a repeated phrase at the occurrence the user selected", async () => {
+    const content = "B wins here.\nLater: B wins here.";
+    const second = content.lastIndexOf("B wins here.");
+    const draft = await draftOf({ content }, "B wins here.", second);
+    expect([draft.locator.from, draft.locator.to]).toEqual([second, second + "B wins here.".length]);
+    // A position that does not hold the text falls back to the first occurrence.
+    expect((await draftOf({ content }, "B wins here.", 3)).locator.from).toBe(0);
+    // Leading whitespace in the selection moves its start, not its text.
+    expect((await draftOf({ content }, "  B wins here.", second - 2)).locator.from).toBe(second);
+  });
+
+  it("asks for a selection when a message mixes text with a tool call", async () => {
+    const content = "Reading the config now.\n🔧 Read: /home/u/secret/file";
+    expect(await buildPassageDraft({ sessionId: "s", sourceId: "f", message: message({ content }) })).toEqual({ refused: "mixed-tool" });
+    expect((await draftOf({ content }, "Reading the config now.")).excerpt).toBe("Reading the config now.");
+  });
+
   it("refuses a selection that is not text of this message", async () => {
-    const result = await buildPassageDraft({ sessionId: "s", sourceId: "f", message: message(), selection: "text from another message" });
+    const result = await buildPassageDraft({ sessionId: "s", sourceId: "f", message: message(), selection: { text: "text from another message" } });
     expect(result).toEqual({ refused: "selection-outside" });
   });
 
   it("refuses an oversized message unless the user narrows it", async () => {
     const long = "x".repeat(MAX_EXCERPT_CHARS + 1);
     expect(await buildPassageDraft({ sessionId: "s", sourceId: "f", message: message({ content: long }) })).toEqual({ refused: "too-long" });
-    const narrowed = await buildPassageDraft({ sessionId: "s", sourceId: "f", message: message({ content: `${long}keep this` }), selection: "keep this" });
+    const narrowed = await buildPassageDraft({ sessionId: "s", sourceId: "f", message: message({ content: `${long}keep this` }), selection: { text: "keep this" } });
     expect("draft" in narrowed && narrowed.draft.excerpt).toBe("keep this");
   });
 
@@ -150,13 +172,30 @@ describe("what one confirmed capture writes", () => {
     expect(plan.created.record.properties.done).toBe(false);
   });
 
-  it("keeps the redacted text when asked, and says it was redacted", async () => {
+  it("keeps nothing derived from a hidden secret: text and both hashes are of the redacted form", async () => {
     const draft = await draftOf({ content: "token: ghp_abcdefghijklmnopqrstuvwxyz0123456789 done" });
     const plan = planPassageCommit(draft, { schemaId: "note", title: "t", body: "b", contextId: null, redact: true }, registry, NOW);
     expect(plan.source.retention).toBe("redacted");
     expect(plan.source.rawBody).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz0123456789");
-    // The hash still names the original passage, so the original can be checked.
-    expect(plan.source.contentHash).toBe(draft.locator.excerptHash);
+    const keptHash = await sha256Hex(plan.source.rawBody!);
+    expect(plan.source.contentHash).toBe(keptHash);
+    expect(plan.source.contentHash).not.toBe(draft.locator.excerptHash);
+    const stored = parsePassageLocator(plan.link.locator)!;
+    expect(stored).toMatchObject({ excerptHash: keptHash, redacted: true });
+    expect(JSON.stringify(plan)).not.toContain(draft.locator.excerptHash);
+  });
+
+  it("keeps the text as is when the user leaves 가리기 off", async () => {
+    const draft = await draftOf({ content: "token: ghp_abcdefghijklmnopqrstuvwxyz0123456789 done" });
+    const plan = planPassageCommit(draft, { schemaId: "note", title: "t", body: "b", contextId: null, redact: false }, registry, NOW);
+    expect(plan.source).toMatchObject({ retention: "retained", rawBody: draft.excerpt, contentHash: draft.locator.excerptHash });
+    expect(parsePassageLocator(plan.link.locator)!.redacted).toBeUndefined();
+  });
+
+  it("recognises a redacted save of the same passage", async () => {
+    const draft = await draftOf({ content: "token: ghp_abcdefghijklmnopqrstuvwxyz0123456789 done" });
+    const plan = planPassageCommit(draft, { schemaId: "note", title: "t", body: "b", contextId: null, redact: true }, registry, NOW);
+    expect(findExistingPassageRecord(draft, [plan.source], [plan.link], [plan.created.record])?.id).toBe(plan.created.record.id);
   });
 
   it("dates a message with no timestamp as unknown, never as the save time", async () => {

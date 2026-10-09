@@ -3141,10 +3141,12 @@ fn build_window(
     // `text.lines()` and the raw split agree on line indices: lossy decoding
     // replaces bytes but never adds or removes a line break.
     for (event, line) in events.iter_mut().zip(lines) {
-        let (Some(&record_start), Some(&next)) = (offsets.get(line), offsets.get(line + 1)) else {
+        let Some(&record_start) = offsets.get(line) else {
             continue;
         };
-        let record_end = next.min(end);
+        // The last line's end is the window's end: a forward read drops the
+        // buffer's final line break, so no offset follows it.
+        let record_end = offsets.get(line + 1).copied().unwrap_or(end).min(end);
         event.record = Some(ClaudeRecordSpan {
             start: record_start,
             end: record_end,
@@ -3579,6 +3581,16 @@ mod window_tests {
         let last = again.events.last().unwrap();
         assert_eq!((last.id.as_str(), last.content.as_str()), ("u2", "message 2"));
         assert_eq!(last.record.as_ref(), Some(&record));
+        // A forward page names every record too, its last one included.
+        let earlier = read_session_window_with(dir.path(), &path, Some(record.end), Some(&window.source_id), None, Some(&record.anchor), 1 << 20).unwrap();
+        let newer = read_session_window_after(dir.path(), &path, earlier.end_offset, &earlier.source_id, &earlier.end_anchor, 1 << 20).unwrap();
+        assert_eq!(newer.events.len(), 2);
+        for event in &newer.events {
+            let span = event.record.as_ref().expect("every forward event carries its span");
+            let index: usize = event.id.trim_start_matches('u').parse().unwrap();
+            let expected = user(index, &format!("message {index}"));
+            assert_eq!(&body.as_bytes()[span.start as usize..span.end as usize], expected.as_bytes());
+        }
         // A record rewritten within its anchored head is refused, not read.
         fs::write(&file, body.replacen("\"uuid\":\"u2\"", "\"uuid\":\"x2\"", 1)).unwrap();
         let refused = read_session_window_with(dir.path(), &path, Some(record.end), Some(&window.source_id), None, Some(&record.anchor), 1 << 20);
