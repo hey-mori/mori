@@ -217,7 +217,6 @@ export function MoriCommandSpaceHome() {
     });
   }
 
-
   function runAsk(question: string): void {
     const trimmed = question.trim();
     if (trimmed.length === 0) return;

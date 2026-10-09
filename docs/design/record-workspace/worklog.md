@@ -1006,5 +1006,6 @@ focused next step, not rushed:
 - 기록으로 남기기 saves a 노트 by default, and 기록 opens notes in the note pane, which never
   showed the saved passage: the provenance and 원본 열기 from #196 reached only 결정, 할 일 and
   지식. The note pane now shows 저장한 구절 under the document, held while autosave reloads.
-- Found in the retention acceptance walkthrough on an isolated synthetic profile: a note whose
-  original was gone showed its passage and 원본 열기 said 원본 대화가 더 이상 없습니다.
+- Found in the retention acceptance walkthrough. Verified after the fix on an isolated
+  synthetic profile: a note whose original was gone showed its passage, and 원본 열기 said
+  원본 대화가 더 이상 없습니다.

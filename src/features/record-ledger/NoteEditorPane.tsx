@@ -129,7 +129,9 @@ export function NoteEditorPane({
   // shows that passage under the document, as every other record type does.
   // Provenance reloads after each autosave; the passage shown stays until the
   // reload settles, so it never blinks while the user types.
-  const loadedPassage = savedPassageOf(source, link);
+  // Only what was loaded for this note: right after a switch the hook still
+  // holds the previous note's provenance for one render.
+  const loadedPassage = note && link?.recordId === note.id ? savedPassageOf(source, link) : null;
   const heldPassage = useRef<{ recordId: string | null; value: ReturnType<typeof savedPassageOf> }>({ recordId: null, value: null });
   if (!provenanceLoading || heldPassage.current.recordId !== (note?.id ?? null)) {
     heldPassage.current = { recordId: note?.id ?? null, value: provenanceLoading ? null : loadedPassage };
