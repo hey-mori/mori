@@ -18,6 +18,7 @@
  * InfoHint, not in always-visible prose.
  */
 import { Radio } from "lucide-react";
+import { withoutPasteMarkers } from "../../lib/session/agentText";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import type { ProjectProjection } from "../../lib/live-intake";
@@ -99,7 +100,7 @@ export function ProjectLiveSection({
               {projection.running.map((request) => (
                 <li key={request.id} className="ctx-live-row">
                   <Radio size={12} aria-hidden="true" className="ctx-live-row-icon" />
-                  <span className="ctx-live-row-title">{request.title}</span>
+                  <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     {formatElapsed(request.elapsedMs)} · {request.stepCount}단계
                   </span>
@@ -151,7 +152,7 @@ function RecentWork({
         <ul className="ctx-live-list">
           {requests.map((request) => (
             <li key={request.id} className="ctx-live-row">
-              <span className="ctx-live-row-title">{request.title}</span>
+              <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
               <span className="ctx-live-row-meta">
                 {STATUS_LABEL[request.status] ?? ""}
                 {request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}

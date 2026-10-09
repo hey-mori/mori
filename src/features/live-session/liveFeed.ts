@@ -10,6 +10,7 @@
  * a request here matches an imported session. Each request carries a live status
  * derived from how recently it was touched.
  */
+import { withoutPasteMarkers } from "../../lib/session/agentText";
 import { classifyMessage } from "../../lib/claude/conversationStats";
 import { isAgentBoilerplateTitle } from "../../lib/import/sanitizeTitle";
 import type {
@@ -341,15 +342,6 @@ export function liveSessionTitle(session: FollowedSession): string {
  *  session index, which shows only truly-working sessions under 라이브 피드). */
 export function sessionIsWorking(session: FollowedSession, now: number): boolean {
   return isSessionWorking(session.follow.messages, now);
-}
-
-/** Claude Code wraps pasted text in `<pasted_content id="…">…</pasted_content>`.
- *  The wrapper is transport, not what the user wrote, so a title keeps the
- *  pasted text and drops the tags. */
-const PASTE_MARKER = /<\/?pasted_content\b[^>]*>/g;
-
-export function withoutPasteMarkers(text: string): string {
-  return text.replace(PASTE_MARKER, " ").replace(/[ \t]+\n/g, "\n").trim();
 }
 
 /** Collapse a message to a single clean line, capped, with an ellipsis. */

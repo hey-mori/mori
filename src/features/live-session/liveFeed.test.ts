@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { ClaudeCodeSessionMeta, ClaudeMessage } from "../../lib/claude/types";
 import type { AgentStoreFollowState } from "../../lib/live-follow";
-import { buildLiveFeed, sessionShortLabel, withoutPasteMarkers } from "./liveFeed";
+import { buildLiveFeed, sessionShortLabel } from "./liveFeed";
+import { withoutPasteMarkers } from "../../lib/session/agentText";
 
 const NOW = Date.parse("2026-01-01T00:10:00Z");
 
