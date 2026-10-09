@@ -14,6 +14,7 @@ export {
 } from "./buildConflictSignals";
 export {
   buildProjectProjections,
+  buildScopedProjection,
   selectProjectionForLabel,
   selectProjectPathForLabel,
   type BuildProjectProjectionOptions,

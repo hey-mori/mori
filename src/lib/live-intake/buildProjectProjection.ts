@@ -136,6 +136,7 @@ function foldProject(
   now: number,
   recentLimit: number,
   fileLimit: number,
+  label: string = labelOf(projectPath),
 ): ProjectProjection {
   const observedAt = rows.reduce(
     (newest, row) => (epoch(row.observedAt) > epoch(newest) ? row.observedAt : newest),
@@ -143,9 +144,11 @@ function foldProject(
   );
   const freshness = freshnessOf(observedAt, now);
 
-  // Past the live window nothing may be reported in the present tense, so the
-  // counts and the in-flight detail collapse rather than being shown stale.
-  const reportsPresent = freshness !== "stale";
+  // Past the live window nothing may be reported in the present tense. Each
+  // row is judged by its OWN observation: a session observed a minute ago must
+  // not make another session's request, last seen hours ago, read as current.
+  // (The projection's newest observation used to stand in for every row.)
+  const rowIsCurrent = (row: IntakeRequestRow) => freshnessOf(row.observedAt, now) !== "stale";
 
   let runningCount = 0;
   let waitingCount = 0;
@@ -153,8 +156,9 @@ function foldProject(
   const running: ProjectRunningRequest[] = [];
   const waiting: ProjectRecentRequest[] = [];
 
-  if (reportsPresent) {
+  {
     for (const row of rows) {
+      if (!rowIsCurrent(row)) continue;
       if (row.status === "running") {
         runningCount += 1;
         running.push({
@@ -180,7 +184,7 @@ function foldProject(
 
   return {
     projectPath,
-    label: labelOf(projectPath),
+    label,
     observedAt,
     freshness,
     runningCount,
@@ -195,7 +199,7 @@ function foldProject(
       sessionKey: row.sessionKey,
       // A past request's own status is a past fact and does not decay; only the
       // present-tense reading of a live row does.
-      status: reportsPresent ? row.status : decay(row.status),
+      status: rowIsCurrent(row) ? row.status : decay(row.status),
       endedAt: row.endedAt,
     })),
     topFiles: rollUpFiles(rows, fileLimit),
@@ -211,6 +215,21 @@ function foldProject(
  */
 function decay(status: SessionActivityStatus): SessionActivityStatus {
   return status === "completed" ? "completed" : "unknown";
+}
+
+/**
+ * One projection over the rows of a chosen set of sessions, whatever folders
+ * they were observed in: a reviewed project's confirmed sessions. Null when
+ * there is no row. The label is the project's, not a folder's.
+ */
+export function buildScopedProjection(
+  rows: readonly IntakeRequestRow[],
+  opts: BuildProjectProjectionOptions & { label: string },
+): ProjectProjection | null {
+  if (rows.length === 0) return null;
+  const recentLimit = Math.max(1, opts.recentRequestLimit ?? DEFAULT_RECENT_REQUESTS);
+  const fileLimit = Math.max(1, opts.topFileLimit ?? DEFAULT_TOP_FILES);
+  return foldProject("", rows, opts.now, recentLimit, fileLimit, opts.label);
 }
 
 function freshnessOf(observedAt: string, now: number): ProjectFreshness {

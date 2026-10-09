@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildProjectProjections } from "./buildProjectProjection";
+import { buildProjectProjections, buildScopedProjection } from "./buildProjectProjection";
 import { INTAKE_ROW_VERSION, type IntakeRequestRow } from "./intakeTypes";
 
 const NOW = Date.parse("2026-08-07T12:00:00.000Z");
@@ -250,5 +250,55 @@ describe("buildProjectProjections", () => {
 
   it("returns nothing for no rows", () => {
     expect(buildProjectProjections([], { now: NOW })).toEqual([]);
+  });
+});
+
+describe("each request is judged by its own observation", () => {
+  it("a session observed now does not make another session's old request current", () => {
+    const out = buildProjectProjections(
+      [
+        row({ id: "fresh", sessionKey: "/s/a.jsonl", status: "completed", observedAt: ago(1) }),
+        row({ id: "old-run", sessionKey: "/s/b.jsonl", status: "running", startedAt: ago(60 * 9), observedAt: ago(60 * 8) }),
+        row({ id: "old-wait", sessionKey: "/s/b.jsonl", status: "waitingForUser", endedAt: ago(60 * 8), observedAt: ago(60 * 8) }),
+      ],
+      { now: NOW },
+    );
+    expect(out[0].freshness).toBe("live");
+    expect(out[0].runningCount).toBe(0);
+    expect(out[0].waitingCount).toBe(0);
+    expect(out[0].running).toEqual([]);
+    expect(out[0].waiting).toEqual([]);
+    // Still listed as last observed, without a present-tense status.
+    const recent = Object.fromEntries(out[0].recentRequests.map((r) => [r.id, r.status]));
+    expect(recent).toMatchObject({ "old-run": "unknown", "old-wait": "unknown", fresh: "completed" });
+  });
+
+  it("keeps a recently observed request in each session current", () => {
+    const out = buildProjectProjections(
+      [
+        row({ id: "a", sessionKey: "/s/a.jsonl", status: "waitingForUser", observedAt: ago(30) }),
+        row({ id: "b", sessionKey: "/s/b.jsonl", status: "running", startedAt: ago(10), observedAt: ago(2) }),
+      ],
+      { now: NOW },
+    );
+    expect([out[0].waitingCount, out[0].runningCount]).toEqual([1, 1]);
+  });
+});
+
+describe("a projection over chosen sessions", () => {
+  it("folds rows from different folders under the project's own label", () => {
+    const projection = buildScopedProjection(
+      [
+        row({ id: "main", projectPath: "/home/u/dev/infra", sessionKey: "/c/main.jsonl", status: "running", observedAt: ago(1) }),
+        row({ id: "wt", projectPath: "/home/u/dev", sessionKey: "/c/worktree.jsonl", status: "waitingForUser", observedAt: ago(2) }),
+      ],
+      { now: NOW, label: "infra" },
+    );
+    expect(projection).toMatchObject({ label: "infra", runningCount: 1, waitingCount: 1, rowCount: 2 });
+    expect(projection!.waiting.map((r) => r.sessionKey)).toEqual(["/c/worktree.jsonl"]);
+  });
+
+  it("is null without rows", () => {
+    expect(buildScopedProjection([], { now: NOW, label: "infra" })).toBeNull();
   });
 });
