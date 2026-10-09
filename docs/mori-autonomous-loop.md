@@ -150,6 +150,14 @@ Maintain this list as the project evolves. Capability-based names
 only · no phase numbers.
 
 **Completed (do not redo):**
+- Durable context (2026-10-09, design `docs/design/passage-capture.md`):
+  기록으로 남기기 turns a transcript message or selection into a reviewed
+  record with a retained excerpt source and a versioned locator (#193);
+  the record shows 저장한 구절 and 원본 열기 re-verifies the passage, saying
+  plainly when the original is gone or changed (#196); 원본 보관 keeps a
+  chosen session's transcript as a content-named archive in Mori's storage
+  that opening, 원본 열기 and project search read when the original is gone
+  (#198).
 - Work Bundle import · composite multi-source preview. `buildWorkBundlePreview`
   (pure) reconstructs several normalized candidates (transcript + Codex/OpenCode
   run JSONL + git diff + terminal log + note) into one work unit (detected
@@ -328,17 +336,18 @@ loop must not manufacture vague polish to avoid this:
 1. Project Memory UX polish · open; needs a concrete defect /
    improvement observed against real captured data.
 2. Queryable Memory extensions · open; needs a clear, safe slice.
-3. Passage-to-record capture · open; needs a design check first. Project
-   search and 현재 상황 now lead to the exact source passage, but a found
-   decision or next action can only reach the record ledger by retyping it
-   (losing its source link) or by recording the whole session as an
-   activity. A user-initiated, review-gated "record this passage" that keeps
-   a source reference is the next real gap (2026-10-09 continuity program).
-4. Kept-copy follow-ups (#190) · open, small: no retry from the notice
+3. Kept-copy follow-ups (#190) · open, small: no retry from the notice
    (the resolver does not re-read an open session that has imports); the
    session restored at startup is shown without a read, so a deleted source
    is only noticed on the next open; a replaced transcript keeps its stored
    copy silently.
+4. Durable-context follow-ups · open, small (see
+   `docs/design/passage-capture.md`): saved passages are searchable through
+   the record body only (a body the user rewrites drops the excerpt words
+   from search); multi-message excerpts and capture from imported timeline
+   cards are not built; the redaction used for a redacted passage has no
+   version, so a future pattern change reads old redacted passages as "could
+   not verify"; archives exist for Claude Code transcripts only.
 
 Deferred · revisit when a concrete need appears:
 - Evidence / Import Review polish · audited; the Import Review view,
