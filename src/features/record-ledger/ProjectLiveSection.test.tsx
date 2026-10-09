@@ -60,3 +60,19 @@ describe("현재 상황 aside for unconfirmed observations", () => {
     expect(renderToStaticMarkup(<ProjectLiveSection projection={null} />)).toBe("");
   });
 });
+
+describe("sessions that went on after Mori looked", () => {
+  it("lists them apart, by session title, with what was last observed", () => {
+    const projection = buildScopedProjection(
+      [row({ id: "b", sessionKey: "/a", status: "blocked", endedAt: ago(125), observedAt: ago(120) })],
+      { now: NOW, label: "infra", sourceActiveAt: () => ago(1) },
+    );
+    const html = renderToStaticMarkup(
+      <ProjectLiveSection projection={projection} now={NOW} sessionTitleOf={() => "PCF 저장소 작업"} />,
+    );
+    expect(html).toContain("관측 이후 계속된 세션 1");
+    expect(html).toContain("PCF 저장소 작업");
+    expect(html).toContain("관측 당시 막힘");
+    expect(html).not.toContain("ctx-live-count is-blocked");
+  });
+});

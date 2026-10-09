@@ -2657,6 +2657,12 @@
   margin: 0;
 }
 
+.ctx-live-continued {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .ctx-live-aside {
   display: inline-flex;
   align-items: center;

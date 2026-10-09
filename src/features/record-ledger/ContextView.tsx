@@ -388,11 +388,29 @@ export function ContextView() {
       sessionIdOfFile: (key) => sessionIdByPath.get(key),
     });
   }, [activeContext, loading, searchInventory, records, contexts]);
-  const confirmedLive = useConfirmedProjectLive(liveSources?.scope ?? null);
+  // When each session's source was last written, by source file: an
+  // auto-imported session's savedAt is pinned to its transcript's last write
+  // and is never restamped by opening it (#170). Read once with the page's
+  // summaries, so it is what discovery last saw, never "now".
+  const sessionBySourceFile = useMemo(() => {
+    const summaryById = new Map(summaries.map((summary) => [summary.sessionId, summary]));
+    const map = new Map<string, { activeAt: string; title: string }>();
+    for (const meta of loadAutoImportMetas()) {
+      const summary = summaryById.get(autoImportedSessionId(meta));
+      if (!summary || !meta.sourceFilePath) continue;
+      map.set(meta.sourceFilePath, { activeAt: sessionLastActiveAt(summary), title: summary.title });
+    }
+    return map;
+  }, [summaries]);
+  const sourceActiveAt = useCallback(
+    (sessionKey: string) => sessionBySourceFile.get(sessionKey)?.activeAt,
+    [sessionBySourceFile],
+  );
+  const confirmedLive = useConfirmedProjectLive(liveSources?.scope ?? null, sourceActiveAt);
   // A folder group has no reviewed membership: it is matched by the folder's
   // display leaf and refused when two observed folders share it (see
   // `selectProjectPathForLabel`).
-  const folderLive = useProjectLive(activeContext ? null : title || null);
+  const folderLive = useProjectLive(activeContext ? null : title || null, sourceActiveAt);
   const live = activeContext ? confirmedLive.projection : folderLive;
   // A live request names its session by file; the session list knows it by
   // its Mori id. A reviewed project maps through its own members (a file two
@@ -674,6 +692,7 @@ export function ContextView() {
                 projection={live}
                 openSession={openLiveSession}
                 unconfirmedObserved={activeContext ? confirmedLive.unconfirmedObserved : 0}
+                sessionTitleOf={(sessionKey) => sessionBySourceFile.get(sessionKey)?.title}
               />
               {children.length > 0 ? (
                 <section className="ctx-section">

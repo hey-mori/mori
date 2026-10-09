@@ -94,10 +94,39 @@ export type ProjectProjection = {
   lastActivityAt: string | null;
   /** Rows folded in, so a caller can tell an empty projection from a thin one. */
   rowCount: number;
+  /**
+   * Sessions whose source was written after Mori last observed them, newest
+   * activity first. Their observed status is history: none of it is counted.
+   */
+  continued: ProjectContinuedSession[];
 };
+
+/** A session that kept going after Mori's last look at it. */
+export type ProjectContinuedSession = {
+  sessionKey: string;
+  /** The newest observed request's title and status, as last seen. */
+  lastTitle: string;
+  lastStatus: SessionActivityStatus;
+  lastObservedAt: string;
+  /** When its source was last written. */
+  activeAt: string;
+};
+
+/**
+ * How much later than the last observation a source write must be before the
+ * observation counts as superseded. Covers the poller's cadence (at most a few
+ * tens of seconds) so a session Mori is watching is never marked as moved on.
+ */
+const SUPERSEDE_GRACE_MS = 2 * 60_000;
 
 export type BuildProjectProjectionOptions = {
   now: number;
+  /**
+   * When a session's source was last written, as discovery last saw it (an
+   * auto-imported session's `savedAt`). Lets the fold tell an observation the
+   * session has since moved past from one that may still hold.
+   */
+  sourceActiveAt?: (sessionKey: string) => string | undefined;
   recentRequestLimit?: number;
   topFileLimit?: number;
 };
@@ -131,7 +160,9 @@ export function buildProjectProjections(
 
   const projections: ProjectProjection[] = [];
   for (const [projectPath, projectRows] of byProject) {
-    projections.push(foldProject(projectPath, projectRows, opts.now, recentLimit, fileLimit));
+    projections.push(
+      foldProject(projectPath, projectRows, opts.now, recentLimit, fileLimit, labelOf(projectPath), opts.sourceActiveAt),
+    );
   }
 
   projections.sort((a, b) => epoch(b.lastActivityAt) - epoch(a.lastActivityAt));
@@ -145,6 +176,7 @@ function foldProject(
   recentLimit: number,
   fileLimit: number,
   label: string = labelOf(projectPath),
+  sourceActiveAt?: (sessionKey: string) => string | undefined,
 ): ProjectProjection {
   const observedAt = rows.reduce(
     (newest, row) => (epoch(row.observedAt) > epoch(newest) ? row.observedAt : newest),
@@ -156,7 +188,34 @@ function foldProject(
   // row is judged by its OWN observation: a session observed a minute ago must
   // not make another session's request, last seen hours ago, read as current.
   // (The projection's newest observation used to stand in for every row.)
-  const rowIsCurrent = (row: IntakeRequestRow) => freshnessOf(row.observedAt, now) !== "stale";
+  //
+  // An observation also stops holding once its session's source was written
+  // after it: Mori was not looking, the session went on, and whatever it was
+  // then is not evidence of what it is now. Only the source's own last write
+  // decides this, never the time Mori read it.
+  const newestRowBySession = new Map<string, IntakeRequestRow>();
+  for (const row of rows) {
+    const held = newestRowBySession.get(row.sessionKey);
+    if (!held || epoch(row.observedAt) > epoch(held.observedAt) || (row.observedAt === held.observedAt && epoch(row.endedAt) > epoch(held.endedAt))) {
+      newestRowBySession.set(row.sessionKey, row);
+    }
+  }
+  const continued: ProjectContinuedSession[] = [];
+  for (const [sessionKey, newest] of newestRowBySession) {
+    const activeAt = sourceActiveAt?.(sessionKey);
+    if (!activeAt || !(epoch(activeAt) > epoch(newest.observedAt) + SUPERSEDE_GRACE_MS)) continue;
+    continued.push({
+      sessionKey,
+      lastTitle: newest.title,
+      lastStatus: newest.status,
+      lastObservedAt: newest.observedAt,
+      activeAt,
+    });
+  }
+  continued.sort((a, b) => epoch(b.activeAt) - epoch(a.activeAt));
+  const superseded = new Set(continued.map((session) => session.sessionKey));
+  const rowIsCurrent = (row: IntakeRequestRow) =>
+    !superseded.has(row.sessionKey) && freshnessOf(row.observedAt, now) !== "stale";
 
   let runningCount = 0;
   let waitingCount = 0;
@@ -227,8 +286,13 @@ function foldProject(
       endedAt: row.endedAt,
     })),
     topFiles: rollUpFiles(rows, fileLimit),
-    lastActivityAt: ordered[0]?.endedAt ?? null,
+    // A session that went on after the observation was active then, too.
+    lastActivityAt: [ordered[0]?.endedAt, ...continued.map((session) => session.activeAt)].reduce<string | null>(
+      (latest, at) => (at && (latest === null || epoch(at) > epoch(latest)) ? at : latest),
+      null,
+    ),
     rowCount: rows.length,
+    continued,
   };
 }
 
@@ -253,7 +317,7 @@ export function buildScopedProjection(
   if (rows.length === 0) return null;
   const recentLimit = Math.max(1, opts.recentRequestLimit ?? DEFAULT_RECENT_REQUESTS);
   const fileLimit = Math.max(1, opts.topFileLimit ?? DEFAULT_TOP_FILES);
-  return foldProject("", rows, opts.now, recentLimit, fileLimit, opts.label);
+  return foldProject("", rows, opts.now, recentLimit, fileLimit, opts.label, opts.sourceActiveAt);
 }
 
 export function freshnessOf(observedAt: string, now: number): ProjectFreshness {
