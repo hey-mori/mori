@@ -295,3 +295,17 @@ export type ClaudeCodeSearchBatch = {
   unsearchableRecords: number;
   unsearchableBytes: number;
 };
+
+/** A point-in-time copy of one transcript that Mori keeps in its own storage. */
+export type ClaudeCodeSessionArchive = {
+  /** `<sha256>.jsonl`, relative to the archive directory. */
+  fileName: string;
+  /** Absolute path, for reading it now; store `fileName`, not this. */
+  path: string;
+  bytes: number;
+  sha256: string;
+  /** The original's content fingerprint, which the copy shares. */
+  sourceId: string;
+  /** True when an identical archive already existed and was reused. */
+  reused: boolean;
+};

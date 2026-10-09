@@ -116,6 +116,9 @@ export type SessionWindowState =
       omittedBytes: number;
       /** A page request in flight, and which way. */
       paging: "earlier" | "newer" | "latest" | null;
+      /** Set when this view reads Mori's kept copy (보관한 원본) because the
+       *  original transcript is gone: when it was kept, and how much. */
+      archive?: { archivedAt: string; bytes: number };
       pageError: { direction: "earlier" | "newer" | "latest"; error: SessionWindowError } | null;
     };
 

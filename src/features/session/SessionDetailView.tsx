@@ -34,6 +34,7 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
  */
 import { OverviewView } from "./OverviewView";
 import { SessionSourceWindow } from "./SessionSourceWindow";
+import { SessionArchiveControl } from "./SessionArchiveControl";
 import { RetainedSourceNotice } from "./RetainedSourceNotice";
 import { sessionCrumbs, sessionReturnLink } from "./sessionProjectIdentity";
 import { useSessionProjectIdentity } from "./useSessionProjectIdentity";
@@ -81,6 +82,7 @@ export function SessionDetailView() {
   // could not be read) in place of the tabs: analysis, report and the counted
   // tabs would treat a part of the session as the whole of it.
   const sessionWindow = useSessionStore(selectActiveSessionWindow);
+  const activeSessionId = useSessionStore((state) => state.draft?.session.id ?? null);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
 
   // Retired tabs redirect to their new homes: the raw-activity alias to 활동,
@@ -95,6 +97,7 @@ export function SessionDetailView() {
       <div className="session-detail-bar">
         <SessionTitleInline />
         {sessionWindow ? null : <SessionTabBar activeTab={sessionTab} onChange={setSessionTab} />}
+        {activeSessionId ? <SessionArchiveControl key={activeSessionId} sessionId={activeSessionId} /> : null}
       </div>
       {sessionWindow ? null : <RetainedSourceNotice />}
       {sessionWindow ? (

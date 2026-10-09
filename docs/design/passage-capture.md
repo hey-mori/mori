@@ -26,7 +26,7 @@ Four states, never collapsed into one flag:
 | - | - | - | - |
 | External source reference | where to read it (agent, file, record position) | no | transcript search, while the file exists |
 | Retained excerpt (저장한 구절) | the exact visible text the user saved, with its origin | yes | record search (the record and its source excerpt) |
-| Retained source archive (보관한 원본) | a user-chosen copy of a whole session | yes | deferred (§9) |
+| Retained source archive (보관한 원본) | a user-chosen copy of a whole session | yes | transcript search and the viewer, reading the copy (§5c) |
 | Kept historical import (이전에 가져온 기록) | the parsed events of an earlier open | yes, as it was then | session view; may be partial |
 
 A retained excerpt is not the conversation; a kept import is not proof the full source was
@@ -61,7 +61,7 @@ preserved; a source reference is not a promise that the source will exist.
    text no longer matches, it says the original changed instead of jumping elsewhere.
 6. **After the original is deleted.** The record and its excerpt are intact; 원본 열기 says
    the original is gone; nothing claims the conversation around it was preserved.
-7. **Preserve a whole session.** Deferred (§9).
+7. **Preserve a whole session.** 원본 보관 in the session bar keeps a point-in-time copy (§5c).
 8. **See what is retained.** The preview states that the excerpt is stored in Mori and can
    outlive the transcript; the record shows 저장한 구절 for that source.
 
@@ -117,6 +117,41 @@ preserved; a source reference is not a promise that the source will exist.
 | Redacted passage no longer matches | "다시 확인하지 못했습니다": the redaction patterns may have changed, not only the original. Two originals that differ only inside a hidden span verify as equal (the hidden text was never kept) |
 | 원본 열기 abandoned (record switched, page left) | the open in flight is dropped; nothing navigates later |
 
+## 5c. Retained source archive (보관한 원본, implemented)
+
+Why it exists next to saved passages: an excerpt keeps what the user knew to keep; the agent
+deletes the whole transcript after 30 days by default (`cleanupPeriodDays`), and later
+questions are about parts nobody saved. An external copy of `~/.claude/projects` keeps bytes
+Mori cannot read or search; this keeps one chosen session readable and searchable in Mori.
+
+- **Action**: 원본 보관 in the session bar, Claude Code transcripts only, never automatic. The
+  dialog states the size, that the copy holds every message, tool call and output (secrets a
+  tool printed included, and pasted or read images, which transcripts hold inline), what it
+  does not hold (subagent transcripts, spilled tool-result files, anything said later), where it is stored (Mori's storage folder, not separately
+  backed up), that it is not an agent-resumable session, and that removing it never touches
+  the original.
+- **Native**: `archive_claude_code_session` copies the transcript's complete records as they
+  stand (a point-in-time snapshot; a partial last line is excluded) into
+  `<storage>/archives/claude-code/<sha256>.jsonl`: a hidden partial file, synced, then renamed.
+  Only files inside the agent's projects directory, never through a symlink; the same bytes
+  reuse the existing file and a different file is never overwritten; a truncated source or a
+  full disk removes the partial and fails. `remove_claude_code_archive` deletes one archive
+  by its hash name. The window and search readers accept the archive directory as a second
+  trusted root, so no other path becomes readable.
+- **Kernel**: a `KernelSource` (kind `agent-session`, retention `retained`, no body, content
+  hash = archive SHA-256) with locator `mori-archive:v1:{sessionId, fileName, bytes, sha256,
+  sourceId}`; no absolute path. Changing the storage location moves the archives with the
+  database, so the names still resolve. Removal keeps the
+  source with retention `notCaptured` as history. The archive is not a record.
+- **Reading**: only when the original is gone (deleted or moved, not merely unreadable) do opening the session, 원본 열기 on a
+  saved passage, and project search read the kept copy instead, with the same fingerprint,
+  anchor and excerpt checks (the copy shares the original's bytes and offsets). Every such view
+  says 보관한 원본 · <date> 시점, paging included; project search coverage says 보관한 원본 for that
+  session. A passage saved after the copy was taken reads as missing, not changed. Removal
+  deletes the file only when no other kept source names the same (content-named) file.
+  Partial files of interrupted copies older than an hour are swept on the next copy; an empty
+  transcript and an archive folder inside the agent's directory are refused.
+
 ## 6. Scope
 
 Built (capture slice): single-message or in-message text selection from the transcript viewer;
@@ -128,7 +163,7 @@ exactly the kept range).
 
 Not built: multi-message excerpts (no workflow yet needs them); automatic or bulk capture;
 AI summarisation of the excerpt; capture from imported timeline cards (they are a kept copy,
-not the source); whole-session archives (§9); changes to Claude Code settings.
+not the source); automatic or bulk archiving; changes to Claude Code settings.
 
 ## 7. Alternatives considered
 

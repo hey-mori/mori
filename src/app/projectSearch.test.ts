@@ -25,12 +25,17 @@ const fake = vi.hoisted(() => ({
   transcripts: new Map<string, { sourceId: string; records: FakeRecord[]; unsearchable?: number }>(),
   meta: new Map<string, unknown>(),
   gate: null as null | ((call: { kind: "window" | "search"; path: string; cursor?: unknown }) => Promise<void> | void),
+  /** Kept copies by session id: what `keptArchiveRead` answers. */
+  archives: new Map<string, { path: string; archive: { archivedAt: string; bytes: number } }>(),
   calls: [] as { kind: "window" | "search"; path: string; cursor?: unknown }[],
   inflight: 0,
   maxInflight: 0,
 }));
 
 vi.mock("../lib/desktop/llmEndpointRegistry", () => ({ syncLlmAllowedEndpoints: () => {} }));
+vi.mock("../lib/session/sessionArchiveRead", () => ({
+  keptArchiveRead: async (sessionId: string) => fake.archives.get(sessionId) ?? null,
+}));
 vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getClaudeCodeSessionWindow: async (path: string, cursor?: Cursor) => {
@@ -298,6 +303,7 @@ beforeEach(() => {
   useSessionStore.setState({ initialized: true, draft: null, imports: [], sessionWindow: null, sessionSearch: null, source: "browser-draft" });
   useProjectSearchStore.getState().close();
   fake.transcripts.clear();
+  fake.archives.clear();
   fake.meta.clear();
   fake.gate = null;
   fake.calls = [];
@@ -485,6 +491,23 @@ describe("searching a project's confirmed sessions", () => {
     expect(hitsOf(ok)).toEqual(["ok-m2"]);
     expect(projectSearchCoverage(search())).toMatchObject({ unavailable: 1, complete: false });
     expect(projectSearchStatusLine(search())).not.toContain("전체에서");
+  });
+
+  it("searches a kept copy when a member's original is gone, and says which copy it read", async () => {
+    const gone = session("gonekept", lines(8, { 3: "needle" }), { contextId: "ctx-infra" });
+    const path = "/home/u/.claude/projects/-home-u-dev-infra/gonekept.jsonl";
+    const archivePath = `/home/u/Mori/Records/archives/claude-code/${"c".repeat(64)}.jsonl`;
+    fake.transcripts.set(archivePath, fake.transcripts.get(path)!);
+    fake.transcripts.delete(path);
+    fake.archives.set(gone, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 800 } });
+    await useProjectSearchStore.getState().start(inventory(), "needle");
+    const source = search().sources[gone]!;
+    expect(source.archive).toEqual({ archivedAt: "2026-10-09T10:00:00.000Z", bytes: 800 });
+    expect(source.sourcePath).toBe(archivePath);
+    expect(hitsOf(gone)).toEqual(["gonekept-m3"]);
+    // Opening the hit reads the kept copy and marks the view as such.
+    expect(await useProjectSearchStore.getState().openHit(gone, source.hits[0]!)).toBe("opened");
+    expect(view().archive?.archivedAt).toBe("2026-10-09T10:00:00.000Z");
   });
 
   it("reads a source shared by two sessions once, and counts unsearchable records", async () => {
@@ -697,6 +720,70 @@ describe("opening a project search result", () => {
       const redacted = { ...locator, excerptHash: keptHash, redacted: true as const };
       expect(await useSessionStore.getState().openSessionAtPassage({ locator: redacted, stillWanted: () => true })).toBe("opened");
       expect(await useSessionStore.getState().openSessionAtPassage({ locator: { ...redacted, redacted: undefined }, stillWanted: () => true })).toBe("changed");
+    });
+
+    it("opens a kept copy when the original is gone, verified the same way, and says so", async () => {
+      const { id, path, locator } = await savedPassage("kept", lines(6, { 4: "Decision: Candidate B" }), 4, "Candidate B");
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"a".repeat(64)}.jsonl`;
+      fake.transcripts.set(archivePath, fake.transcripts.get(path)!);
+      fake.transcripts.delete(path);
+      fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 600 } });
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("opened");
+      expect(view().archive).toEqual({ archivedAt: "2026-10-09T10:00:00.000Z", bytes: 600 });
+      expect(view().sourcePath).toBe(archivePath);
+      expect(markup()).toContain("보관한 원본");
+    });
+
+    it("keeps saying 보관한 원본 after 최신 대화로", async () => {
+      const { id, path, locator } = await savedPassage("keptlatest", lines(9, { 7: "Decision: Candidate B" }), 7, "Candidate B");
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"d".repeat(64)}.jsonl`;
+      fake.transcripts.set(archivePath, fake.transcripts.get(path)!);
+      fake.transcripts.delete(path);
+      fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 900 } });
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("opened");
+      await useSessionStore.getState().loadLatestSessionWindow();
+      expect(view().focus).toBeNull();
+      expect(view().archive?.archivedAt).toBe("2026-10-09T10:00:00.000Z");
+      expect(markup()).toContain("보관한 원본");
+    });
+
+    it("says missing for a passage written after the kept copy was taken", async () => {
+      const { id, path, locator } = await savedPassage("toolate", lines(6, { 5: "said later" }), 5);
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"e".repeat(64)}.jsonl`;
+      const original = fake.transcripts.get(path)!;
+      fake.transcripts.set(archivePath, { ...original, records: original.records.slice(0, 3) });
+      fake.transcripts.delete(path);
+      fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 300 } });
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("missing");
+    });
+
+    it("never reads the kept copy when the original exists but cannot be read just now", async () => {
+      const { id, path, locator } = await savedPassage("locked", lines(6, { 4: "keep me" }), 4);
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"f".repeat(64)}.jsonl`;
+      fake.transcripts.set(archivePath, fake.transcripts.get(path)!);
+      fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 600 } });
+      fake.gate = ({ path: read }) => {
+        if (read === path) throw new Error("SOURCE_UNREADABLE: Failed to open: permission denied");
+      };
+      // Not "gone": the page must not say the original no longer exists.
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("failed");
+      expect(fake.calls.some((call) => call.path === archivePath)).toBe(false);
+    });
+
+    it("still says missing when neither the original nor a kept copy exists", async () => {
+      const { path, locator } = await savedPassage("none", lines(6, { 4: "keep me" }), 4);
+      fake.transcripts.delete(path);
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("missing");
+    });
+
+    it("refuses a kept copy that does not hold the saved text", async () => {
+      const { id, path, locator } = await savedPassage("wrongcopy", lines(6, { 4: "original words" }), 4);
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"b".repeat(64)}.jsonl`;
+      const original = fake.transcripts.get(path)!;
+      fake.transcripts.set(archivePath, { ...original, records: original.records.map((r, i) => (i === 4 ? { ...r, content: "other words" } : r)) });
+      fake.transcripts.delete(path);
+      fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 600 } });
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("changed");
     });
 
     it("changes nothing when the user moved on", async () => {
