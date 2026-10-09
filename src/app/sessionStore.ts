@@ -1565,21 +1565,45 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // and the write run with no await between them, after the open is
       // known to be current, so two opens cannot both decide to add.
       const repository = getRepository();
+      // Events accepted project memory cites: their ids cannot be re-pointed
+      // from here, so a reopen never renames them.
+      const cited = new Set(
+        repository
+          .listAllAcceptedProjectMemories()
+          .flatMap((memory) => memory.evidenceRefs)
+          .flatMap((ref) => (ref.kind === "event" && ref.sessionId === sessionId ? [ref.eventId] : [])),
+      );
       const plan = meta.sessionId
-        ? planSourceReopen(repository.listSessionImports(sessionId), candidate)
+        ? planSourceReopen(repository.listSessionImports(sessionId), candidate, (eventId) => cited.has(eventId))
         : ({ kind: "add" } as const);
       if (plan.kind === "add") {
         get().addImport(candidate);
       } else if (plan.kind === "update") {
-        repository.putSessionImports(sessionId, [plan.next]);
-        // An answered prompt took a new event id; the analysis follows it.
-        let analysis = get().analysis;
+        // An answered prompt took a new event id; the analysis (and the memory
+        // body projected from it) follows. These writes are not atomic, so if
+        // a later one fails the earlier ones are put back and the open reports
+        // the failure: never an import whose ids the analysis does not know.
+        const previousAnalysis = get().analysis;
+        let analysis = previousAnalysis;
         for (const { from, to } of plan.renamed) {
           if (analysis) analysis = remapEventIdInAnalysis(analysis, from, to);
         }
-        if (analysis && analysis !== get().analysis) {
-          repository.saveSessionAnalysis(sessionId, analysis);
-          persistMemoryBodyFromAnalysis(repository, sessionId, analysis);
+        repository.putSessionImports(sessionId, [plan.next]);
+        if (analysis && previousAnalysis && analysis !== previousAnalysis) {
+          try {
+            repository.saveSessionAnalysis(sessionId, analysis);
+            persistMemoryBodyFromAnalysis(repository, sessionId, analysis);
+          } catch (error) {
+            repository.putSessionImports(sessionId, [plan.previous]);
+            try {
+              repository.saveSessionAnalysis(sessionId, previousAnalysis);
+              persistMemoryBodyFromAnalysis(repository, sessionId, previousAnalysis);
+            } catch {
+              // Already failing on storage; the import itself is restored.
+            }
+            set({ imports: repository.listSessionImports(sessionId) });
+            throw error;
+          }
           set({ analysis });
         }
         set({ imports: repository.listSessionImports(sessionId) });

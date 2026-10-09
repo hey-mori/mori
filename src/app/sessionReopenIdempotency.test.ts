@@ -348,6 +348,144 @@ describe("a transcript that changed since it was imported", () => {
   });
 });
 
+/** A minimal analysis whose one issue cites `eventId`. */
+function analysisCiting(sessionId: string, eventId: string) {
+  return {
+    runId: "run-1",
+    providerName: "deterministic-heuristic-v1",
+    providerLabel: "Deterministic",
+    sessionId,
+    projectId: "p",
+    generatedAt: "2026-10-08T11:00:00.000Z",
+    durationMs: 1,
+    inputEventCount: 2,
+    inputSourceCount: 1,
+    summary: { sessionSummary: "", resumePrompt: "", highlights: [] },
+    issues: [{ ...mockSession.issues[0]!, id: "iss-1", sourceEventIds: [eventId] }],
+    decisions: [],
+    relationships: [],
+    nextActions: [],
+    rendered: { summary: { id: "s", sessionId, sessionSummary: "", resumePrompt: "", reportMarkdown: "", nextActionIds: [], generatedAt: "2026-10-08T11:00:00.000Z" } },
+    confidence: 0.5,
+    notes: [],
+  } as never;
+}
+
+describe("release review · what an answered prompt must keep", () => {
+  async function openAnsweredLater(setup: (sessionId: string, promptId: string) => void) {
+    const a = register(meta("a", "A"), transcript(2, true));
+    const resolve = resolver();
+    await resolve(a);
+    const prompt = repository.listSessionImports(a)[0]!.events[1]!;
+    setup(a, prompt.id);
+    sources.set("a", transcript(3));
+    await resolve(register(meta("b", "B"), transcript(1)));
+    await resolve(a);
+    return { a, prompt, events: repository.listSessionImports(a)[0]!.events };
+  }
+
+  it("a note on a waiting prompt survives its answer (a note does not set userModified)", async () => {
+    const { prompt, events } = await openAnsweredLater(() => {
+      const id = repository.listSessionImports(useSessionStore.getState().draft!.session.id)[0]!.events[1]!.id;
+      expect(useSessionStore.getState().updateSessionEvent(id, { note: "다시 볼 것" })).toBe(true);
+    });
+    const answered = events[1]!;
+    expect(prompt.userModified).toBe(false);
+    expect(answered.userModified).toBe(false);
+    expect(answered.userNote).toBe("다시 볼 것");
+    expect(answered.summary).not.toBe(prompt.summary);
+    expect(events).toHaveLength(3);
+  });
+
+  it("links, artifacts and extra source references on a waiting prompt survive its answer", async () => {
+    const { events } = await openAnsweredLater((sessionId) => {
+      const [entry] = repository.listSessionImports(sessionId);
+      const linked = entry!.events.map((event, index) =>
+        index === 1
+          ? { ...event, linkedIssueIds: ["iss-9"], linkedDecisionIds: ["dec-9"], relationshipIds: ["rel-9"], artifactIds: ["art-9"], sourceRefs: [...event.sourceRefs, "src-extra"] }
+          : event,
+      );
+      repository.putSessionImports(sessionId, [{ ...entry!, events: linked }]);
+      useSessionStore.setState({ imports: repository.listSessionImports(sessionId) });
+    });
+    expect(events[1]).toMatchObject({
+      linkedIssueIds: ["iss-9"],
+      linkedDecisionIds: ["dec-9"],
+      relationshipIds: ["rel-9"],
+      artifactIds: ["art-9"],
+    });
+    expect(events[1]!.sourceRefs).toContain("src-extra");
+  });
+
+  it("a prompt cited by accepted project memory keeps its id, so the citation never dangles", async () => {
+    const { prompt, events } = await openAnsweredLater((sessionId, promptId) => {
+      repository.saveAcceptedProjectMemory({
+        id: "mem-1",
+        projectId: "p",
+        evidenceRefs: [{ kind: "event", sessionId, eventId: promptId }],
+      } as never);
+    });
+    expect(events.some((event) => event.id === prompt.id)).toBe(true);
+    expect(events).toHaveLength(3);
+  });
+
+  it("a failed analysis write puts the import back, so nothing half-applied stays", async () => {
+    const a = register(meta("a", "A"), transcript(2, true));
+    const resolve = resolver();
+    await resolve(a);
+    const prompt = repository.listSessionImports(a)[0]!.events[1]!;
+    repository.saveSessionAnalysis(a, analysisCiting(a, prompt.id));
+    const importBefore = JSON.stringify(repository.listSessionImports(a));
+    const analysisBefore = JSON.stringify(repository.loadSessionAnalysis(a)?.result);
+    sources.set("a", transcript(3));
+    await resolve(register(meta("b", "B"), transcript(1)));
+    const memoryWrite = vi.spyOn(repository, "saveSessionMemoryBody").mockImplementation(() => {
+      throw new Error("QuotaExceededError");
+    });
+    await resolve(a);
+    memoryWrite.mockRestore();
+    expect(JSON.stringify(repository.listSessionImports(a))).toBe(importBefore);
+    expect(JSON.stringify(repository.loadSessionAnalysis(a)?.result)).toBe(analysisBefore);
+  });
+});
+
+describe("release review · rewrites the ids do not show", () => {
+  it("same event ids with different text are kept as stored, not refreshed", async () => {
+    const a = register(meta("a", "A"), transcript(3));
+    const resolve = resolver();
+    await resolve(a);
+    const before = JSON.stringify(repository.listSessionImports(a));
+    // Rewritten in place and grown: new turns must not be spliced onto it.
+    sources.set("a", transcript(5).map((message) => ({ ...message, content: `${message.content} (rewritten)` })));
+    await resolve(register(meta("b", "B"), transcript(1)));
+    await resolve(a);
+    expect(JSON.stringify(repository.listSessionImports(a))).toBe(before);
+  });
+
+  it("a truncated transcript is kept as stored", async () => {
+    const a = register(meta("a", "A"), transcript(4));
+    const resolve = resolver();
+    await resolve(a);
+    const before = JSON.stringify(repository.listSessionImports(a));
+    sources.set("a", transcript(2));
+    await resolve(register(meta("b", "B"), transcript(1)));
+    await resolve(a);
+    expect(JSON.stringify(repository.listSessionImports(a))).toBe(before);
+  });
+
+  it("a rewritten last turn is not taken for an answered prompt", async () => {
+    const a = register(meta("a", "A"), transcript(3));
+    const resolve = resolver();
+    await resolve(a);
+    const before = JSON.stringify(repository.listSessionImports(a));
+    // The last turn now carries a later reply time and other text: not a prompt that got its answer.
+    sources.set("a", transcript(3).map((message, index, all) => (index === all.length - 1 ? { ...message, content: "other", createdAt: "2026-10-08T09:59:00Z" } : message)));
+    await resolve(register(meta("b", "B"), transcript(1)));
+    await resolve(a);
+    expect(JSON.stringify(repository.listSessionImports(a))).toBe(before);
+  });
+});
+
 describe("reopen failures and races", () => {
   it("I13 · a transcript that has gone keeps what was imported", async () => {
     const a = register(meta("a", "A"), transcript(3));

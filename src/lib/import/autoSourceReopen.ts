@@ -12,19 +12,20 @@
  * whose ids carry their own capture times.
  *
  * - No stored import of the source: add it.
- * - One, unchanged (same event ids and transcript text): nothing is written.
+ * - One, unchanged (same event ids and text): nothing is written.
  * - One, and the transcript only grew (its stored event ids are an exact
- *   prefix of the new read; event ids are stable across reads: session id,
- *   turn index and turn time): the new turns are appended.
+ *   prefix of the new read; ids are stable across reads: session id, turn
+ *   index and turn time): the new turns are appended, and the token total and
+ *   file touches the reader attaches later are updated. A changed text under
+ *   the same id is a rewrite, not growth: the import is kept as stored.
  *   - A last stored turn that was a prompt still waiting for its reply takes
- *     the answered turn. That turn's id changes (a turn is dated by its
- *     reply), so the plan names the replaced id for references to follow. If
- *     the user edited that prompt, the edit stays and only later turns are
- *     added. Only fields that come from the transcript are
- *   refreshed, and never on an event the user edited (`userModified`): links,
- *   relationships and edits made in Mori stay as they are.
- * - One that no longer matches (the transcript was rewritten, or the user
- *   split or merged its events): kept as it is, not refreshed.
+ *     the answered turn. Its id changes (a turn is dated by its reply), so the
+ *     plan names the replaced id for references to follow. The event keeps
+ *     its note, links and every other field; only its text and identity come
+ *     from the read. If the user edited the prompt, or accepted project memory
+ *     cites it, it stays as stored and only later turns are added.
+ * - One that no longer matches (rewritten, truncated, or events the user
+ *   split or merged): kept as it is, not refreshed.
  * - Several (copies stored by older builds): none is changed, and no further
  *   copy is added. Choosing between them is an explicit cleanup, not a reopen.
  *
@@ -34,22 +35,27 @@ import type { TimelineEvent } from "../../domain/types";
 import type { StoredSessionImport } from "../storage/storageTypes";
 import type { NormalizedImportCandidate } from "./types";
 
-/** The event fields that come from the transcript itself. */
-const TRANSCRIPT_FIELDS = ["title", "summary", "actor", "toolName", "openedByUser", "tokenUsage", "fileTouches"] as const;
+/** What a turn says. In an append-only transcript a turn's text never
+ *  changes once written, so a difference here, under the same event id, is a
+ *  rewrite, not growth. */
+const CONTENT_FIELDS = ["title", "summary", "actor", "toolName", "openedByUser"] as const;
+/** What the reader may legitimately attach later: the session's token total
+ *  moves to the newest reply, and file touches are attributed per reply. */
+const ENRICHMENT_FIELDS = ["tokenUsage", "fileTouches"] as const;
 
-/** The stored event with the read's transcript fields, or the stored event
- *  itself when nothing differs or the user edited it. */
-function refreshedEvent(stored: TimelineEvent, fresh: TimelineEvent): TimelineEvent {
-  if (stored.userModified) return stored;
-  let changed = false;
+type EventField = (typeof CONTENT_FIELDS)[number] | (typeof ENRICHMENT_FIELDS)[number];
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** `stored` with `fields` taken from `fresh`. Every other field (notes, links,
+ *  relationships, artifacts, extra source references, edits) stays. */
+function withFields(stored: TimelineEvent, fresh: TimelineEvent, fields: readonly EventField[]): TimelineEvent {
   const next: TimelineEvent = { ...stored };
-  for (const field of TRANSCRIPT_FIELDS) {
-    if (JSON.stringify(stored[field]) === JSON.stringify(fresh[field])) continue;
-    changed = true;
+  for (const field of fields) {
     if (fresh[field] === undefined) delete next[field];
     else (next as Record<string, unknown>)[field] = fresh[field];
   }
-  return changed ? next : stored;
+  return next;
 }
 
 const CAPTURE_SUFFIX = /-\d{14}$/;
@@ -64,6 +70,8 @@ export type ReopenPlan =
   | { kind: "unchanged"; importId: string }
   | {
       kind: "update";
+      /** The import as stored before, to put back if a dependent write fails. */
+      previous: StoredSessionImport;
       next: StoredSessionImport;
       added: number;
       refreshed: number;
@@ -84,9 +92,15 @@ export function storedImportsOfSource(
   );
 }
 
+/**
+ * @param isCited an event id that a durable record outside the import cites
+ *   and that cannot be re-pointed here (accepted project memory). Such an
+ *   event never takes a new id.
+ */
 export function planSourceReopen(
   imports: readonly StoredSessionImport[],
   candidate: NormalizedImportCandidate,
+  isCited: (eventId: string) => boolean = () => false,
 ): ReopenPlan {
   const stored = storedImportsOfSource(imports, candidate);
   if (stored.length === 0) return { kind: "add" };
@@ -98,34 +112,48 @@ export function planSourceReopen(
   if (storedIds.length > freshIds.length) return { kind: "keep", reason: "diverged", importIds: [existing.id] };
   const lastIndex = storedIds.length - 1;
   const renamed: { from: string; to: string }[] = [];
+  let refreshed = 0;
+  const kept: TimelineEvent[] = [];
   for (let index = 0; index < storedIds.length; index += 1) {
-    if (storedIds[index] === freshIds[index]) continue;
     const stored = existing.events[index]!;
     const fresh = candidate.events[index]!;
-    // Only the last stored turn may differ, and only as the same turn now
-    // answered (dated later).
+    if (stored.id === fresh.id) {
+      // Same turn. Its text must not have changed unless the user changed it.
+      if (!stored.userModified && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
+        return { kind: "keep", reason: "diverged", importIds: [existing.id] };
+      }
+      const enriched = ENRICHMENT_FIELDS.some((field) => !same(stored[field], fresh[field]));
+      if (enriched) refreshed += 1;
+      kept.push(enriched ? withFields(stored, fresh, ENRICHMENT_FIELDS) : stored);
+      continue;
+    }
+    // Only the last stored turn may differ, and only as a prompt that has
+    // since been answered: the same turn, now dated by its reply.
     const answered =
       index === lastIndex &&
       stored.turnIndex !== undefined &&
       stored.turnIndex === fresh.turnIndex &&
+      stored.actor === "user" &&
+      fresh.actor !== "user" &&
       Date.parse(stored.start) <= Date.parse(fresh.start);
     if (!answered) return { kind: "keep", reason: "diverged", importIds: [existing.id] };
-    if (!stored.userModified) renamed.push({ from: stored.id, to: fresh.id });
-  }
-
-  let refreshed = 0;
-  const kept = existing.events.map((event, index) => {
-    const fresh = candidate.events[index]!;
-    if (event.id !== fresh.id) {
-      // The answered prompt, unless the user edited it: then the edit stays.
-      if (event.userModified) return event;
-      refreshed += 1;
-      return { ...fresh, sessionId: existing.sessionId, sourceRefs: [existing.source.id] };
+    if (stored.userModified || isCited(stored.id)) {
+      // The user's edit, or a citation that cannot follow a new id, wins: the
+      // prompt stays as stored, and only later turns are added.
+      kept.push(stored);
+      continue;
     }
-    const next = refreshedEvent(event, fresh);
-    if (next !== event) refreshed += 1;
-    return next;
-  });
+    // Keep the stored event and everything Mori or the user added to it; take
+    // the turn's text and its new identity from the read.
+    renamed.push({ from: stored.id, to: fresh.id });
+    refreshed += 1;
+    kept.push({
+      ...withFields(stored, fresh, [...CONTENT_FIELDS, ...ENRICHMENT_FIELDS]),
+      id: fresh.id,
+      start: fresh.start,
+      ...(fresh.turnId !== undefined ? { turnId: fresh.turnId } : {}),
+    });
+  }
   if (refreshed === 0 && storedIds.length === freshIds.length) return { kind: "unchanged", importId: existing.id };
 
   // The turns the transcript gained, re-pointed at the stored source.
@@ -137,6 +165,7 @@ export function planSourceReopen(
   const relatedEventIds = [...kept, ...added].map((event) => event.id);
   return {
     kind: "update",
+    previous: existing,
     added: added.length,
     refreshed,
     renamed,
