@@ -146,6 +146,8 @@ export function useAutoImportSessions(): void {
             ...(keptRef.current?.ids ?? []),
             ...sessionIdsWithStoredImports(getAppStorage() ?? window.localStorage),
           ]),
+          // Without the kernel's answer the cap must not drop durable copies.
+          { complete: keptRef.current !== null },
         );
         const discovered = await listAllAgentWorkSessions();
         if (!cancelled) {

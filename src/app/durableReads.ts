@@ -21,7 +21,8 @@ import type { KeyValueStorage } from "../lib/storage/storageTypes";
 import { useStorageHealthStore } from "./storageHealthStore";
 import { setAppStorageProvider } from "../lib/storage/appStorage";
 import { adoptDurableDocuments } from "../lib/storage/adoptDurableDocuments";
-import { replayPendingDeletes } from "../lib/storage/desktopDocumentMirror";
+import { appScopedSavedAt, replayPendingDeletes } from "../lib/storage/desktopDocumentMirror";
+import { durableKeyToDocument } from "../lib/storage/durableKeyMap";
 import { adoptReopenDescriptors } from "../lib/session/autoImportMetaStore";
 import { recordAdoptionReport } from "./useDurableDocumentAdoption";
 
@@ -64,6 +65,10 @@ export function prepareDurableReads(): Promise<void> {
               deleteDocument: (kind, ownerId) => tauriCommands.deleteDurableDocumentRow(kind, ownerId),
             },
             listExisting: (kind) => tauriCommands.listDurableDocumentRows(kind),
+            savedAtOf: (key) => {
+              const doc = durableKeyToDocument(key);
+              return doc ? appScopedSavedAt(window.localStorage, doc.kind) : null;
+            },
             now: () => new Date().toISOString(),
           }),
         );

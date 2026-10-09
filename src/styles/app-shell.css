@@ -1160,3 +1160,10 @@
 }
 
 /* ─── End app chrome ─────────────────────────────────────────────────── */
+
+/* Before the durable read source is decided (desktop, usually a moment):
+   the page background only, so startup does not flash. */
+.app-starting {
+  min-height: 100vh;
+  background: var(--base-bg);
+}

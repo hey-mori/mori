@@ -12,6 +12,7 @@ vi.mock("../storage/desktopDocumentMirror", () => ({
 import {
   adoptReopenDescriptors,
   forgetReopenDescriptors,
+  setProtectedDescriptorIds,
   loadAutoImportMeta,
   loadAutoImportMetas,
   loadEmptySourceLabels,
@@ -134,6 +135,7 @@ describe("reopen descriptors", () => {
   });
 
   it("evicts the oldest unprotected descriptor, local and durable, when nothing is protected", () => {
+    setProtectedDescriptorIds(new Set(), { complete: true });
     const old = meta("old", 0);
     upsertAutoImportMetas([old]);
     upsertAutoImportMetas(Array.from({ length: 1000 }, (_, i) => meta(`n${i}`, i + 10)));
@@ -149,5 +151,25 @@ describe("reopen descriptors", () => {
     const aside = keys.find((k) => k?.startsWith("mori.autoImport.v1.unreadable."));
     expect(aside && window.localStorage.getItem(aside)).toBe("{truncated");
     expect(loadAutoImportMeta(autoImportedSessionId(meta("a", 1)))).not.toBeNull();
+  });
+});
+
+describe("the cap while the kept set is unknown", () => {
+  beforeEach(() => {
+    vi.stubGlobal("window", { localStorage: memoryStorage() });
+    ops.writes.length = 0;
+    ops.removes.length = 0;
+    forgetReopenDescriptors();
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("trims only the local cache, never a durable descriptor", async () => {
+    const { setProtectedDescriptorIds } = await import("./autoImportMetaStore");
+    const meta = (id: string, day: number) =>
+      ({ id, sessionId: id, agentId: "claude", importKind: "claude-code", sourceFilePath: `/p/${id}`, startedAt: "", updatedAt: new Date(Date.UTC(2026, 0, 1) + day * 86_400_000).toISOString() }) as AgentWorkSessionMeta;
+    setProtectedDescriptorIds(new Set(), { complete: false });
+    upsertAutoImportMetas([meta("old", 0)]);
+    upsertAutoImportMetas(Array.from({ length: 1000 }, (_, i) => meta(`n${i}`, i + 10)));
+    expect(ops.removes).toEqual([]);
   });
 });

@@ -37,6 +37,9 @@ const DESCRIPTOR_VERSION = 1;
 let durable: MetaMap = {};
 /** Sessions whose descriptor the cap must keep, as last reported by the poll. */
 let lastProtected: ReadonlySet<string> = new Set();
+/** Whether that set includes what the kernel keeps (archives, passages). Until
+ *  it does, the cap trims only the local cache, never a durable descriptor. */
+let protectedComplete = false;
 
 function storage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> | null {
   return getAppStorage();
@@ -149,8 +152,9 @@ export function adoptReopenDescriptors(rows: readonly SqliteDurableDocumentRow[]
 }
 
 /** The poll's current protected set, used when a caller passes none. */
-export function setProtectedDescriptorIds(ids: ReadonlySet<string>): void {
+export function setProtectedDescriptorIds(ids: ReadonlySet<string>, options: { complete: boolean } = { complete: true }): void {
   lastProtected = ids;
+  protectedComplete = options.complete;
 }
 
 /** Every reopen meta known here (used to seed the auto-import "seen" set). */
@@ -184,6 +188,7 @@ export function upsertAutoImportMetas(
   }
 
   const protectedIds = options.protectedIds ?? lastProtected;
+  const durableEviction = options.protectedIds !== undefined || protectedComplete;
   let entries = Object.entries(map);
   if (entries.length > MAX_METAS) {
     // Protected descriptors never count against the cap: losing one would
@@ -193,7 +198,7 @@ export function upsertAutoImportMetas(
       .filter(([id]) => !protectedIds.has(id))
       .sort((a, b) => activity(b[1]) - activity(a[1]));
     const room = Math.max(0, MAX_METAS - kept.length);
-    for (const [id] of rest.slice(room)) dropDescriptor(id);
+    if (durableEviction) for (const [id] of rest.slice(room)) dropDescriptor(id);
     entries = [...kept, ...rest.slice(0, room)];
   }
   try {
@@ -229,6 +234,7 @@ export function removeAutoImportMeta(sessionId: string): void {
 export function forgetReopenDescriptors(): void {
   durable = {};
   lastProtected = new Set();
+  protectedComplete = false;
 }
 
 /** Sources a complete read proved empty in the latest poll, keyed by auto

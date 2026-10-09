@@ -15,6 +15,30 @@ import { APP_SCOPED_OWNER, type DurableDocumentKind } from "../sqlite/durableDoc
 import { DocumentMirror, type MirrorHealth, type PendingDeleteLedger } from "./documentMirror";
 import type { KeyValueStorage } from "./storageTypes";
 
+/** Device-local bookkeeping: when each app-scoped document was last saved. */
+export const APP_SCOPED_SAVED_AT_KEY = "mori.appScopedSavedAt.v1";
+
+function recordAppScopedSavedAt(storage: KeyValueStorage, kind: DurableDocumentKind, savedAt: string): void {
+  try {
+    const map = JSON.parse(storage.getItem(APP_SCOPED_SAVED_AT_KEY) ?? "{}") as Record<string, string>;
+    map[kind] = savedAt;
+    storage.setItem(APP_SCOPED_SAVED_AT_KEY, JSON.stringify(map));
+  } catch {
+    // Without the record the adoption pass only fills a missing row.
+  }
+}
+
+/** When the app-scoped document of `kind` was last saved here, if recorded. */
+export function appScopedSavedAt(storage: KeyValueStorage, kind: DurableDocumentKind): string | null {
+  try {
+    const map = JSON.parse(storage.getItem(APP_SCOPED_SAVED_AT_KEY) ?? "{}") as Record<string, unknown>;
+    const value = map[kind];
+    return typeof value === "string" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Device-local bookkeeping: deletes not yet confirmed by SQLite. */
 export const PENDING_DELETES_KEY = "mori.mirror.pendingDeletes.v1";
 
@@ -107,6 +131,9 @@ export function mirrorAppScopedDocument<T>(
   body: T,
   updatedAt: string,
 ): void {
+  // The app-scoped bodies are bare arrays with no `savedAt` of their own; the
+  // launch-time adoption dates the local copy by this record instead.
+  if (isTauriRuntime()) recordAppScopedSavedAt(window.localStorage, kind, updatedAt);
   getDesktopDocumentMirror()?.write({
     kind,
     ownerId: APP_SCOPED_OWNER,

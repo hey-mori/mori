@@ -346,3 +346,60 @@ describe("adoptDurableDocuments", () => {
     expect(saved[0].updatedAt).toBe("2026-08-18T10:00:00.000Z");
   });
 });
+
+describe("adoption on every launch", () => {
+  const draft = (title: string) => ({ session: { id: "s1", title }, savedAt: "2026-08-01T00:00:00.000Z" });
+  const held = (kind: string, ownerId: string, body: unknown, updatedAt: string) => async (k: string) =>
+    k === kind ? [{ kind, ownerId, schemaVersion: 1, bodyJson: JSON.stringify(body), updatedAt }] : [];
+
+  it("repairs an edit that kept its date when its mirror write was lost", async () => {
+    const storage = storageWith({ "mori.sessionDraft.s1": draft("renamed") });
+    const { mirrorTarget, saved } = target();
+    await adoptDurableDocuments({
+      storage,
+      target: mirrorTarget,
+      now,
+      listExisting: held("session_draft", "s1", draft("old title"), "2026-08-01T00:00:00.000Z") as never,
+    });
+    expect(saved).toHaveLength(1);
+    expect(JSON.parse(saved[0]!.bodyJson).session.title).toBe("renamed");
+  });
+
+  it("leaves a document SQLite already holds unchanged", async () => {
+    const storage = storageWith({ "mori.sessionDraft.s1": draft("same") });
+    const { mirrorTarget, saved } = target();
+    const report = await adoptDurableDocuments({
+      storage,
+      target: mirrorTarget,
+      now,
+      listExisting: held("session_draft", "s1", draft("same"), "2026-08-01T00:00:00.000Z") as never,
+    });
+    expect(saved).toHaveLength(0);
+    expect(report.skippedFresher).toBe(1);
+  });
+
+  it("does not let an undated local mapping replace the one SQLite holds", async () => {
+    const storage = storageWith({ "mori.userProjects.v1": [{ key: "stale" }] });
+    const { mirrorTarget, saved } = target();
+    await adoptDurableDocuments({
+      storage,
+      target: mirrorTarget,
+      now,
+      listExisting: held("user_projects", "@app", [{ key: "restored" }], "2026-08-01T00:00:00.000Z") as never,
+    });
+    expect(saved).toHaveLength(0);
+  });
+
+  it("copies a mapping whose recorded save time is newer than SQLite's", async () => {
+    const storage = storageWith({ "mori.userProjects.v1": [{ key: "newer" }] });
+    const { mirrorTarget, saved } = target();
+    await adoptDurableDocuments({
+      storage,
+      target: mirrorTarget,
+      now,
+      listExisting: held("user_projects", "@app", [{ key: "older" }], "2026-08-01T00:00:00.000Z") as never,
+      savedAtOf: () => "2026-08-02T00:00:00.000Z",
+    });
+    expect(saved).toHaveLength(1);
+  });
+});

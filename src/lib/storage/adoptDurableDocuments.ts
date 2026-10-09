@@ -1,6 +1,8 @@
 /**
- * The one-time adoption pass: copy the durable documents that already exist in
- * localStorage into SQLite.
+ * The adoption pass, run on every desktop launch before the read source is
+ * decided: copy into SQLite every durable document localStorage holds newer
+ * than SQLite (or SQLite lacks). Once, it adopted classes newly made durable;
+ * from then on it repairs mirror writes a quit or an error lost.
  *
  * The other half of R2 in `docs/design/sqlite-source-of-truth-promotion.md` §7.
  * Dual-write only covers documents written from now on, so without this a
@@ -44,9 +46,9 @@
  * must not flip under.
  *
  * So the pass reads what SQLite already holds and skips any owner whose stored
- * document is at least as new. Three list calls against a table that is empty
- * or nearly so, in exchange for removing a race that would only ever show up as
- * data missing after the flip.
+ * document is newer, or as new with the same content. One listing per kind,
+ * once per launch, in exchange for removing a race that would only ever show
+ * up as data missing after the flip.
  */
 import type { KeyValueStorage } from "./storageTypes";
 import type { DocumentMirrorTarget } from "./documentMirror";
@@ -117,6 +119,8 @@ export async function adoptDurableDocuments(input: {
    * about the race; production always passes it.
    */
   listExisting?: (kind: DurableDocumentKind) => Promise<SqliteDurableDocumentRow[]>;
+  /** When an undated body (an app-scoped array) was last saved, by key. */
+  savedAtOf?: (key: string) => string | null;
 }): Promise<AdoptionReport> {
   const { storage, target, now, listExisting } = input;
   const report: AdoptionReport = {
@@ -129,12 +133,12 @@ export async function adoptDurableDocuments(input: {
 
   // Read before scanning, so a document written between the two is treated as
   // fresher and left alone rather than compared against a stale snapshot.
-  const existing = new Map<string, string>();
+  const existing = new Map<string, { updatedAt: string; bodyJson: string }>();
   if (listExisting) {
     for (const kind of durableKinds()) {
       try {
         for (const row of await listExisting(kind)) {
-          existing.set(`${row.kind} ${row.ownerId}`, row.updatedAt);
+          existing.set(`${row.kind} ${row.ownerId}`, { updatedAt: row.updatedAt, bodyJson: row.bodyJson });
         }
       } catch (error) {
         report.stoppedBecause = error instanceof Error ? error.message : String(error);
@@ -175,11 +179,17 @@ export async function adoptDurableDocuments(input: {
     }
 
     const ownerId = match.ownerId;
-    const updatedAt = readSavedAt(body) ?? now();
     const held = existing.get(`${match.kind} ${ownerId}`);
-    if (held !== undefined && held >= updatedAt) {
-      // Equal counts as fresher: an identical timestamp means the same
-      // document, and rewriting it would be work for no change.
+    // A body without its own `savedAt` (the project-mapping arrays) is dated
+    // by the time its writer recorded beside it. Undated and already held:
+    // left alone, since a stale local copy (a storage folder restored onto a
+    // device with older localStorage) must not replace the restored one.
+    const updatedAt = readSavedAt(body) ?? input.savedAtOf?.(key) ?? null;
+    if (updatedAt === null && held !== undefined) {
+      report.skippedFresher += 1;
+      continue;
+    }
+    if (held !== undefined && !isNewer(updatedAt ?? now(), body, held)) {
       report.skippedFresher += 1;
       continue;
     }
@@ -190,7 +200,7 @@ export async function adoptDurableDocuments(input: {
         ownerId,
         schemaVersion: readSchemaVersion(body),
         body,
-        updatedAt,
+        updatedAt: updatedAt ?? now(),
       }),
     );
   }
@@ -228,7 +238,7 @@ export async function adoptDurableDocuments(input: {
       if (storage.getItem(`mori.sessionImportEntry.${ownerId}`) !== null) continue;
       const updatedAt = readSavedAt(entry) ?? now();
       const held = existing.get(`session_import ${ownerId}`);
-      if (held !== undefined && held >= updatedAt) {
+      if (held !== undefined && !isNewer(updatedAt, entry, held)) {
         report.skippedFresher += 1;
         continue;
       }
@@ -263,6 +273,18 @@ export async function adoptDurableDocuments(input: {
 function readSchemaVersion(body: unknown): number {
   const value = (body as { schemaVersion?: unknown } | null)?.schemaVersion;
   return typeof value === "number" ? value : 1;
+}
+
+/**
+ * Whether the local body should replace SQLite's: dated later, or dated the
+ * same with different content. An edit that keeps its `savedAt` (a rename
+ * keeps the session's time) whose mirror write was lost has the same date and
+ * new content; skipping it would let the read flip serve the old version.
+ */
+function isNewer(updatedAt: string, body: unknown, held: { updatedAt: string; bodyJson: string }): boolean {
+  if (updatedAt > held.updatedAt) return true;
+  if (updatedAt < held.updatedAt) return false;
+  return JSON.stringify(body) !== held.bodyJson;
 }
 
 function readSavedAt(body: unknown): string | null {
