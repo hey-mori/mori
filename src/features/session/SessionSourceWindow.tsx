@@ -285,6 +285,15 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
       <div className="session-window-top">
         <header className="session-window-head">
           <span className="session-window-coverage">
+            {state.archive ? (
+              <span className="session-window-archive">
+                보관한 원본 · {new Date(state.archive.archivedAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 시점
+                <InfoHint label="보관한 원본 설명">
+                  원본 대화가 없어 Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다.
+                </InfoHint>
+                {" · "}
+              </span>
+            ) : null}
             {headline}
             <InfoHint label="표시 범위">
               이 대화는 한 번에 가져오기에 길어서 끝에서부터 나눠 읽습니다. 한 번에 {MAX_RETAINED_WINDOWS}구간까지

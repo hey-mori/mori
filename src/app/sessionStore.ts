@@ -18,6 +18,7 @@ import type {
   QuickPassAnalysisSettings,
 } from "../lib/analysis";
 import { sha256Hex, type PassageLocatorV1 } from "../lib/capture/passageCapture";
+import { keptArchiveRead } from "../lib/session/sessionArchiveRead";
 import { redactText } from "../lib/connectors/redaction";
 import {
   DEFAULT_QUICK_PASS_SETTINGS,
@@ -579,6 +580,8 @@ export type SessionState = {
     query: string;
     wholeWords: boolean;
     stillWanted: () => boolean;
+    /** Set when `sourcePath` is Mori's kept copy (보관한 원본), not the original. */
+    archive?: LoadedSessionWindow["archive"];
   }) => Promise<SourceHitOutcome>;
   /**
    * Open a session at its latest reply: the newest window of its source, with
@@ -742,7 +745,9 @@ export function selectActiveSessionWindow(state: SessionState): SessionWindowSta
   // A search result opened this view at its passage: show it even for a
   // session with a whole import, until the focus is let go of (최신 대화로,
   // closing the search), when the session's own tabs return.
-  if (state.imports.length > 0 && !(isLoadedWindow(window) && window.focus)) return null;
+  // A kept archive is the fuller copy of a session whose original is gone:
+  // it shows even where an earlier import exists.
+  if (state.imports.length > 0 && !(isLoadedWindow(window) && (window.focus || window.archive))) return null;
   return window;
 }
 
@@ -1643,26 +1648,35 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     jumpSequence += 1;
     set({ sessionWindow: { sessionId, status: "loading" }, sessionSearch: null });
     const sourcePath = meta.sourceFilePath;
-    const openWindow = async (): Promise<OpenDiscoveredOutcome> => {
+    const openWindow = async (
+      path: string = sourcePath,
+      archive?: LoadedSessionWindow["archive"],
+    ): Promise<OpenDiscoveredOutcome> => {
       try {
         let state: LoadedSessionWindow = windowStateFrom(
           sessionId,
-          await getClaudeCodeSessionWindow(sourcePath),
+          await getClaudeCodeSessionWindow(path),
           token,
         );
         // A tail of metadata records shows nothing; read back a little further.
         for (let skip = 0; state.events.length === 0 && state.status === "partial" && skip < MAX_EMPTY_WINDOW_SKIPS; skip += 1) {
           state = prependEarlierWindow(
             state,
-            await getClaudeCodeSessionWindow(sourcePath, earlierCursor(state)),
+            await getClaudeCodeSessionWindow(path, earlierCursor(state)),
           );
         }
         if (!current()) return "superseded";
-        set({ sessionWindow: state });
+        set({ sessionWindow: archive ? { ...state, archive } : state });
         return "opened";
       } catch (error) {
         if (!current()) return "superseded";
-        set({ sessionWindow: { sessionId, status: "error", error: classifyWindowError(error) } });
+        const failure = classifyWindowError(error);
+        if (!archive && failure.kind === "missing") {
+          const kept = await keptArchiveRead(sessionId);
+          if (!current()) return "superseded";
+          if (kept) return openWindow(kept.path, kept.archive);
+        }
+        set({ sessionWindow: { sessionId, status: "error", error: failure } });
         return "failed";
       }
     };
@@ -1732,6 +1746,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       if (meta.importKind === "claude-code" && isTooLargeError(error)) {
         return openWindow();
       }
+      // The original is gone: a copy the user kept is read in its place, and
+      // the view says so.
+      if (meta.importKind === "claude-code" && classifyWindowError(error).kind === "missing") {
+        const kept = await keptArchiveRead(sessionId);
+        if (!current()) return "superseded";
+        if (kept) return openWindow(kept.path, kept.archive);
+      }
       set({ sessionWindow: { sessionId, status: "error", error: classifyWindowError(error) } });
       return "failed";
     }
@@ -1786,7 +1807,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
     return "opened";
   },
-  openSessionAtSourceHit: async ({ sessionId, sourcePath, sourceId, hit, query, wholeWords, stillWanted }) => {
+  openSessionAtSourceHit: async ({ sessionId, sourcePath, sourceId, hit, query, wholeWords, stillWanted, archive }) => {
     // An open of its own: it supersedes any other open in flight, and any
     // in-session search or jump of the session shown before.
     const token = ++discoveredOpenSequence;
@@ -1805,26 +1826,47 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // The window ends at the matched record: its last event is that record.
     const shown = hitWindow.events[hitWindow.events.length - 1];
     if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, query, wholeWords)) return "changed";
-    return showWindowAtRecord({ sessionId, sourcePath, hitWindow, token, current, focus: { messageId: hit.messageId, query, wholeWords } });
+    return showWindowAtRecord({ sessionId, sourcePath, hitWindow, token, current, focus: { messageId: hit.messageId, query, wholeWords }, archive });
   },
   openSessionAtPassage: async ({ locator, stillWanted }) => {
     const token = ++discoveredOpenSequence;
     searchSequence += 1;
     jumpSequence += 1;
     const current = () => token === discoveredOpenSequence && stillWanted();
-    // The session is named, never a path: its descriptor says where it lives now.
-    const sourcePath = loadAutoImportMeta(locator.sessionId)?.sourceFilePath;
-    if (!sourcePath) return "missing";
-    let hitWindow: ClaudeCodeSessionWindow;
-    try {
-      hitWindow = await getClaudeCodeSessionWindow(sourcePath, {
-        beforeOffset: locator.end,
-        sourceId: locator.sourceId,
-        endAnchor: locator.anchor,
-      });
-    } catch (error) {
+    // The session is named, never a path: its descriptor says where it lives
+    // now. When the original is gone, a copy the user kept is read instead,
+    // with the same checks: it shares the original's fingerprint and offsets.
+    const readAt = (path: string) =>
+      getClaudeCodeSessionWindow(path, { beforeOffset: locator.end, sourceId: locator.sourceId, endAnchor: locator.anchor });
+    let sourcePath = loadAutoImportMeta(locator.sessionId)?.sourceFilePath ?? null;
+    let archive: LoadedSessionWindow["archive"] | undefined;
+    let hitWindow: ClaudeCodeSessionWindow | null = null;
+    let failure: SessionWindowError | null = sourcePath ? null : { kind: "missing", message: "no descriptor" };
+    if (sourcePath) {
+      try {
+        hitWindow = await readAt(sourcePath);
+      } catch (error) {
+        failure = classifyWindowError(error);
+      }
+    }
+    if (!current()) return "superseded";
+    if (!hitWindow && failure?.kind === "missing") {
+      const kept = await keptArchiveRead(locator.sessionId);
       if (!current()) return "superseded";
-      const kind = classifyWindowError(error).kind;
+      if (kept) {
+        try {
+          hitWindow = await readAt(kept.path);
+          sourcePath = kept.path;
+          archive = kept.archive;
+          failure = null;
+        } catch (error) {
+          failure = classifyWindowError(error);
+        }
+      }
+    }
+    if (!current()) return "superseded";
+    if (!hitWindow || !sourcePath) {
+      const kind = failure?.kind;
       return kind === "missing" ? "missing" : kind === "changed" ? "changed" : "failed";
     }
     if (!current()) return "superseded";
@@ -1845,6 +1887,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       token,
       current,
       focus: { messageId: shown.id, query: excerpt, wholeWords: false, range: { from: locator.from, to: locator.to } },
+      archive,
     });
   },
   loadNewerSessionWindow: () => pageSessionWindow("newer"),
@@ -2637,6 +2680,7 @@ async function showWindowAtRecord({
   token,
   current,
   focus,
+  archive,
 }: {
   sessionId: string;
   sourcePath: string;
@@ -2644,6 +2688,8 @@ async function showWindowAtRecord({
   token: number;
   current: () => boolean;
   focus: { messageId: string; query: string; wholeWords: boolean; range?: { from: number; to: number } };
+  /** Set when the window reads Mori's kept copy instead of the original. */
+  archive?: LoadedSessionWindow["archive"];
 }): Promise<SourceHitOutcome> {
   const get = useSessionStore.getState;
   const set = useSessionStore.setState;
@@ -2670,11 +2716,18 @@ async function showWindowAtRecord({
   }
   const focusSeq = ++jumpSequence;
   set({
-    sessionWindow: jumpedWindowState(windowStateFrom(sessionId, hitWindow, token), hitWindow, newer, {
-      ...focus,
-      seq: focusSeq,
-    }),
+    sessionWindow: withArchive(
+      jumpedWindowState(windowStateFrom(sessionId, hitWindow, token), hitWindow, newer, {
+        ...focus,
+        seq: focusSeq,
+      }),
+      archive,
+    ),
     sessionSearch: null,
   });
   return "opened";
+}
+
+function withArchive<T extends LoadedSessionWindow>(state: T, archive: LoadedSessionWindow["archive"] | undefined): T {
+  return archive ? { ...state, archive } : state;
 }

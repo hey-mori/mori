@@ -29,6 +29,7 @@ import {
   type ProjectSearchState,
 } from "../lib/session/projectSearch";
 import { classifyWindowError } from "../lib/session/sessionWindow";
+import { keptArchiveRead } from "../lib/session/sessionArchiveRead";
 import { normalizeQuery } from "../lib/session/sessionSearch";
 import { useSessionStore, type SourceHitOutcome } from "./sessionStore";
 
@@ -93,7 +94,32 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
     } catch (error) {
       const latest = get().search;
       if (sequence !== searchSequence || !latest) return;
-      set({ search: applySourceError(latest, sessionId, classifyWindowError(error)) });
+      const failure = classifyWindowError(error);
+      // The original is gone: a copy the user kept is searched in its place,
+      // from its end, and the coverage says which one was read.
+      if (failure.kind === "missing" && !source.archive) {
+        const kept = await keptArchiveRead(sessionId);
+        const now = get().search;
+        if (sequence !== searchSequence || !now) return;
+        const held = now.sources[sessionId];
+        if (kept && held && held.status === "searching") {
+          set({
+            search: {
+              ...now,
+              sources: {
+                ...now.sources,
+                [sessionId]: { ...held, sourcePath: kept.path, archive: kept.archive, cursor: null, sourceId: null, scanEnd: null },
+              },
+            },
+          });
+          return step(sequence, sessionId);
+        }
+      }
+      // Fresh state: other sources may have folded results in while the
+      // archive was looked up.
+      const current = get().search;
+      if (sequence !== searchSequence || !current) return;
+      set({ search: applySourceError(current, sessionId, failure) });
     }
   }
 
@@ -191,6 +217,7 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
         query: search.query,
         wholeWords: search.wholeWords,
         stillWanted,
+        archive: source.archive,
       });
       if (sequence !== openSequence) return "superseded";
       if (outcome === "opened") set({ opening: null, openedSessionId: sessionId });

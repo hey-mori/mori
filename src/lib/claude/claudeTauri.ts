@@ -269,3 +269,24 @@ export function shortMessagePreview(content: string, max: number = 140): string 
   if (cleaned.length <= max) return cleaned;
   return `${cleaned.slice(0, max - 1)}…`;
 }
+
+export type { ClaudeCodeSessionArchive } from "./types";
+import type { ClaudeCodeSessionArchive } from "./types";
+
+/** Keep a copy of one transcript in Mori's storage. Explicit user action only. */
+export async function archiveClaudeCodeSession(sessionPath: string): Promise<ClaudeCodeSessionArchive> {
+  if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
+  return invokeTauriCommand("archive_claude_code_session", { sessionPath });
+}
+
+/** Delete one archive by name. The original transcript is never touched. */
+export async function removeClaudeCodeArchive(fileName: string): Promise<boolean> {
+  if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
+  return invokeTauriCommand("remove_claude_code_archive", { fileName });
+}
+
+/** Where archives live, so a stored archive name can be read again. */
+export async function claudeCodeArchiveDir(): Promise<string> {
+  if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
+  return invokeTauriCommand("claude_code_archive_dir", {});
+}

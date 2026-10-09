@@ -149,6 +149,9 @@ export type ProjectSearchSource = {
   unsearchableRecords: number;
   steps: number;
   error: SessionWindowError | null;
+  /** Set when the original is gone and this source reads the kept copy
+   *  (보관한 원본): its coverage is the copy's, as of when it was kept. */
+  archive?: { archivedAt: string; bytes: number };
 };
 
 export type ProjectSearchState = {

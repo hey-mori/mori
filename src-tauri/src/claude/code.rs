@@ -276,7 +276,9 @@ pub fn get_claude_code_session_window(
     if trimmed.is_empty() {
         return Err("sessionPath is required.".to_string());
     }
-    let root = claude_code_projects_dir()?;
+    // An archive Mori kept is read through its own trusted root; any other
+    // path still has to be inside the agent's projects directory.
+    let root = super::archive::read_root_for(trimmed)?;
     if let Some(after) = after_offset {
         // Newer history after a part opened in the middle of the transcript.
         let (Some(source_id), Some(end_anchor)) = (source_id.as_deref(), end_anchor.as_deref()) else {
@@ -311,7 +313,7 @@ pub async fn search_claude_code_session(
     if trimmed.is_empty() {
         return Err("sessionPath is required.".to_string());
     }
-    let root = claude_code_projects_dir()?;
+    let root = super::archive::read_root_for(&trimmed)?;
     tauri::async_runtime::spawn_blocking(move || {
         search_session_matching(
             &root,
@@ -2879,7 +2881,7 @@ pub struct ClaudeCodeSessionWindow {
     pub omitted_bytes: u64,
 }
 
-fn resolve_session_path(root: &Path, session_path: &str) -> Result<PathBuf, String> {
+pub(crate) fn resolve_session_path(root: &Path, session_path: &str) -> Result<PathBuf, String> {
     let requested = PathBuf::from(session_path);
     let canonical_root = fs::canonicalize(root)
         .map_err(|error| format!("Failed to resolve {}: {error}", root.display()))?;
@@ -2894,7 +2896,7 @@ fn resolve_session_path(root: &Path, session_path: &str) -> Result<PathBuf, Stri
     Ok(canonical)
 }
 
-fn source_id_of(file: &mut fs::File) -> Result<String, String> {
+pub(crate) fn source_id_of(file: &mut fs::File) -> Result<String, String> {
     use std::io::{Read, Seek, SeekFrom};
     file.seek(SeekFrom::Start(0)).map_err(|error| error.to_string())?;
     let mut head = vec![0u8; SOURCE_ID_PROBE];
@@ -3101,7 +3103,7 @@ fn check_boundary(file: &mut fs::File, len: u64, cursor: u64) -> Result<(), Stri
 
 /// The end of the last complete record: a trailing record still being written
 /// is not a record yet.
-fn complete_end(file: &mut fs::File, len: u64) -> Result<u64, String> {
+pub(crate) fn complete_end(file: &mut fs::File, len: u64) -> Result<u64, String> {
     if len > 0 && read_range(file, len - 1, len)?[0] != b'\n' {
         return Ok(record_start_before(file, len)?.unwrap_or(0));
     }

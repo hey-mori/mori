@@ -14,8 +14,11 @@
 //!
 //! Everything is read-only and bounded. We never write back to either
 //! store, never recurse into arbitrary paths the user did not name, and
-//! never expose contents the user did not explicitly ask for.
+//! never expose contents the user did not explicitly ask for. The one write
+//! is `archive`: on the user's explicit request, a copy of one transcript into
+//! Mori's own storage, never into the agent's.
 
+pub mod archive;
 pub mod code;
 pub mod desktop;
 pub mod installations;

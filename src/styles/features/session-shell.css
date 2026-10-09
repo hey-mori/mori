@@ -1149,3 +1149,54 @@
   color: var(--muted);
   font-size: var(--base-font-size-xs);
 }
+
+/* 원본 보관: a quiet chip in the session bar, and its dialog. */
+.session-archive-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--base-text-muted);
+  font: inherit;
+  font-size: var(--base-font-size-xs);
+  cursor: pointer;
+}
+
+.session-archive-chip:hover,
+.session-archive-chip:focus-visible {
+  color: var(--base-text);
+}
+
+.session-archive-modal {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.session-archive-lead,
+.session-archive-done {
+  margin: 0;
+  color: var(--base-text);
+  font-size: var(--base-font-size-sm);
+  line-height: var(--base-line-relaxed);
+}
+
+.session-archive-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-sm);
+  line-height: var(--base-line-relaxed);
+}
+
+.session-window-archive {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--base-text);
+}

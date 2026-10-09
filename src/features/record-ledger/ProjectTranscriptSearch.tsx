@@ -153,7 +153,7 @@ export function ProjectTranscriptSearch({
                     : entry.kind === "no-source"
                       ? "원본 위치를 알 수 없음"
                       : source
-                        ? SOURCE_STATUS[source.status]
+                        ? `${source.archive ? "보관한 원본 · " : ""}${SOURCE_STATUS[source.status]}`
                         : "";
                 return (
                   <li key={entry.sessionId}>

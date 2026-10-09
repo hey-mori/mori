@@ -38,6 +38,7 @@ import type {
   ClaudeCodeSessionDelta,
   ClaudeCodeSessionWindow,
   ClaudeCodeSearchBatch,
+  ClaudeCodeSessionArchive,
   ClaudeCodeSessionDetail,
   ClaudeCodeSessionMeta,
   ClaudeConversationDetail,
@@ -136,6 +137,9 @@ export type TauriCommandName =
   | "get_claude_code_session_delta"
   | "get_claude_code_session_window"
   | "search_claude_code_session"
+  | "archive_claude_code_session"
+  | "remove_claude_code_archive"
+  | "claude_code_archive_dir"
   | "resolve_file_locations"
   | "reveal_path_in_os"
   | "llm_http_request"
@@ -413,6 +417,9 @@ export type TauriCommandMap = {
     };
     output: ClaudeCodeSearchBatch;
   };
+  archive_claude_code_session: { input: { sessionPath: string }; output: ClaudeCodeSessionArchive };
+  remove_claude_code_archive: { input: { fileName: string }; output: boolean };
+  claude_code_archive_dir: { input: Record<string, never>; output: string };
   resolve_file_locations: {
     input: { paths: string[]; searchRoot?: string };
     output: ResolvedFileLocation[];
