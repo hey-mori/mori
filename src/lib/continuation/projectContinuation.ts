@@ -201,7 +201,9 @@ function firstLine(text: string): string {
       .split("\n")
       .map((entry) => entry.trim())
       .find((entry) => entry.length > 0) ?? "";
+  // A record kept from a conversation starts with the passage quoted.
   const plain = line
+    .replace(/^(>\s*)+/, "")
     .replace(/^#+\s*/, "")
     .replace(/^[-*+]\s+/, "")
     .replace(/[*_`~]/g, "")
