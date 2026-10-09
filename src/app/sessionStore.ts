@@ -2171,8 +2171,11 @@ async function openSearchHit(hit: ClaudeCodeSearchHit): Promise<void> {
       endAnchor: hit.recordAnchor,
     });
     if (!current()) return;
-    const shown = hitWindow.events.find((event) => event.id === hit.messageId);
-    if (!shown || !containsPhrase(shown.content, search.query)) {
+    // The window ends at the matched record, so its message is the window's
+    // last event. That names the record exactly, even when an earlier record
+    // carries the same id.
+    const shown = hitWindow.events[hitWindow.events.length - 1];
+    if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, search.query)) {
       fail({ kind: "changed", message: "SOURCE_CHANGED: the matched message is no longer at its place." });
       return;
     }

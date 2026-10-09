@@ -158,8 +158,8 @@ function searchTranscript(path: string, query: string, cursor: Cursor | undefine
   };
 }
 
-function makeTranscript(path: string, contents: string[], sourceId = `src-${path}`) {
-  const records = contents.map((content, index) => ({ id: `${path}-m${index}`, content, start: index * RECORD, end: (index + 1) * RECORD }));
+function makeTranscript(path: string, contents: string[], sourceId = `src-${path}`, ids: { [index: number]: string } = {}) {
+  const records = contents.map((content, index) => ({ id: ids[index] ?? `${path}-m${index}`, content, start: index * RECORD, end: (index + 1) * RECORD }));
   fake.transcripts.set(path, { sourceId, records });
 }
 
@@ -367,6 +367,29 @@ describe("searching a long transcript and opening a result", () => {
     // The markup renders the panel only while it is open; the status line is pure.
     const { searchStatusLine } = await import("../lib/session/sessionSearch");
     expect(searchStatusLine(useSessionStore.getState().sessionSearch!)).toBe("원본 전체에서 찾지 못했습니다");
+  });
+});
+
+describe("a repeated message id", () => {
+  it("opens and marks the record the result names, not an earlier one with its id", async () => {
+    makeTranscript("long", contents(40, { 20: "first version", 21: "second version names the needle" }), "src-long", { 20: "dup", 21: "dup" });
+    const id = register("long");
+    await resolver()(id);
+    await useSessionStore.getState().searchSessionWindow("needle");
+    const hit = useSessionStore.getState().sessionSearch!.hits[0]!;
+    expect(hit).toMatchObject({ messageId: "dup", recordEnd: 2200 });
+    await useSessionStore.getState().openSessionSearchHit(hit);
+    expect(useSessionStore.getState().sessionSearch!.openError).toBeNull();
+    expect(view().focus?.messageId).toBe("dup");
+    const html = markup();
+    const focused = html.match(/is-search-focus[^>]*>[\s\S]*?<\/li>/g) ?? [];
+    expect(focused).toHaveLength(1);
+    expect(focused[0]).toContain("<mark>needle</mark>");
+    expect(focused[0]).not.toContain("first version");
+    // Paging keeps exactly one focused record.
+    await useSessionStore.getState().loadEarlierSessionWindow();
+    await useSessionStore.getState().loadNewerSessionWindow();
+    expect(markup().match(/is-search-focus/g)).toHaveLength(1);
   });
 });
 

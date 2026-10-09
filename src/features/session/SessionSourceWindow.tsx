@@ -159,7 +159,10 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
       appliedFocus.current = focus.seq;
       toBottom.current = false;
       anchor.current = null;
-      const item = section.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(focus.messageId)}"]`);
+      // The last element with the id: the matched record is the last of its
+      // id in the view (paging drops later and earlier repeats of an id).
+      const items = section.querySelectorAll<HTMLElement>(`[data-message-id="${CSS.escape(focus.messageId)}"]`);
+      const item = items[items.length - 1];
       if (item) {
         const offset = item.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
         scroller.scrollTop += offset - Math.max(0, (scroller.clientHeight - item.offsetHeight) / 2);
@@ -203,6 +206,14 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
 
   const reachedStart = state.startOffset === 0;
   const atLatest = isAtLatest(state);
+  const focusIndex = focus ? state.events.map((event) => event.id).lastIndexOf(focus.messageId) : -1;
+  // A repeated id (two records sharing a uuid) still gets its own row key.
+  const seen = new Map<string, number>();
+  const rowKey = (id: string) => {
+    const count = seen.get(id) ?? 0;
+    seen.set(id, count + 1);
+    return count === 0 ? id : `${id}#${count}`;
+  };
   const position = atLatest ? null : filePositionLabel(state);
   const toggleSearch = () => {
     if (searchOpen) closeSearch();
@@ -271,12 +282,8 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
         <p className="session-window-empty">이 구간에는 표시할 메시지가 없습니다.</p>
       ) : (
         <ol className="session-window-list">
-          {state.events.map((message) => (
-            <WindowMessage
-              key={message.id}
-              message={message}
-              focus={focus?.messageId === message.id ? focus : null}
-            />
+          {state.events.map((message, index) => (
+            <WindowMessage key={rowKey(message.id)} message={message} focus={index === focusIndex ? focus : null} />
           ))}
         </ol>
       )}

@@ -3795,6 +3795,32 @@ mod search_tests {
     }
 
     #[test]
+    fn a_repeated_uuid_hit_is_the_last_record_of_its_window() {
+        let dir = TempDir::new().unwrap();
+        // Two records share a uuid; only the later one holds the phrase.
+        let body = format!(
+            "{}{}{}{}",
+            filler(3, 0),
+            user("dup", "first version without it", "2026-10-08T00:00:00Z"),
+            user("dup", "second version names the needle", "2026-10-08T00:00:01Z"),
+            filler(3, 3),
+        );
+        let path = session(&dir, &body);
+        let batch = search(dir.path(), &path, "needle");
+        assert_eq!(batch.hits.len(), 1);
+        let hit = &batch.hits[0];
+        let later = body.find("second version").unwrap() as u64;
+        assert!(hit.record_start < later && later < hit.record_end, "the hit names the later record");
+        let window = read_session_window_with(dir.path(), &path, Some(hit.record_end), Some(&batch.source_id), None, Some(&hit.record_anchor), WINDOW_BYTES).unwrap();
+        // Both records are in the window under one id; the hit is the last event.
+        assert_eq!(window.events.iter().filter(|event| event.id == "dup").count(), 2);
+        let last = window.events.last().unwrap();
+        assert_eq!(last.id, "dup");
+        assert!(last.content.contains("needle"));
+        assert!(!window.events.iter().find(|event| event.id == "dup").unwrap().content.contains("needle"));
+    }
+
+    #[test]
     fn the_newest_record_is_the_latest_window() {
         let dir = TempDir::new().unwrap();
         let body = format!("{}{}", filler(3, 0), user("end", "closing note", "2026-10-08T00:00:00Z"));
