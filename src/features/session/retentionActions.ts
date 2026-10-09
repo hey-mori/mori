@@ -15,6 +15,7 @@ import {
   type RetentionSourceInput,
 } from "../../lib/session/retentionRisk";
 import { sessionIdsWithStoredImports } from "../../lib/storage/localStorageAdapter";
+import { getAppStorage } from "../../lib/storage/appStorage";
 
 export type RetentionView = {
   policy: CleanupPolicyInput;
@@ -42,7 +43,7 @@ export async function loadRetentionView(now: number = Date.now()): Promise<Reten
   // Desktop mirrors its sessions into local storage, so key names suffice.
   let importedSessionIds = new Set<string>();
   try {
-    importedSessionIds = sessionIdsWithStoredImports(window.localStorage);
+    importedSessionIds = sessionIdsWithStoredImports(getAppStorage() ?? window.localStorage);
   } catch {
     // No storage: no import is claimed.
   }
