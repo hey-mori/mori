@@ -28,7 +28,12 @@ export type DurableDocumentKind =
   | "session_draft"
   | "package_draft"
   | "project_connections"
-  | "user_projects";
+  | "user_projects"
+  /** One imported source of a session (its events), owner `<sessionId>.<importId>`. */
+  | "session_import"
+  /** The reopen descriptors of auto-registered sessions: how to find each one's
+   *  transcript again. App-scoped: one document, the whole map. */
+  | "auto_import_descriptors";
 
 /**
  * The owner id for a class that has exactly one document for the whole app,

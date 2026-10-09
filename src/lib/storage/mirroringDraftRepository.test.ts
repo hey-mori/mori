@@ -168,4 +168,43 @@ describe("createMirroringDraftRepository", () => {
     expect(inner.loadSessionMemoryBody("sess-1")?.sessionId).toBe("sess-1");
     expect(repository.loadSessionMemoryBody("sess-1")?.sessionId).toBe("sess-1");
   });
+
+  describe("imported transcripts", () => {
+    const candidate = (id: string) =>
+      ({
+        source: { id, kind: "claudeTranscript", title: "t", relatedEventIds: [] },
+        events: [],
+      }) as unknown as Parameters<BrowserDraftRepository["addSessionImport"]>[1];
+
+    it("mirrors an added import under <sessionId>.<importId>", async () => {
+      const { repository, mirror, saved } = setup();
+      const stored = repository.addSessionImport("sess-1", candidate("src-a"));
+      await mirror.drain();
+      expect(saved).toHaveLength(1);
+      expect(saved[0]).toMatchObject({ kind: "session_import", ownerId: `sess-1.${stored.id}` });
+    });
+
+    it("removes the documents of imports cleared directly or with their session", async () => {
+      const { repository, mirror, removed } = setup();
+      repository.addSessionImport("sess-1", candidate("src-a"));
+      repository.addSessionImport("sess-2", candidate("src-b"));
+      repository.clearSessionImports("sess-1");
+      repository.clearStoredSession("sess-2");
+      await mirror.drain();
+      const imports = removed.filter((entry) => entry.kind === "session_import").map((entry) => entry.ownerId).sort();
+      expect(imports).toEqual(["sess-1.src-a", "sess-2.src-b"]);
+    });
+
+    it("mirrors only the imports a put wrote", async () => {
+      const { repository, mirror, saved } = setup();
+      const a = repository.addSessionImport("sess-1", candidate("src-a"));
+      repository.addSessionImport("sess-1", candidate("src-b"));
+      await mirror.drain();
+      saved.length = 0;
+      repository.putSessionImports("sess-1", [{ ...a, savedAt: "2026-05-01T00:00:00.000Z" }]);
+      await mirror.drain();
+      expect(saved.map((row) => row.ownerId)).toEqual([`sess-1.${a.id}`]);
+      expect(saved[0]!.updatedAt).toBe("2026-05-01T00:00:00.000Z");
+    });
+  });
 });

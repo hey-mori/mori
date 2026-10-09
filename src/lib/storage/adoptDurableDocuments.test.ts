@@ -83,10 +83,46 @@ describe("adoptDurableDocuments", () => {
     const report = await adoptDurableDocuments({ storage, target: mirrorTarget, now });
 
     // Live intake is a derived index and moves in R5 with its own shape;
-    // session imports already have their own table since V004; preferences
-    // stay in localStorage by classification.
-    expect(report.scanned).toBe(1);
+    // preferences stay in localStorage by classification. A legacy import
+    // array is adopted entry by entry, so one that is not an array is counted
+    // unreadable rather than copied. (The V004 table was never written by the
+    // app, so imports are a durable-document class.)
+    expect(report.scanned).toBe(2);
+    expect(report.unreadable).toBe(1);
     expect(saved).toHaveLength(1);
+  });
+
+  it("adopts imported transcripts and reopen descriptors, and legacy import arrays entry by entry", async () => {
+    const storage = storageWith({
+      "mori.sessionImportEntry.sess-1.imp-a": { id: "imp-a", sessionId: "sess-1", savedAt: "2026-08-02T00:00:00.000Z", events: [] },
+      "mori.sessionImports.sess-2": [
+        { id: "imp-b", sessionId: "sess-2", savedAt: "2026-08-03T00:00:00.000Z", events: [] },
+        { id: "imp-c", sessionId: "sess-2", savedAt: "2026-08-04T00:00:00.000Z", events: [] },
+      ],
+      "mori.autoImport.v1": { "auto-claude-x": { id: "x", importKind: "claude-code", sourceFilePath: "/p/x.jsonl" } },
+    });
+    const { mirrorTarget, saved } = target();
+
+    await adoptDurableDocuments({ storage, target: mirrorTarget, now });
+
+    const owners = saved.map((row) => `${row.kind} ${row.ownerId}`).sort();
+    expect(owners).toEqual([
+      "auto_import_descriptors @app",
+      "session_import sess-1.imp-a",
+      "session_import sess-2.imp-b",
+      "session_import sess-2.imp-c",
+    ]);
+  });
+
+  it("does not adopt a legacy array entry twice when its per-entry key exists", async () => {
+    const storage = storageWith({
+      "mori.sessionImportEntry.sess-2.imp-b": { id: "imp-b", sessionId: "sess-2", savedAt: "2026-08-05T00:00:00.000Z", events: [] },
+      "mori.sessionImports.sess-2": [{ id: "imp-b", sessionId: "sess-2", savedAt: "2026-08-03T00:00:00.000Z", events: [] }],
+    });
+    const { mirrorTarget, saved } = target();
+    await adoptDurableDocuments({ storage, target: mirrorTarget, now });
+    expect(saved).toHaveLength(1);
+    expect(saved[0]!.updatedAt).toBe("2026-08-05T00:00:00.000Z");
   });
 
   // Excluded by the shape of the prefixes rather than by a rule, which is

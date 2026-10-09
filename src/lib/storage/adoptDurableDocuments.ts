@@ -74,7 +74,18 @@ const CHUNK = 50;
  * Set only after a pass that completed with no failures, so an interrupted or
  * failed run is retried on the next launch rather than recorded as done.
  */
-export const ADOPTION_MARKER_KEY = "mori.adoption.durableDocuments.v1";
+export const ADOPTION_MARKER_KEY = "mori.adoption.durableDocuments.v2";
+
+/**
+ * The marker of the first pass, before imported transcripts and reopen
+ * descriptors were durable classes. A device carrying only it has every other
+ * class in SQLite already; v2 runs once more to copy the two new ones (the
+ * pass skips what SQLite already holds at least as new).
+ */
+export const LEGACY_ADOPTION_MARKER_KEY = "mori.adoption.durableDocuments.v1";
+
+/** Older builds stored a session's imports as one array under this prefix. */
+const LEGACY_IMPORTS_PREFIX = "mori.sessionImports.";
 
 export type AdoptionReport = {
   /** Matching keys found in localStorage. */
@@ -138,6 +149,10 @@ export async function adoptDurableDocuments(input: {
   for (let index = 0; index < storage.length; index += 1) {
     const key = storage.key(index);
     if (!key) continue;
+    if (key.startsWith(LEGACY_IMPORTS_PREFIX)) {
+      collectLegacyImports(key);
+      continue;
+    }
     // One shared mapping with the read flip, so the two directions cannot
     // disagree about what a key holds.
     const match = durableKeyToDocument(key);
@@ -178,6 +193,49 @@ export async function adoptDurableDocuments(input: {
         updatedAt,
       }),
     );
+  }
+
+  /**
+   * A legacy import array becomes one document per entry, under the owner the
+   * per-entry key would have (`<sessionId>.<importId>`), so a restore reads it
+   * back as the entries the adapter already merges with the array. The array
+   * stays in localStorage: nothing is deleted.
+   */
+  function collectLegacyImports(key: string): void {
+    const sessionId = key.slice(LEGACY_IMPORTS_PREFIX.length);
+    const raw = storage.getItem(key);
+    let entries: unknown;
+    try {
+      entries = raw === null ? null : JSON.parse(raw);
+    } catch {
+      entries = null;
+    }
+    if (!sessionId || !Array.isArray(entries)) {
+      report.scanned += 1;
+      report.unreadable += 1;
+      return;
+    }
+    for (const entry of entries) {
+      report.scanned += 1;
+      const id = entry && typeof entry === "object" ? (entry as { id?: unknown }).id : undefined;
+      if (typeof id !== "string" || !id) {
+        report.unreadable += 1;
+        continue;
+      }
+      const ownerId = `${sessionId}.${id}`;
+      // A per-entry key for the same import is newer than the array (the
+      // adapter writes entries since), and it is adopted under this owner too.
+      if (storage.getItem(`mori.sessionImportEntry.${ownerId}`) !== null) continue;
+      const updatedAt = readSavedAt(entry) ?? now();
+      const held = existing.get(`session_import ${ownerId}`);
+      if (held !== undefined && held >= updatedAt) {
+        report.skippedFresher += 1;
+        continue;
+      }
+      rows.push(
+        toDurableDocumentRow({ kind: "session_import", ownerId, schemaVersion: 1, body: entry, updatedAt }),
+      );
+    }
   }
 
   for (let start = 0; start < rows.length; start += CHUNK) {
