@@ -185,6 +185,32 @@ export function createMirroringDraftRepository(
       mirror.remove("analysis_history", sessionId);
     },
 
+    selectSessionAnalysisRun(sessionId: string, runId: string) {
+      const history = inner.selectSessionAnalysisRun(sessionId, runId);
+      // Choosing a run rewrites both the current analysis and the history's
+      // pointer; both are read back, so the SQLite copy follows the choice.
+      if (history) {
+        mirror.write({
+          kind: "analysis_history",
+          ownerId: sessionId,
+          schemaVersion: ANALYSIS_HISTORY_VERSION,
+          body: history,
+          updatedAt: history.savedAt,
+        });
+        const current = inner.loadSessionAnalysis(sessionId);
+        if (current) {
+          mirror.write({
+            kind: "analysis",
+            ownerId: sessionId,
+            schemaVersion: ANALYSIS_VERSION,
+            body: current,
+            updatedAt: current.savedAt,
+          });
+        }
+      }
+      return history;
+    },
+
     addSessionImport(sessionId, candidate, options) {
       const stored = inner.addSessionImport(sessionId, candidate, options);
       mirrorImport(stored);

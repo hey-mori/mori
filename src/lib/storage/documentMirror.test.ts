@@ -167,3 +167,47 @@ describe("DocumentMirror", () => {
     await expect(mirror.drain()).resolves.toBeUndefined();
   });
 });
+
+describe("pending deletes", () => {
+  function ledger() {
+    const pending = new Set<string>();
+    return {
+      pending,
+      add: (kind: string, ownerId: string) => void pending.add(`${kind} ${ownerId}`),
+      clear: (kind: string, ownerId: string) => void pending.delete(`${kind} ${ownerId}`),
+    };
+  }
+
+  it("keeps a delete pending until SQLite confirms it", async () => {
+    const book = ledger();
+    let fail = true;
+    const mirror = new DocumentMirror(
+      {
+        saveDocuments: async () => undefined,
+        deleteDocument: async () => {
+          if (fail) throw new Error("db closed");
+        },
+      },
+      book,
+    );
+    mirror.remove("session_draft", "s1");
+    await mirror.drain();
+    expect([...book.pending]).toEqual(["session_draft s1"]);
+    fail = false;
+    mirror.remove("session_draft", "s1");
+    await mirror.drain();
+    expect([...book.pending]).toEqual([]);
+  });
+
+  it("drops a pending delete that a newer write supersedes", async () => {
+    const book = ledger();
+    const mirror = new DocumentMirror(
+      { saveDocuments: async () => undefined, deleteDocument: async () => Promise.reject(new Error("x")) },
+      book,
+    );
+    mirror.remove("session_draft", "s1");
+    await mirror.drain();
+    mirror.write({ kind: "session_draft", ownerId: "s1", schemaVersion: 1, body: {}, updatedAt: "2026-01-01T00:00:00Z" });
+    expect([...book.pending]).toEqual([]);
+  });
+});

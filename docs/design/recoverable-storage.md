@@ -38,28 +38,37 @@ first render before `prepareDurableReads` decided (it captured "no durable stora
 
 ## 3. Decisions
 
-- **Descriptors and imports are durable-document classes**, not a new table: `auto_import_descriptors`
-  (app-scoped, the whole map) and `session_import` (owner `<sessionId>.<importId>`, the suffix of
-  the per-entry key). The V009 table is exactly the access pattern (whole document per owner,
-  list by kind), its rule for breaking a kind out ("found by something other than its owner")
-  does not apply, and reusing it brings the existing mirror, adoption, flip and reset coverage
-  with no schema change and so no new migration boundary. No V014 was needed.
+- **Imports are a durable-document class** (`session_import`, owner `<sessionId>.<importId>`, the
+  suffix of the per-entry key), so the existing mirror, adoption, read flip and reset cover them.
+  The V009 table is exactly this access pattern; no V014 was needed.
+- **Reopen descriptors are one durable document per session** (`reopen_descriptor`, owner = the
+  Mori session id), not one whole-map document and not a flipped key. The local map stays the
+  device's capped recent-discovery cache; reads merge the two, newest activity winning per
+  session (local on a tie). Upserts write only the entries they touch; a durable descriptor is
+  deleted only by an explicit removal (prune) or a cap eviction of an unprotected session. So a
+  launch that reads an empty or partial local map can never shrink SQLite's copies, which for a
+  session whose original is gone are the only copy. (A whole-map document did exactly that, found
+  in review.)
 - **The read source is decided per call.** One storage (`lib/storage/appStorage`) forwards each
   read to the SQLite-backed cache once the flip engaged and to localStorage until then. Every
-  durable reader goes through it: the session repository, views that build their own repository,
-  the descriptor store, the project mappings, the import-presence checks.
-- **Adoption runs before the decision.** The adoption marker moved to v2; a device that adopted
-  the earlier classes copies the two new ones once (skipping anything SQLite holds at least as
-  new), converting legacy import arrays entry by entry. It runs inside `prepareDurableReads`, so
-  an upgrade launch does not hold the flip back. Nothing is deleted from localStorage.
-- **Reconciliation** is the flip's existing rule: SQLite is served only when it holds every
-  durable key localStorage holds; otherwise reads stay on localStorage and the gap is reported.
-  On a fresh restore localStorage is empty, so SQLite is served. Writes go to both.
-- **Protected descriptors.** The recency cap (1000) evicts only descriptors of sessions Mori
-  keeps nothing of; a session with a kept archive, a saved passage or an import is exempt. Prune
-  already keeps those sessions; it now counts imports restored from SQLite.
-- **Failure honesty.** A stored descriptor map that cannot be parsed is never replaced by a
-  map holding only new entries; mirror failures are counted and hold the flip back.
+  durable reader goes through it; the default repository is also mirrored on desktop, so views
+  that build their own repository write to SQLite like everything else.
+- **Every launch, before the decision** (`prepareDurableReads`): replay deletes an earlier run
+  recorded and SQLite never confirmed; run the adoption pass (copies every body localStorage
+  holds newer than SQLite, or SQLite lacks; legacy import arrays entry by entry; never deletes
+  from localStorage); merge and adopt reopen descriptors. This is what repairs a mirror write lost
+  at a quit, and why the flip, which checks that SQLite holds every durable key localStorage
+  holds, is not served stale bodies. Mirror-failure counts are diagnostics only; they do not
+  steer the decision.
+- **Deletes survive a quit.** The mirror records each delete in a device-local ledger until SQLite
+  confirms it; a newer write of the same document supersedes it.
+- **Protected descriptors.** The recency cap (1000) evicts only descriptors of sessions Mori keeps
+  nothing of; a session with a kept archive, a saved passage or an import is exempt, from the
+  first discovery pass on. Prune keeps those sessions and counts imports restored from SQLite.
+- **Failure honesty.** An unreadable local descriptor map is set aside under a dated key and
+  reported; durable copies keep serving. The read-through cache writes localStorage first, so a
+  refused write never shows as saved. A full reset settles queued mirror writes before wiping
+  SQLite and clears keys written straight to localStorage.
 
 ## 4. Recovery levels and the backup contract
 

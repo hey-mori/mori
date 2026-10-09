@@ -39,9 +39,6 @@ export const DURABLE_PREFIXES: ReadonlyArray<{ prefix: string; kind: DurableDocu
 export const DURABLE_SINGLETONS: ReadonlyArray<{ key: string; kind: DurableDocumentKind }> = [
   { key: "mori.projectConnections.v1", kind: "project_connections" },
   { key: "mori.userProjects.v1", kind: "user_projects" },
-  // What reopening a preserved session needs (agent, import kind, source path).
-  // Without it a restored archive exists but cannot be opened.
-  { key: "mori.autoImport.v1", kind: "auto_import_descriptors" },
 ];
 
 /** Which document a localStorage key holds, or `null` when it holds none. */

@@ -37,6 +37,7 @@ import { prepareDurableReads } from "../../app/durableReads";
 import {
   loadAutoImportMetas,
   replaceEmptySources,
+  setProtectedDescriptorIds,
   upsertAutoImportMetas,
 } from "../../lib/session/autoImportMetaStore";
 import {
@@ -132,7 +133,20 @@ export function useAutoImportSessions(): void {
           if (cancelled) return;
           seenRef.current = seenFingerprintsFromMetas(loadAutoImportMetas());
           seeded = true;
+          // Know what Mori keeps from the first pass on, so the descriptor
+          // cap protects it before any prune has had to ask.
+          const sources = await getKernelRepository().listSources();
+          if (cancelled) return;
+          if (!sources.fellBack) {
+            keptRef.current = { ids: sessionsWithKeptEvidence(sources.data), at: Date.now() };
+          }
         }
+        setProtectedDescriptorIds(
+          new Set([
+            ...(keptRef.current?.ids ?? []),
+            ...sessionIdsWithStoredImports(getAppStorage() ?? window.localStorage),
+          ]),
+        );
         const discovered = await listAllAgentWorkSessions();
         if (!cancelled) {
           // Bound to the most-recent window so the draft + seen sets stay small.
@@ -159,10 +173,8 @@ export function useAutoImportSessions(): void {
             );
             if (persisted.length > 0) {
               // Descriptors of sessions Mori keeps something of are exempt
-              // from the recency cap: they are how what was kept reopens.
-              const keptNow = keptRef.current?.ids ?? new Set<string>();
-              const importedNow = sessionIdsWithStoredImports(getAppStorage() ?? window.localStorage);
-              upsertAutoImportMetas(persisted, { protectedIds: new Set([...keptNow, ...importedNow]) });
+              // from the recency cap (the protected set published above).
+              upsertAutoImportMetas(persisted);
               let newCount = 0;
               let updatedCount = 0;
               for (const meta of persisted) {

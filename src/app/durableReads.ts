@@ -20,7 +20,10 @@ import {
 import type { KeyValueStorage } from "../lib/storage/storageTypes";
 import { useStorageHealthStore } from "./storageHealthStore";
 import { setAppStorageProvider } from "../lib/storage/appStorage";
-import { adoptDurableDocuments, hasAdopted } from "../lib/storage/adoptDurableDocuments";
+import { adoptDurableDocuments } from "../lib/storage/adoptDurableDocuments";
+import { replayPendingDeletes } from "../lib/storage/desktopDocumentMirror";
+import { adoptReopenDescriptors } from "../lib/session/autoImportMetaStore";
+import { recordAdoptionReport } from "./useDurableDocumentAdoption";
 
 let resolved: DurableReadSource | null = null;
 let storage: KeyValueStorage | null = null;
@@ -43,13 +46,17 @@ export function prepareDurableReads(): Promise<void> {
 
   inFlight = (async () => {
     try {
-      // Copy what localStorage holds and SQLite lacks before deciding, so a
-      // class newly made durable (imports, reopen descriptors) does not hold
-      // the flip back on the first launch after an upgrade. Idempotent and
-      // non-destructive; a failed pass simply leaves the decision to report
-      // the gap, as before.
-      if (!hasAdopted(window.localStorage)) {
-        try {
+      // 1. Deletes a previous run recorded and SQLite never confirmed: gone
+      //    before anything can be served from them.
+      await replayPendingDeletes(window.localStorage, (kind, ownerId) =>
+        tauriCommands.deleteDurableDocumentRow(kind, ownerId),
+      );
+      // 2. Copy every body localStorage holds newer than SQLite (or SQLite
+      //    lacks), on every launch: the adoption of classes newly made durable
+      //    and the repair of a mirror write lost at a quit. Idempotent and
+      //    non-destructive; a failure leaves the decision to report the gap.
+      try {
+        recordAdoptionReport(
           await adoptDurableDocuments({
             storage: window.localStorage,
             target: {
@@ -58,10 +65,17 @@ export function prepareDurableReads(): Promise<void> {
             },
             listExisting: (kind) => tauriCommands.listDurableDocumentRows(kind),
             now: () => new Date().toISOString(),
-          });
-        } catch {
-          // Reported through the decision below if anything is missing.
-        }
+          }),
+        );
+      } catch {
+        // Reported through the decision below if anything is missing.
+      }
+      // 3. Reopen descriptors: one document per session, merged with the
+      //    local map rather than flipped (see autoImportMetaStore).
+      try {
+        adoptReopenDescriptors(await tauriCommands.listDurableDocumentRows("reopen_descriptor"));
+      } catch {
+        // Unreadable: the local map still serves; nothing is overwritten.
       }
       const outcome = await resolveDurableReadSource({
         local: window.localStorage,

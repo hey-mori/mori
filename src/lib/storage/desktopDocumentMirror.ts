@@ -12,7 +12,62 @@
  */
 import { isTauriRuntime, tauriCommands } from "../desktop";
 import { APP_SCOPED_OWNER, type DurableDocumentKind } from "../sqlite/durableDocumentRows";
-import { DocumentMirror, type MirrorHealth } from "./documentMirror";
+import { DocumentMirror, type MirrorHealth, type PendingDeleteLedger } from "./documentMirror";
+import type { KeyValueStorage } from "./storageTypes";
+
+/** Device-local bookkeeping: deletes not yet confirmed by SQLite. */
+export const PENDING_DELETES_KEY = "mori.mirror.pendingDeletes.v1";
+
+type Pending = Record<string, { kind: DurableDocumentKind; ownerId: string }>;
+
+function readPending(storage: KeyValueStorage): Pending {
+  try {
+    const parsed = JSON.parse(storage.getItem(PENDING_DELETES_KEY) ?? "{}") as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Pending) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** The ledger over a storage (raw localStorage: it must survive a quit). */
+export function pendingDeleteLedger(storage: KeyValueStorage): PendingDeleteLedger {
+  const update = (change: (pending: Pending) => void) => {
+    const pending = readPending(storage);
+    change(pending);
+    try {
+      if (Object.keys(pending).length === 0) storage.removeItem(PENDING_DELETES_KEY);
+      else storage.setItem(PENDING_DELETES_KEY, JSON.stringify(pending));
+    } catch {
+      // A full store: the delete still runs; only its replay is lost.
+    }
+  };
+  return {
+    add: (kind, ownerId) => update((pending) => void (pending[`${kind} ${ownerId}`] = { kind, ownerId })),
+    clear: (kind, ownerId) => update((pending) => void delete pending[`${kind} ${ownerId}`]),
+  };
+}
+
+/**
+ * Replay the deletes an earlier run recorded and SQLite never confirmed.
+ * Run before the read source is decided, so a deleted row is gone before
+ * anything can be served from it. Returns how many are still pending.
+ */
+export async function replayPendingDeletes(
+  storage: KeyValueStorage,
+  deleteDocument: (kind: DurableDocumentKind, ownerId: string) => Promise<unknown>,
+): Promise<number> {
+  const ledger = pendingDeleteLedger(storage);
+  let left = 0;
+  for (const { kind, ownerId } of Object.values(readPending(storage))) {
+    try {
+      await deleteDocument(kind, ownerId);
+      ledger.clear(kind, ownerId);
+    } catch {
+      left += 1;
+    }
+  }
+  return left;
+}
 
 let active: DocumentMirror | null = null;
 
@@ -27,10 +82,13 @@ let active: DocumentMirror | null = null;
 export function getDesktopDocumentMirror(): DocumentMirror | null {
   if (!isTauriRuntime()) return null;
   if (!active) {
-    active = new DocumentMirror({
-      saveDocuments: (documents) => tauriCommands.saveDurableDocumentRows(documents),
-      deleteDocument: (kind, ownerId) => tauriCommands.deleteDurableDocumentRow(kind, ownerId),
-    });
+    active = new DocumentMirror(
+      {
+        saveDocuments: (documents) => tauriCommands.saveDurableDocumentRows(documents),
+        deleteDocument: (kind, ownerId) => tauriCommands.deleteDurableDocumentRow(kind, ownerId),
+      },
+      pendingDeleteLedger(window.localStorage),
+    );
   }
   return active;
 }

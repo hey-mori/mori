@@ -92,14 +92,13 @@ describe("adoptDurableDocuments", () => {
     expect(saved).toHaveLength(1);
   });
 
-  it("adopts imported transcripts and reopen descriptors, and legacy import arrays entry by entry", async () => {
+  it("adopts imported transcripts, legacy import arrays entry by entry", async () => {
     const storage = storageWith({
       "mori.sessionImportEntry.sess-1.imp-a": { id: "imp-a", sessionId: "sess-1", savedAt: "2026-08-02T00:00:00.000Z", events: [] },
       "mori.sessionImports.sess-2": [
         { id: "imp-b", sessionId: "sess-2", savedAt: "2026-08-03T00:00:00.000Z", events: [] },
         { id: "imp-c", sessionId: "sess-2", savedAt: "2026-08-04T00:00:00.000Z", events: [] },
       ],
-      "mori.autoImport.v1": { "auto-claude-x": { id: "x", importKind: "claude-code", sourceFilePath: "/p/x.jsonl" } },
     });
     const { mirrorTarget, saved } = target();
 
@@ -107,7 +106,6 @@ describe("adoptDurableDocuments", () => {
 
     const owners = saved.map((row) => `${row.kind} ${row.ownerId}`).sort();
     expect(owners).toEqual([
-      "auto_import_descriptors @app",
       "session_import sess-1.imp-a",
       "session_import sess-2.imp-b",
       "session_import sess-2.imp-c",

@@ -31,9 +31,10 @@ export type DurableDocumentKind =
   | "user_projects"
   /** One imported source of a session (its events), owner `<sessionId>.<importId>`. */
   | "session_import"
-  /** The reopen descriptors of auto-registered sessions: how to find each one's
-   *  transcript again. App-scoped: one document, the whole map. */
-  | "auto_import_descriptors";
+  /** One auto-registered session's reopen descriptor (how to find its
+   *  transcript or archive again), owner = the Mori session id. Not a
+   *  localStorage key class: written and merged by the descriptor store. */
+  | "reopen_descriptor";
 
 /**
  * The owner id for a class that has exactly one document for the whole app,
