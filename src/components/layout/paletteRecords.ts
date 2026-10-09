@@ -16,6 +16,7 @@ import type { CommandEntry } from "../../lib/commandPalette/commandPalette";
 import type { KernelContext, KernelRelation, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { formatDate } from "../../lib/formatting/time";
+import { matchingPassage, PASSAGE_MATCH_LABEL } from "../../lib/capture/passageSearch";
 import { displayTime, schemaLabel } from "../../features/record-ledger/recordPresentation";
 import { projectLabel, recordProject } from "../../features/record-ledger/projectScope";
 
@@ -52,6 +53,44 @@ export function recordToEntry(
         ? { kind: "openAgentSession", sessionId: record.id }
         : { kind: "openRecord", recordId: record.id },
   };
+}
+
+/** How many passage-matched records the palette reads before cutting to the
+ *  rows it has room for. */
+export const PASSAGE_SCAN_CAP = 40;
+
+/** Whether the record's own title or body holds the query as typed. */
+export function recordTextHolds(record: Pick<MoriRecord, "title" | "body">, query: string): boolean {
+  const needle = query.trim().normalize("NFC").toLowerCase();
+  if (!needle) return false;
+  return `${record.title}\n${record.body}`.normalize("NFC").toLowerCase().includes(needle);
+}
+
+/** The same row, saying it was found through the passage it was saved from. */
+export function viaSavedPassage(entry: CommandEntry): CommandEntry {
+  return { ...entry, hint: entry.hint ? `${PASSAGE_MATCH_LABEL} · ${entry.hint}` : PASSAGE_MATCH_LABEL };
+}
+
+/**
+ * Records whose saved passage holds the query but which the text search did
+ * not return (their body was rewritten), up to `limit`. The caller fetches
+ * them and drops any that are discarded or archived.
+ */
+export function passageOnlyRecordIds(
+  passages: ReadonlyMap<string, readonly string[]>,
+  query: string,
+  alreadyFound: ReadonlySet<string>,
+  limit: number,
+): string[] {
+  const needle = query.trim().normalize("NFC").toLowerCase();
+  if (!needle || limit <= 0) return [];
+  const ids: string[] = [];
+  for (const [recordId, texts] of passages) {
+    if (alreadyFound.has(recordId) || !matchingPassage(texts, needle)) continue;
+    ids.push(recordId);
+    if (ids.length >= limit) break;
+  }
+  return ids;
 }
 
 /** Drop a session command whose session already appears as a record row. */

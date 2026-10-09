@@ -13,6 +13,7 @@ import { Trash2, X } from "lucide-react";
 import { useAppStore } from "../../app/store";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { useRecordLedger } from "./useRecordLedger";
+import { useSavedPassageTexts } from "./useSavedPassageTexts";
 import { NoteExplorer } from "./NoteExplorer";
 import { NoteEditorPane } from "./NoteEditorPane";
 import { withProject } from "./ContextPicker";
@@ -25,6 +26,9 @@ import { useSessionResolver } from "../session/useSessionResolver";
 export function LedgerWorkspace() {
   const ledger = useRecordLedger();
   const [query, setQuery] = useState("");
+  // Passages are saved outside 기록, so only a record added while searching
+  // (not an autosave of an existing one) can bring a new one.
+  const passages = useSavedPassageTexts(query.trim().length > 0, ledger.records.length);
   const [sort, setSort] = useState<ExplorerSort>("date");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // 기록 opens ready to capture (approved design: capture/organize/review are one
@@ -247,6 +251,7 @@ export function LedgerWorkspace() {
         ledger={ledger}
         query={query}
         onQuery={setQuery}
+        passages={passages}
         sort={sort}
         onSort={setSort}
         selectedId={selectedId}

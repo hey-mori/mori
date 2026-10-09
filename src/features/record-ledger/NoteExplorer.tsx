@@ -25,12 +25,14 @@ import {
 } from "./noteExplorerModel";
 import { displayTime, ledgerVisibleRecords, schemaLabel } from "./recordPresentation";
 import { isDateUndecided } from "./dateResolution";
+import { matchingPassage, PASSAGE_MATCH_LABEL, passageSnippet } from "../../lib/capture/passageSearch";
 import { inProjectScope, resolveProjectScope } from "./projectScope";
 
 export function NoteExplorer({
   ledger,
   query,
   onQuery,
+  passages,
   sort,
   onSort,
   selectedId,
@@ -46,6 +48,8 @@ export function NoteExplorer({
   ledger: RecordLedger;
   query: string;
   onQuery: (value: string) => void;
+  /** Saved passage texts by record, present while searching. */
+  passages?: ReadonlyMap<string, readonly string[]>;
   sort: ExplorerSort;
   onSort: (sort: ExplorerSort) => void;
   selectedId: string | null;
@@ -66,11 +70,27 @@ export function NoteExplorer({
   // NFC the needle too: a note written before the factory normalized on write,
   // or typed here as NFD, must still match the NFC text stored on the record.
   const text = query.trim().normalize("NFC").toLowerCase();
-  const matches = (record: MoriRecord) =>
+  const matchesOwn = (record: MoriRecord) =>
     !text ||
     record.title.toLowerCase().includes(text) ||
     record.body.toLowerCase().includes(text) ||
     schemaLabel(record, ledger.registry).toLowerCase().includes(text);
+  // A record whose body was rewritten is still found by the passage it was
+  // saved from; the row then says so and shows that passage. Worked out once
+  // per search for every record with a passage, not per row render.
+  const passageHits = useMemo(() => {
+    const hits = new Map<string, string>();
+    if (!text || !passages) return hits;
+    for (const record of ledger.records) {
+      if (!passages.has(record.id) || matchesOwn(record)) continue;
+      const hit = matchingPassage(passages.get(record.id), text);
+      if (hit) hits.set(record.id, hit);
+    }
+    return hits;
+    // matchesOwn closes over `text` and the registry.
+  }, [ledger.records, ledger.registry, passages, text]);
+  const passageHit = (record: MoriRecord): string | null => passageHits.get(record.id) ?? null;
+  const matches = (record: MoriRecord) => matchesOwn(record) || passageHits.has(record.id);
 
   // A project scope narrows the list to the project's durable members (and its
   // sub-projects), never to look-alikes. A project that is gone or archived
@@ -127,7 +147,7 @@ export function NoteExplorer({
   const pinned = useMemo(
     () => (scope ? [] : [...candidates, ...dateUnknown].filter(matches)),
     // matches closes over `text`; recompute when records or query change.
-    [candidates, dateUnknown, text, ledger.registry, scope],
+    [candidates, dateUnknown, text, ledger.registry, scope, passageHits],
   );
 
   const groups = useMemo(() => {
@@ -147,7 +167,7 @@ export function NoteExplorer({
     );
     return buildExplorerGroups(visible, ledger.contexts, ledger.relations, sort, groupMode, now);
     // matches closes over `text`.
-  }, [visibleRecords, ledger.contexts, ledger.relations, sort, groupMode, typeFilter, text, pinnedIds, derivedIds, ledger.registry, now, scope]);
+  }, [visibleRecords, ledger.contexts, ledger.relations, sort, groupMode, typeFilter, text, pinnedIds, derivedIds, ledger.registry, now, scope, passageHits]);
 
   return (
     <div className="note-explorer">
@@ -220,6 +240,7 @@ export function NoteExplorer({
                 onSelect={onSelect}
                 groupMode={groupMode}
                 query={query}
+                passageHit={passageHit(record)}
                 now={now}
               />
             ))}
@@ -241,6 +262,7 @@ export function NoteExplorer({
                 onSelect={onSelect}
                 groupMode={groupMode}
                 query={query}
+                passageHit={passageHit(record)}
                 now={now}
               />
             ))}
@@ -389,6 +411,7 @@ function NoteItem({
   onSelect,
   groupMode,
   query,
+  passageHit = null,
   now,
 }: {
   record: MoriRecord;
@@ -397,9 +420,15 @@ function NoteItem({
   onSelect: (recordId: string) => void;
   groupMode: ExplorerGroupMode;
   query: string;
+  /** The saved passage that matched when the record's own text did not. */
+  passageHit?: string | null;
   now: Date;
 }) {
-  const snippet = recordSnippet(record, query);
+  // NFC like the stored text, so a query typed in another form still marks.
+  const needle = query.normalize("NFC");
+  const snippet = passageHit
+    ? passageSnippet(passageHit, needle.trim().toLowerCase())
+    : recordSnippet(record, needle);
   // "Has no occurredStart" is NOT the same as "has no decided date": a note is
   // written with timeBasis capture-fallback and no occurredStart, which is a
   // decided state that files it under today. Only timeBasis unknown is undecided.
@@ -426,13 +455,14 @@ function NoteItem({
     >
       <span className="note-item-body">
         <span className="note-item-title">
-          <Highlighted text={record.title} query={query} />
+          <Highlighted text={record.title} query={needle} />
         </span>
         {snippet ? (
           <span className="note-item-snippet">
-            <Highlighted text={snippet} query={query} />
+            <Highlighted text={snippet} query={needle} />
           </span>
         ) : null}
+        {passageHit ? <span className="note-item-snippet is-meta">{PASSAGE_MATCH_LABEL}</span> : null}
         {pinnedMeta ? <span className="note-item-snippet is-meta">{pinnedMeta}</span> : null}
       </span>
       {trailing ? <span className="note-item-time">{trailing}</span> : null}

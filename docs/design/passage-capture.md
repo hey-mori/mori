@@ -183,12 +183,30 @@ Mori may say that a source conversation may soon be removed; it never keeps one 
   set has not seen (or every 30 minutes), and a fallback kernel read skips pruning that pass.
   The session-bar chip estimates from the stored meta and does not check presence.
 
+## 5e. Finding a record by its saved passage (implemented)
+
+- 기록 search and the palette also match the saved passage text of each record, read from the
+  passage sources already stored (the kept form: a redacted passage matches only its redacted
+  text). A row found only that way says 저장한 구절에서 찾음 and shows the passage from the
+  hit; the palette adds such records after its text-search results, up to the same 8.
+- No field, index, export or copy is added. 기록 reads the passages only while a search is
+  active (again when a record is added); the palette reads them once per open and a query waits
+  for that read. Passage matching is a case-insensitive substring over NFC text with whitespace
+  collapsed, like 기록's title and body matching. The palette's own results come from the text
+  index, which matches whole words in any order; a passage needs the words in order, and a row
+  whose body holds the query inside a longer word is shown without the passage label.
+- A redacted passage's placeholder (such as `[REDACTED openai key]`) is part of its kept text,
+  so it can match a search for those words; the hidden value never can.
+- A passage whose source Mori no longer keeps (`notCaptured`) is not matched; a discarded or
+  archived record is not shown.
+
 ## 6. Scope
 
 Built (capture slice): single-message or in-message text selection from the transcript viewer;
 record types from the existing schemas; retained excerpt as a kernel source; record search
-through the record body (prefilled with the excerpt; a body the user rewrites is what search
-then sees); provenance on the record page (저장한 구절 with message and save time, and 원본 열기,
+through the record body (prefilled with the excerpt) and through the saved passage itself, so a
+record whose body was rewritten is still found by the words it was saved from (§5e);
+provenance on the record page (저장한 구절 with message and save time, and 원본 열기,
 which re-reads to the stored record and requires its id and the excerpt hash there, marking
 exactly the kept range).
 
