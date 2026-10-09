@@ -48,6 +48,9 @@ pub struct ClearAllDataResult {
     /// Kept copies that could not be removed (or a folder that could not be
     /// found), so the reset can say they are still on disk.
     pub archives_left: u64,
+    /// Pre-migration snapshots removed, and those still on disk.
+    pub snapshots_deleted: u64,
+    pub snapshots_left: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]

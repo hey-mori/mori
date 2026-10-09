@@ -521,6 +521,16 @@ pub fn clear_all_sqlite_data(
         // Unknown location: the files cannot be confirmed gone.
         Err(_) => result.archives_left = 1,
     }
+    // A permanent deletion includes the managed recovery snapshots: they hold
+    // the same records and passages. (The recovery reset keeps them.)
+    match crate::db::backup::backups_dir() {
+        Ok(dir) => {
+            let (removed, left) = crate::db::backup::remove_all_backups_in(&dir);
+            result.snapshots_deleted = removed as u64;
+            result.snapshots_left = left as u64;
+        }
+        Err(_) => result.snapshots_left = 1,
+    }
     Ok(result)
 }
 

@@ -125,6 +125,42 @@ pub fn restore_backup(backup_path: &Path, dir: &Path, target_db: &Path) -> Resul
     Ok(())
 }
 
+/// Permanent deletion of all Mori data (decision B of the recovery program):
+/// the pre-migration snapshots hold records and saved passages, so they go
+/// too. Only snapshot files Mori names (`mori-*.sqlite`) directly inside the
+/// managed folder; never through a symlinked folder, never a symlinked entry,
+/// never anything else. Returns how many went and how many are still there,
+/// so the caller can say a deletion was incomplete.
+///
+/// The recovery "start fresh" deliberately does not call this: its snapshots
+/// are the way back.
+pub fn remove_all_backups_in(dir: &Path) -> (usize, usize) {
+    match std::fs::symlink_metadata(dir) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return (0, 0),
+        Err(_) => return (0, 1),
+        // A symlinked folder could point anywhere: refuse, and count it as left.
+        Ok(meta) if !meta.is_dir() => return (0, 1),
+        Ok(_) => {}
+    }
+    let Ok(read) = std::fs::read_dir(dir) else { return (0, 1) };
+    let (mut removed, mut left) = (0, 0);
+    for entry in read.flatten() {
+        let path = entry.path();
+        if !is_backup_file(&path) {
+            continue;
+        }
+        if !entry.file_type().map(|kind| kind.is_file()).unwrap_or(false) {
+            continue;
+        }
+        if std::fs::remove_file(&path).is_ok() {
+            removed += 1;
+        } else {
+            left += 1;
+        }
+    }
+    (removed, left)
+}
+
 fn prune_backups(dir: &Path) {
     let read = match std::fs::read_dir(dir) {
         Ok(read) => read,
@@ -290,5 +326,34 @@ mod tests {
 
         let result = restore_backup(&outside, &backups, &db);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn permanent_deletion_removes_only_mori_snapshots() {
+        let dir = TempDir::new().unwrap();
+        let backups = dir.path().join("backups");
+        std::fs::create_dir_all(&backups).unwrap();
+        std::fs::write(backups.join("mori-pre-V014-1.sqlite"), "a").unwrap();
+        std::fs::write(backups.join("mori-pre-V009-2.sqlite"), "b").unwrap();
+        std::fs::write(backups.join("my-own-copy.sqlite"), "keep").unwrap();
+        std::fs::write(backups.join("notes.txt"), "keep").unwrap();
+        assert_eq!(remove_all_backups_in(&backups), (2, 0));
+        let mut left: Vec<String> = std::fs::read_dir(&backups).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        left.sort();
+        assert_eq!(left, vec!["my-own-copy.sqlite".to_string(), "notes.txt".to_string()]);
+        assert_eq!(remove_all_backups_in(&dir.path().join("absent")), (0, 0));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn permanent_deletion_refuses_a_symlinked_snapshot_folder() {
+        let dir = TempDir::new().unwrap();
+        let elsewhere = dir.path().join("elsewhere");
+        std::fs::create_dir_all(&elsewhere).unwrap();
+        std::fs::write(elsewhere.join("mori-user-1.sqlite"), "someone else's").unwrap();
+        let link = dir.path().join("backups");
+        std::os::unix::fs::symlink(&elsewhere, &link).unwrap();
+        assert_eq!(remove_all_backups_in(&link), (0, 1));
+        assert!(elsewhere.join("mori-user-1.sqlite").exists());
     }
 }

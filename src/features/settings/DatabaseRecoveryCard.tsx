@@ -153,7 +153,7 @@ export function DatabaseRecoveryCard() {
         <SettingsRow
           compact
           label="처음부터 시작"
-          meta="복구가 안 될 때 데이터베이스를 비웁니다. 이 기기의 저장 내용은 사라집니다."
+          meta="복구가 안 될 때 데이터베이스를 비웁니다. 자동 백업과 보관한 원본은 남아 다시 복구할 수 있습니다."
           control={
             confirmingClear ? (
               <span className="db-recovery-confirm">

@@ -75,6 +75,9 @@ export type ClearAllSqliteDataResult = {
   archivesDeleted?: number;
   /** Kept copies that could not be removed and are still on disk. */
   archivesLeft?: number;
+  /** Pre-migration recovery snapshots removed, and those still on disk. */
+  snapshotsDeleted?: number;
+  snapshotsLeft?: number;
 };
 
 /** One automatic pre-migration backup file, as returned by list_sqlite_backups. */
