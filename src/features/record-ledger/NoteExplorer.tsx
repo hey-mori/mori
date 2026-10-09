@@ -41,6 +41,7 @@ export function NoteExplorer({
   now,
   projectScopeId = null,
   onClearProjectScope,
+  focusSearch = false,
 }: {
   ledger: RecordLedger;
   query: string;
@@ -56,6 +57,8 @@ export function NoteExplorer({
   /** A project context id: show only records that durably belong to it. */
   projectScopeId?: string | null;
   onClearProjectScope?: () => void;
+  /** Focus 기록 검색 on mount: the user came here to find something. */
+  focusSearch?: boolean;
 }) {
   const [groupMode, setGroupMode] = useState<ExplorerGroupMode>("day");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -155,6 +158,7 @@ export function NoteExplorer({
             onChange={onQuery}
             placeholder="기록 검색"
             ariaLabel="기록 검색"
+            autoFocus={focusSearch}
           />
           <button
             type="button"

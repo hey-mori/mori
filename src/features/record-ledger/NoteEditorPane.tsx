@@ -61,6 +61,7 @@ export function NoteEditorPane({
   onOpenRecord,
   paneId,
   now,
+  autoFocusEditor = true,
 }: {
   /** The selected note record, or null for a brand-new note. */
   note: MoriRecord | null;
@@ -83,6 +84,8 @@ export function NoteEditorPane({
    *  workspace so the current note flushes on the switch. */
   onOpenRecord: (recordId: string) => void;
   now: Date;
+  /** False when the user came to find something, not to write. */
+  autoFocusEditor?: boolean;
 }) {
   const [body, setBody] = useState(note?.body ?? "");
   // The id of the note record this pane is bound to (null until first save).
@@ -471,7 +474,7 @@ export function NoteEditorPane({
               docId={note?.id ?? null}
               onChange={onChange}
               placeholder={"무엇이든 적어보세요"}
-              autoFocus
+              autoFocus={autoFocusEditor}
               onOpenLink={handleOpenLink}
               revealSpan={pendingSpan}
             />

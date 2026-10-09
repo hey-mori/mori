@@ -174,6 +174,10 @@ type AppState = {
    *  이 프로젝트에서 찾기. Kept here, not in the explorer, so opening a session
    *  from the scoped list and coming back keeps the scope. */
   ledgerProjectScope: string | null;
+  /** Set by 이 프로젝트에서 찾기 so 기록 opens with 기록 검색 focused rather than
+   *  the capture editor. Consumed once on arrival; the scope above persists,
+   *  this does not. */
+  ledgerFindRequest: boolean;
   /** A project (context id) 프로젝트 should select when it next renders, set by
    *  a link that names a reviewed project. Consumed once, then cleared. */
   projectContextFocus: string | null;
@@ -269,6 +273,7 @@ type AppState = {
   clearNewRecordRequest: () => void;
   /** Opens 기록 scoped to one project's durable members. */
   findInProject: (projectId: string) => void;
+  clearLedgerFindRequest: () => void;
   /** Open 프로젝트 on a reviewed project, by its durable context id. Unlike
    *  `openProject`, which takes a source-derived project key. */
   openProjectContext: (contextId: string) => void;
@@ -305,6 +310,7 @@ export const useAppStore = create<AppState>((set) => ({
   newRecordRequest: false,
   newRecordProjectId: null,
   ledgerProjectScope: null,
+  ledgerFindRequest: false,
   projectContextFocus: null,
   sessionReturn: null,
   setCurrentView: (currentView) => set({ currentView }),
@@ -422,7 +428,9 @@ export const useAppStore = create<AppState>((set) => ({
   requestNewRecord: (projectId) =>
     set({ currentView: "ledger", newRecordRequest: true, newRecordProjectId: projectId ?? null }),
   clearNewRecordRequest: () => set({ newRecordRequest: false }),
-  findInProject: (projectId) => set({ currentView: "ledger", ledgerProjectScope: projectId }),
+  findInProject: (projectId) =>
+    set({ currentView: "ledger", ledgerProjectScope: projectId, ledgerFindRequest: true }),
+  clearLedgerFindRequest: () => set({ ledgerFindRequest: false }),
   openProjectContext: (contextId) => set({ currentView: "contexts", projectContextFocus: contextId }),
   clearProjectContextFocus: () => set({ projectContextFocus: null }),
   setSessionReturn: (value) => set({ sessionReturn: value }),
