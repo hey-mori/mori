@@ -14,7 +14,7 @@
  * hidden and backs off on error; foreground-only, never a daemon.
  */
 import { useEffect, useRef, useState } from "react";
-import { useSessionStore } from "../../app/sessionStore";
+import { loadStoredSessionSummaries, useSessionStore } from "../../app/sessionStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { isClaudeBridgeAvailable } from "../../lib/claude/claudeTauri";
 import { listAllAgentWorkSessions } from "../../lib/trace/sources/ai/workSessions";
@@ -24,11 +24,14 @@ import {
   autoImportedSessionId,
   carryForwardRepository,
   diffDiscoveredSessions,
+  isAutoImportedSessionId,
   seenFingerprintsFromMetas,
 } from "../../lib/session/autoImportSessions";
 import { upsertAgentSessionRecords } from "../../lib/record-kernel/agentSessionRecordAdapter";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
+import { sessionsWithKeptEvidence } from "../../lib/session/retentionInventory";
+import { sessionIdsWithStoredImports } from "../../lib/storage/localStorageAdapter";
 import {
   loadAutoImportMetas,
   replaceEmptySources,
@@ -43,7 +46,8 @@ import { buildSessionSyncNotification } from "../../lib/notifications/sessionSyn
 /** Auto-register only the most-recent N discovered sessions, so the localStorage
  *  draft set + the seen-fingerprint set stay bounded on a long-lived multi-agent
  *  install (older sessions can still be opened via the record browser). Must be
- *  ≤ the reopen-meta cap so the seed never misses a registered session. */
+ *  ≤ the reopen-meta cap so the seed never misses a registered session.
+ *  Sessions kept for an archive or passage add to the metas beyond it. */
 const REGISTER_CAP = 400;
 /** Calm cadence: discovery parses files, so we poll gently, not tightly. */
 const VISIBLE_INTERVAL_MS = 90_000;
@@ -53,6 +57,9 @@ const FIRST_PASS_MS = 4_000;
 const HIDDEN_RECHECK_MS = 5_000;
 /** After a read error, back off before retrying. */
 const ERROR_BACKOFF_MS = 120_000;
+/** How long the set of sessions Mori keeps something of is trusted before
+ *  the kernel is read again for it. Errs toward keeping. */
+const KEPT_REFRESH_MS = 30 * 60_000;
 
 export function useAutoImportSessions(): void {
   const registerDiscoveredSessions = useSessionStore(
@@ -89,6 +96,7 @@ export function useAutoImportSessions(): void {
   }, []);
 
   const seenRef = useRef<Map<string, string>>(new Map());
+  const keptRef = useRef<{ ids: Set<string>; at: number } | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -171,8 +179,31 @@ export function useAutoImportSessions(): void {
           // Prune placeholders that dropped out of the recent window (keeping
           // any the user opened) so 과거 does not accumulate stale stubs.
           const keep = new Set(recent.map((meta) => autoImportedSessionId(meta)));
-          for (const removedId of pruneAutoImportedSessions(keep)) {
-            seenRef.current.delete(removedId);
+          // A session Mori keeps an archive or a passage of stays, so what was
+          // kept still opens after the agent removes the original. The kernel
+          // is read only for a would-be-pruned session the cached kept set has
+          // not seen (or when that set is stale), and a fallback read (which
+          // on the desktop is not the real kernel) skips pruning this pass.
+          const imported = sessionIdsWithStoredImports(window.localStorage);
+          const candidates = loadStoredSessionSummaries()
+            .map((summary) => summary.sessionId)
+            .filter((id) => isAutoImportedSessionId(id) && !keep.has(id) && !imported.has(id));
+          let canPrune = true;
+          if (candidates.length > 0) {
+            const cached = keptRef.current;
+            const stale = !cached || Date.now() - cached.at > KEPT_REFRESH_MS;
+            if (stale || candidates.some((id) => !cached.ids.has(id))) {
+              const sources = await getKernelRepository().listSources();
+              if (cancelled) return;
+              if (sources.fellBack) canPrune = false;
+              else keptRef.current = { ids: sessionsWithKeptEvidence(sources.data), at: Date.now() };
+            }
+            for (const id of keptRef.current?.ids ?? []) keep.add(id);
+          }
+          if (canPrune) {
+            for (const removedId of pruneAutoImportedSessions(keep)) {
+              seenRef.current.delete(removedId);
+            }
           }
         }
       } catch {

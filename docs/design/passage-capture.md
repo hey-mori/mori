@@ -1,6 +1,6 @@
 # Passage capture and evidence retention
 
-Status: implemented 2026-10-09 (capture #193, provenance #196, archive #198); verified in isolated
+Status: implemented 2026-10-09 (capture #193, provenance #196, archive #198, retention view §5d); verified in isolated
 runtimes against real and synthetic transcripts, not yet by the operator or in production.
 Governing architecture: [`mori-context-workspace-architecture.md`](mori-context-workspace-architecture.md)
 (Source / Record / SourceLink / Revision). This document does not add a store, an index or
@@ -152,6 +152,36 @@ Mori cannot read or search; this keeps one chosen session readable and searchabl
   deletes the file only when no other kept source names the same (content-named) file.
   Partial files of interrupted copies older than an hour are swept on the next copy; an empty
   transcript and an archive folder inside the agent's directory are refused.
+
+## 5d. Retention risk (정리될 수 있는 대화, implemented)
+
+Mori may say that a source conversation may soon be removed; it never keeps one for the user.
+
+- **Facts, kept apart**: whether the original is there (an existence check that never opens
+  the file, only for the few sources near or past their estimate, while Home is showing or the
+  dialog opens; "missing" only when the system says not found, any other error stays unknown;
+  absence from discovery proves nothing, because a failed read lists nothing); when the cleanup
+  *may* reach it (the file's last change plus `cleanupPeriodDays` from the managed settings file
+  or the user's settings, else the documented default of 30; a value Mori cannot read as a
+  period, such as 0, makes no estimate at all; project settings, MDM policy and
+  `managed-settings.d` drop-ins are not read, and the docs do not say which age or when the
+  sweep runs, so the copy says 정리 대상일 수 있음, never a date it will be deleted); and what Mori keeps (an archive, and whether it covers the transcript as it
+  is now; saved passages that still back a live record; an earlier import). No score, no
+  transcript read, no hashing.
+- **Placement**: a quiet count in Home's status row (정리될 수 있는 대화 N개) only when a present
+  source is within 7 days of its estimate, or past it, and no current archive holds it; nothing
+  otherwise. The dialog behind it lists those conversations, most urgent first, with 열기 and 보관
+  (the same keep dialog as the session bar, naming the conversation), and folds sources already
+  gone under 원본을 찾을 수 없는 대화 N개 with what survives. The session bar chip adds 곧 정리될
+  수 있음 / 정리 대상일 수 있음, or 이후 대화 있음 when the archive predates newer messages.
+  An InfoHint holds the basis, the project-override caveat, and that an archive is not a backup.
+- **Ignoring it** changes nothing: no archive, no notification, no background work.
+- **Kept sessions outlive their original**: auto-import prunes placeholders whose transcript
+  left discovery unless they were imported. A session with a kept archive or a saved passage is
+  now kept too, so what was kept still opens from the session list after the agent removes the
+  original. The kernel is read only for an unimported would-be-pruned session the cached kept
+  set has not seen (or every 30 minutes), and a fallback kernel read skips pruning that pass.
+  The session-bar chip estimates from the stored meta and does not check presence.
 
 ## 6. Scope
 

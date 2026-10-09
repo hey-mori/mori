@@ -20,6 +20,7 @@
 
 pub mod archive;
 pub mod code;
+pub mod retention;
 pub mod desktop;
 pub mod installations;
 
