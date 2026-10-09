@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
+import { useProjectSearchStore } from "../../app/projectSearchStore";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -245,6 +247,7 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
             </InfoHint>
           </span>
           <span className="session-window-head-side">
+            <BackToProjectSearch sessionId={state.sessionId} />
             <span className="session-window-meta">
               메시지 {state.events.length.toLocaleString("ko-KR")}개{coverage ? ` · ${coverage}` : ""}
               {position ? ` · ${position}` : ""}
@@ -408,6 +411,25 @@ function WindowMessage({
         </button>
       ) : null}
     </li>
+  );
+}
+
+/**
+ * The way back to the project search a result opened this session from. A
+ * navigation context only: it says where the user came from, never that the
+ * session belongs to the project (that is the breadcrumb's job).
+ */
+function BackToProjectSearch({ sessionId }: { sessionId: string }) {
+  const projectId = useProjectSearchStore((store) =>
+    store.search && store.openedSessionId === sessionId ? store.search.projectId : null,
+  );
+  const query = useProjectSearchStore((store) => store.search?.query ?? "");
+  const openProjectContext = useAppStore((store) => store.openProjectContext);
+  if (!projectId) return null;
+  return (
+    <Button size="sm" variant="ghost" icon={ArrowLeft} onClick={() => openProjectContext(projectId)} title={`"${query}" 검색 결과로`}>
+      프로젝트 검색 결과
+    </Button>
   );
 }
 

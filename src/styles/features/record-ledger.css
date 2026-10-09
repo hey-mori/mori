@@ -4713,3 +4713,160 @@
     max-height: 320px;
   }
 }
+
+/* 이 프로젝트의 대화에서 찾기: one compact search over the project's confirmed
+   sessions, results grouped by session. */
+.project-search {
+  display: grid;
+  gap: var(--base-space-2);
+  padding: var(--base-space-3) var(--base-space-4);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+}
+
+.project-search-form {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-2);
+}
+
+.project-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px var(--base-space-3);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--base-text);
+  font: inherit;
+  font-size: var(--base-font-size-sm);
+}
+
+.project-search-body {
+  display: grid;
+  gap: var(--base-space-2);
+  justify-items: start;
+}
+
+.project-search-status,
+.project-search-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.project-search-error {
+  padding-inline: var(--base-space-3);
+  color: var(--base-status-danger);
+}
+
+.project-search-coverage {
+  width: 100%;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.project-search-coverage summary {
+  cursor: pointer;
+}
+
+.project-search-coverage ul {
+  display: grid;
+  gap: 2px;
+  margin: var(--base-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-search-coverage li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--base-space-3);
+}
+
+.project-search-coverage-title {
+  overflow: hidden;
+  color: var(--base-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-search-coverage p {
+  margin: var(--base-space-2) 0 0;
+}
+
+.project-search-groups,
+.project-search-hits {
+  display: grid;
+  gap: var(--base-space-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-search-hits {
+  gap: 2px;
+}
+
+.project-search-session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--base-space-2);
+  margin: 0;
+  font-size: var(--base-font-size-sm);
+}
+
+.project-search-session-title {
+  color: var(--base-text);
+  font-weight: 600;
+}
+
+.project-search-session-meta {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.project-search-hit {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 6px var(--base-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--base-radius-sm);
+  background: transparent;
+  color: var(--base-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-search-hit:hover {
+  background: var(--base-surface-subtle);
+}
+
+.project-search-hit-head {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.project-search-snippet {
+  font-size: var(--base-font-size-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.project-search-snippet mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--base-status-warning-soft);
+  color: inherit;
+}
