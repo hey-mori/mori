@@ -9,6 +9,7 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  rmSync,
   readdirSync,
   readFileSync,
   symlinkSync,
@@ -17,7 +18,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { applyAgentSessionStatusBackfill } from "../../lib/record-kernel/agentSessionStatusBackfill";
 import { KernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { KernelBrowserStore } from "../../lib/record-kernel/kernelStore";
@@ -43,8 +44,17 @@ const SECRET = "AKIAIOSFODNN7EXAMPLE";
 const TITLE_MARK = "TITLE-MARK-인증-마이그레이션";
 const BODY_MARK = "BODY-MARK-본문은-나가지-않는다";
 
+// Every directory a test makes is removed after the file: the suite runs on
+// every gate, and leaked snapshots once filled a shared /tmp.
+const madeDirs: string[] = [];
+afterAll(() => {
+  for (const dir of madeDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 function tempDir(): string {
-  return mkdtempSync(join(tmpdir(), "mori-dry-run-test-"));
+  const dir = mkdtempSync(join(tmpdir(), "mori-dry-run-test-"));
+  madeDirs.push(dir);
+  return dir;
 }
 
 const at = (iso: string) => () => new Date(iso);
