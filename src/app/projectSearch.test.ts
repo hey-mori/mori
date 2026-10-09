@@ -72,8 +72,16 @@ import {
 } from "../lib/session/projectSearch";
 import { isAtLatest, isLoadedWindow, MAX_RETAINED_WINDOWS, type LoadedSessionWindow } from "../lib/session/sessionWindow";
 import { SessionSourceWindow } from "../features/session/SessionSourceWindow";
+import { buildPassageDraft, sha256Hex } from "../lib/capture/passageCapture";
+import { redactText } from "../lib/connectors/redaction";
 
 // ─── fake transcripts ──────────────────────────────────────────────────────
+
+/** A window read through the same fake the store uses. */
+async function getClaudeCodeSessionWindowForTest(path: string) {
+  const { getClaudeCodeSessionWindow } = await import("../lib/claude/claudeTauri");
+  return getClaudeCodeSessionWindow(path);
+}
 
 function transcript(path: string) {
   const found = fake.transcripts.get(path);
@@ -100,7 +108,13 @@ function windowOf(path: string, picked: FakeRecord[], all: FakeRecord[], sourceI
     endOffset: end,
     reachedStart: start === 0,
     reachedEnd: end === fileEnd,
-    events: picked.map((record) => ({ id: record.id, role: "assistant", content: record.content, createdAt: "2026-10-08T00:00:00Z" })),
+    events: picked.map((record) => ({
+      id: record.id,
+      role: "assistant",
+      content: record.content,
+      createdAt: "2026-10-08T00:00:00Z",
+      record: { start: record.start, end: record.end, anchor: endAnchorOf(all, record.end) },
+    })),
     fileTouches: [],
     stats: { rawLines: picked.length, parsed: picked.length, skipped: 0, unparseable: 0 },
     omittedRecords: 0,
@@ -616,6 +630,80 @@ describe("opening a project search result", () => {
     expect(repository.listSessionImports(id)).toEqual([]);
     fake.transcripts.delete(path);
     expect(await useSessionStore.getState().openSessionAtLatestReply({ sessionId: id, sourcePath: path, stillWanted: () => true })).toBe("missing");
+  });
+
+  describe("opening the passage a record was saved from", () => {
+    async function savedPassage(name: string, contents: string[], index: number, selection?: string) {
+      const id = session(name, contents, { contextId: "ctx-infra" });
+      const path = `/home/u/.claude/projects/-home-u-dev-infra/${name}.jsonl`;
+      const window = (await getClaudeCodeSessionWindowForTest(path))!;
+      const message = window.events.find((event) => event.id === `${name}-m${index}`)!;
+      const result = await buildPassageDraft({ sessionId: id, sourceId: window.sourceId, message, selection: selection === undefined ? undefined : { text: selection } });
+      if (!("draft" in result)) throw new Error(result.refused);
+      return { id, path, locator: result.draft.locator };
+    }
+
+    it("reads back to the saved record, checks its text, and focuses it without importing", async () => {
+      const { id, locator } = await savedPassage("p", lines(6, { 4: "Decision: Candidate B" }), 4, "Candidate B");
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("opened");
+      expect(useSessionStore.getState().draft?.session.id).toBe(id);
+      expect(view().focus).toMatchObject({ messageId: "p-m4", query: "Candidate B", wholeWords: false, range: { from: locator.from, to: locator.to } });
+      // Exactly the kept range is marked, even where the words repeat.
+      expect(markup().match(/<mark>/g)?.length).toBe(1);
+      expect(repository.listSessionImports(id)).toEqual([]);
+    });
+
+    it("says missing when the transcript is gone, without opening anything", async () => {
+      const { path, locator } = await savedPassage("gone", lines(6, { 4: "keep me" }), 4);
+      fake.transcripts.delete(path);
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("missing");
+      expect(useSessionStore.getState().sessionWindow).toBeNull();
+    });
+
+    it("says missing when Mori no longer knows the session", async () => {
+      const { locator } = await savedPassage("unknown", lines(6, { 4: "keep me" }), 4);
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator: { ...locator, sessionId: "auto-claude-nobody" }, stillWanted: () => true })).toBe("missing");
+    });
+
+    it("says changed when the record at that place no longer holds the saved text", async () => {
+      const { path, locator } = await savedPassage("edit", lines(6, { 3: "original words" }), 3);
+      const held = fake.transcripts.get(path)!;
+      held.records[3] = { ...held.records[3]!, content: "rewritten words" };
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("changed");
+      expect(useSessionStore.getState().sessionWindow).toBeNull();
+    });
+
+    it("says changed when the text at the saved range does not hash to the excerpt", async () => {
+      const { locator } = await savedPassage("hash", lines(6, { 3: "original words" }), 3);
+      const tampered = { ...locator, excerptHash: "0".repeat(64) };
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator: tampered, stillWanted: () => true })).toBe("changed");
+    });
+
+    it("says changed when the transcript was replaced by another", async () => {
+      const { path, locator } = await savedPassage("swap", lines(6, { 3: "original words" }), 3);
+      fake.transcripts.get(path)!.sourceId = "src-other";
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("changed");
+    });
+
+    it("says changed when another record now ends at that place", async () => {
+      const { locator } = await savedPassage("other", lines(6, { 3: "original words" }), 3);
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator: { ...locator, messageId: "other-m9" }, stillWanted: () => true })).toBe("changed");
+    });
+
+    it("re-checks a redacted passage after the same redaction", async () => {
+      const secret = "token ghp_abcdefghijklmnopqrstuvwxyz0123456789 here";
+      const { locator } = await savedPassage("red", lines(6, { 4: secret }), 4);
+      const keptHash = await sha256Hex(redactText(secret).redacted);
+      const redacted = { ...locator, excerptHash: keptHash, redacted: true as const };
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator: redacted, stillWanted: () => true })).toBe("opened");
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator: { ...redacted, redacted: undefined }, stillWanted: () => true })).toBe("changed");
+    });
+
+    it("changes nothing when the user moved on", async () => {
+      const { locator } = await savedPassage("late", lines(6, { 3: "original words" }), 3);
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => false })).toBe("superseded");
+      expect(useSessionStore.getState().draft).toBeNull();
+    });
   });
 
   it("searching and opening results write nothing durable beyond the active-session pointer", async () => {

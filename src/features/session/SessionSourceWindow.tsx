@@ -426,7 +426,7 @@ function WindowMessage({
   onCapture,
 }: {
   message: ClaudeMessage;
-  focus: { query: string; wholeWords: boolean; seq: number } | null;
+  focus: { query: string; wholeWords: boolean; seq: number; range?: { from: number; to: number } } | null;
   /** Opens 기록으로 남기기 for this message, with the text selected in it. */
   onCapture?: (message: ClaudeMessage, selection: MessageSelection) => void;
 }) {
@@ -484,7 +484,15 @@ function WindowMessage({
         ) : null}
       </div>
       <p className="session-window-text" ref={textRef}>
-        {focus
+        {focus?.range
+          ? // A saved passage: mark the very range that was kept, not every
+            // place the same words appear.
+            [
+              <span key="before">{text.slice(0, focus.range.from)}</span>,
+              <mark key="kept">{text.slice(focus.range.from, focus.range.to)}</mark>,
+              <span key="after">{text.slice(focus.range.to)}</span>,
+            ]
+          : focus
           ? splitOnPhrase(text, focus.query, focus.wholeWords).map((part, index) =>
               part.match ? <mark key={index}>{part.text}</mark> : <span key={index}>{part.text}</span>,
             )

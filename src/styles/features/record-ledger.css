@@ -4942,3 +4942,70 @@
 .project-search-coverage-when {
   color: var(--base-text-muted);
 }
+
+/* 저장한 구절: the kept evidence under a record saved from a conversation. */
+.saved-passage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.saved-passage-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+}
+
+.saved-passage-meta {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.saved-passage-quote {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft, transparent);
+  color: var(--text);
+  font-size: var(--base-font-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.saved-passage-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.saved-passage-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--base-font-size-xs);
+  cursor: pointer;
+}
+
+.saved-passage-open:hover:not(:disabled),
+.saved-passage-open:focus-visible {
+  color: var(--accent);
+}
+
+.saved-passage-outcome {
+  color: var(--muted);
+  font-size: var(--base-font-size-xs);
+}
