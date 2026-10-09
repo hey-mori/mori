@@ -1200,3 +1200,67 @@
   gap: 4px;
   color: var(--base-text);
 }
+
+/* 정리될 수 있는 대화: the list behind Home's quiet count. */
+.retention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.retention-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.retention-row:last-child {
+  border-bottom: none;
+}
+
+.retention-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.retention-row-text strong {
+  overflow: hidden;
+  color: var(--base-text);
+  font-size: var(--base-font-size-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retention-row-text span {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.retention-row-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.retention-lost {
+  margin-top: 12px;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-sm);
+}
+
+.retention-lost summary {
+  cursor: pointer;
+}
+
+.session-archive-chip-note {
+  color: var(--base-text-muted);
+}

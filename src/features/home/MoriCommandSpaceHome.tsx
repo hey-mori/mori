@@ -24,6 +24,7 @@ import {
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
+import { RetentionStatus } from "../session/RetentionStatus";
 import { DEMO_SESSION_SUMMARIES } from "../../lib/demo/demoSessionFixtures";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import {
@@ -338,6 +339,7 @@ export function MoriCommandSpaceHome() {
             <span>
               {sessions.length}개 {usingDemoData ? "예시 세션" : "세션"}
             </span>
+            {usingDemoData ? null : <RetentionStatus refreshKey={sessions.length} onOpen={(sessionId) => openSessionById(sessionId)} />}
             <button type="button" onClick={openCommandPalette}>
               {SHORTCUT_LABEL}
             </button>

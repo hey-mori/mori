@@ -14,7 +14,9 @@ import { InfoHint } from "../../components/ui/InfoHint";
 import { trapTabKey } from "../../components/ui/focusTrap";
 import { loadAutoImportMeta } from "../../lib/session/autoImportMetaStore";
 import { formatArchiveBytes, type KeptArchive } from "../../lib/session/sessionArchive";
+import { estimateCleanup, type CleanupPolicyInput } from "../../lib/session/retentionRisk";
 import { keepSessionArchive, loadKeptArchive, removeSessionArchive } from "./sessionArchiveActions";
+import { loadCleanupPolicy } from "./retentionActions";
 
 function day(iso: string): string {
   const date = new Date(iso);
@@ -26,6 +28,17 @@ export function SessionArchiveControl({ sessionId }: { sessionId: string }) {
   const [kept, setKept] = useState<KeptArchive | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [dialog, setDialog] = useState<"keep" | "remove" | null>(null);
+  const [policy, setPolicy] = useState<CleanupPolicyInput | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadCleanupPolicy().then((next) => {
+      if (!cancelled) setPolicy(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,17 +61,25 @@ export function SessionArchiveControl({ sessionId }: { sessionId: string }) {
   // Only a Claude Code transcript has a reader that can open a kept copy.
   if (!meta || meta.importKind !== "claude-code" || !meta.sourceFilePath || !loaded) return null;
 
+  // Only an estimate near or past says anything; otherwise the chip stays plain.
+  const cleanup = policy ? estimateCleanup(meta.modifiedAt ?? meta.updatedAt, policy, Date.now()) : null;
+  const near = cleanup?.state === "approaching" || cleanup?.state === "mayBeEligible";
+  const grown = Boolean(kept && meta.fileBytes !== undefined && kept.locator.bytes < meta.fileBytes);
+  const note = !kept && near ? (cleanup?.state === "mayBeEligible" ? "정리 대상일 수 있음" : "곧 정리될 수 있음") : grown ? "이후 대화 있음" : null;
+
   return (
     <>
       {kept ? (
         <button type="button" className="session-archive-chip" onClick={() => setDialog("remove")}>
           <Archive size={12} aria-hidden="true" />
           보관함 · {day(kept.source.capturedAt)} · {formatArchiveBytes(kept.locator.bytes)}
+          {note ? <span className="session-archive-chip-note"> · {note}</span> : null}
         </button>
       ) : (
         <button type="button" className="session-archive-chip" onClick={() => setDialog("keep")}>
           <Archive size={12} aria-hidden="true" />
           원본 보관
+          {note ? <span className="session-archive-chip-note"> · {note}</span> : null}
         </button>
       )}
       {dialog === "keep" ? (
@@ -110,11 +131,14 @@ function useModal(onClose: () => void, busy: () => boolean) {
   return dialogRef;
 }
 
-function KeepDialog({
+export function KeepDialog({
+  title,
   sizeBytes,
   onClose,
   onKeep,
 }: {
+  /** Names the conversation when the dialog opens away from it. */
+  title?: string;
   sizeBytes?: number;
   onClose: () => void;
   onKeep: () => Promise<void>;
@@ -154,7 +178,9 @@ function KeepDialog({
             </p>
           ) : (
             <>
-              <p className="session-archive-lead">이 세션의 원본 대화를 지금 시점 그대로 Mori에 보관합니다.</p>
+              <p className="session-archive-lead">
+                {title ? `「${title}」의` : "이 세션의"} 원본 대화를 지금 시점 그대로 Mori에 보관합니다.
+              </p>
               <ul className="session-archive-facts">
                 <li>크기: {sizeBytes ? `약 ${formatArchiveBytes(sizeBytes)}` : "보관할 때 확인합니다"}</li>
                 <li>
