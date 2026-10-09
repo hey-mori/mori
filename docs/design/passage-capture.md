@@ -152,6 +152,20 @@ Mori cannot read or search; this keeps one chosen session readable and searchabl
   deletes the file only when no other kept source names the same (content-named) file.
   Partial files of interrupted copies older than an hour are swept on the next copy; an empty
   transcript and an archive folder inside the agent's directory are refused.
+- **Integrity**: before a kept copy stands in for its original it is verified once per run:
+  present, the recorded size, and hashing to its content name (it reads the file whole, so this
+  happens when a copy is about to be read, never on render). A missing copy says 보관한 원본 파일이
+  없습니다; a truncated or altered one says 보관한 원본이 손상되었습니다 and is not shown; a saved
+  passage then reads as missing, and project search skips it.
+- **A changed original with a kept copy**: the copy records the original's head fingerprint
+  (`sourceId`, stable under appends). When the file at the path now has a different one,
+  opening the session shows its kept copy instead (labelled as replacing a changed original),
+  nothing from the other conversation is imported under the session's identity, and 원본 열기 on
+  a saved passage reads the copy. Project search and opening at the latest reply still read the
+  file at the path (a known limitation). The rule assumes the agent never rewrites a
+  transcript's first line in place; no rewrite was observed, but it is not proven. A good
+  verification is remembered for the run, so a copy altered after it was verified is not
+  re-checked until the next launch.
 - **Full reset**: 데이터 전체 초기화 deletes the archive files and partial copies once the
   kernel's records of them are cleared, and its confirmation names 보관한 원본. A file that
   cannot be removed is reported in settings as still in the archives folder. Pre-migration

@@ -63,7 +63,15 @@ export function useSessionResolver(): (sessionId: string) => Promise<SessionOpen
 function needsTranscript(sessionId: string): boolean {
   const { imports, sessionWindow } = useSessionStore.getState();
   if (imports.length > 0) {
-    return sessionWindow?.sessionId === sessionId && sessionWindow.status === "error" && sessionWindow.error.kind === "missing";
+    return (
+      sessionWindow?.sessionId === sessionId &&
+      sessionWindow.status === "error" &&
+      // The original or the kept copy was missing or damaged: restoring the
+      // file and reopening (or 다시 시도) must read again.
+      (sessionWindow.error.kind === "missing" ||
+        sessionWindow.error.kind === "archiveMissing" ||
+        sessionWindow.error.kind === "archiveDamaged")
+    );
   }
   if (sessionWindow?.sessionId !== sessionId) return true;
   return sessionWindow.status === "error";

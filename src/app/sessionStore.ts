@@ -18,7 +18,12 @@ import type {
   QuickPassAnalysisSettings,
 } from "../lib/analysis";
 import { sha256Hex, type PassageLocatorV1 } from "../lib/capture/passageCapture";
-import { keptArchiveRead } from "../lib/session/sessionArchiveRead";
+import {
+  isUsableArchive,
+  keptArchiveRead,
+  keptArchiveSourceId,
+  type KeptArchiveRead,
+} from "../lib/session/sessionArchiveRead";
 import { redactText } from "../lib/connectors/redaction";
 import {
   DEFAULT_QUICK_PASS_SETTINGS,
@@ -1733,6 +1738,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           );
         }
         if (!current()) return "superseded";
+        // Read from the original: if the user kept a copy and the file at the
+        // path is now a different conversation (its head fingerprint differs),
+        // the copy is what this session was. Show it, and say why.
+        if (!archive) {
+          const keptId = await keptArchiveSourceId(sessionId);
+          if (!current()) return "superseded";
+          if (keptId && state.sourceId && keptId !== state.sourceId) {
+            const kept = await keptArchiveRead(sessionId);
+            if (!current()) return "superseded";
+            if (kept && isUsableArchive(kept)) return openWindow(kept.path, { ...kept.archive, replacedOriginal: true });
+            set({ sessionWindow: { sessionId, status: "error", error: kept ? archiveFailure(kept) : { kind: "changed", message: "SOURCE_CHANGED" } } });
+            return "failed";
+          }
+        }
         set({ sessionWindow: archive ? { ...state, archive } : state });
         return "opened";
       } catch (error) {
@@ -1741,6 +1760,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         if (!archive && isSourceGone(error)) {
           const kept = await keptArchiveRead(sessionId);
           if (!current()) return "superseded";
+          if (kept && !isUsableArchive(kept)) {
+            set({ sessionWindow: { sessionId, status: "error", error: archiveFailure(kept) } });
+            return "failed";
+          }
           if (kept) return openWindow(kept.path, kept.archive);
         }
         set({ sessionWindow: { sessionId, status: "error", error: failure } });
@@ -1752,6 +1775,24 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // A late reply for a session the user already left must not be imported
       // into whichever session is active now.
       if (!current()) return "superseded";
+      // A session the user kept a copy of: the file at its path must still be
+      // that conversation (same head fingerprint) before it is imported under
+      // this session; otherwise the copy is shown and nothing is imported.
+      if (meta.importKind === "claude-code") {
+        const keptId = await keptArchiveSourceId(sessionId);
+        if (!current()) return "superseded";
+        if (keptId) {
+          const head = await getClaudeCodeSessionWindow(sourcePath).catch(() => null);
+          if (!current()) return "superseded";
+          if (head && head.sourceId !== keptId) {
+            const kept = await keptArchiveRead(sessionId);
+            if (!current()) return "superseded";
+            if (kept && isUsableArchive(kept)) return openWindow(kept.path, { ...kept.archive, replacedOriginal: true });
+            set({ sessionWindow: { sessionId, status: "error", error: kept ? archiveFailure(kept) : { kind: "changed", message: "SOURCE_CHANGED" } } });
+            return "failed";
+          }
+        }
+      }
       const candidate = buildPrimaryImportCandidateFromAgentWorkSession(detail, {
         projectId: autoImportedProjectId(meta),
         sessionId,
@@ -1773,7 +1814,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         ? planSourceReopen(repository.listSessionImports(sessionId), candidate, (eventId) => cited.has(eventId))
         : ({ kind: "add" } as const);
       // A transcript that no longer continues the import keeps the import as
-      // stored; say so rather than let the readable file vouch for it.
+      // stored; say so rather than let the readable file vouch for it. (A file
+      // that is another conversation altogether was caught above by its head
+      // fingerprint when a copy is kept; this is the same conversation read
+      // differently, so the stored import, possibly newer than any copy,
+      // stays on screen.)
       set({ divergedSourceSessionId: plan.kind === "keep" && plan.reason === "diverged" ? sessionId : null });
       if (plan.kind === "add") {
         get().addImport(candidate);
@@ -1821,6 +1866,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       if (meta.importKind === "claude-code" && isSourceGone(error)) {
         const kept = await keptArchiveRead(sessionId);
         if (!current()) return "superseded";
+        if (kept && !isUsableArchive(kept)) {
+          set({ sessionWindow: { sessionId, status: "error", error: archiveFailure(kept) } });
+          return "failed";
+        }
         if (kept) return openWindow(kept.path, kept.archive);
       }
       set({ sessionWindow: { sessionId, status: "error", error: classifyWindowError(error) } });
@@ -1922,17 +1971,28 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
     }
     if (!current()) return "superseded";
-    if (!hitWindow && gone) {
+    // The file at the path is now another conversation: the passage was saved
+    // from the original, so a copy kept of that same original (same head
+    // fingerprint as the passage records) still holds it.
+    let replaced = false;
+    if (!hitWindow && !gone && failure?.kind === "changed") {
+      const keptId = await keptArchiveSourceId(locator.sessionId);
+      if (!current()) return "superseded";
+      replaced = keptId !== null && keptId === locator.sourceId;
+    }
+    if (!hitWindow && (gone || replaced)) {
       const kept = await keptArchiveRead(locator.sessionId);
       if (!current()) return "superseded";
       // A copy kept before this passage was written cannot hold it: the
       // original is gone and the copy ends earlier, which is "missing".
       if (kept && kept.archive.bytes < locator.end) return "missing";
+      // A copy that is gone or no longer the file kept cannot vouch for it.
+      if (kept && !isUsableArchive(kept)) return "missing";
       if (kept) {
         try {
           hitWindow = await readAt(kept.path);
           sourcePath = kept.path;
-          archive = kept.archive;
+          archive = replaced ? { ...kept.archive, replacedOriginal: true } : kept.archive;
           failure = null;
         } catch (error) {
           failure = classifyWindowError(error);
@@ -2826,6 +2886,13 @@ function mirrorDesktopImports(
     if (savedAt !== stored.savedAt) kept.push({ ...stored, savedAt });
   }
   if (kept.length > 0) repository.putSessionImports(sessionId, kept);
+}
+
+/** Why a kept copy cannot stand in for its gone original. */
+function archiveFailure(kept: KeptArchiveRead): SessionWindowError {
+  return kept.integrity === "missing"
+    ? { kind: "archiveMissing", message: "ARCHIVE_MISSING" }
+    : { kind: "archiveDamaged", message: "ARCHIVE_DAMAGED" };
 }
 
 function withArchive<T extends LoadedSessionWindow>(state: T, archive: LoadedSessionWindow["archive"] | undefined): T {

@@ -29,7 +29,7 @@ import {
   type ProjectSearchState,
 } from "../lib/session/projectSearch";
 import { classifyWindowError } from "../lib/session/sessionWindow";
-import { keptArchiveRead } from "../lib/session/sessionArchiveRead";
+import { isUsableArchive, keptArchiveRead } from "../lib/session/sessionArchiveRead";
 import { normalizeQuery } from "../lib/session/sessionSearch";
 import { useSessionStore, type SourceHitOutcome } from "./sessionStore";
 
@@ -103,7 +103,8 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
         const now = get().search;
         if (sequence !== searchSequence || !now) return;
         const held = now.sources[sessionId];
-        if (kept && held && held.status === "searching") {
+        // A copy that is gone or no longer the file kept is not searched.
+        if (kept && isUsableArchive(kept) && held && held.status === "searching") {
           set({
             search: {
               ...now,

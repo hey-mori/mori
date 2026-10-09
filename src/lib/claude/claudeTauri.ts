@@ -285,6 +285,12 @@ export async function removeClaudeCodeArchive(fileName: string): Promise<boolean
   return invokeTauriCommand("remove_claude_code_archive", { fileName });
 }
 
+/** Whether a kept copy is still the file Mori recorded (reads it whole). */
+export async function verifyClaudeCodeArchive(fileName: string, bytes: number): Promise<"ok" | "missing" | "damaged"> {
+  if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
+  return invokeTauriCommand("verify_claude_code_archive", { fileName, bytes });
+}
+
 /** Where archives live, so a stored archive name can be read again. */
 export async function claudeCodeArchiveDir(): Promise<string> {
   if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
