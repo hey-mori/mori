@@ -981,3 +981,12 @@ focused next step, not rushed:
 - Driven by a one-shot `ledgerFindRequest` in the app store, consumed on mount;
   the project scope itself still persists across visits (#162), and an ordinary
   later visit opens ready to capture as before.
+
+## 2026-10-09 · 저장한 구절 on records saved from a conversation (#196)
+
+- A record made by 기록으로 남기기 (#193) shows its kept excerpt under the body, with the
+  message time and save time, instead of an unlabelled 원문 toggle; its provenance reads
+  대화에서 남김.
+- 원본 열기 re-reads to the stored record and requires its id and the excerpt hash before
+  showing it; a gone or changed original is said plainly and the excerpt stays. Design:
+  `docs/design/passage-capture.md`.

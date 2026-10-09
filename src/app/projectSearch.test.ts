@@ -647,7 +647,9 @@ describe("opening a project search result", () => {
       const { id, locator } = await savedPassage("p", lines(6, { 4: "Decision: Candidate B" }), 4, "Candidate B");
       expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("opened");
       expect(useSessionStore.getState().draft?.session.id).toBe(id);
-      expect(view().focus).toMatchObject({ messageId: "p-m4", query: "Candidate B", wholeWords: false });
+      expect(view().focus).toMatchObject({ messageId: "p-m4", query: "Candidate B", wholeWords: false, range: { from: locator.from, to: locator.to } });
+      // Exactly the kept range is marked, even where the words repeat.
+      expect(markup().match(/<mark>/g)?.length).toBe(1);
       expect(repository.listSessionImports(id)).toEqual([]);
     });
 

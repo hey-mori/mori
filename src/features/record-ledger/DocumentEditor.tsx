@@ -119,10 +119,17 @@ function RecordDocument({
   onOpenRecord: (recordId: string) => void;
   now: Date;
 }) {
-  const { source, link, revisions, relations } = useRecordProvenance(record.id, record.updatedAt);
+  const { source, link, revisions, relations, loading: provenanceLoading } = useRecordProvenance(record.id, record.updatedAt);
   // A record kept from a conversation shows that passage as its evidence, not
-  // behind a 원문 toggle: it is the reason the record exists.
-  const passage = savedPassageOf(source, link);
+  // behind a 원문 toggle: it is the reason the record exists. Provenance
+  // reloads after every edit; the passage already shown stays until the new
+  // load settles, so the label never flips to 직접 입력 in between.
+  const loadedPassage = savedPassageOf(source, link);
+  const heldPassage = useRef<{ recordId: string; value: ReturnType<typeof savedPassageOf> }>({ recordId: record.id, value: null });
+  if (!provenanceLoading || heldPassage.current.recordId !== record.id) {
+    heldPassage.current = { recordId: record.id, value: provenanceLoading ? null : loadedPassage };
+  }
+  const passage = provenanceLoading ? heldPassage.current.value : loadedPassage;
 
   // The note this record was kept out of. `confirmExtraction` has always stored
   // the derived-from relation and nothing ever rendered it, so a record reached

@@ -1844,7 +1844,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       hitWindow,
       token,
       current,
-      focus: { messageId: shown.id, query: excerpt, wholeWords: false },
+      focus: { messageId: shown.id, query: excerpt, wholeWords: false, range: { from: locator.from, to: locator.to } },
     });
   },
   loadNewerSessionWindow: () => pageSessionWindow("newer"),
@@ -2643,38 +2643,38 @@ async function showWindowAtRecord({
   hitWindow: ClaudeCodeSessionWindow;
   token: number;
   current: () => boolean;
-  focus: { messageId: string; query: string; wholeWords: boolean };
+  focus: { messageId: string; query: string; wholeWords: boolean; range?: { from: number; to: number } };
 }): Promise<SourceHitOutcome> {
   const get = useSessionStore.getState;
   const set = useSessionStore.setState;
-    let newer: ClaudeCodeSessionWindow | null = null;
-    if (!hitWindow.reachedEnd) {
-      try {
-        newer = await getClaudeCodeSessionWindow(sourcePath, {
-          afterOffset: hitWindow.endOffset,
-          sourceId: hitWindow.sourceId,
-          endAnchor: hitWindow.endAnchor,
-        });
-      } catch {
-        newer = null;
-      }
+  let newer: ClaudeCodeSessionWindow | null = null;
+  if (!hitWindow.reachedEnd) {
+    try {
+      newer = await getClaudeCodeSessionWindow(sourcePath, {
+        afterOffset: hitWindow.endOffset,
+        sourceId: hitWindow.sourceId,
+        endAnchor: hitWindow.endAnchor,
+      });
+    } catch {
+      newer = null;
     }
-    if (!current()) return "superseded";
-    // The same open an ordinary click makes: the stored draft becomes the
-    // active session (a descriptor-only session gets its draft back, as the
-    // resolver's open does). No transcript is read into an import.
-    if (!get().loadBrowserSession(sessionId)) {
-      const meta = loadAutoImportMeta(sessionId);
-      if (meta) getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
-      if (!get().loadBrowserSession(sessionId)) return "missing";
-    }
-    const focusSeq = ++jumpSequence;
-    set({
-      sessionWindow: jumpedWindowState(windowStateFrom(sessionId, hitWindow, token), hitWindow, newer, {
-        ...focus,
-        seq: focusSeq,
-      }),
-      sessionSearch: null,
-    });
-    return "opened";
+  }
+  if (!current()) return "superseded";
+  // The same open an ordinary click makes: the stored draft becomes the
+  // active session (a descriptor-only session gets its draft back, as the
+  // resolver's open does). No transcript is read into an import.
+  if (!get().loadBrowserSession(sessionId)) {
+    const meta = loadAutoImportMeta(sessionId);
+    if (meta) getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
+    if (!get().loadBrowserSession(sessionId)) return "missing";
+  }
+  const focusSeq = ++jumpSequence;
+  set({
+    sessionWindow: jumpedWindowState(windowStateFrom(sessionId, hitWindow, token), hitWindow, newer, {
+      ...focus,
+      seq: focusSeq,
+    }),
+    sessionSearch: null,
+  });
+  return "opened";
 }

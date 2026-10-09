@@ -8,7 +8,7 @@
  * the original is gone or no longer holds that text, it says so and the kept
  * excerpt stays as it is.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useAppStore } from "../../app/store";
 import { useSessionStore, type SourceHitOutcome } from "../../app/sessionStore";
@@ -26,10 +26,15 @@ export function savedPassageOf(
   return locator ? { source, locator } : null;
 }
 
-const OUTCOME: Partial<Record<SourceHitOutcome, string>> = {
+type OpenOutcome = SourceHitOutcome | "unverifiable";
+
+const OUTCOME: Partial<Record<OpenOutcome, string>> = {
   missing: "원본 대화가 더 이상 없습니다. 저장한 구절만 남아 있습니다.",
   changed: "원본이 바뀌어 이 구절을 다시 찾을 수 없습니다. 저장한 구절은 그대로입니다.",
-  failed: "원본을 읽지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  // A redacted passage is compared after redaction: a change in what Mori
+  // hides, not only in the original, can make it fail to match.
+  unverifiable: "원본에서 이 구절을 다시 확인하지 못했습니다. 저장한 구절은 그대로입니다.",
+  failed: "원본을 읽지 못했습니다.",
 };
 
 function stamp(iso: string | undefined): string {
@@ -43,8 +48,16 @@ export function SavedPassage({ source, locator }: { source: KernelSource; locato
   const openSession = useAppStore((state) => state.openSession);
   const openSessionAtPassage = useSessionStore((state) => state.openSessionAtPassage);
   const [opening, setOpening] = useState(false);
-  const [outcome, setOutcome] = useState<SourceHitOutcome | null>(null);
+  const [outcome, setOutcome] = useState<OpenOutcome | null>(null);
   const sequence = useRef(0);
+  // Leaving the record (or this block re-mounting) abandons an open in flight:
+  // a slow verification must not pull the user into a session later.
+  useEffect(
+    () => () => {
+      sequence.current += 1;
+    },
+    [],
+  );
   const written = stamp(source.publishedAt);
   const kept = stamp(source.capturedAt);
 
@@ -56,7 +69,7 @@ export function SavedPassage({ source, locator }: { source: KernelSource; locato
     if (mine !== sequence.current) return;
     setOpening(false);
     if (result === "opened") openSession("flow");
-    else setOutcome(result);
+    else setOutcome(result === "changed" && locator.redacted ? "unverifiable" : result);
   };
 
   return (

@@ -69,7 +69,15 @@ export type ReleasedSpan = { startOffset: number; endOffset: number; endAnchor: 
 
 /** The message a search result opened the view at, and the phrase to mark in
  *  it. `seq` tells one jump from the next, so the viewport moves once per jump. */
-export type SessionWindowFocus = { messageId: string; query: string; wholeWords: boolean; seq: number };
+export type SessionWindowFocus = {
+  messageId: string;
+  query: string;
+  wholeWords: boolean;
+  seq: number;
+  /** Mark exactly this character range of the message (a saved passage),
+   *  instead of every occurrence of `query`. */
+  range?: { from: number; to: number };
+};
 
 export type SessionWindowState =
   | { sessionId: string; status: "loading" }

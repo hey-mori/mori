@@ -112,14 +112,19 @@ preserved; a source reference is not a promise that the source will exist.
 | Same passage saved again | the preview offers the existing record |
 | Cancel | nothing written |
 | Write fails midway | the excerpt source is written first, so what the user chose to keep is not lost |
-| Original changed / missing later | see the provenance cycle (원본 열기) |
+| Original gone (or Mori no longer knows the session) | 원본 열기 says so; record and excerpt stay |
+| Original replaced, rewritten, or another record now ends at that place | 원본 열기 says the original changed; nothing else is shown |
+| Redacted passage no longer matches | "다시 확인하지 못했습니다": the redaction patterns may have changed, not only the original. Two originals that differ only inside a hidden span verify as equal (the hidden text was never kept) |
+| 원본 열기 abandoned (record switched, page left) | the open in flight is dropped; nothing navigates later |
 
 ## 6. Scope
 
 Built (capture slice): single-message or in-message text selection from the transcript viewer;
 record types from the existing schemas; retained excerpt as a kernel source; record search
 through the record body (prefilled with the excerpt; a body the user rewrites is what search
-then sees). Next slice: provenance display with 원본 열기 and honest missing/changed states.
+then sees); provenance on the record page (저장한 구절 with message and save time, and 원본 열기,
+which re-reads to the stored record and requires its id and the excerpt hash there, marking
+exactly the kept range).
 
 Not built: multi-message excerpts (no workflow yet needs them); automatic or bulk capture;
 AI summarisation of the excerpt; capture from imported timeline cards (they are a kept copy,
