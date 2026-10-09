@@ -45,8 +45,8 @@ pub struct SessionArchive {
     pub reused: bool,
 }
 
-/// Where archives live: inside Mori's storage directory, so a backup or a
-/// relocation of that directory carries them along.
+/// Where archives live: inside Mori's storage directory. Changing the storage
+/// location moves them along with the database (`move_archives`).
 pub(crate) fn archive_root() -> Result<PathBuf, String> {
     Ok(crate::package::default_storage_dir()?.join("archives").join("claude-code"))
 }
@@ -75,6 +75,13 @@ pub(crate) fn archive_session_at(projects_root: &Path, archive_dir: &Path, sessi
         return Err("Refused: a transcript reached through a symlink is not archived.".to_string());
     }
     let canonical = resolve_session_path(projects_root, session_path.trim())?;
+    // Never write into the agent's own directory, even through a storage
+    // override that points inside it: its cleanup would delete the copy.
+    if let (Ok(root), Ok(archives)) = (fs::canonicalize(projects_root), fs::canonicalize(archive_dir).or_else(|_| Ok::<_, std::io::Error>(archive_dir.to_path_buf()))) {
+        if archives.starts_with(&root) {
+            return Err("Refused: the archive folder is inside the agent's projects directory.".to_string());
+        }
+    }
     let mut source = fs::File::open(&canonical)
         .map_err(|error| format!("SOURCE_UNREADABLE: Failed to open {}: {error}", canonical.display()))?;
     let len = source.metadata().map_err(|error| error.to_string())?.len();
@@ -82,7 +89,11 @@ pub(crate) fn archive_session_at(projects_root: &Path, archive_dir: &Path, sessi
     // A point in time: the complete records present now. Anything appended
     // while copying is not part of this archive; a partial last line never is.
     let snapshot = complete_end(&mut source, len)?;
+    if snapshot == 0 {
+        return Err("Refused: the transcript has no complete record to keep yet.".to_string());
+    }
     fs::create_dir_all(archive_dir).map_err(|error| format!("ARCHIVE_UNWRITABLE: {error}"))?;
+    sweep_stale_partials(archive_dir);
     let nonce = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|elapsed| elapsed.as_nanos())
@@ -109,6 +120,8 @@ pub(crate) fn archive_session_at(projects_root: &Path, archive_dir: &Path, sessi
     } else if let Err(error) = fs::rename(&partial, &target) {
         let _ = fs::remove_file(&partial);
         return Err(format!("ARCHIVE_UNWRITABLE: {error}"));
+    } else {
+        sync_dir(archive_dir);
     }
     Ok(SessionArchive {
         file_name,
@@ -141,6 +154,70 @@ fn copy_hashing(source: &mut fs::File, bytes: u64, partial: &Path) -> Result<Str
     }
     out.sync_all().map_err(|error| format!("ARCHIVE_UNWRITABLE: {error}"))?;
     Ok(hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect())
+}
+
+/// A copy interrupted by a crash or a kill leaves its partial file behind; it
+/// can hold a whole transcript. Any partial older than an hour is removed.
+fn sweep_stale_partials(archive_dir: &Path) {
+    let Ok(entries) = fs::read_dir(archive_dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        if !name.to_string_lossy().starts_with(".partial-") {
+            continue;
+        }
+        let stale = entry
+            .metadata()
+            .and_then(|meta| meta.modified())
+            .ok()
+            .and_then(|modified| modified.elapsed().ok())
+            .map(|age| age.as_secs() > 3600)
+            .unwrap_or(false);
+        if stale {
+            let _ = fs::remove_file(entry.path());
+        }
+    }
+}
+
+/// Make the rename durable: without it a crash can lose the new name while the
+/// kernel already records the archive.
+fn sync_dir(dir: &Path) {
+    #[cfg(unix)]
+    if let Ok(handle) = fs::File::open(dir) {
+        let _ = handle.sync_all();
+    }
+    #[cfg(not(unix))]
+    let _ = dir;
+}
+
+/// Carry every archive to a new storage location: copy all first, then remove
+/// the originals only when every copy succeeded, so a failed move leaves the
+/// old folder intact. Only archive-named files are touched.
+pub(crate) fn move_archives(from: &Path, to: &Path) -> Result<usize, String> {
+    let Ok(entries) = fs::read_dir(from) else {
+        return Ok(0);
+    };
+    let names: Vec<String> = entries
+        .flatten()
+        .map(|entry| entry.file_name().to_string_lossy().to_string())
+        .filter(|name| is_archive_name(name))
+        .collect();
+    if names.is_empty() || from == to {
+        return Ok(0);
+    }
+    fs::create_dir_all(to).map_err(|error| format!("ARCHIVE_UNWRITABLE: {error}"))?;
+    for name in &names {
+        let target = to.join(name);
+        if !target.exists() {
+            fs::copy(from.join(name), &target).map_err(|error| format!("ARCHIVE_UNWRITABLE: {error}"))?;
+        }
+    }
+    sync_dir(to);
+    for name in &names {
+        let _ = fs::remove_file(from.join(name));
+    }
+    Ok(names.len())
 }
 
 fn is_archive_name(name: &str) -> bool {
@@ -249,6 +326,43 @@ mod tests {
         }
         assert!(archive_session_at(&projects, &archives, "/nope/missing.jsonl").unwrap_err().starts_with("SOURCE_MISSING"));
         assert!(!archives.exists() || fs::read_dir(&archives).unwrap().next().is_none(), "nothing written on refusal");
+    }
+
+    #[test]
+    fn refuses_an_empty_snapshot_and_an_archive_folder_inside_the_agent_directory() {
+        let (_dir, projects, archives, path) = setup("{\"type\":\"user\",\"partial");
+        assert!(archive_session_at(&projects, &archives, &path).unwrap_err().contains("no complete record"));
+        let (_dir2, projects2, _archives2, path2) = setup(&line(0));
+        let inside = projects2.join("archives");
+        assert!(archive_session_at(&projects2, &inside, &path2).unwrap_err().contains("inside the agent"));
+    }
+
+    #[test]
+    fn sweeps_stale_partials_but_not_fresh_ones() {
+        let (_dir, projects, archives, path) = setup(&line(0));
+        fs::create_dir_all(&archives).unwrap();
+        let stale = archives.join(".partial-1-1");
+        let fresh = archives.join(".partial-2-2");
+        fs::write(&stale, "old").unwrap();
+        fs::write(&fresh, "new").unwrap();
+        let old = std::time::SystemTime::now() - std::time::Duration::from_secs(7200);
+        fs::File::options().write(true).open(&stale).unwrap().set_modified(old).unwrap();
+        archive_session_at(&projects, &archives, &path).unwrap();
+        assert!(!stale.exists());
+        assert!(fresh.exists());
+    }
+
+    #[test]
+    fn moving_storage_carries_archives_and_only_archives() {
+        let (dir, projects, archives, path) = setup(&line(0));
+        let archive = archive_session_at(&projects, &archives, &path).unwrap();
+        fs::write(archives.join("notes.txt"), "keep").unwrap();
+        let moved_to = dir.path().join("Elsewhere").join("archives").join("claude-code");
+        assert_eq!(move_archives(&archives, &moved_to).unwrap(), 1);
+        assert!(moved_to.join(&archive.file_name).exists());
+        assert!(!archives.join(&archive.file_name).exists());
+        assert!(archives.join("notes.txt").exists(), "nothing but archives is moved");
+        assert_eq!(move_archives(&dir.path().join("none"), &moved_to).unwrap(), 0);
     }
 
     #[test]

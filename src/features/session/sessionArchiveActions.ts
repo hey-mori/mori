@@ -31,6 +31,13 @@ export async function keepSessionArchive(sessionId: string, sourcePath: string):
 
 /** Delete the kept copy's file; the source stays as history (not captured). */
 export async function removeSessionArchive(kept: KeptArchive): Promise<void> {
-  await removeClaudeCodeArchive(kept.locator.fileName);
-  await getKernelRepository().saveSource(removedArchiveSource(kept.source));
+  const repo = getKernelRepository();
+  // The file is named by its content: another session keeping identical bytes
+  // still needs it. Only the last keeper's removal deletes it.
+  const others = (await repo.listSources()).data.filter((source) => {
+    if (source.id === kept.source.id || source.retention !== "retained") return false;
+    return parseArchiveLocator(source.locator)?.fileName === kept.locator.fileName;
+  });
+  if (others.length === 0) await removeClaudeCodeArchive(kept.locator.fileName);
+  await repo.saveSource(removedArchiveSource(kept.source));
 }

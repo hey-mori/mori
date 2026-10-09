@@ -1671,7 +1671,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       } catch (error) {
         if (!current()) return "superseded";
         const failure = classifyWindowError(error);
-        if (!archive && failure.kind === "missing") {
+        if (!archive && isSourceGone(error)) {
           const kept = await keptArchiveRead(sessionId);
           if (!current()) return "superseded";
           if (kept) return openWindow(kept.path, kept.archive);
@@ -1748,7 +1748,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
       // The original is gone: a copy the user kept is read in its place, and
       // the view says so.
-      if (meta.importKind === "claude-code" && classifyWindowError(error).kind === "missing") {
+      if (meta.importKind === "claude-code" && isSourceGone(error)) {
         const kept = await keptArchiveRead(sessionId);
         if (!current()) return "superseded";
         if (kept) return openWindow(kept.path, kept.archive);
@@ -1842,17 +1842,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     let archive: LoadedSessionWindow["archive"] | undefined;
     let hitWindow: ClaudeCodeSessionWindow | null = null;
     let failure: SessionWindowError | null = sourcePath ? null : { kind: "missing", message: "no descriptor" };
+    let gone = !sourcePath;
     if (sourcePath) {
       try {
         hitWindow = await readAt(sourcePath);
       } catch (error) {
         failure = classifyWindowError(error);
+        gone = isSourceGone(error);
       }
     }
     if (!current()) return "superseded";
-    if (!hitWindow && failure?.kind === "missing") {
+    if (!hitWindow && gone) {
       const kept = await keptArchiveRead(locator.sessionId);
       if (!current()) return "superseded";
+      // A copy kept before this passage was written cannot hold it: the
+      // original is gone and the copy ends earlier, which is "missing".
+      if (kept && kept.archive.bytes < locator.end) return "missing";
       if (kept) {
         try {
           hitWindow = await readAt(kept.path);
@@ -1867,7 +1872,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!current()) return "superseded";
     if (!hitWindow || !sourcePath) {
       const kind = failure?.kind;
-      return kind === "missing" ? "missing" : kind === "changed" ? "changed" : "failed";
+      // "missing" only for a source that is gone: an unreadable original
+      // (locked, permissions) still exists and must not be reported gone.
+      if (kind === "missing") return gone || archive ? "missing" : "failed";
+      return kind === "changed" ? "changed" : "failed";
     }
     if (!current()) return "superseded";
     // The anchor covers only a record's head (its parentUuid in real
@@ -2467,7 +2475,7 @@ async function pageSessionWindow(direction: "earlier" | "newer" | "latest"): Pro
           ? cursor && "afterOffset" in cursor
             ? appendForwardWindow(latest, window)
             : appendNewerWindow(latest, window)
-          : windowStateFrom(state.sessionId, window, state.openToken);
+          : withArchive(windowStateFrom(state.sessionId, window, state.openToken), state.archive);
     if (next === latest) {
       const error = { kind: "changed" as const, message: "SOURCE_CHANGED: the page does not continue the view." };
       setState({ sessionWindow: { ...latest, paging: null, pageError: { direction, error } } });
@@ -2730,4 +2738,11 @@ async function showWindowAtRecord({
 
 function withArchive<T extends LoadedSessionWindow>(state: T, archive: LoadedSessionWindow["archive"] | undefined): T {
   return archive ? { ...state, archive } : state;
+}
+
+/** The original transcript is gone (deleted or moved), not merely unreadable
+ *  for now: only then is a kept copy read in its place. */
+function isSourceGone(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.startsWith("SOURCE_MISSING") || /No such file|not found|cannot find/i.test(message);
 }

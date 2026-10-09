@@ -97,7 +97,8 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
       const failure = classifyWindowError(error);
       // The original is gone: a copy the user kept is searched in its place,
       // from its end, and the coverage says which one was read.
-      if (failure.kind === "missing" && !source.archive) {
+      const gone = /^SOURCE_MISSING|No such file|not found|cannot find/i.test(failure.message);
+      if (gone && !source.archive) {
         const kept = await keptArchiveRead(sessionId);
         const now = get().search;
         if (sequence !== searchSequence || !now) return;
@@ -108,7 +109,9 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
               ...now,
               sources: {
                 ...now.sources,
-                [sessionId]: { ...held, sourcePath: kept.path, archive: kept.archive, cursor: null, sourceId: null, scanEnd: null },
+                // The copy is searched from its end afresh: hits from the
+                // original, if any, would otherwise repeat.
+                [sessionId]: { ...held, sourcePath: kept.path, archive: kept.archive, cursor: null, sourceId: null, scanEnd: null, hits: [], steps: 0, unsearchableRecords: 0 },
               },
             },
           });

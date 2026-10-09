@@ -126,8 +126,8 @@ Mori cannot read or search; this keeps one chosen session readable and searchabl
 
 - **Action**: 원본 보관 in the session bar, Claude Code transcripts only, never automatic. The
   dialog states the size, that the copy holds every message, tool call and output (secrets a
-  tool printed included), what it does not hold (subagent transcripts, spilled tool results,
-  images, anything said later), where it is stored (Mori's storage folder, not separately
+  tool printed included, and pasted or read images, which transcripts hold inline), what it
+  does not hold (subagent transcripts, spilled tool-result files, anything said later), where it is stored (Mori's storage folder, not separately
   backed up), that it is not an agent-resumable session, and that removing it never touches
   the original.
 - **Native**: `archive_claude_code_session` copies the transcript's complete records as they
@@ -140,12 +140,17 @@ Mori cannot read or search; this keeps one chosen session readable and searchabl
   trusted root, so no other path becomes readable.
 - **Kernel**: a `KernelSource` (kind `agent-session`, retention `retained`, no body, content
   hash = archive SHA-256) with locator `mori-archive:v1:{sessionId, fileName, bytes, sha256,
-  sourceId}`; no absolute path, so a moved storage folder still resolves it. Removal keeps the
+  sourceId}`; no absolute path. Changing the storage location moves the archives with the
+  database, so the names still resolve. Removal keeps the
   source with retention `notCaptured` as history. The archive is not a record.
-- **Reading**: only when the original reads as missing do opening the session, 원본 열기 on a
+- **Reading**: only when the original is gone (deleted or moved, not merely unreadable) do opening the session, 원본 열기 on a
   saved passage, and project search read the kept copy instead, with the same fingerprint,
   anchor and excerpt checks (the copy shares the original's bytes and offsets). Every such view
-  says 보관한 원본 · <date> 시점; project search coverage says 보관한 원본 for that session.
+  says 보관한 원본 · <date> 시점, paging included; project search coverage says 보관한 원본 for that
+  session. A passage saved after the copy was taken reads as missing, not changed. Removal
+  deletes the file only when no other kept source names the same (content-named) file.
+  Partial files of interrupted copies older than an hour are swept on the next copy; an empty
+  transcript and an archive folder inside the agent's directory are refused.
 
 ## 6. Scope
 

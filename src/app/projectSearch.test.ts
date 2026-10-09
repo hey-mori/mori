@@ -734,6 +734,42 @@ describe("opening a project search result", () => {
       expect(markup()).toContain("보관한 원본");
     });
 
+    it("keeps saying 보관한 원본 after 최신 대화로", async () => {
+      const { id, path, locator } = await savedPassage("keptlatest", lines(9, { 7: "Decision: Candidate B" }), 7, "Candidate B");
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"d".repeat(64)}.jsonl`;
+      fake.transcripts.set(archivePath, fake.transcripts.get(path)!);
+      fake.transcripts.delete(path);
+      fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 900 } });
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("opened");
+      await useSessionStore.getState().loadLatestSessionWindow();
+      expect(view().focus).toBeNull();
+      expect(view().archive?.archivedAt).toBe("2026-10-09T10:00:00.000Z");
+      expect(markup()).toContain("보관한 원본");
+    });
+
+    it("says missing for a passage written after the kept copy was taken", async () => {
+      const { id, path, locator } = await savedPassage("toolate", lines(6, { 5: "said later" }), 5);
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"e".repeat(64)}.jsonl`;
+      const original = fake.transcripts.get(path)!;
+      fake.transcripts.set(archivePath, { ...original, records: original.records.slice(0, 3) });
+      fake.transcripts.delete(path);
+      fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 300 } });
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("missing");
+    });
+
+    it("never reads the kept copy when the original exists but cannot be read just now", async () => {
+      const { id, path, locator } = await savedPassage("locked", lines(6, { 4: "keep me" }), 4);
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"f".repeat(64)}.jsonl`;
+      fake.transcripts.set(archivePath, fake.transcripts.get(path)!);
+      fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 600 } });
+      fake.gate = ({ path: read }) => {
+        if (read === path) throw new Error("SOURCE_UNREADABLE: Failed to open: permission denied");
+      };
+      // Not "gone": the page must not say the original no longer exists.
+      expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("failed");
+      expect(fake.calls.some((call) => call.path === archivePath)).toBe(false);
+    });
+
     it("still says missing when neither the original nor a kept copy exists", async () => {
       const { path, locator } = await savedPassage("none", lines(6, { 4: "keep me" }), 4);
       fake.transcripts.delete(path);

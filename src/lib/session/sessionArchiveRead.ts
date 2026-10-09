@@ -1,5 +1,5 @@
 /**
- * Reading a session's kept copy (보관한 원本) when its original is gone.
+ * Reading a session's kept copy (보관한 원본) when its original is gone.
  */
 import { claudeCodeArchiveDir } from "../claude/claudeTauri";
 import { getKernelRepository } from "../record-kernel/kernelRepository";

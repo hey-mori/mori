@@ -87,11 +87,15 @@ export function SessionArchiveControl({ sessionId }: { sessionId: string }) {
 
 function useModal(onClose: () => void, busy: () => boolean) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  // Read through refs so a re-render (a phase change) never re-runs the effect
+  // and bounces focus out of the dialog and back.
+  const latest = useRef({ onClose, busy });
+  latest.current = { onClose, busy };
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (!busy()) onClose();
+        if (!latest.current.busy()) latest.current.onClose();
         return;
       }
       trapTabKey(event, dialogRef.current);
@@ -102,7 +106,7 @@ function useModal(onClose: () => void, busy: () => boolean) {
       document.removeEventListener("keydown", onKey);
       previous?.focus();
     };
-  }, [onClose, busy]);
+  }, []);
   return dialogRef;
 }
 
@@ -119,6 +123,7 @@ function KeepDialog({
   const busy = useRef(false);
   const ref = useModal(onClose, () => busy.current);
   const keep = async () => {
+    if (busy.current) return;
     busy.current = true;
     setPhase("keeping");
     try {
@@ -153,10 +158,10 @@ function KeepDialog({
               <ul className="session-archive-facts">
                 <li>크기: {sizeBytes ? `약 ${formatArchiveBytes(sizeBytes)}` : "보관할 때 확인합니다"}</li>
                 <li>
-                  담기는 것: 메시지와 도구 실행, 그 결과 전부. 도구가 읽거나 출력한 비밀번호, 키, 내부 주소가
-                  그대로 들어 있을 수 있습니다.
+                  담기는 것: 메시지, 붙여 넣거나 읽은 이미지, 도구 실행과 그 결과 전부. 도구가 읽거나 출력한
+                  비밀번호, 키, 내부 주소가 그대로 들어 있을 수 있습니다.
                 </li>
-                <li>담기지 않는 것: 하위 에이전트 대화, 따로 저장된 큰 도구 결과와 이미지, 보관 뒤에 이어진 대화</li>
+                <li>담기지 않는 것: 하위 에이전트 대화, 따로 저장된 큰 도구 결과 파일, 보관 뒤에 이어진 대화</li>
                 <li>보관 위치: Mori 저장 폴더 안 (archives). 따로 백업되지는 않습니다.</li>
                 <li>원본이 지워진 뒤에도 Mori에서 열고 찾을 수 있습니다. 에이전트가 이어서 쓸 수 있는 세션은 아닙니다.</li>
                 <li>언제든 지울 수 있고, 지워도 에이전트의 원본에는 영향이 없습니다.</li>
@@ -195,6 +200,7 @@ function RemoveDialog({ kept, onClose, onRemove }: { kept: KeptArchive; onClose:
   const busy = useRef(false);
   const ref = useModal(onClose, () => busy.current);
   const remove = async () => {
+    if (busy.current) return;
     busy.current = true;
     setPhase("removing");
     try {
@@ -224,7 +230,8 @@ function RemoveDialog({ kept, onClose, onRemove }: { kept: KeptArchive; onClose:
         <div className="project-modal-body">
           <p className="session-archive-lead">
             {day(kept.source.capturedAt)}에 보관한 {formatArchiveBytes(kept.locator.bytes)} 사본을 지울까요? 에이전트의 원본에는
-            영향이 없지만, 원본이 이미 지워졌다면 이 세션의 대화는 다시 열 수 없습니다. 이 대화에서 남긴 기록과 저장한 구절은 그대로입니다.
+            영향이 없지만, 원본이 이미 지워졌다면 이 사본으로는 더 이상 열 수 없습니다(전에 가져온 기록이 있으면 그것만 남습니다). 이
+            대화에서 남긴 기록과 저장한 구절은 그대로입니다.
           </p>
           {phase === "failed" ? (
             <p className="project-modal-error" role="alert">
