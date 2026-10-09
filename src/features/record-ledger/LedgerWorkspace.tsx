@@ -45,6 +45,11 @@ export function LedgerWorkspace() {
   // at request time because an untyped note has no record yet, so the intent is
   // held until the first save mints one.
   const pendingProjectRef = useRef<string | null>(null);
+  // Arriving from a project's "이 프로젝트에서 찾기" is a request to FIND, so the
+  // search field takes focus instead of the capture editor. Otherwise the query
+  // the user starts typing lands in a fresh note and autosaves as one. The
+  // editor takes focus again as soon as the user opens a note or starts one.
+  const [arrivedToFind, setArrivedToFind] = useState(() => Boolean(projectScope));
 
   // Both global entry points route through the same actions the in-workspace
   // controls use, rather than setting state behind their backs. That is what
@@ -115,6 +120,7 @@ export function LedgerWorkspace() {
   // captured closure.
   const nonceRef = useRef(0);
   const remount = () => {
+    setArrivedToFind(false);
     nonceRef.current += 1;
     setEditorNonce(nonceRef.current);
   };
@@ -245,6 +251,7 @@ export function LedgerWorkspace() {
         now={now}
         projectScopeId={projectScope}
         onClearProjectScope={clearProjectScope}
+        focusSearch={arrivedToFind}
       />
       {showNoteEditor ? (
         <NoteEditorPane
@@ -257,6 +264,7 @@ export function LedgerWorkspace() {
           onRecordDiscarded={handleRecordDiscarded}
           onOpenRecord={openRecord}
           now={now}
+          autoFocusEditor={!arrivedToFind}
         />
       ) : (
         <DocumentEditor

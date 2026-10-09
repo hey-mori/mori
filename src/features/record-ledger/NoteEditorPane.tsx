@@ -61,7 +61,10 @@ export function NoteEditorPane({
   onOpenRecord,
   paneId,
   now,
+  autoFocusEditor = true,
 }: {
+  /** False when the user came to find something, not to write. */
+  autoFocusEditor?: boolean;
   /** The selected note record, or null for a brand-new note. */
   note: MoriRecord | null;
   ledger: RecordLedger;
@@ -471,7 +474,7 @@ export function NoteEditorPane({
               docId={note?.id ?? null}
               onChange={onChange}
               placeholder={"무엇이든 적어보세요"}
-              autoFocus
+              autoFocus={autoFocusEditor}
               onOpenLink={handleOpenLink}
               revealSpan={pendingSpan}
             />
