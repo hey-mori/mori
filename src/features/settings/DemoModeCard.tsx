@@ -22,7 +22,7 @@ export function DemoModeCard() {
   );
   const refreshSqlite = useSqliteStore((state) => state.refresh);
   const [confirmingReset, setConfirmingReset] = useState(false);
-  const [left, setLeft] = useState({ archives: 0, snapshots: 0 });
+  const [left, setLeft] = useState({ archives: 0, snapshots: 0, database: false });
   const [resetting, setResetting] = useState(false);
 
   const isDemo = mode === "demo";
@@ -78,7 +78,9 @@ export function DemoModeCard() {
         <SettingsRow
           label="데이터 전체 초기화"
           description={
-            (left.archives > 0 || left.snapshots > 0) && !confirmingReset
+            left.database && !confirmingReset
+              ? "저장소의 데이터베이스를 비우지 못해 기록, 보관한 원본, 복구용 스냅샷이 그대로 남아 있습니다. 저장소 상태를 확인한 뒤 다시 시도하세요."
+              : (left.archives > 0 || left.snapshots > 0) && !confirmingReset
               ? `지우지 못한 파일이 저장 폴더에 남아 있습니다: ${[
                   left.archives > 0 ? `보관한 원본 ${left.archives}개 (archives)` : null,
                   left.snapshots > 0 ? `복구용 스냅샷 ${left.snapshots}개 (backups)` : null,
@@ -108,8 +110,8 @@ export function DemoModeCard() {
                   onClick={async () => {
                     setResetting(true);
                     try {
-                      const { archivesLeft, snapshotsLeft } = await clearAllDataAndViewDemo();
-                      setLeft({ archives: archivesLeft, snapshots: snapshotsLeft });
+                      const { archivesLeft, snapshotsLeft, databaseCleared } = await clearAllDataAndViewDemo();
+                      setLeft({ archives: archivesLeft, snapshots: snapshotsLeft, database: !databaseCleared });
                       await refreshSqlite();
                     } finally {
                       setResetting(false);

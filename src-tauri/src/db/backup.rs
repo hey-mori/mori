@@ -181,11 +181,47 @@ fn prune_backups(dir: &Path) {
     }
 }
 
+/// Exactly the name `ensure_migrated` writes: `mori-pre-v<N>-<millis>.sqlite`.
+/// Narrow on purpose: prune and permanent deletion remove only these, never a
+/// copy a user saved beside them under a Mori-like name.
 fn is_backup_file(path: &Path) -> bool {
-    path.file_name()
-        .and_then(|name| name.to_str())
-        .map(|name| name.starts_with("mori-") && name.ends_with(".sqlite"))
-        .unwrap_or(false)
+    let Some(name) = path.file_name().and_then(|name| name.to_str()) else { return false };
+    let Some(rest) = name.strip_prefix("mori-pre-v").and_then(|rest| rest.strip_suffix(".sqlite")) else {
+        return false;
+    };
+    let mut parts = rest.split('-');
+    let digits = |part: Option<&str>| part.is_some_and(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
+    digits(parts.next()) && digits(parts.next()) && parts.next().is_none()
+}
+
+/// Move Mori's snapshots with a relocated storage folder, so they stay listed,
+/// restorable, and inside what a permanent deletion removes. Copy, sync, then
+/// remove the originals; an existing file of the same name is kept.
+pub fn move_backups(from: &Path, to: &Path) -> Result<usize, String> {
+    if from == to {
+        return Ok(0);
+    }
+    let Ok(read) = std::fs::read_dir(from) else { return Ok(0) };
+    let names: Vec<PathBuf> = read
+        .flatten()
+        .filter(|entry| entry.file_type().map(|kind| kind.is_file()).unwrap_or(false))
+        .map(|entry| entry.path())
+        .filter(|path| is_backup_file(path))
+        .collect();
+    if names.is_empty() {
+        return Ok(0);
+    }
+    std::fs::create_dir_all(to).map_err(|error| format!("Failed to create backups dir: {error}"))?;
+    for path in &names {
+        let target = to.join(file_name_of(path));
+        if !target.exists() {
+            std::fs::copy(path, &target).map_err(|error| format!("Failed to move a backup: {error}"))?;
+        }
+    }
+    for path in &names {
+        let _ = std::fs::remove_file(path);
+    }
+    Ok(names.len())
 }
 
 fn file_name_of(path: &Path) -> String {
@@ -284,7 +320,7 @@ mod tests {
         std::fs::create_dir_all(&backups).unwrap();
         // Pre-seed more than the cap with distinct modified times.
         for i in 0..(MAX_BACKUPS + 3) {
-            let path = backups.join(format!("mori-old-{i:03}.sqlite"));
+            let path = backups.join(format!("mori-pre-v{}-{i}.sqlite", 100 + i));
             std::fs::write(&path, b"x").unwrap();
         }
         let db = temp.path().join("mori.sqlite");
@@ -333,14 +369,22 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let backups = dir.path().join("backups");
         std::fs::create_dir_all(&backups).unwrap();
-        std::fs::write(backups.join("mori-pre-V014-1.sqlite"), "a").unwrap();
-        std::fs::write(backups.join("mori-pre-V009-2.sqlite"), "b").unwrap();
+        std::fs::write(backups.join("mori-pre-v13-1791558670015.sqlite"), "a").unwrap();
+        std::fs::write(backups.join("mori-pre-v8-2.sqlite"), "b").unwrap();
         std::fs::write(backups.join("my-own-copy.sqlite"), "keep").unwrap();
+        std::fs::write(backups.join("mori-export.sqlite"), "keep").unwrap();
+        std::fs::write(backups.join("mori-pre-v13-keep.sqlite"), "keep").unwrap();
         std::fs::write(backups.join("notes.txt"), "keep").unwrap();
         assert_eq!(remove_all_backups_in(&backups), (2, 0));
         let mut left: Vec<String> = std::fs::read_dir(&backups).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
         left.sort();
-        assert_eq!(left, vec!["my-own-copy.sqlite".to_string(), "notes.txt".to_string()]);
+        assert_eq!(
+            left,
+            vec!["mori-export.sqlite", "mori-pre-v13-keep.sqlite", "my-own-copy.sqlite", "notes.txt"]
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>()
+        );
         assert_eq!(remove_all_backups_in(&dir.path().join("absent")), (0, 0));
     }
 
@@ -350,10 +394,24 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let elsewhere = dir.path().join("elsewhere");
         std::fs::create_dir_all(&elsewhere).unwrap();
-        std::fs::write(elsewhere.join("mori-user-1.sqlite"), "someone else's").unwrap();
+        std::fs::write(elsewhere.join("mori-pre-v1-1.sqlite"), "someone else's").unwrap();
         let link = dir.path().join("backups");
         std::os::unix::fs::symlink(&elsewhere, &link).unwrap();
         assert_eq!(remove_all_backups_in(&link), (0, 1));
-        assert!(elsewhere.join("mori-user-1.sqlite").exists());
+        assert!(elsewhere.join("mori-pre-v1-1.sqlite").exists());
+    }
+
+    #[test]
+    fn snapshots_move_with_a_relocated_storage_folder() {
+        let dir = TempDir::new().unwrap();
+        let old = dir.path().join("old/backups");
+        let new = dir.path().join("new/backups");
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("mori-pre-v12-1.sqlite"), "snap").unwrap();
+        std::fs::write(old.join("mine.sqlite"), "user").unwrap();
+        assert_eq!(move_backups(&old, &new).unwrap(), 1);
+        assert!(new.join("mori-pre-v12-1.sqlite").exists());
+        assert!(!old.join("mori-pre-v12-1.sqlite").exists());
+        assert!(old.join("mine.sqlite").exists());
     }
 }

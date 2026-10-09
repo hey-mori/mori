@@ -707,6 +707,7 @@ pub fn set_storage_location(
     let new_db = chosen.join("mori.sqlite");
     // Kept transcript copies (보관한 원본) live in the storage folder too.
     let old_archives = crate::claude::archive::archive_root()?;
+    let old_backups = crate::db::backup::backups_dir()?;
 
     // Drop the cached connection so the file unlocks (WAL checkpoints on the
     // last close) before anything moves; the next command reopens it.
@@ -726,6 +727,9 @@ pub fn set_storage_location(
     }
     // The archives follow, so the kernel's records of them still resolve.
     crate::claude::archive::move_archives(&old_archives, &crate::claude::archive::archive_root()?)?;
+    // So do the snapshots: left behind they would hold records and passages
+    // that nothing lists, restores or permanently deletes.
+    crate::db::backup::move_backups(&old_backups, &crate::db::backup::backups_dir()?)?;
 
     Ok(StorageRelocation {
         path: Some(chosen.to_string_lossy().to_string()),
