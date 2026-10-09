@@ -374,7 +374,7 @@ function WindowMessage({
   focus,
 }: {
   message: ClaudeMessage;
-  focus: { query: string; seq: number } | null;
+  focus: { query: string; wholeWords: boolean; seq: number } | null;
 }) {
   const [open, setOpen] = useState(focus !== null);
   // A search result opened at this message: show it whole, so the match is
@@ -400,7 +400,7 @@ function WindowMessage({
       </div>
       <p className="session-window-text">
         {focus
-          ? splitOnPhrase(text, focus.query).map((part, index) =>
+          ? splitOnPhrase(text, focus.query, focus.wholeWords).map((part, index) =>
               part.match ? <mark key={index}>{part.text}</mark> : <span key={index}>{part.text}</span>,
             )
           : text}
@@ -444,13 +444,23 @@ function TranscriptSearch({ state, search }: { state: LoadedState; search: Sessi
   const cancel = useSessionStore((store) => store.cancelSessionSearch);
   const openHit = useSessionStore((store) => store.openSessionSearchHit);
   const [query, setQuery] = useState(search?.query ?? "");
+  const [partial, setPartial] = useState(search ? !search.wholeWords : false);
   const [listOpen, setListOpen] = useState(true);
   const searching = search?.status === "searching";
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!normalizeQuery(query)) return;
     setListOpen(true);
-    void start(query);
+    void start(query, !partial);
+  };
+  const togglePartial = () => {
+    const next = !partial;
+    setPartial(next);
+    // A search already showing is run again under the new rule.
+    if (search && normalizeQuery(query)) {
+      setListOpen(true);
+      void start(query, !next);
+    }
   };
   const select = (hit: ClaudeCodeSearchHit) => {
     setListOpen(false);
@@ -479,9 +489,20 @@ function TranscriptSearch({ state, search }: { state: LoadedState; search: Sessi
             찾기
           </Button>
         )}
+        <button
+          type="button"
+          className={`search-mode-toggle${partial ? " is-on" : ""}`}
+          aria-pressed={partial}
+          onClick={togglePartial}
+          title="단어 중간에 들어 있는 경우도 찾습니다"
+        >
+          부분 일치
+        </button>
         <InfoHint label="이 대화에서 찾기">
           원본 대화 파일을 지금 읽어서 최근부터 이전 순서로 찾습니다. 대소문자는 구분하지 않고, 화면에 보이는 메시지
-          내용만 찾습니다. 결과와 검색어는 저장하지 않습니다. 찾기를 시작한 뒤에 추가된 내용은 포함되지 않습니다.
+          내용만 찾습니다. 영문과 숫자는 단어 단위로 찾아서 "Candidate B"가 "candidate build"에 걸리지 않습니다. 단어 중간도
+          찾으려면 부분 일치를 켜세요. 한글은 조사가 붙어도 찾습니다. 결과와 검색어는 저장하지 않습니다. 찾기를 시작한
+          뒤에 추가된 내용은 포함되지 않습니다.
         </InfoHint>
       </form>
 
@@ -538,7 +559,7 @@ function TranscriptSearch({ state, search }: { state: LoadedState; search: Sessi
             </Button>
           ) : null}
           {retryable ? (
-            <Button size="sm" variant="ghost" icon={RotateCw} onClick={() => void start(search.query)}>
+            <Button size="sm" variant="ghost" icon={RotateCw} onClick={() => void start(search.query, search.wholeWords)}>
               다시 찾기
             </Button>
           ) : null}

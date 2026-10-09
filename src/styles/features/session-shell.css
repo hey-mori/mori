@@ -982,3 +982,23 @@
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
+
+/* "부분 일치": a small on/off chip beside a search field (session and project
+   search). Off means whole words for ASCII letters and digits. */
+.search-mode-toggle {
+  flex: none;
+  padding: 3px var(--base-space-2);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-pill);
+  background: transparent;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.search-mode-toggle.is-on {
+  border-color: var(--base-text-muted);
+  background: var(--base-surface-subtle);
+  color: var(--base-text);
+}

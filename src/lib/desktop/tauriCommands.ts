@@ -409,6 +409,7 @@ export type TauriCommandMap = {
       sourceId: string | null;
       anchor: string | null;
       maxHits: number | null;
+      wholeWords: boolean;
     };
     output: ClaudeCodeSearchBatch;
   };

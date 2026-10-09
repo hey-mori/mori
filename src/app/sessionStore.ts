@@ -552,7 +552,8 @@ export type SessionState = {
    */
   sessionSearch: SessionSearchState | null;
   /** Start searching the open transcript for a phrase, from its end back. */
-  searchSessionWindow: (query: string) => Promise<void>;
+  /** Whole words unless `wholeWords` is false ("부분 일치"). */
+  searchSessionWindow: (query: string, wholeWords?: boolean) => Promise<void>;
   /** Continue the search into earlier history. */
   searchMoreSessionWindow: () => Promise<void>;
   /** Stop a running search; what it found stays. */
@@ -574,6 +575,7 @@ export type SessionState = {
     sourceId: string;
     hit: ClaudeCodeSearchHit;
     query: string;
+    wholeWords: boolean;
     stillWanted: () => boolean;
   }) => Promise<SourceHitOutcome>;
   /**
@@ -1678,7 +1680,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
   loadEarlierSessionWindow: () => pageSessionWindow("earlier"),
-  searchSessionWindow: (query) => startSessionSearch(query),
+  searchSessionWindow: (query, wholeWords = true) => startSessionSearch(query, wholeWords),
   searchMoreSessionWindow: () => continueSessionSearch(),
   cancelSessionSearch: () => {
     searchSequence += 1;
@@ -1695,7 +1697,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
   },
   openSessionSearchHit: (hit) => openSearchHit(hit),
-  openSessionAtSourceHit: async ({ sessionId, sourcePath, sourceId, hit, query, stillWanted }) => {
+  openSessionAtSourceHit: async ({ sessionId, sourcePath, sourceId, hit, query, wholeWords, stillWanted }) => {
     // An open of its own: it supersedes any other open in flight, and any
     // in-session search or jump of the session shown before.
     const token = ++discoveredOpenSequence;
@@ -1713,7 +1715,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!current()) return "superseded";
     // The window ends at the matched record: its last event is that record.
     const shown = hitWindow.events[hitWindow.events.length - 1];
-    if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, query)) return "changed";
+    if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, query, wholeWords)) return "changed";
     let newer: ClaudeCodeSessionWindow | null = null;
     if (!hitWindow.reachedEnd) {
       try {
@@ -1740,6 +1742,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       sessionWindow: jumpedWindowState(windowStateFrom(sessionId, hitWindow, token), hitWindow, newer, {
         messageId: hit.messageId,
         query,
+        wholeWords,
         seq: focusSeq,
       }),
       sessionSearch: null,
@@ -2135,7 +2138,7 @@ function searchOfView(search: SessionSearchState | null, window: SessionWindowSt
     : null;
 }
 
-async function startSessionSearch(query: string): Promise<void> {
+async function startSessionSearch(query: string, wholeWords: boolean): Promise<void> {
   const { getState, setState } = useSessionStore;
   const phrase = normalizeQuery(query);
   const window = getState().sessionWindow;
@@ -2150,6 +2153,7 @@ async function startSessionSearch(query: string): Promise<void> {
       openToken: window.openToken,
       sourcePath: window.sourcePath,
       query: phrase,
+      wholeWords,
     }),
   });
   await runSessionSearch(sequence, SEARCH_PAGE_HITS);
@@ -2192,6 +2196,7 @@ async function runSessionSearch(sequence: number, target: number): Promise<void>
           ? { beforeOffset: search.cursor.beforeOffset, sourceId: search.sourceId, anchor: search.cursor.anchor }
           : undefined,
         Math.min(SEARCH_PAGE_HITS, target - search.hits.length),
+        search.wholeWords,
       );
     } catch (error) {
       const latest = getState().sessionSearch;
@@ -2248,7 +2253,7 @@ async function openSearchHit(hit: ClaudeCodeSearchHit): Promise<void> {
     // last event. That names the record exactly, even when an earlier record
     // carries the same id.
     const shown = hitWindow.events[hitWindow.events.length - 1];
-    if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, search.query)) {
+    if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, search.query, search.wholeWords)) {
       fail({ kind: "changed", message: "SOURCE_CHANGED: the matched message is no longer at its place." });
       return;
     }
@@ -2271,6 +2276,7 @@ async function openSearchHit(hit: ClaudeCodeSearchHit): Promise<void> {
       sessionWindow: jumpedWindowState(now.window, hitWindow, newer, {
         messageId: hit.messageId,
         query: search.query,
+        wholeWords: search.wholeWords,
         seq: sequence,
       }),
       sessionSearch: { ...now.search, opening: null, openError: null },
