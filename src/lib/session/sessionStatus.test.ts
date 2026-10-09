@@ -51,7 +51,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   clearLastApplied: () => {},
   resetToDemo: () => {},
   beginEmptySession: () => ({} as never),
-  clearAllDataAndViewDemo: async () => {},
+  clearAllDataAndViewDemo: async () => ({ archivesLeft: 0 }),
   runQuickPass: async () => null,
   clearAnalysis: () => {},
   loadAnalysisRunHistory: () => null,

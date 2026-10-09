@@ -443,7 +443,8 @@ export type SessionState = {
    * and repository settings are preserved. In desktop mode it also wipes the
    * SQLite database (sessions the user registered there). Irreversible.
    */
-  clearAllDataAndViewDemo: () => Promise<void>;
+  /** Resolves how many kept transcript copies could not be removed. */
+  clearAllDataAndViewDemo: () => Promise<{ archivesLeft: number }>;
   runQuickPass: (
     provider?: AnalysisProvider,
     runSettings?: QuickPassAnalysisSettings,
@@ -1353,6 +1354,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     return stored;
   },
   clearAllDataAndViewDemo: async () => {
+    let archivesLeft = 0;
     const repository = getRepository();
     repository.clearAllLocalData();
     const service = getPersistenceService();
@@ -1362,7 +1364,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // new empty local session still opens; the SQLite list refresh will reveal any rows
       // that survived so the state stays honest rather than silently wrong.
       try {
-        await service.clearAllDesktopData();
+        const result = await service.clearAllDesktopData();
+        archivesLeft = result?.archivesLeft ?? 0;
       } catch {
         // Intentionally swallowed — see above. The SQLite store's own refresh
         // surfaces the real post-clear state.
@@ -1398,6 +1401,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       dataResetNonce: get().dataResetNonce + 1,
     });
+    return { archivesLeft };
   },
   runQuickPass: async (provider, runSettings) => {
     const repository = getRepository();

@@ -42,6 +42,12 @@ pub struct ClearAllDataResult {
     /// silently left them was the bug this field was added with.
     pub kernel_records_deleted: u64,
     pub durable_documents_deleted: u64,
+    /// Kept transcript copies removed from the archive folder (set by the
+    /// command; the database layer does not touch files).
+    pub archives_deleted: u64,
+    /// Kept copies that could not be removed (or a folder that could not be
+    /// found), so the reset can say they are still on disk.
+    pub archives_left: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
