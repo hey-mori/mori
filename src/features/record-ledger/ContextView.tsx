@@ -279,7 +279,9 @@ export function ContextView() {
   const closeProjectSearch = useProjectSearchStore((state) => state.close);
   const projectSearchId = useProjectSearchStore((state) => state.search?.projectId ?? null);
   useEffect(() => {
-    if (!projectSearchId) return;
+    // While the kernel is still loading, the page holds no records yet: that is
+    // not "every session left the project", so nothing is restricted.
+    if (!projectSearchId || loading) return;
     // Recompute the scope for the searched project itself, whatever is selected.
     const scoped =
       searchInventory?.kind === "ok" && searchInventory.projectId === projectSearchId
@@ -297,7 +299,7 @@ export function ContextView() {
       projectSearchId,
       new Set(scoped.kind === "ok" ? scoped.entries.map((entry) => entry.sessionId) : []),
     );
-  }, [projectSearchId, searchInventory, contexts, records, restrictProjectSearch]);
+  }, [projectSearchId, loading, searchInventory, contexts, records, restrictProjectSearch]);
   // Selecting another project stops the scan (what it found stays for the
   // way back); leaving 프로젝트 does too.
   useEffect(() => {

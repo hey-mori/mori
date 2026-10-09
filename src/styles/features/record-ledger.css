@@ -4870,3 +4870,16 @@
   background: var(--base-status-warning-soft);
   color: inherit;
 }
+
+.project-search-more {
+  padding: 2px var(--base-space-3);
+  border: 0;
+  background: transparent;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  cursor: pointer;
+}
+
+.project-search-more:hover {
+  color: var(--base-text);
+}

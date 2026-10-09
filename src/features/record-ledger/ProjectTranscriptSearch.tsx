@@ -17,6 +17,10 @@ import { normalizeQuery, SEARCH_QUERY_MAX_CHARS } from "../../lib/session/sessio
 
 const ROLE: Record<string, string> = { human: "나", assistant: "Claude" };
 
+/** Matches shown per session before "더 보기": which sessions hold the phrase
+ *  is the first question, so one busy session must not bury the others. */
+const HITS_SHOWN = 3;
+
 const SOURCE_STATUS: Record<SourceStatus, string> = {
   pending: "아직 찾지 않음",
   searching: "찾는 중",
@@ -58,6 +62,7 @@ export function ProjectTranscriptSearch({
   const store = useProjectSearchStore();
   const search = store.search?.projectId === inventory.projectId ? store.search : null;
   const [query, setQuery] = useState(search?.query ?? "");
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const searching = search?.status === "searching";
   const coverage = search ? projectSearchCoverage(search) : null;
   const entryById = new Map(inventory.entries.map((entry) => [entry.sessionId, entry]));
@@ -158,7 +163,7 @@ export function ProjectTranscriptSearch({
                     </span>
                   </p>
                   <ol className="project-search-hits">
-                    {source.hits.map((hit) => {
+                    {(expanded.has(entry.sessionId) ? source.hits : source.hits.slice(0, HITS_SHOWN)).map((hit) => {
                       const key = `${entry.sessionId}:${hit.recordStart}`;
                       return (
                         <li key={key}>
@@ -192,6 +197,15 @@ export function ProjectTranscriptSearch({
                       );
                     })}
                   </ol>
+                  {source.hits.length > HITS_SHOWN && !expanded.has(entry.sessionId) ? (
+                    <button
+                      type="button"
+                      className="project-search-more"
+                      onClick={() => setExpanded((current) => new Set(current).add(entry.sessionId))}
+                    >
+                      이 세션에서 {source.hits.length - HITS_SHOWN}개 더 보기
+                    </button>
+                  ) : null}
                 </li>
               ))}
             </ol>
