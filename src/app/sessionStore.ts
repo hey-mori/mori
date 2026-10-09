@@ -893,13 +893,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           savedAt: localDraft.savedAt,
         };
         repository.saveCurrentSessionDraft(sqliteDraft);
-        repository.clearSessionImports(sqliteDraft.session.id);
-        for (const entry of loaded.imports) {
-          repository.addSessionImport(sqliteDraft.session.id, {
-            source: entry.source,
-            events: entry.events,
-          });
-        }
+        mirrorDesktopImports(repository, sqliteDraft.session.id, loaded.imports);
         draft = sqliteDraft;
         imports = repository.listSessionImports(sqliteDraft.session.id);
         analysisRecord = repository.loadSessionAnalysis(sqliteDraft.session.id);
@@ -2240,13 +2234,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       savedAt: repository.loadStoredSessionDraft(sessionId)?.savedAt ?? loaded.draft.savedAt,
     });
     const storedDraft = repository.setCurrentSession(sessionId) ?? loaded.draft;
-    repository.clearSessionImports(storedDraft.session.id);
-    for (const entry of loaded.imports) {
-      repository.addSessionImport(storedDraft.session.id, {
-        source: entry.source,
-        events: entry.events,
-      });
-    }
+    mirrorDesktopImports(repository, storedDraft.session.id, loaded.imports);
 
     const refreshedImports = repository.listSessionImports(storedDraft.session.id);
     const analysisRecord = repository.loadSessionAnalysis(storedDraft.session.id);
@@ -2734,6 +2722,29 @@ async function showWindowAtRecord({
     sessionSearch: null,
   });
   return "opened";
+}
+
+/**
+ * Mirror the imports read back from SQLite into local storage without
+ * restamping them. The SQLite read stamps every import "now"; kept as is, a
+ * reopened session's imports looked freshly made to everything that reads
+ * `savedAt` (the 가져오기 완료 notice, its 24h window). A load is not a new
+ * import: keep the earlier local stamp, else the source's capture time.
+ */
+function mirrorDesktopImports(
+  repository: ReturnType<typeof getRepository>,
+  sessionId: string,
+  loaded: readonly StoredSessionImport[],
+): void {
+  const earlier = new Map(repository.listSessionImports(sessionId).map((entry) => [entry.source.id, entry.savedAt]));
+  repository.clearSessionImports(sessionId);
+  const kept: StoredSessionImport[] = [];
+  for (const entry of loaded) {
+    const stored = repository.addSessionImport(sessionId, { source: entry.source, events: entry.events });
+    const savedAt = earlier.get(entry.source.id) ?? (entry.source.capturedAt || stored.savedAt);
+    if (savedAt !== stored.savedAt) kept.push({ ...stored, savedAt });
+  }
+  if (kept.length > 0) repository.putSessionImports(sessionId, kept);
 }
 
 function withArchive<T extends LoadedSessionWindow>(state: T, archive: LoadedSessionWindow["archive"] | undefined): T {

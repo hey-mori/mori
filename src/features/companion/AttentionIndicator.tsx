@@ -21,6 +21,7 @@ import { useAutoImportSessions } from "../background-watch/useAutoImportSessions
 import { useNotifications } from "./useNotifications";
 import { useOsNotifications } from "./useOsNotifications";
 import { NotificationFeedList } from "./NotificationFeedList";
+import { isDerivedFromHistory, toastArrival } from "../../lib/notifications/toastArrival";
 
 /**
  * 알림 — the notification bell + a right-side notification drawer.
@@ -84,6 +85,8 @@ export function AttentionIndicator({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const knownNotificationIdsRef = useRef<Set<string> | null>(null);
+  const runStartedAtRef = useRef(Date.now());
+  const historyIdsRef = useRef<Set<string>>(new Set());
   const toastReadyRef = useRef(false);
 
   const unreadCount = useMemo(
@@ -156,21 +159,32 @@ export function AttentionIndicator({
   // stays quiet so a backlog never flashes on load.
   useEffect(() => {
     const nextIds = new Set(notifications.map((notification) => notification.id));
-    const knownIds = knownNotificationIdsRef.current;
-    if (!knownIds) {
-      knownNotificationIdsRef.current = nextIds;
-      return;
-    }
-    if (!toastReadyRef.current) return;
-
-    const fresh = notifications.find((notification) => !knownIds.has(notification.id));
+    const previousIds = knownNotificationIdsRef.current;
     knownNotificationIdsRef.current = nextIds;
-    if (!fresh) return;
+    // Items derived from stored history are remembered for the whole run, so
+    // switching back to a session never makes them arrive again. Others keep
+    // the previous-feed rule: a re-detected file may announce itself again.
+    const historyIds = historyIdsRef.current;
+    const known = new Set([...(previousIds ?? []), ...historyIds]);
+    for (const notification of notifications) {
+      if (isDerivedFromHistory(notification)) historyIds.add(notification.id);
+    }
+    // The first feed and anything arriving while the shell settles (hydration
+    // filling the feed) are the backlog: absorbed above, never toasted.
+    if (!previousIds || !toastReadyRef.current) return;
 
-    setToast(fresh);
+    const fresh = toastArrival(notifications, known, runStartedAtRef.current);
+    if (fresh) setToast(fresh);
+  }, [notifications]);
+
+  // The toast hides on its own clock. Tied to the feed effect, every feed
+  // recompute (a session switch, an auto-import pass) cancelled the timer and
+  // left the toast on screen indefinitely.
+  useEffect(() => {
+    if (!toast) return;
     const timeout = window.setTimeout(() => setToast(null), 4600);
     return () => window.clearTimeout(timeout);
-  }, [notifications]);
+  }, [toast]);
 
   // Measure the sidebar's right edge on open so the drawer docks flush against
   // it — correct whether the sidebar is expanded or collapsed.
