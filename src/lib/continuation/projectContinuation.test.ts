@@ -84,6 +84,13 @@ describe("buildProjectContinuationPack · inclusion", () => {
     expect(pack.excluded).toEqual({ unconfirmed: 2, removed: 2, secretLike: 0 });
   });
 
+  it("cites a decision kept from a conversation by its words, without quote markers", () => {
+    const pack = buildProjectContinuationPack(
+      input({ records: [record("d1", "decision", { title: "SMB on nuc-srv", body: "> **Decision: Candidate B**, SMB served from nuc-srv." })] }),
+    );
+    expect(pack.decisions[0]?.line).toBe("Decision: Candidate B, SMB served from nuc-srv.");
+  });
+
   it("needs an active kernel record for an auto-imported session but not for a hand-imported one", () => {
     const pack = buildProjectContinuationPack(
       input({
