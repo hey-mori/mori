@@ -49,7 +49,8 @@ import { ProjectContinuationModal } from "./ProjectContinuationModal";
 import { SessionMembershipControl } from "./SessionMembershipControl";
 import { buildProjectContinuationPack } from "../../lib/continuation/projectContinuation";
 import { ProjectLiveSection } from "./ProjectLiveSection";
-import { useProjectLive } from "./useProjectLive";
+import { useConfirmedProjectLive, useProjectLive } from "./useProjectLive";
+import { liveSourcesOf } from "../../lib/live-intake/confirmedLiveSources";
 import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import { sessionLastActiveAt } from "../../lib/session/sessionActivity";
@@ -367,14 +368,30 @@ export function ContextView() {
   }, [continuing, activeGroup, contexts, records, relations]);
 
   const title = activeContext?.name ?? activeGroup?.name ?? "";
-  // Matched by the project's display leaf, the same key a saved session resolves
-  // by, and refused when two observed projects share it (see
-  // `selectProjectionForLabel`).
-  const live = useProjectLive(title || null);
+  // A reviewed project's 현재 상황 follows its confirmed sessions, wherever
+  // their agents worked: membership picks the sessions, their observed rows
+  // say what happened and how long ago. Nothing is read while the kernel is
+  // loading, since an empty member list then means "not known yet".
+  const liveSources = useMemo(() => {
+    if (!activeContext || loading) return null;
+    return liveSourcesOf(searchInventory?.kind === "ok" ? searchInventory.entries : []);
+  }, [activeContext, loading, searchInventory]);
+  const confirmedLive = useConfirmedProjectLive(
+    activeContext && liveSources
+      ? { projectId: activeContext.id, label: activeContext.name, keys: liveSources.keys }
+      : null,
+  );
+  // A folder group has no reviewed membership: it is matched by the folder's
+  // display leaf and refused when two observed folders share it (see
+  // `selectProjectPathForLabel`).
+  const folderLive = useProjectLive(activeContext ? null : title || null);
+  const live = activeContext ? confirmedLive.projection : folderLive;
   // A live request names its session by file; the session list knows it by
-  // its Mori id. The discovery descriptors map one to the other.
+  // its Mori id. A reviewed project maps through its own members (a file two
+  // members name opens neither); a folder group through the descriptors.
   const sessionIdByFile = useMemo(() => {
-    const map = new Map<string, string>();
+    if (activeContext) return liveSources?.sessionByKey ?? new Map<string, string | null>();
+    const map = new Map<string, string | null>();
     for (const meta of loadAutoImportMetas()) {
       const id = autoImportedSessionId(meta);
       if (meta.filePath) map.set(meta.filePath, id);
@@ -382,7 +399,8 @@ export function ContextView() {
     }
     return map;
     // Re-read when the live projection changes (a poll may discover a session).
-  }, [live]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeContext, liveSources, folderLive]);
   // A live row opens its session at the agent's latest reply, the part a
   // waiting request waits on; if that cannot be read, the ordinary open.
   const liveOpenSequence = useRef(0);
@@ -644,7 +662,11 @@ export function ContextView() {
                   }}
                 />
               ) : null}
-              <ProjectLiveSection projection={live} openSession={openLiveSession} />
+              <ProjectLiveSection
+                projection={live}
+                openSession={openLiveSession}
+                unconfirmedObserved={activeContext ? confirmedLive.unconfirmedObserved : 0}
+              />
               {children.length > 0 ? (
                 <section className="ctx-section">
                   <p className="ctx-section-label">하위 프로젝트</p>

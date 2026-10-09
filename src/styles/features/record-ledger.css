@@ -2639,6 +2639,12 @@
   margin: 0;
 }
 
+.ctx-live-aside {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .ctx-live-running {
   display: flex;
   flex-direction: column;

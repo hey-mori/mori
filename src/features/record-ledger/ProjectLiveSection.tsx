@@ -67,13 +67,27 @@ export function ProjectLiveSection({
   projection,
   now = Date.now(),
   openSession,
+  unconfirmedObserved = 0,
 }: {
   projection: ProjectProjection | null;
   now?: number;
   /** Maps a request's session file to an action that opens it. */
   openSession?: OpenRequestSession;
+  /**
+   * Sessions observed in the folder named like this project that are not its
+   * confirmed members. Never counted above; only said, so the user knows
+   * there is work Mori saw and did not attribute.
+   */
+  unconfirmedObserved?: number;
 }) {
-  if (!projection) return null;
+  const aside = unconfirmedObserved > 0 ? <UnconfirmedAside count={unconfirmedObserved} /> : null;
+  const asideOnly = aside ? (
+    <section className="ctx-section ctx-live">
+      <p className="ctx-section-label">현재 상황</p>
+      {aside}
+    </section>
+  ) : null;
+  if (!projection) return asideOnly;
 
   const { freshness } = projection;
   const stale = freshness === "stale";
@@ -85,8 +99,8 @@ export function ProjectLiveSection({
 
   // Nothing observed is worth a band, and neither is a stale project with no
   // recorded activity. A calm workspace shows no section at all.
-  if (!stale && counts.length === 0 && !projection.lastActivityAt) return null;
-  if (stale && !projection.lastActivityAt) return null;
+  if (!stale && counts.length === 0 && !projection.lastActivityAt) return asideOnly;
+  if (stale && !projection.lastActivityAt) return asideOnly;
 
   return (
     <section className="ctx-section ctx-live">
@@ -156,7 +170,21 @@ export function ProjectLiveSection({
       )}
 
       <RecentWork projection={projection} now={now} openSession={openSession} />
+      {aside}
     </section>
+  );
+}
+
+/** Observed work this project does not claim, said once and kept quiet. */
+function UnconfirmedAside({ count }: { count: number }) {
+  return (
+    <p className="ctx-live-quiet ctx-live-aside">
+      확정하지 않은 세션 {count}개의 관찰은 넣지 않았습니다
+      <InfoHint label="확정하지 않은 세션 설명">
+        같은 이름의 폴더에서 관찰했지만 이 프로젝트에 넣지 않은 세션입니다. 세션을
+        프로젝트에 넣으면 그 관찰도 여기에 포함됩니다.
+      </InfoHint>
+    </p>
   );
 }
 
