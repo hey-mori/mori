@@ -24,6 +24,7 @@ function projection(overrides: Partial<ProjectProjection> = {}): ProjectProjecti
     runningCount: 0,
     waitingCount: 0,
     blockedCount: 0,
+    blocked: [],
     running: [],
     recentRequests: [],
     waiting: [],

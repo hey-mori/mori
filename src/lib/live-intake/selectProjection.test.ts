@@ -11,6 +11,7 @@ function projection(projectPath: string, label: string): ProjectProjection {
     runningCount: 0,
     waitingCount: 0,
     blockedCount: 0,
+    blocked: [],
     running: [],
     recentRequests: [],
     waiting: [],

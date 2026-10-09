@@ -78,6 +78,8 @@ export type ProjectProjection = {
    *  first. Present tense, so empty once the observation is stale. */
   waiting: ProjectRecentRequest[];
   blockedCount: number;
+  /** Requests the agent stopped on, newest first; empty once stale. */
+  blocked: ProjectRecentRequest[];
   /** Detail for each in-flight request; empty unless `freshness` is not stale. */
   running: ProjectRunningRequest[];
   recentRequests: ProjectRecentRequest[];
@@ -155,6 +157,7 @@ function foldProject(
   let blockedCount = 0;
   const running: ProjectRunningRequest[] = [];
   const waiting: ProjectRecentRequest[] = [];
+  const blocked: ProjectRecentRequest[] = [];
 
   {
     for (const row of rows) {
@@ -174,10 +177,14 @@ function foldProject(
         waitingCount += 1;
         waiting.push({ id: row.id, title: row.title, sessionLabel: row.sessionLabel, sessionKey: row.sessionKey, status: row.status, endedAt: row.endedAt });
       }
-      else if (row.status === "blocked") blockedCount += 1;
+      else if (row.status === "blocked") {
+        blockedCount += 1;
+        blocked.push({ id: row.id, title: row.title, sessionLabel: row.sessionLabel, sessionKey: row.sessionKey, status: row.status, endedAt: row.endedAt });
+      }
     }
     running.sort((a, b) => b.elapsedMs - a.elapsedMs);
     waiting.sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
+    blocked.sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
   }
 
   const ordered = [...rows].sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
@@ -191,6 +198,7 @@ function foldProject(
     waitingCount,
     waiting,
     blockedCount,
+    blocked,
     running,
     recentRequests: ordered.slice(0, recentLimit).map((row) => ({
       id: row.id,

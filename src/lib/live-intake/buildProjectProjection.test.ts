@@ -285,6 +285,32 @@ describe("each request is judged by its own observation", () => {
   });
 });
 
+describe("blocked requests", () => {
+  it("lists a current blocked request so it can be opened, newest first", () => {
+    const out = buildProjectProjections(
+      [
+        row({ id: "b-old", sessionKey: "/s/a.jsonl", status: "blocked", endedAt: ago(40), observedAt: ago(5) }),
+        row({ id: "b-new", sessionKey: "/s/b.jsonl", status: "blocked", endedAt: ago(10), observedAt: ago(5) }),
+      ],
+      { now: NOW },
+    );
+    expect(out[0].blockedCount).toBe(2);
+    expect(out[0].blocked.map((r) => r.id)).toEqual(["b-new", "b-old"]);
+  });
+
+  it("does not list a blocked request whose own observation is stale", () => {
+    const out = buildProjectProjections(
+      [
+        row({ id: "fresh", sessionKey: "/s/a.jsonl", observedAt: ago(1) }),
+        row({ id: "b", sessionKey: "/s/b.jsonl", status: "blocked", observedAt: ago(60 * 8) }),
+      ],
+      { now: NOW },
+    );
+    expect(out[0].blockedCount).toBe(0);
+    expect(out[0].blocked).toEqual([]);
+  });
+});
+
 describe("a projection over chosen sessions", () => {
   it("folds rows from different folders under the project's own label", () => {
     const projection = buildScopedProjection(

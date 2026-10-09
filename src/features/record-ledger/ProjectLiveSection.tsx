@@ -18,7 +18,7 @@
  * InfoHint, not in always-visible prose.
  */
 import type { ReactNode } from "react";
-import { Hand, Radio } from "lucide-react";
+import { CircleAlert, Hand, Radio } from "lucide-react";
 import { withoutPasteMarkers } from "../../lib/session/agentText";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
@@ -143,7 +143,7 @@ export function ProjectLiveSection({
             </p>
           )}
 
-          {projection.running.length > 0 || projection.waiting.length > 0 ? (
+          {projection.running.length > 0 || projection.waiting.length > 0 || projection.blocked.length > 0 ? (
             <ul className="ctx-live-running">
               {/* What waits for the user first: it is the part only they can move. */}
               {projection.waiting.map((request) => (
@@ -152,6 +152,16 @@ export function ProjectLiveSection({
                   <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     내 확인 대기{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
+                  </span>
+                </RequestRow>
+              ))}
+              {/* A stopped agent also needs the user, and a count alone gives no way in. */}
+              {projection.blocked.map((request) => (
+                <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
+                  <CircleAlert size={12} aria-hidden="true" className="ctx-live-row-icon" />
+                  <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
+                  <span className="ctx-live-row-meta">
+                    막힘{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
                   </span>
                 </RequestRow>
               ))}
