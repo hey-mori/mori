@@ -4883,3 +4883,7 @@
 .project-search-more:hover {
   color: var(--base-text);
 }
+
+.project-search-coverage-when {
+  color: var(--base-text-muted);
+}

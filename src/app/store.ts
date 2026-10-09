@@ -5,6 +5,9 @@ import type { ReviewSelection } from "../lib/review-workspace/reviewWorkspace";
 import type { AgentWorkAgentId } from "../lib/trace/sources/ai/agentRegistry";
 
 /** Active tab on the Review surface. Persisted so the user returns to the same tab. */
+/** The project page a session was opened from (see `sessionReturn`). */
+export type SessionReturn = { sessionId: string; contextId: string; label: string; viaSearch: boolean };
+
 export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";
 
 /**
@@ -174,6 +177,13 @@ type AppState = {
   /** A project (context id) 프로젝트 should select when it next renders, set by
    *  a link that names a reviewed project. Consumed once, then cleared. */
   projectContextFocus: string | null;
+  /**
+   * Where the open session was opened from on the 프로젝트 page, for the way
+   * back. A navigation context only: it never says the session belongs to that
+   * project (the breadcrumb, from reviewed membership, says that).
+   */
+  sessionReturn: SessionReturn | null;
+  setSessionReturn: (value: SessionReturn | null) => void;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -296,6 +306,7 @@ export const useAppStore = create<AppState>((set) => ({
   newRecordProjectId: null,
   ledgerProjectScope: null,
   projectContextFocus: null,
+  sessionReturn: null,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -414,5 +425,6 @@ export const useAppStore = create<AppState>((set) => ({
   findInProject: (projectId) => set({ currentView: "ledger", ledgerProjectScope: projectId }),
   openProjectContext: (contextId) => set({ currentView: "contexts", projectContextFocus: contextId }),
   clearProjectContextFocus: () => set({ projectContextFocus: null }),
+  setSessionReturn: (value) => set({ sessionReturn: value }),
   clearLedgerProjectScope: () => set({ ledgerProjectScope: null }),
 }));

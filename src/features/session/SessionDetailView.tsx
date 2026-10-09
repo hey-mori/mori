@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo } from "react";
 import {
+  ArrowLeft,
   ChevronRight,
   Folder,
   FolderGit2,
@@ -33,7 +34,7 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
  */
 import { OverviewView } from "./OverviewView";
 import { SessionSourceWindow } from "./SessionSourceWindow";
-import { sessionCrumbs } from "./sessionProjectIdentity";
+import { sessionCrumbs, sessionReturnLink } from "./sessionProjectIdentity";
 import { useSessionProjectIdentity } from "./useSessionProjectIdentity";
 
 const TimelineView = lazy(() =>
@@ -134,8 +135,24 @@ function SessionTitleInline() {
   );
   // The agent's working folder is observed source, not the user's project.
   const { lead, trailingSource } = sessionCrumbs(identity, context.projectLabel ?? null);
+  // The way back to the project page this session was opened from. Shown
+  // unless the breadcrumb already leads there (a confirmed member opened from
+  // its own project's list).
+  const sessionReturn = useAppStore((state) => state.sessionReturn);
+  const back = sessionReturnLink(sessionReturn, draft?.session.id ?? null, lead);
   return (
     <nav className="session-detail-breadcrumb" aria-label="현재 위치">
+      {back ? (
+        <button
+          type="button"
+          className="session-detail-back"
+          title={back.viaSearch ? "프로젝트 검색 결과로 돌아갑니다" : "열었던 프로젝트로 돌아갑니다"}
+          onClick={() => openProjectContext(back.contextId)}
+        >
+          <ArrowLeft size={12} aria-hidden="true" />
+          <span>{back.viaSearch ? `${back.label} 검색 결과` : back.label}</span>
+        </button>
+      ) : null}
       {lead?.kind === "project" ? (
         <button
           type="button"

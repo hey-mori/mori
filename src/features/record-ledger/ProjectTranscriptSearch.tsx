@@ -56,7 +56,7 @@ export function ProjectTranscriptSearch({
   unconfirmed: number;
   /** A descendant project's label, by context id. */
   contextLabel: (contextId: string) => string;
-  onOpened: () => void;
+  onOpened: (sessionId: string) => void;
   onClose: () => void;
 }) {
   const store = useProjectSearchStore();
@@ -84,7 +84,7 @@ export function ProjectTranscriptSearch({
     // Membership is checked again against what the page holds now.
     if (entryById.get(sessionId)?.kind !== "searchable") return;
     void store.openHit(sessionId, hit).then((outcome) => {
-      if (outcome === "opened") onOpened();
+      if (outcome === "opened") onOpened(sessionId);
     });
   };
 
@@ -157,7 +157,10 @@ export function ProjectTranscriptSearch({
                         : "";
                 return (
                   <li key={entry.sessionId}>
-                    <span className="project-search-coverage-title">{entry.title}</span>
+                    <span className="project-search-coverage-title">
+                      {entry.title}
+                      {entry.lastActiveAt ? <span className="project-search-coverage-when"> · {formatClaudeRelativeKo(entry.lastActiveAt)}</span> : null}
+                    </span>
                     <span>{label}</span>
                   </li>
                 );

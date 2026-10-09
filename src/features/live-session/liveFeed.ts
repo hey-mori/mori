@@ -10,6 +10,7 @@
  * a request here matches an imported session. Each request carries a live status
  * derived from how recently it was touched.
  */
+import { withoutPasteMarkers } from "../../lib/session/agentText";
 import { classifyMessage } from "../../lib/claude/conversationStats";
 import { isAgentBoilerplateTitle } from "../../lib/import/sanitizeTitle";
 import type {
@@ -114,7 +115,7 @@ export function buildLiveFeed(
           id: `${meta.filePath}::${message.id}`,
           sessionKey: meta.filePath,
           sessionLabel,
-          requestTitle: text,
+          requestTitle: withoutPasteMarkers(text),
           startedAt: message.createdAt,
           updatedAt: message.createdAt,
           status: "done",
@@ -332,7 +333,7 @@ export function sessionShortLabel(meta: ClaudeCodeSessionMeta): string {
 export function liveSessionTitle(session: FollowedSession): string {
   const openers = session.follow.messages.filter(isRequestOpener);
   const opener = openers[openers.length - 1] ?? openers[0];
-  const text = opener?.content.trim();
+  const text = opener ? withoutPasteMarkers(opener.content) : "";
   if (text) return oneLine(text, 80);
   return sessionShortLabel(session.meta);
 }
