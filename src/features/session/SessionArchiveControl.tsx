@@ -32,7 +32,12 @@ export function SessionArchiveControl({ sessionId }: { sessionId: string }) {
   const [policy, setPolicy] = useState<CleanupPolicyInput | null>(null);
   // Known gone, or replaced by another conversation, this open: there is
   // nothing of this session left to keep a copy of.
-  const sourceNotThis = useSessionStore((state) => selectRetainedSourceKind(state) !== null);
+  const sourceNotThis = useSessionStore((state) => {
+    if (selectRetainedSourceKind(state) !== null) return true;
+    // A placeholder with nothing imported shows the read failure instead.
+    const window = state.sessionWindow;
+    return window?.sessionId === sessionId && window.status === "error" && window.error.kind === "missing";
+  });
 
   useEffect(() => {
     let cancelled = false;

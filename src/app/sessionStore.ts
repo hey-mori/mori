@@ -1640,11 +1640,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
   recheckRestoredSource: async (sessionId) => {
     if (sourceCheckedThisRun.has(sessionId)) return false;
-    sourceCheckedThisRun.add(sessionId);
     const state = get();
-    if (state.draft?.session.id !== sessionId || state.sessionWindow) return false;
+    // Not the session on screen, or already read this run (its own window).
+    if (state.draft?.session.id !== sessionId || state.sessionWindow?.sessionId === sessionId) return false;
     const meta = loadAutoImportMeta(sessionId);
     if (!meta || meta.importKind !== "claude-code" || !meta.sourceFilePath) return false;
+    sourceCheckedThisRun.add(sessionId);
     let presence: string | undefined;
     try {
       [presence] = await claudeCodeSourcePresence([meta.sourceFilePath]);
@@ -1655,7 +1656,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // says is not there is "gone".
     if (presence !== "missing") return false;
     const now = get();
-    if (now.draft?.session.id !== sessionId || now.sessionWindow) return false;
+    if (now.draft?.session.id !== sessionId || now.sessionWindow?.sessionId === sessionId) return false;
     await get().openDiscoveredSession(sessionId);
     return true;
   },
@@ -2217,6 +2218,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (get().draft?.session.id === sessionId) return true;
     // Already showing this demo session — nothing further to load.
     if (!get().draft && get().demoSessionId === sessionId) return true;
+    // "Replaced" is said only by the open that read the transcript.
+    if (get().divergedSourceSessionId) set({ divergedSourceSessionId: null });
     const repository = getRepository();
     const draft = repository.setCurrentSession(sessionId);
     if (!draft) {
@@ -2273,6 +2276,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!service.isDesktop()) {
       return false;
     }
+    if (get().divergedSourceSessionId) set({ divergedSourceSessionId: null });
     const repository = getRepository();
     let loaded;
     try {

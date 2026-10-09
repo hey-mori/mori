@@ -269,6 +269,26 @@ describe("a transcript that changed since it was imported", () => {
     expect(stored[0]!.source.relatedEventIds).toEqual(stored[0]!.events.map((event) => event.id));
   });
 
+  it("a session opened mid tool loop takes the reply to its tool result", async () => {
+    const working: ClaudeMessage[] = [
+      { id: "u0", role: "human", content: "run the tests", createdAt: "2026-10-08T09:00:00Z" },
+      { id: "a0", role: "assistant", content: "🔧 Bash: npm test", createdAt: "2026-10-08T09:00:10Z" },
+      { id: "u1", role: "human", content: "↳ 도구 결과 all passed", createdAt: "2026-10-08T09:00:20Z" },
+    ];
+    const a = register(meta("a", "A"), working);
+    const resolve = resolver();
+    await resolve(a);
+    const before = repository.listSessionImports(a)[0]!.events;
+    sources.set("a", [...working, { id: "a1", role: "assistant", content: "All tests pass.", createdAt: "2026-10-08T09:00:30Z" }]);
+    await resolve(register(meta("b", "B"), transcript(1)));
+    await resolve(a);
+    const after = repository.listSessionImports(a)[0]!.events;
+    // Growth, not a rewrite: the tool-result turn now carries its reply.
+    expect(after).toHaveLength(before.length);
+    expect(after[after.length - 1]!.summary).toContain("All tests pass.");
+    expect(useSessionStore.getState().divergedSourceSessionId).toBeNull();
+  });
+
   it("an analysis that pointed at the unanswered prompt follows it to the answered turn", async () => {
     const a = register(meta("a", "A"), transcript(2, true));
     const resolve = resolver();

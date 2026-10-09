@@ -292,6 +292,12 @@ describe("a session within the import limit", () => {
     const state = useSessionStore.getState();
     expect(state.imports[0]!.events).toHaveLength(before);
     expect(selectRetainedSourceNotice(state)?.kind).toBe("replaced");
+
+    // The original is back: the next read matches, and the notice goes.
+    reader.detail.mockResolvedValueOnce({ ...m, messages: both, claudeDetail: { ...m, filePath: m.sourceFilePath, messages: both } });
+    await useSessionStore.getState().openDiscoveredSession(id);
+    expect(useSessionStore.getState().divergedSourceSessionId).toBeNull();
+    expect(selectRetainedSourceNotice(useSessionStore.getState())).toBeNull();
   });
 
   it("a non-size failure is shown as an error, not retried as a window", async () => {
