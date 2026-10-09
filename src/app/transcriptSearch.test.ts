@@ -14,7 +14,7 @@ import type { AgentWorkSessionMeta } from "../lib/trace/sources/ai/workSessions"
 import type { ClaudeCodeSearchBatch, ClaudeCodeSearchHit, ClaudeCodeSessionWindow } from "../lib/claude/types";
 import { isAtLatest, isLoadedWindow, MAX_RETAINED_WINDOWS, type LoadedSessionWindow } from "../lib/session/sessionWindow";
 
-type Record = { id: string; content: string; start: number; end: number };
+type FakeRecord = { id: string; content: string; start: number; end: number };
 type Cursor = { beforeOffset?: number; afterOffset?: number; sourceId?: string; anchor?: string; endAnchor?: string };
 
 const RECORD = 100;
@@ -22,7 +22,7 @@ const WINDOW_RECORDS = 3;
 const SCAN_RECORDS = 4;
 
 const fake = vi.hoisted(() => ({
-  transcripts: new Map<string, { sourceId: string; records: Record[] }>(),
+  transcripts: new Map<string, { sourceId: string; records: FakeRecord[] }>(),
   meta: new Map<string, unknown>(),
   /** When set, the next reader or search call waits on it. */
   gate: null as null | ((call: { kind: "window" | "search"; path: string; cursor?: unknown }) => Promise<void> | void),
@@ -70,12 +70,12 @@ function transcript(path: string) {
   return found;
 }
 
-const endAnchorOf = (records: Record[], offset: number) => {
+const endAnchorOf = (records: FakeRecord[], offset: number) => {
   const before = records.find((record) => record.end === offset);
   return before ? `e-${before.id}:${before.content.length}` : "";
 };
 
-function windowOf(path: string, picked: Record[], all: Record[], sourceId: string, fallback: number): ClaudeCodeSessionWindow {
+function windowOf(path: string, picked: FakeRecord[], all: FakeRecord[], sourceId: string, fallback: number): ClaudeCodeSessionWindow {
   const start = picked[0]?.start ?? fallback;
   const end = picked[picked.length - 1]?.end ?? fallback;
   const fileEnd = all[all.length - 1]!.end;
