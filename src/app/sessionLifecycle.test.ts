@@ -84,6 +84,7 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     cancelSessionSearch: () => {},
     closeSessionSearch: () => {},
     openSessionSearchHit: async () => {},
+    openSessionAtSourceHit: async () => "superseded",
     loadBrowserSession: () => false,
     renameSession: () => false,
     setNextActionCompletion: () => false,
