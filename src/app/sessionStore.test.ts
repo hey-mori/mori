@@ -386,6 +386,21 @@ describe("useSessionStore desktop persistence", () => {
     expect(repository.loadStoredSessionDraft(mockSession.session.id)?.savedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 
+  it("opening a saved SQLite session keeps when its imports were made (a load is not a new import)", async () => {
+    await useSessionStore.getState().loadDesktopSession(mockSession.session.id);
+    const sessionId = mockSession.session.id;
+    const first = repository.listSessionImports(sessionId);
+    expect(first.length).toBeGreaterThan(0);
+    repository.putSessionImports(
+      sessionId,
+      first.map((entry) => ({ ...entry, savedAt: "2026-05-01T00:00:00.000Z" })),
+    );
+    await useSessionStore.getState().loadDesktopSession(sessionId);
+    const again = repository.listSessionImports(sessionId);
+    expect(again.map((entry) => entry.savedAt)).toEqual(first.map(() => "2026-05-01T00:00:00.000Z"));
+    expect(useSessionStore.getState().imports.every((entry) => entry.savedAt === "2026-05-01T00:00:00.000Z")).toBe(true);
+  });
+
   it("clearAllDataAndViewDemo wipes SQLite and returns to an empty real session", async () => {
     const before = useSessionStore.getState().dataResetNonce;
     await useSessionStore.getState().clearAllDataAndViewDemo();

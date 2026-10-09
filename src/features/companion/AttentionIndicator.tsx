@@ -21,7 +21,7 @@ import { useAutoImportSessions } from "../background-watch/useAutoImportSessions
 import { useNotifications } from "./useNotifications";
 import { useOsNotifications } from "./useOsNotifications";
 import { NotificationFeedList } from "./NotificationFeedList";
-import { toastArrival } from "../../lib/notifications/toastArrival";
+import { isDerivedFromHistory, toastArrival } from "../../lib/notifications/toastArrival";
 
 /**
  * 알림 — the notification bell + a right-side notification drawer.
@@ -86,6 +86,7 @@ export function AttentionIndicator({
   const drawerRef = useRef<HTMLDivElement>(null);
   const knownNotificationIdsRef = useRef<Set<string> | null>(null);
   const runStartedAtRef = useRef(Date.now());
+  const historyIdsRef = useRef<Set<string>>(new Set());
   const toastReadyRef = useRef(false);
 
   const unreadCount = useMemo(
@@ -158,17 +159,21 @@ export function AttentionIndicator({
   // stays quiet so a backlog never flashes on load.
   useEffect(() => {
     const nextIds = new Set(notifications.map((notification) => notification.id));
-    const knownIds = knownNotificationIdsRef.current;
-    if (!knownIds) {
-      knownNotificationIdsRef.current = nextIds;
-      return;
+    const previousIds = knownNotificationIdsRef.current;
+    knownNotificationIdsRef.current = nextIds;
+    // Items derived from stored history are remembered for the whole run, so
+    // switching back to a session never makes them arrive again. Others keep
+    // the previous-feed rule: a re-detected file may announce itself again.
+    const historyIds = historyIdsRef.current;
+    const known = new Set([...(previousIds ?? []), ...historyIds]);
+    for (const notification of notifications) {
+      if (isDerivedFromHistory(notification)) historyIds.add(notification.id);
     }
-    if (!toastReadyRef.current) return;
+    // The first feed and anything arriving while the shell settles (hydration
+    // filling the feed) are the backlog: absorbed above, never toasted.
+    if (!previousIds || !toastReadyRef.current) return;
 
-    const fresh = toastArrival(notifications, knownIds, runStartedAtRef.current);
-    // Remember every id seen this run: switching back to a session must not
-    // make its items arrive again.
-    for (const id of nextIds) knownIds.add(id);
+    const fresh = toastArrival(notifications, known, runStartedAtRef.current);
     if (fresh) setToast(fresh);
   }, [notifications]);
 
