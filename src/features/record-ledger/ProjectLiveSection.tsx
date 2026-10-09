@@ -18,11 +18,11 @@
  * InfoHint, not in always-visible prose.
  */
 import type { ReactNode } from "react";
-import { Hand, Radio } from "lucide-react";
+import { CircleAlert, Hand, Radio } from "lucide-react";
 import { withoutPasteMarkers } from "../../lib/session/agentText";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
-import type { ProjectProjection } from "../../lib/live-intake";
+import { freshnessOf, type ProjectProjection } from "../../lib/live-intake";
 
 /** Elapsed wall time as calm Korean, coarse on purpose. */
 function formatElapsed(ms: number): string {
@@ -67,16 +67,33 @@ export function ProjectLiveSection({
   projection,
   now = Date.now(),
   openSession,
+  unconfirmedObserved = 0,
 }: {
   projection: ProjectProjection | null;
   now?: number;
   /** Maps a request's session file to an action that opens it. */
   openSession?: OpenRequestSession;
+  /**
+   * Sessions observed in the folder named like this project that are not its
+   * confirmed members. Never counted above; only said, so the user knows
+   * there is work Mori saw and did not attribute.
+   */
+  unconfirmedObserved?: number;
 }) {
-  if (!projection) return null;
+  const aside = unconfirmedObserved > 0 ? <UnconfirmedAside count={unconfirmedObserved} /> : null;
+  const asideOnly = aside ? (
+    <section className="ctx-section ctx-live">
+      <p className="ctx-section-label">현재 상황</p>
+      {aside}
+    </section>
+  ) : null;
+  if (!projection) return asideOnly;
 
-  const { freshness } = projection;
-  const stale = freshness === "stale";
+  const stale = projection.freshness === "stale";
+  // The counts are as current as their oldest observation, not their newest:
+  // a session seen a minute ago does not make another one's count live.
+  const basisAt = projection.countedObservedAt ?? projection.observedAt;
+  const freshness = stale ? "stale" : freshnessOf(basisAt, now);
   const counts: Array<{ key: string; label: string; value: number }> = [
     { key: "running", label: "진행 중", value: projection.runningCount },
     { key: "waiting", label: "내 확인 대기", value: projection.waitingCount },
@@ -85,8 +102,8 @@ export function ProjectLiveSection({
 
   // Nothing observed is worth a band, and neither is a stale project with no
   // recorded activity. A calm workspace shows no section at all.
-  if (!stale && counts.length === 0 && !projection.lastActivityAt) return null;
-  if (stale && !projection.lastActivityAt) return null;
+  if (!stale && counts.length === 0 && !projection.lastActivityAt) return asideOnly;
+  if (stale && !projection.lastActivityAt) return asideOnly;
 
   return (
     <section className="ctx-section ctx-live">
@@ -119,7 +136,7 @@ export function ProjectLiveSection({
               ))}
               {freshness === "recent" ? (
                 <span className="ctx-live-asof">
-                  {formatSidebarRelative(projection.observedAt, now)} 기준
+                  {formatSidebarRelative(basisAt, now)} 기준
                 </span>
               ) : null}
             </div>
@@ -129,7 +146,7 @@ export function ProjectLiveSection({
             </p>
           )}
 
-          {projection.running.length > 0 || projection.waiting.length > 0 ? (
+          {projection.running.length > 0 || projection.waiting.length > 0 || projection.blocked.length > 0 ? (
             <ul className="ctx-live-running">
               {/* What waits for the user first: it is the part only they can move. */}
               {projection.waiting.map((request) => (
@@ -138,6 +155,16 @@ export function ProjectLiveSection({
                   <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     내 확인 대기{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
+                  </span>
+                </RequestRow>
+              ))}
+              {/* A stopped agent also needs the user, and a count alone gives no way in. */}
+              {projection.blocked.map((request) => (
+                <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
+                  <CircleAlert size={12} aria-hidden="true" className="ctx-live-row-icon" />
+                  <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
+                  <span className="ctx-live-row-meta">
+                    막힘{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
                   </span>
                 </RequestRow>
               ))}
@@ -156,7 +183,21 @@ export function ProjectLiveSection({
       )}
 
       <RecentWork projection={projection} now={now} openSession={openSession} />
+      {aside}
     </section>
+  );
+}
+
+/** Observed work this project does not claim, said once and kept quiet. */
+function UnconfirmedAside({ count }: { count: number }) {
+  return (
+    <p className="ctx-live-quiet ctx-live-aside">
+      확정하지 않은 세션 {count}개의 관찰은 넣지 않았습니다
+      <InfoHint label="확정하지 않은 세션 설명">
+        같은 이름의 폴더에서 관찰했지만 이 프로젝트에 넣지 않은 세션입니다. 세션을
+        프로젝트에 넣으면 그 관찰도 여기에 포함됩니다.
+      </InfoHint>
+    </p>
   );
 }
 

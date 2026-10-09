@@ -365,6 +365,27 @@ Suggested top section:
 - 위험 후보: 두 세션이 같은 gateway 설정 파일을 수정 중
 ```
 
+Which sessions count is decided by reviewed membership, not by folder name.
+For a project in the record kernel, 현재 상황 reads the intake rows of the
+project's confirmed sessions (`contextIds`, active descendants rolled up)
+through the store's session index. The join is the session's source file as
+the discovery listing names it, which is also the follower's `sessionKey`; a
+file two members name counts for the project but opens neither. A worktree
+session whose agent ran under a parent folder therefore still shows under
+its project. Sessions observed in the folder named like the project are
+never counted; the section only says how many were recently seen there that
+the operator has not placed anywhere (not filed to another project, not
+rejected for this one).
+Folder groups that have no reviewed membership keep the leaf-name lookup.
+
+Freshness is per row. Each row is judged by its own `observedAt` (the last
+time the writer stored that session's rows), so one active session cannot
+make another session's old running or waiting request look current; the old
+request appears in 최근 작업 without a status. The header dates the counts by
+the oldest observation behind them (`countedObservedAt`), so the live dot
+appears only when every counted request was seen moments ago, and a running
+request not seen moments ago is timed only up to when it was seen.
+
 Session rows should support status-first grouping:
 
 - 진행 중

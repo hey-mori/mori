@@ -71,6 +71,12 @@ export type ProjectProjection = {
   /** Newest observation across contributing rows. */
   observedAt: string;
   freshness: ProjectFreshness;
+  /**
+   * The oldest observation behind a present-tense count, or null when nothing
+   * is counted. The header dates the counts by this, not by the newest row, so
+   * one session seen a minute ago cannot make a count from hours ago read live.
+   */
+  countedObservedAt: string | null;
   /** Present-tense counts. All zero once `freshness` is `stale`, by D11. */
   runningCount: number;
   waitingCount: number;
@@ -78,6 +84,8 @@ export type ProjectProjection = {
    *  first. Present tense, so empty once the observation is stale. */
   waiting: ProjectRecentRequest[];
   blockedCount: number;
+  /** Requests the agent stopped on, newest first; empty once stale. */
+  blocked: ProjectRecentRequest[];
   /** Detail for each in-flight request; empty unless `freshness` is not stale. */
   running: ProjectRunningRequest[];
   recentRequests: ProjectRecentRequest[];
@@ -136,6 +144,7 @@ function foldProject(
   now: number,
   recentLimit: number,
   fileLimit: number,
+  label: string = labelOf(projectPath),
 ): ProjectProjection {
   const observedAt = rows.reduce(
     (newest, row) => (epoch(row.observedAt) > epoch(newest) ? row.observedAt : newest),
@@ -143,18 +152,26 @@ function foldProject(
   );
   const freshness = freshnessOf(observedAt, now);
 
-  // Past the live window nothing may be reported in the present tense, so the
-  // counts and the in-flight detail collapse rather than being shown stale.
-  const reportsPresent = freshness !== "stale";
+  // Past the live window nothing may be reported in the present tense. Each
+  // row is judged by its OWN observation: a session observed a minute ago must
+  // not make another session's request, last seen hours ago, read as current.
+  // (The projection's newest observation used to stand in for every row.)
+  const rowIsCurrent = (row: IntakeRequestRow) => freshnessOf(row.observedAt, now) !== "stale";
 
   let runningCount = 0;
   let waitingCount = 0;
   let blockedCount = 0;
   const running: ProjectRunningRequest[] = [];
   const waiting: ProjectRecentRequest[] = [];
+  const blocked: ProjectRecentRequest[] = [];
+  let countedObservedAt: string | null = null;
 
-  if (reportsPresent) {
+  {
     for (const row of rows) {
+      if (!rowIsCurrent(row)) continue;
+      if (row.status === "running" || row.status === "waitingForUser" || row.status === "blocked") {
+        if (countedObservedAt === null || epoch(row.observedAt) < epoch(countedObservedAt)) countedObservedAt = row.observedAt;
+      }
       if (row.status === "running") {
         runningCount += 1;
         running.push({
@@ -163,30 +180,41 @@ function foldProject(
           sessionLabel: row.sessionLabel,
           sessionKey: row.sessionKey,
           startedAt: row.startedAt,
-          elapsedMs: Math.max(0, now - epoch(row.startedAt)),
+          // Elapsed up to the last time it was seen running, unless that was
+          // moments ago: a request seen hours ago is not known to run since.
+          elapsedMs: Math.max(
+            0,
+            (freshnessOf(row.observedAt, now) === "live" ? now : epoch(row.observedAt)) - epoch(row.startedAt),
+          ),
           stepCount: row.stepCount,
         });
       } else if (row.status === "waitingForUser") {
         waitingCount += 1;
         waiting.push({ id: row.id, title: row.title, sessionLabel: row.sessionLabel, sessionKey: row.sessionKey, status: row.status, endedAt: row.endedAt });
       }
-      else if (row.status === "blocked") blockedCount += 1;
+      else if (row.status === "blocked") {
+        blockedCount += 1;
+        blocked.push({ id: row.id, title: row.title, sessionLabel: row.sessionLabel, sessionKey: row.sessionKey, status: row.status, endedAt: row.endedAt });
+      }
     }
     running.sort((a, b) => b.elapsedMs - a.elapsedMs);
     waiting.sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
+    blocked.sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
   }
 
   const ordered = [...rows].sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
 
   return {
     projectPath,
-    label: labelOf(projectPath),
+    label,
     observedAt,
     freshness,
+    countedObservedAt,
     runningCount,
     waitingCount,
     waiting,
     blockedCount,
+    blocked,
     running,
     recentRequests: ordered.slice(0, recentLimit).map((row) => ({
       id: row.id,
@@ -195,7 +223,7 @@ function foldProject(
       sessionKey: row.sessionKey,
       // A past request's own status is a past fact and does not decay; only the
       // present-tense reading of a live row does.
-      status: reportsPresent ? row.status : decay(row.status),
+      status: rowIsCurrent(row) ? row.status : decay(row.status),
       endedAt: row.endedAt,
     })),
     topFiles: rollUpFiles(rows, fileLimit),
@@ -213,7 +241,22 @@ function decay(status: SessionActivityStatus): SessionActivityStatus {
   return status === "completed" ? "completed" : "unknown";
 }
 
-function freshnessOf(observedAt: string, now: number): ProjectFreshness {
+/**
+ * One projection over the rows of a chosen set of sessions, whatever folders
+ * they were observed in: a reviewed project's confirmed sessions. Null when
+ * there is no row. The label is the project's, not a folder's.
+ */
+export function buildScopedProjection(
+  rows: readonly IntakeRequestRow[],
+  opts: BuildProjectProjectionOptions & { label: string },
+): ProjectProjection | null {
+  if (rows.length === 0) return null;
+  const recentLimit = Math.max(1, opts.recentRequestLimit ?? DEFAULT_RECENT_REQUESTS);
+  const fileLimit = Math.max(1, opts.topFileLimit ?? DEFAULT_TOP_FILES);
+  return foldProject("", rows, opts.now, recentLimit, fileLimit, opts.label);
+}
+
+export function freshnessOf(observedAt: string, now: number): ProjectFreshness {
   const age = now - epoch(observedAt);
   if (age <= LIVE_MS) return "live";
   if (age <= RECENT_MS) return "recent";
