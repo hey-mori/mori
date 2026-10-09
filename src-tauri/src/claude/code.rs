@@ -3922,6 +3922,41 @@ mod search_tests {
         assert!(search_session_at(dir.path(), &path, "needle", Some(0), Some("x"), None, 5, SEARCH_SCAN_BYTES).unwrap_err().starts_with("INVALID_CURSOR"));
     }
 
+    /// Measure a search of a real transcript, read-only, the way the view runs
+    /// it: steps until a page of matches or the start, then open the first
+    /// match. `MORI_SEARCH_BENCH=<file> MORI_SEARCH_QUERY=<phrase>`.
+    #[test]
+    #[ignore]
+    fn search_bench() {
+        let (Ok(path), Ok(query)) = (std::env::var("MORI_SEARCH_BENCH"), std::env::var("MORI_SEARCH_QUERY")) else { return };
+        let root = Path::new(&path).parent().and_then(Path::parent).unwrap().to_path_buf();
+        let started = std::time::Instant::now();
+        let mut batch = search_session_at(&root, &path, &query, None, None, None, 20, SEARCH_SCAN_BYTES).unwrap();
+        let scan_end = batch.scan_end;
+        let mut hits = batch.hits.clone();
+        let mut steps = vec![started.elapsed()];
+        while hits.len() < 20 && !batch.reached_start {
+            let step = std::time::Instant::now();
+            batch = search_session_at(&root, &path, &query, Some(batch.scan_start), Some(&batch.source_id), Some(&batch.scan_start_anchor), 20 - hits.len(), SEARCH_SCAN_BYTES).unwrap();
+            hits.extend(batch.hits.clone());
+            steps.push(step.elapsed());
+        }
+        let total = started.elapsed();
+        let payload: usize = hits.iter().map(|hit| serde_json::to_string(hit).unwrap().len()).sum();
+        println!("query={query:?} steps={} total={total:?} slowest_step={:?} scanned_mib={:.1} reached_start={} hits={} unsearchable={} payload_bytes={payload}",
+            steps.len(), steps.iter().max().unwrap(), (scan_end - batch.scan_start) as f64 / 1048576.0, batch.reached_start, hits.len(), batch.unsearchable_records);
+        for hit in hits.iter().take(5) {
+            println!("  {} {} from_end_mib={:.2} matches={}", hit.created_at, hit.message_id, (scan_end - hit.record_end) as f64 / 1048576.0, hit.matches_in_message);
+        }
+        if let Some(hit) = hits.first() {
+            let open = std::time::Instant::now();
+            let window = read_session_window_with(&root, &path, Some(hit.record_end), Some(&batch.source_id), None, Some(&hit.record_anchor), WINDOW_BYTES).unwrap();
+            let newer = read_session_window_after(&root, &path, window.end_offset, &window.source_id, &window.end_anchor, WINDOW_BYTES).unwrap();
+            let shown = window.events.iter().any(|event| event.id == hit.message_id);
+            println!("  open first: {:?} shown={shown} window_events={} newer_events={}", open.elapsed(), window.events.len(), newer.events.len());
+        }
+    }
+
     #[test]
     fn forward_reads_tile_to_the_end_and_skip_an_oversized_record() {
         let dir = TempDir::new().unwrap();
