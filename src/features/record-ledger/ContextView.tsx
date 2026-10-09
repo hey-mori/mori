@@ -13,7 +13,7 @@
  * row management behind a hover `⋯` / right-click. Right: the selected
  * project's page (v8 §5), ordered by what a returning user asks first.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArchiveRestore,
   ClipboardList,
@@ -96,7 +96,14 @@ export function ContextView() {
     () => useProjectSearchStore.getState().search?.projectId ?? null,
   );
 
+  const setSessionReturn = useAppStore((state) => state.setSessionReturn);
   const openSessionById = (sessionId: string) => {
+    // Remember where it was opened from, for the session's way back.
+    setSessionReturn(
+      activeContextRef.current
+        ? { sessionId, contextId: activeContextRef.current.id, label: activeContextRef.current.name, viaSearch: false }
+        : null,
+    );
     void resolveSession(sessionId).then((outcome) => {
       if (outcome === "opened") openSession("flow");
       else if (outcome === "unavailable") navigate("sessions");
@@ -242,6 +249,9 @@ export function ContextView() {
         : null,
     [selection, contexts],
   );
+  // The selected project for handlers declared above it (openSessionById).
+  const activeContextRef = useRef(activeContext);
+  activeContextRef.current = activeContext;
   const activeGroup = useMemo(() => {
     if (!selection) return null;
     if (selection.kind === "group") return groups.find((group) => group.id === selection.id) ?? null;
@@ -590,7 +600,10 @@ export function ContextView() {
                   inventory={searchInventory}
                   unconfirmed={unconfirmedInGroup}
                   contextLabel={(contextId) => contextPath(contextId, contexts)}
-                  onOpened={() => openSession("flow")}
+                  onOpened={(sessionId) => {
+                    setSessionReturn({ sessionId, contextId: activeContext.id, label: activeContext.name, viaSearch: true });
+                    openSession("flow");
+                  }}
                   onClose={() => {
                     closeProjectSearch();
                     setTranscriptSearchFor(null);

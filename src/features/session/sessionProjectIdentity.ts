@@ -75,3 +75,19 @@ export function sessionCrumbs(identity: SessionProjectIdentity, sourceLabel: str
   }
   return { lead: sourceLabel ? { kind: "source", sourceKey: sourceLabel } : null, trailingSource: null };
 }
+
+/**
+ * The way back to the project page a session was opened from, or null. Shown
+ * for that session only, and not when the breadcrumb already leads to the same
+ * project (a confirmed member opened from its own list), unless it came from a
+ * search, whose results the link names.
+ */
+export function sessionReturnLink<T extends { sessionId: string; contextId: string; viaSearch: boolean }>(
+  sessionReturn: T | null,
+  sessionId: string | null,
+  lead: SessionCrumbs["lead"],
+): T | null {
+  if (!sessionReturn || sessionReturn.sessionId !== sessionId) return null;
+  if (!sessionReturn.viaSearch && lead?.kind === "project" && lead.contextId === sessionReturn.contextId) return null;
+  return sessionReturn;
+}

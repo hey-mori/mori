@@ -114,7 +114,7 @@ export function buildLiveFeed(
           id: `${meta.filePath}::${message.id}`,
           sessionKey: meta.filePath,
           sessionLabel,
-          requestTitle: text,
+          requestTitle: withoutPasteMarkers(text),
           startedAt: message.createdAt,
           updatedAt: message.createdAt,
           status: "done",
@@ -332,7 +332,7 @@ export function sessionShortLabel(meta: ClaudeCodeSessionMeta): string {
 export function liveSessionTitle(session: FollowedSession): string {
   const openers = session.follow.messages.filter(isRequestOpener);
   const opener = openers[openers.length - 1] ?? openers[0];
-  const text = opener?.content.trim();
+  const text = opener ? withoutPasteMarkers(opener.content) : "";
   if (text) return oneLine(text, 80);
   return sessionShortLabel(session.meta);
 }
@@ -341,6 +341,15 @@ export function liveSessionTitle(session: FollowedSession): string {
  *  session index, which shows only truly-working sessions under 라이브 피드). */
 export function sessionIsWorking(session: FollowedSession, now: number): boolean {
   return isSessionWorking(session.follow.messages, now);
+}
+
+/** Claude Code wraps pasted text in `<pasted_content id="…">…</pasted_content>`.
+ *  The wrapper is transport, not what the user wrote, so a title keeps the
+ *  pasted text and drops the tags. */
+const PASTE_MARKER = /<\/?pasted_content\b[^>]*>/g;
+
+export function withoutPasteMarkers(text: string): string {
+  return text.replace(PASTE_MARKER, " ").replace(/[ \t]+\n/g, "\n").trim();
 }
 
 /** Collapse a message to a single clean line, capped, with an ellipsis. */

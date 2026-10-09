@@ -311,6 +311,29 @@
   flex: 1;
 }
 
+/* The way back to the project page a session was opened from: a quiet
+   pill before the breadcrumb, separate from it because it is where the user
+   came from, not what the session belongs to. */
+.session-detail-back {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  margin-right: var(--base-space-2);
+  padding: 3px 8px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-pill);
+  background: transparent;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  cursor: pointer;
+}
+
+.session-detail-back:hover {
+  background: var(--base-surface-subtle);
+  color: var(--base-text);
+}
+
 .session-detail-crumb {
   display: inline-flex;
   align-items: center;

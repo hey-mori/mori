@@ -1659,7 +1659,26 @@ fn cap_text(input: &str, max: usize) -> String {
 /// (everything before any horizontal-rule fence), strip leading markdown
 /// markers, then truncate — turning a messy paste into a scannable title. Falls
 /// back to a plain truncation when there is no clean headline to find.
+/// Claude Code wraps pasted text in `<pasted_content id="…">…</pasted_content>`.
+/// The wrapper is transport, not what the user wrote: a title keeps the pasted
+/// text and drops the tags.
+fn without_paste_markers(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut rest = raw;
+    loop {
+        let next = [rest.find("<pasted_content"), rest.find("</pasted_content")].into_iter().flatten().min();
+        let Some(start) = next else { break };
+        let Some(end) = rest[start..].find('>') else { break };
+        out.push_str(&rest[..start]);
+        out.push(' ');
+        rest = &rest[start + end + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
 fn distill_title(raw: &str, max: usize) -> String {
+    let raw = &without_paste_markers(raw);
     // Take lines until a horizontal-rule fence (--- or longer), where a pasted
     // document / screenshot dump typically begins rather than the actual ask.
     let mut headline = String::new();
@@ -1726,6 +1745,14 @@ mod tests {
         let mut file = std::fs::File::create(&path).unwrap();
         file.write_all(body.as_bytes()).unwrap();
         path
+    }
+
+    #[test]
+    fn distill_title_drops_the_paste_wrapper_and_keeps_the_pasted_ask() {
+        let raw = "<pasted_content id=\"c86f\">\n# HOME V12 · Interaction Integrity\n\n## Mission\n</pasted_content>";
+        assert_eq!(distill_title(raw, 90), "HOME V12 · Interaction Integrity");
+        assert_eq!(distill_title("<pasted_content id=\"x\"> fix the parser", 90), "fix the parser");
+        assert_eq!(without_paste_markers("a <pasted_content broken"), "a <pasted_content broken");
     }
 
     #[test]

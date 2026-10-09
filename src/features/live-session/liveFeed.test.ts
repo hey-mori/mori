@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ClaudeCodeSessionMeta, ClaudeMessage } from "../../lib/claude/types";
 import type { AgentStoreFollowState } from "../../lib/live-follow";
-import { buildLiveFeed, sessionShortLabel } from "./liveFeed";
+import { buildLiveFeed, sessionShortLabel, withoutPasteMarkers } from "./liveFeed";
 
 const NOW = Date.parse("2026-01-01T00:10:00Z");
 
@@ -142,5 +142,14 @@ describe("sessionShortLabel", () => {
   it("takes the last path segment", () => {
     expect(sessionShortLabel(meta("s", "C:/dev/mori"))).toBe("mori");
     expect(sessionShortLabel(meta("s", "C:\\dev\\ng-gw"))).toBe("ng-gw");
+  });
+});
+
+describe("paste markers in titles", () => {
+  it("drops the paste wrapper and keeps what was pasted", () => {
+    expect(withoutPasteMarkers('<pasted_content id="c86f">\n# HOME V12 · Interaction Integrity\n</pasted_content>')).toBe(
+      "# HOME V12 · Interaction Integrity",
+    );
+    expect(withoutPasteMarkers("plain request")).toBe("plain request");
   });
 });
