@@ -66,6 +66,15 @@ read-only window of its recent conversation instead (#163).
   - reopening the session also retries.
   - Recovery when a source cannot be read: check that the file still exists under the Claude projects folder, then reopen. A transcript replaced while open reads again from its end.
 - **Races.** Every open takes a sequence token. A read that finishes after a newer open has started changes nothing; before this, a slow read could be imported into whichever session was active.
+- **Searching inside the transcript (#171).** "이 대화에서 찾기" searches the open long transcript, on request only.
+  - `search_claude_code_session` reads the source backward from its last complete record in 16 MiB steps, off the main thread, and returns at most 50 matches per step with the cursor to continue from (`scanStart` plus its anchor, checked like a window cursor).
+  - It matches a literal phrase, ignoring case, on the text the view shows for each message (the same projection as the window reader). Thinking, signatures, summaries and raw metadata never match. A record too large for the view is counted as unsearchable, never returned.
+  - A result carries the message id, the record's byte range and anchor, and a short preview; never the record. Measured with the release build: a full scan of the 140 MB and 152 MB transcripts took about 0.5 s (slowest step about 65 ms); a page of 20 results is about 8 KB.
+  - The view gathers 20 matches, newest first, and says how much it searched ("최근 약 97%에서 20개 메시지 · 이전 부분은 아직 찾지 않았습니다"). "원본 전체" and "찾지 못했습니다" are only said once the start was reached.
+  - Opening a result reads the window that ends at the matched record (its byte offset and anchor) and then the window after it, read forward. The matched record is that window's last event, so it is named exactly even when an earlier record carries the same uuid (no local transcript has one; the case is tested). That message must still hold the phrase; otherwise the result is refused as changed and the view does not move. The anchor probes a record's first 64 bytes, so a rewrite past them is caught by that message check, not by the anchor.
+  - A view opened at a result is not the latest: newer history is read forward ("다음 대화 보기") until the end, the header shows the file position ("파일 앞에서 약 92% 지점"), and "최신 대화로" returns to the end. The 4-window limit holds.
+  - Nothing is stored: no index, no copy, no query history. A search and a pending jump belong to one open of one session; a step or jump that finishes after another session opened, another query started, the search was closed, or a later result was chosen changes nothing. Stopping a scan (멈추기) keeps what it found, and a result already opening still opens.
+  - This finds a passage inside a session already open. Finding which session holds a phrase is not built.
 - **Other agents.** Codex, Antigravity, Cline and the rest still have only the 8 MB detailed reader.
   - An oversized transcript from them shows "아직 열 수 없는 긴 대화입니다", with no retry.
   - A window reader for them is not built. No local Codex transcript over the cap existed to test one against.

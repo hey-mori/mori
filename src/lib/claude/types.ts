@@ -238,10 +238,51 @@ export type ClaudeCodeSessionWindow = {
   endAnchor: string;
   endOffset: number;
   reachedStart: boolean;
+  /** True when the window ends at the transcript's last complete record, as
+   *  the file stood when it was read. A window opened in the middle is not. */
+  reachedEnd: boolean;
   events: ClaudeMessage[];
   fileTouches: ClaudeFileTouch[];
   stats: ClaudeDeltaStats;
   /** Records skipped because one alone exceeded a window; counted, not hidden. */
   omittedRecords: number;
   omittedBytes: number;
+};
+
+/**
+ * One message whose visible text contains a searched phrase. Mirrors the Rust
+ * `ClaudeCodeSearchHit`. `recordEnd` with `recordAnchor` reads the window that
+ * ends at this record; a rewritten transcript is refused.
+ */
+export type ClaudeCodeSearchHit = {
+  messageId: string;
+  role: string;
+  subkind: string;
+  createdAt: string;
+  recordStart: number;
+  recordEnd: number;
+  recordAnchor: string;
+  snippetBefore: string;
+  snippetMatch: string;
+  snippetAfter: string;
+  matchesInMessage: number;
+};
+
+/**
+ * One bounded search step, newest match first. Everything from `scanStart` to
+ * `scanEnd` was searched; continue from `scanStart` with `scanStartAnchor`.
+ * Mirrors the Rust `ClaudeCodeSearchBatch`.
+ */
+export type ClaudeCodeSearchBatch = {
+  sourceId: string;
+  fileBytes: number;
+  scanEnd: number;
+  scanStart: number;
+  scanStartAnchor: string;
+  reachedStart: boolean;
+  hits: ClaudeCodeSearchHit[];
+  hitLimit: boolean;
+  searchedRecords: number;
+  unsearchableRecords: number;
+  unsearchableBytes: number;
 };

@@ -33,18 +33,32 @@ import {
 } from "../lib/trace/sources/ai/workSessions";
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
 import { planSourceReopen } from "../lib/import/autoSourceReopen";
-import { getClaudeCodeSessionWindow } from "../lib/claude/claudeTauri";
+import { getClaudeCodeSessionWindow, searchClaudeCodeSession } from "../lib/claude/claudeTauri";
+import type { ClaudeCodeSearchHit } from "../lib/claude/types";
 import {
+  applySearchBatch,
+  canSearchMore,
+  containsPhrase,
+  normalizeQuery,
+  searchPageDone,
+  SEARCH_PAGE_HITS,
+  startedSearch,
+  type SessionSearchState,
+} from "../lib/session/sessionSearch";
+import {
+  appendForwardWindow,
   appendNewerWindow,
   classifyWindowError,
   earlierCursor,
   isLoadedWindow,
   isTooLargeError,
   MAX_EMPTY_WINDOW_SKIPS,
+  jumpedWindowState,
   newerCursor,
   prependEarlierWindow,
   windowStateFrom,
   type LoadedSessionWindow,
+  type SessionWindowError,
   type SessionWindowState,
 } from "../lib/session/sessionWindow";
 import {
@@ -532,6 +546,22 @@ export type SessionState = {
   /** Replace the view with the transcript's current end (an explicit jump). */
   loadLatestSessionWindow: () => Promise<void>;
   /**
+   * A search inside the open long transcript (`sessionWindow`): its query,
+   * what it found and how much it searched. Transient, never persisted, and
+   * dropped when another session opens.
+   */
+  sessionSearch: SessionSearchState | null;
+  /** Start searching the open transcript for a phrase, from its end back. */
+  searchSessionWindow: (query: string) => Promise<void>;
+  /** Continue the search into earlier history. */
+  searchMoreSessionWindow: () => Promise<void>;
+  /** Stop a running search; what it found stays. */
+  cancelSessionSearch: () => void;
+  /** Close the search and drop its results. */
+  closeSessionSearch: () => void;
+  /** Open the view at a search result: the window that ends at its record. */
+  openSessionSearchHit: (hit: ClaudeCodeSearchHit) => Promise<void>;
+  /**
    * Open an already-saved browser session draft as the active session.
    * Used by the Workspace project hub to continue a previous session.
    * Returns `false` when no draft is stored for the id.
@@ -682,6 +712,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   initialized: false,
   draft: null,
   sessionWindow: null,
+  sessionSearch: null,
   demoSessionId: null,
   pendingNewSession: null,
   imports: [],
@@ -1526,7 +1557,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
       if (!get().loadBrowserSession(sessionId)) return "missing";
     }
-    set({ sessionWindow: { sessionId, status: "loading" } });
+    // A search and a jump belong to one open of one session.
+    searchSequence += 1;
+    jumpSequence += 1;
+    set({ sessionWindow: { sessionId, status: "loading" }, sessionSearch: null });
     const sourcePath = meta.sourceFilePath;
     const openWindow = async (): Promise<OpenDiscoveredOutcome> => {
       try {
@@ -1622,6 +1656,23 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
   loadEarlierSessionWindow: () => pageSessionWindow("earlier"),
+  searchSessionWindow: (query) => startSessionSearch(query),
+  searchMoreSessionWindow: () => continueSessionSearch(),
+  cancelSessionSearch: () => {
+    searchSequence += 1;
+    const search = get().sessionSearch;
+    if (search?.status === "searching") set({ sessionSearch: { ...search, status: "cancelled" } });
+  },
+  closeSessionSearch: () => {
+    searchSequence += 1;
+    jumpSequence += 1;
+    const window = get().sessionWindow;
+    set({
+      sessionSearch: null,
+      ...(isLoadedWindow(window) && window.focus ? { sessionWindow: { ...window, focus: null } } : {}),
+    });
+  },
+  openSessionSearchHit: (hit) => openSearchHit(hit),
   loadNewerSessionWindow: () => pageSessionWindow("newer"),
   loadLatestSessionWindow: () => pageSessionWindow("latest"),
   pauseFollow: () => set({ follow: followReducer(get().follow, { type: "pause" }) }),
@@ -1994,6 +2045,168 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 }));
 
+/** Bumped by every search start, continue, cancel and close, and by every
+ *  session open: a step that finishes after that must not touch the store. */
+let searchSequence = 0;
+/** Bumped by every result opened, and by everything that ends or replaces a
+ *  search (a new query, closing it, another session opening): only the last
+ *  jump asked for, from the search still showing, may move the view. Stopping
+ *  a search only stops its scan; what it found, and opening one of those
+ *  results, stays valid. */
+let jumpSequence = 0;
+
+/** Does the search belong to the view that is open now (same session, same open)? */
+function searchOfView(search: SessionSearchState | null, window: SessionWindowState | null): LoadedSessionWindow | null {
+  return search && isLoadedWindow(window) && search.sessionId === window.sessionId && search.openToken === window.openToken
+    ? window
+    : null;
+}
+
+async function startSessionSearch(query: string): Promise<void> {
+  const { getState, setState } = useSessionStore;
+  const phrase = normalizeQuery(query);
+  const window = getState().sessionWindow;
+  if (!phrase || !isLoadedWindow(window)) return;
+  const sequence = ++searchSequence;
+  // A new query replaces the old results: a result of theirs still opening
+  // must not move the view.
+  jumpSequence += 1;
+  setState({
+    sessionSearch: startedSearch({
+      sessionId: window.sessionId,
+      openToken: window.openToken,
+      sourcePath: window.sourcePath,
+      query: phrase,
+    }),
+  });
+  await runSessionSearch(sequence, SEARCH_PAGE_HITS);
+}
+
+async function continueSessionSearch(): Promise<void> {
+  const { getState, setState } = useSessionStore;
+  const search = getState().sessionSearch;
+  if (!search || !canSearchMore(search) || !searchOfView(search, getState().sessionWindow)) return;
+  const sequence = ++searchSequence;
+  setState({ sessionSearch: { ...search, status: "searching", error: null } });
+  await runSessionSearch(sequence, search.hits.length + SEARCH_PAGE_HITS);
+}
+
+/**
+ * Run bounded search steps until the page has its matches, the start of the
+ * transcript is reached, or the search is cancelled or superseded. Each step
+ * is one short native request, so stopping takes effect at the next step and
+ * a stale step's reply is dropped.
+ */
+async function runSessionSearch(sequence: number, target: number): Promise<void> {
+  const { getState, setState } = useSessionStore;
+  for (;;) {
+    const search = getState().sessionSearch;
+    if (!search || sequence !== searchSequence || search.status !== "searching") return;
+    if (!searchOfView(search, getState().sessionWindow)) {
+      setState({ sessionSearch: null });
+      return;
+    }
+    if (searchPageDone(search, target)) {
+      setState({ sessionSearch: { ...search, status: "idle" } });
+      return;
+    }
+    let batch;
+    try {
+      batch = await searchClaudeCodeSession(
+        search.sourcePath,
+        search.query,
+        search.cursor && search.sourceId
+          ? { beforeOffset: search.cursor.beforeOffset, sourceId: search.sourceId, anchor: search.cursor.anchor }
+          : undefined,
+        Math.min(SEARCH_PAGE_HITS, target - search.hits.length),
+      );
+    } catch (error) {
+      const latest = getState().sessionSearch;
+      if (sequence !== searchSequence || !latest) return;
+      const classified = classifyWindowError(error);
+      const status = classified.kind === "changed" ? "changed" : classified.kind === "missing" ? "missing" : "error";
+      setState({ sessionSearch: { ...latest, status, error: classified } });
+      return;
+    }
+    const latest = getState().sessionSearch;
+    if (sequence !== searchSequence || !latest || latest.status !== "searching") return;
+    const next = applySearchBatch(latest, batch);
+    if (next === latest) {
+      const error = { kind: "changed" as const, message: "SOURCE_CHANGED: the search step does not continue the search." };
+      setState({ sessionSearch: { ...latest, status: "changed", error } });
+      return;
+    }
+    setState({ sessionSearch: next });
+  }
+}
+
+/**
+ * Open the view at a search result. The window that ends at the matched
+ * record is read with the result's source id and record anchor, so a replaced
+ * or rewritten transcript is refused, and the message must still be there and
+ * still hold the phrase. The window after it is read forward for context. Only
+ * the last result asked for, in the same open of the same session, may move
+ * the view.
+ */
+async function openSearchHit(hit: ClaudeCodeSearchHit): Promise<void> {
+  const { getState, setState } = useSessionStore;
+  const search = getState().sessionSearch;
+  if (!search?.sourceId || !searchOfView(search, getState().sessionWindow)) return;
+  const sourceId = search.sourceId;
+  const sequence = ++jumpSequence;
+  setState({ sessionSearch: { ...search, opening: hit.messageId, openError: null } });
+  const current = () => {
+    const latest = getState().sessionSearch;
+    const window = searchOfView(latest, getState().sessionWindow);
+    return sequence === jumpSequence && latest && window ? { search: latest, window } : null;
+  };
+  const fail = (error: SessionWindowError) => {
+    const now = current();
+    if (now) setState({ sessionSearch: { ...now.search, opening: null, openError: { messageId: hit.messageId, error } } });
+  };
+  try {
+    const hitWindow = await getClaudeCodeSessionWindow(search.sourcePath, {
+      beforeOffset: hit.recordEnd,
+      sourceId,
+      endAnchor: hit.recordAnchor,
+    });
+    if (!current()) return;
+    // The window ends at the matched record, so its message is the window's
+    // last event. That names the record exactly, even when an earlier record
+    // carries the same id.
+    const shown = hitWindow.events[hitWindow.events.length - 1];
+    if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, search.query)) {
+      fail({ kind: "changed", message: "SOURCE_CHANGED: the matched message is no longer at its place." });
+      return;
+    }
+    let newer = null;
+    if (!hitWindow.reachedEnd) {
+      try {
+        newer = await getClaudeCodeSessionWindow(search.sourcePath, {
+          afterOffset: hitWindow.endOffset,
+          sourceId: hitWindow.sourceId,
+          endAnchor: hitWindow.endAnchor,
+        });
+      } catch {
+        // The match is shown; the newer history stays one "다음 대화 보기" away.
+        newer = null;
+      }
+    }
+    const now = current();
+    if (!now) return;
+    setState({
+      sessionWindow: jumpedWindowState(now.window, hitWindow, newer, {
+        messageId: hit.messageId,
+        query: search.query,
+        seq: sequence,
+      }),
+      sessionSearch: { ...now.search, opening: null, openError: null },
+    });
+  } catch (error) {
+    fail(classifyWindowError(error));
+  }
+}
+
 /**
  * One page of a session window, in one direction. Only one runs at a time.
  * The reply is applied only to the view it was asked for (same session, same
@@ -2031,7 +2244,9 @@ async function pageSessionWindow(direction: "earlier" | "newer" | "latest"): Pro
       direction === "earlier"
         ? prependEarlierWindow(latest, window)
         : direction === "newer"
-          ? appendNewerWindow(latest, window)
+          ? cursor && "afterOffset" in cursor
+            ? appendForwardWindow(latest, window)
+            : appendNewerWindow(latest, window)
           : windowStateFrom(state.sessionId, window, state.openToken);
     if (next === latest) {
       const error = { kind: "changed" as const, message: "SOURCE_CHANGED: the page does not continue the view." };

@@ -248,12 +248,20 @@ pub fn get_claude_code_session_window(
     source_id: Option<String>,
     anchor: Option<String>,
     end_anchor: Option<String>,
+    after_offset: Option<u64>,
 ) -> Result<ClaudeCodeSessionWindow, String> {
     let trimmed = session_path.trim();
     if trimmed.is_empty() {
         return Err("sessionPath is required.".to_string());
     }
     let root = claude_code_projects_dir()?;
+    if let Some(after) = after_offset {
+        // Newer history after a part opened in the middle of the transcript.
+        let (Some(source_id), Some(end_anchor)) = (source_id.as_deref(), end_anchor.as_deref()) else {
+            return Err("INVALID_CURSOR: a newer page needs the source id and anchor it was given.".to_string());
+        };
+        return read_session_window_after(&root, trimmed, after, source_id, end_anchor, WINDOW_BYTES);
+    }
     read_session_window_with(
         &root,
         trimmed,
@@ -263,6 +271,38 @@ pub fn get_claude_code_session_window(
         end_anchor.as_deref(),
         WINDOW_BYTES,
     )
+}
+
+/// Search the visible messages of an authorized transcript, on request, in one
+/// bounded backward step. Runs off the main thread. See `search_session_at`.
+#[tauri::command]
+pub async fn search_claude_code_session(
+    session_path: String,
+    query: String,
+    before_offset: Option<u64>,
+    source_id: Option<String>,
+    anchor: Option<String>,
+    max_hits: Option<usize>,
+) -> Result<ClaudeCodeSearchBatch, String> {
+    let trimmed = session_path.trim().to_string();
+    if trimmed.is_empty() {
+        return Err("sessionPath is required.".to_string());
+    }
+    let root = claude_code_projects_dir()?;
+    tauri::async_runtime::spawn_blocking(move || {
+        search_session_at(
+            &root,
+            &trimmed,
+            &query,
+            before_offset,
+            source_id.as_deref(),
+            anchor.as_deref(),
+            max_hits.unwrap_or(SEARCH_MAX_HITS),
+            SEARCH_SCAN_BYTES,
+        )
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -576,34 +616,13 @@ fn parse_jsonl_lines(
         if let Some((id, counts)) = tool_result_patch(&value) {
             patches.insert(id, counts);
         }
-        let role = detect_role(&value);
-        if role != "human" && role != "assistant" {
-            stats.skipped += 1;
-            continue;
+        match visible_message(&value, || fallback_id(index)) {
+            Some(message) => {
+                messages.push(message);
+                stats.parsed += 1;
+            }
+            None => stats.skipped += 1,
         }
-        let content = extract_content(&value);
-        if content.trim().is_empty() {
-            stats.skipped += 1;
-            continue;
-        }
-        let id = value
-            .get("uuid")
-            .or_else(|| value.get("id"))
-            .and_then(Value::as_str)
-            .map(str::to_string)
-            .unwrap_or_else(|| fallback_id(index));
-        let created_at = extract_timestamp(&value).unwrap_or_default();
-        let subkind = classify_subkind(&role, &content);
-        let stop_reason = extract_stop_reason(&value);
-        messages.push(ClaudeCodeMessage {
-            id,
-            role,
-            content,
-            created_at,
-            subkind,
-            stop_reason,
-        });
-        stats.parsed += 1;
     }
     for (index, id) in touch_ids.iter().enumerate() {
         if let Some(id) = id {
@@ -615,6 +634,39 @@ fn parse_jsonl_lines(
         }
     }
     (messages, file_touches, stats)
+}
+
+/// The message a record shows in a conversation view, or `None` when it shows
+/// nothing (bookkeeping, thinking-only or signature-only content). The window
+/// reader and the transcript search both read records through this, so a
+/// search hit is always text the viewer displays. `fallback_id` names a record
+/// that carries no `uuid` / `id`.
+fn visible_message(value: &Value, fallback_id: impl FnOnce() -> String) -> Option<ClaudeCodeMessage> {
+    let role = detect_role(value);
+    if role != "human" && role != "assistant" {
+        return None;
+    }
+    let content = extract_content(value);
+    if content.trim().is_empty() {
+        return None;
+    }
+    let id = value
+        .get("uuid")
+        .or_else(|| value.get("id"))
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .unwrap_or_else(fallback_id);
+    let created_at = extract_timestamp(value).unwrap_or_default();
+    let subkind = classify_subkind(&role, &content);
+    let stop_reason = extract_stop_reason(value);
+    Some(ClaudeCodeMessage {
+        id,
+        role,
+        content,
+        created_at,
+        subkind,
+        stop_reason,
+    })
 }
 
 #[derive(Default)]
@@ -2691,6 +2743,9 @@ pub struct ClaudeCodeSessionWindow {
     pub end_offset: u64,
     /// True when the window begins at the start of the transcript.
     pub reached_start: bool,
+    /// True when the window ends at the end of the transcript's last complete
+    /// record, as the file stood when this window was read.
+    pub reached_end: bool,
     pub events: Vec<ClaudeCodeMessage>,
     pub file_touches: Vec<ClaudeFileTouch>,
     pub stats: ClaudeDeltaStats,
@@ -2825,47 +2880,8 @@ pub(crate) fn read_session_window_with(
     end_anchor: Option<&str>,
     window: u64,
 ) -> Result<ClaudeCodeSessionWindow, String> {
-    let canonical = resolve_session_path(root, session_path)?;
-    let mut file = fs::File::open(&canonical)
-        .map_err(|error| format!("SOURCE_UNREADABLE: Failed to open {}: {error}", canonical.display()))?;
-    let len = file.metadata().map_err(|error| error.to_string())?.len();
-    let id = source_id_of(&mut file)?;
-    if before.is_some() && (source_id.is_none() || (anchor.is_none() && end_anchor.is_none())) {
-        return Err("INVALID_CURSOR: an earlier page needs the source id and anchor it was given.".to_string());
-    }
-    if let Some(expected) = source_id {
-        if expected != id {
-            return Err("SOURCE_CHANGED: the transcript was replaced since it was opened.".to_string());
-        }
-    }
-
-    // The window's end: a validated cursor, or the end of the last complete line.
-    let mut end = match before {
-        Some(cursor) => {
-            if cursor > len {
-                return Err("SOURCE_CHANGED: the transcript is shorter than the cursor.".to_string());
-            }
-            if cursor > 0 && read_range(&mut file, cursor - 1, cursor)?[0] != b'\n' {
-                return Err("INVALID_CURSOR: the cursor is not at a record boundary.".to_string());
-            }
-            if let Some(expected) = anchor {
-                if expected != anchor_at(&mut file, cursor, len)? {
-                    return Err("SOURCE_CHANGED: the record at the cursor is not the one it named.".to_string());
-                }
-            }
-            if let Some(expected) = end_anchor {
-                if expected != last_record_anchor(&mut file, 0, cursor, len)? {
-                    return Err("SOURCE_CHANGED: the record before the cursor is not the one it named.".to_string());
-                }
-            }
-            cursor
-        }
-        None => len,
-    };
-    if before.is_none() && end > 0 && read_range(&mut file, end - 1, end)?[0] != b'\n' {
-        // A trailing record still being written is not a record yet.
-        end = record_start_before(&mut file, end)?.unwrap_or(0);
-    }
+    let (canonical, mut file, len, id) = open_source(root, session_path)?;
+    let end = cursor_end(&mut file, len, &id, before, source_id, anchor, end_anchor)?;
 
     let mut omitted_records = 0usize;
     let mut omitted_bytes = 0u64;
@@ -2893,7 +2909,95 @@ pub(crate) fn read_session_window_with(
             }
         }
     }
+    build_window(&canonical, &mut file, len, id, start, end, &buffer, omitted_records, omitted_bytes)
+}
 
+/// Open an authorized transcript: its canonical path, the file, its length and
+/// its source id.
+fn open_source(root: &Path, session_path: &str) -> Result<(PathBuf, fs::File, u64, String), String> {
+    let canonical = resolve_session_path(root, session_path)?;
+    let mut file = fs::File::open(&canonical)
+        .map_err(|error| format!("SOURCE_UNREADABLE: Failed to open {}: {error}", canonical.display()))?;
+    let len = file.metadata().map_err(|error| error.to_string())?.len();
+    let id = source_id_of(&mut file)?;
+    Ok((canonical, file, len, id))
+}
+
+/// Where a backward read ends: a validated cursor, or the end of the last
+/// complete record. A cursor must carry the source id it came with and an
+/// anchor naming the record at it (`anchor`) or before it (`end_anchor`); a
+/// cursor past the end, mid-line, or for a replaced or rewritten file is
+/// refused instead of read as something else.
+fn cursor_end(
+    file: &mut fs::File,
+    len: u64,
+    id: &str,
+    before: Option<u64>,
+    source_id: Option<&str>,
+    anchor: Option<&str>,
+    end_anchor: Option<&str>,
+) -> Result<u64, String> {
+    if before.is_some() && (source_id.is_none() || (anchor.is_none() && end_anchor.is_none())) {
+        return Err("INVALID_CURSOR: an earlier page needs the source id and anchor it was given.".to_string());
+    }
+    if let Some(expected) = source_id {
+        if expected != id {
+            return Err("SOURCE_CHANGED: the transcript was replaced since it was opened.".to_string());
+        }
+    }
+    match before {
+        Some(cursor) => {
+            check_boundary(file, len, cursor)?;
+            if let Some(expected) = anchor {
+                if expected != anchor_at(file, cursor, len)? {
+                    return Err("SOURCE_CHANGED: the record at the cursor is not the one it named.".to_string());
+                }
+            }
+            if let Some(expected) = end_anchor {
+                if expected != last_record_anchor(file, 0, cursor, len)? {
+                    return Err("SOURCE_CHANGED: the record before the cursor is not the one it named.".to_string());
+                }
+            }
+            Ok(cursor)
+        }
+        None => complete_end(file, len),
+    }
+}
+
+/// Refuse a cursor past the end of the file or not at a record boundary.
+fn check_boundary(file: &mut fs::File, len: u64, cursor: u64) -> Result<(), String> {
+    if cursor > len {
+        return Err("SOURCE_CHANGED: the transcript is shorter than the cursor.".to_string());
+    }
+    if cursor > 0 && read_range(file, cursor - 1, cursor)?[0] != b'\n' {
+        return Err("INVALID_CURSOR: the cursor is not at a record boundary.".to_string());
+    }
+    Ok(())
+}
+
+/// The end of the last complete record: a trailing record still being written
+/// is not a record yet.
+fn complete_end(file: &mut fs::File, len: u64) -> Result<u64, String> {
+    if len > 0 && read_range(file, len - 1, len)?[0] != b'\n' {
+        return Ok(record_start_before(file, len)?.unwrap_or(0));
+    }
+    Ok(len)
+}
+
+/// The window over the complete records in `buffer`, which holds the bytes
+/// from `start` to `end`.
+#[allow(clippy::too_many_arguments)]
+fn build_window(
+    canonical: &Path,
+    file: &mut fs::File,
+    len: u64,
+    id: String,
+    start: u64,
+    end: u64,
+    buffer: &[u8],
+    omitted_records: usize,
+    omitted_bytes: u64,
+) -> Result<ClaudeCodeSessionWindow, String> {
     // A record without its own id is named by its byte offset, so the same line
     // keeps the same id in every window that contains it. Offsets come from the
     // raw bytes: decoding replaces invalid sequences and would shift them.
@@ -2903,9 +3007,10 @@ pub(crate) fn read_session_window_with(
         offsets.push(cursor);
         cursor += line.len() as u64 + 1;
     }
-    let start_anchor = anchor_at(&mut file, start, len)?;
-    let end_anchor = last_record_anchor(&mut file, start, end, len)?;
-    let text = String::from_utf8_lossy(&buffer);
+    let start_anchor = anchor_at(file, start, len)?;
+    let end_anchor = last_record_anchor(file, start, end, len)?;
+    let reached_end = end >= complete_end(file, len)?;
+    let text = String::from_utf8_lossy(buffer);
     let (events, file_touches, stats) = parse_jsonl_lines(&text, |index| {
         format!("offset-{}", offsets.get(index).copied().unwrap_or(start))
     });
@@ -2918,12 +3023,329 @@ pub(crate) fn read_session_window_with(
         end_anchor,
         end_offset: end,
         reached_start: start == 0,
+        reached_end,
         events,
         file_touches,
         stats,
         omitted_records,
         omitted_bytes,
     })
+}
+
+/// Read the complete records that start at `after`, at most `window` bytes of
+/// them: the newer history after a part the view holds, for a view opened in
+/// the middle of a transcript (a search result).
+///
+/// The cursor must sit on a record boundary and carry the source id and the
+/// fingerprint of the record that ends at it (`end_anchor`, "" at the start of
+/// the file), so a replaced or rewritten transcript is refused, not read at a
+/// stale offset. A record larger than a window is skipped and counted, and the
+/// window ends after it, so later history stays reachable.
+pub(crate) fn read_session_window_after(
+    root: &Path,
+    session_path: &str,
+    after: u64,
+    source_id: &str,
+    end_anchor: &str,
+    window: u64,
+) -> Result<ClaudeCodeSessionWindow, String> {
+    let (canonical, mut file, len, id) = open_source(root, session_path)?;
+    if source_id != id {
+        return Err("SOURCE_CHANGED: the transcript was replaced since it was opened.".to_string());
+    }
+    check_boundary(&mut file, len, after)?;
+    if end_anchor != last_record_anchor(&mut file, 0, after, len)? {
+        return Err("SOURCE_CHANGED: the record before the cursor is not the one it named.".to_string());
+    }
+    let complete = complete_end(&mut file, len)?;
+    if after >= complete {
+        return build_window(&canonical, &mut file, len, id, after, after, &[], 0, 0);
+    }
+    let limit = (after + window.max(1)).min(complete);
+    let mut buffer = read_range(&mut file, after, limit)?;
+    match buffer.iter().rposition(|&byte| byte == b'\n') {
+        Some(position) => {
+            buffer.truncate(position + 1);
+            let end = after + position as u64 + 1;
+            // The bytes end on a line break; drop it so `split` yields records only.
+            buffer.pop();
+            build_window(&canonical, &mut file, len, id, after, end, &buffer, 0, 0)
+        }
+        None => {
+            let end = record_end_after(&mut file, limit, complete)?
+                .ok_or_else(|| "RECORD_TOO_LARGE: a single record exceeds the scan limit.".to_string())?;
+            build_window(&canonical, &mut file, len, id, after, end, &[], 1, end - after)
+        }
+    }
+}
+
+/// Offset just after the first line break at or after `from`, scanning forward
+/// in small chunks up to `limit`; `None` when none lies within the scan limit.
+fn record_end_after(file: &mut fs::File, from: u64, limit: u64) -> Result<Option<u64>, String> {
+    const CHUNK: u64 = 64 * 1024;
+    let ceiling = limit.min(from.saturating_add(RECORD_START_SCAN_LIMIT));
+    let mut start = from;
+    while start < ceiling {
+        let end = (start + CHUNK).min(ceiling);
+        let chunk = read_range(file, start, end)?;
+        if let Some(position) = chunk.iter().position(|&byte| byte == b'\n') {
+            return Ok(Some(start + position as u64 + 1));
+        }
+        start = end;
+    }
+    Ok(None)
+}
+
+// ─── on-demand transcript search ───────────────────────────────────────────
+
+/// Bytes one search request scans. A request costs this much reading and
+/// parsing, never the transcript's whole size; the caller continues from the
+/// returned cursor for more.
+pub const SEARCH_SCAN_BYTES: u64 = 16 * 1024 * 1024;
+/// Matches one request returns at most.
+pub const SEARCH_MAX_HITS: usize = 50;
+/// The longest query accepted, in characters.
+pub const SEARCH_QUERY_MAX_CHARS: usize = 200;
+/// Characters of context kept on each side of a match in a result preview.
+const SNIPPET_CONTEXT_CHARS: usize = 60;
+
+/// One message whose visible text contains the query.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaudeCodeSearchHit {
+    /// The message's id as the window reader names it.
+    pub message_id: String,
+    pub role: String,
+    pub subkind: String,
+    pub created_at: String,
+    /// The record's byte range; `record_end` sits on a line boundary.
+    pub record_start: u64,
+    pub record_end: u64,
+    /// Fingerprint of the record: with `record_end` it reads the window that
+    /// ends at this record, and a rewritten transcript is refused.
+    pub record_anchor: String,
+    /// A bounded preview: the text before the first match, the match as
+    /// written, and the text after. Whitespace runs are folded to one space.
+    pub snippet_before: String,
+    pub snippet_match: String,
+    pub snippet_after: String,
+    /// Matches in this message's visible text.
+    pub matches_in_message: usize,
+}
+
+/// One search request's result, newest match first.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaudeCodeSearchBatch {
+    pub source_id: String,
+    pub file_bytes: u64,
+    /// The end of the range searched by this request.
+    pub scan_end: u64,
+    /// Where this request stopped: everything from here to `scan_end` was
+    /// searched. Pass it, with `scan_start_anchor`, to search earlier.
+    pub scan_start: u64,
+    pub scan_start_anchor: String,
+    /// True when the search has reached the start of the transcript.
+    pub reached_start: bool,
+    pub hits: Vec<ClaudeCodeSearchHit>,
+    /// True when the request stopped because it had returned its maximum.
+    pub hit_limit: bool,
+    /// Records whose messages were checked.
+    pub searched_records: usize,
+    /// Records too large for the viewer to show (and so not searched), counted
+    /// with their bytes rather than silently passed over.
+    pub unsearchable_records: usize,
+    pub unsearchable_bytes: u64,
+}
+
+/// Lowercased text with, for each of its bytes, the byte in the original it
+/// came from: case-insensitive matching that can still point at the original.
+fn fold(text: &str) -> (String, Vec<usize>) {
+    let mut folded = String::with_capacity(text.len());
+    let mut origin = Vec::with_capacity(text.len());
+    for (index, ch) in text.char_indices() {
+        for lower in ch.to_lowercase() {
+            let before = folded.len();
+            folded.push(lower);
+            origin.extend(std::iter::repeat(index).take(folded.len() - before));
+        }
+    }
+    (folded, origin)
+}
+
+fn fold_whitespace(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The first match of `needle` (already folded) in `text`, as an original byte
+/// range, and how many non-overlapping matches there are.
+fn find_matches(text: &str, needle: &str) -> Option<((usize, usize), usize)> {
+    let (folded, origin) = fold(text);
+    let mut first = None;
+    let mut count = 0;
+    let mut from = 0;
+    while let Some(position) = folded[from..].find(needle) {
+        let at = from + position;
+        if first.is_none() {
+            let end_byte = at + needle.len();
+            let start = origin[at];
+            // The original character holding the match's last folded byte.
+            let last = origin[end_byte - 1];
+            let end = last + text[last..].chars().next().map(char::len_utf8).unwrap_or(0);
+            first = Some((start, end));
+        }
+        count += 1;
+        from = at + needle.len();
+    }
+    first.map(|range| (range, count))
+}
+
+fn snippet(text: &str, (start, end): (usize, usize)) -> (String, String, String) {
+    let before_chars: Vec<char> = text[..start].chars().collect();
+    let mut before: String = before_chars[before_chars.len().saturating_sub(SNIPPET_CONTEXT_CHARS)..].iter().collect();
+    if before_chars.len() > SNIPPET_CONTEXT_CHARS {
+        before.insert(0, '…');
+    }
+    let after_chars: Vec<char> = text[end..].chars().take(SNIPPET_CONTEXT_CHARS + 1).collect();
+    let mut after: String = after_chars.iter().take(SNIPPET_CONTEXT_CHARS).collect();
+    if after_chars.len() > SNIPPET_CONTEXT_CHARS {
+        after.push('…');
+    }
+    let before = fold_whitespace(&before);
+    let after = fold_whitespace(&after);
+    // Keep the space at a boundary that folding would otherwise eat.
+    let lead = if text[..start].ends_with(char::is_whitespace) && !before.is_empty() { " " } else { "" };
+    let trail = if text[end..].starts_with(char::is_whitespace) && !after.is_empty() { " " } else { "" };
+    (format!("{before}{lead}"), fold_whitespace(&text[start..end]), format!("{trail}{after}"))
+}
+
+/// Search the visible messages of a transcript backward from `before` (the end
+/// of its last complete record when absent), newest match first.
+///
+/// - The query is a literal phrase, matched case-insensitively; an empty or
+///   overlong query is refused rather than scanned for.
+/// - Each request reads at most `scan_bytes` and returns at most `max_hits`;
+///   `scan_start` says where it stopped, so a partial search never reads as a
+///   complete one.
+/// - A message matches on the text the conversation view shows for it, never
+///   on raw JSON, metadata, thinking or signatures.
+/// - A record too large for the viewer to show is counted as unsearchable.
+/// - A continuing request carries the source id and the anchor it was given; a
+///   replaced or rewritten transcript is refused.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn search_session_at(
+    root: &Path,
+    session_path: &str,
+    query: &str,
+    before: Option<u64>,
+    source_id: Option<&str>,
+    anchor: Option<&str>,
+    max_hits: usize,
+    scan_bytes: u64,
+) -> Result<ClaudeCodeSearchBatch, String> {
+    let query = query.trim();
+    if query.is_empty() {
+        return Err("INVALID_QUERY: the query is empty.".to_string());
+    }
+    if query.chars().count() > SEARCH_QUERY_MAX_CHARS {
+        return Err(format!("INVALID_QUERY: the query is longer than {SEARCH_QUERY_MAX_CHARS} characters."));
+    }
+    let (needle, _) = fold(query);
+    let max_hits = max_hits.clamp(1, SEARCH_MAX_HITS);
+    let (_, mut file, len, id) = open_source(root, session_path)?;
+    let end = cursor_end(&mut file, len, &id, before, source_id, anchor, None)?;
+
+    let mut batch = ClaudeCodeSearchBatch {
+        source_id: id,
+        file_bytes: len,
+        scan_end: end,
+        scan_start: end,
+        scan_start_anchor: String::new(),
+        reached_start: false,
+        hits: Vec::new(),
+        hit_limit: false,
+        searched_records: 0,
+        unsearchable_records: 0,
+        unsearchable_bytes: 0,
+    };
+    let mut start = end.saturating_sub(scan_bytes.max(1));
+    let mut buffer = read_range(&mut file, start, end)?;
+    if start > 0 {
+        match buffer.iter().position(|&byte| byte == b'\n') {
+            Some(position) if start + (position as u64) + 1 < end => {
+                buffer.drain(..=position);
+                start += position as u64 + 1;
+            }
+            _ => {
+                // One record larger than a whole request: count it and step
+                // before it.
+                let record_start = record_start_before(&mut file, end - 1)?
+                    .ok_or_else(|| "RECORD_TOO_LARGE: a single record exceeds the scan limit.".to_string())?;
+                batch.unsearchable_records = 1;
+                batch.unsearchable_bytes = end - record_start;
+                start = record_start;
+                buffer.clear();
+            }
+        }
+    }
+
+    // Records with their offsets, newest last.
+    let mut records = Vec::new();
+    let mut offset = start;
+    for line in buffer.split(|&byte| byte == b'\n') {
+        if offset >= end {
+            break;
+        }
+        records.push((offset, line));
+        offset += line.len() as u64 + 1;
+    }
+    batch.scan_start = start;
+    for &(offset, line) in records.iter().rev() {
+        let record_bytes = line.len() as u64 + 1;
+        if record_bytes >= WINDOW_BYTES {
+            // The viewer cannot show it, so no result may point at it.
+            batch.unsearchable_records += 1;
+            batch.unsearchable_bytes += record_bytes;
+            continue;
+        }
+        let text = String::from_utf8_lossy(line);
+        let trimmed = text.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let Ok(value) = serde_json::from_str::<Value>(trimmed) else {
+            continue;
+        };
+        let Some(message) = visible_message(&value, || format!("offset-{offset}")) else {
+            continue;
+        };
+        batch.searched_records += 1;
+        if let Some((range, count)) = find_matches(&message.content, &needle) {
+            let (snippet_before, snippet_match, snippet_after) = snippet(&message.content, range);
+            batch.hits.push(ClaudeCodeSearchHit {
+                message_id: message.id,
+                role: message.role,
+                subkind: message.subkind,
+                created_at: message.created_at,
+                record_start: offset,
+                record_end: offset + record_bytes,
+                record_anchor: anchor_at(&mut file, offset, len)?,
+                snippet_before,
+                snippet_match,
+                snippet_after,
+                matches_in_message: count,
+            });
+            if batch.hits.len() >= max_hits {
+                // Stop here: the next request continues before this record.
+                batch.hit_limit = true;
+                batch.scan_start = offset;
+                break;
+            }
+        }
+    }
+    batch.reached_start = batch.scan_start == 0;
+    batch.scan_start_anchor = anchor_at(&mut file, batch.scan_start, len)?;
+    Ok(batch)
 }
 
 #[cfg(test)]
@@ -3193,5 +3615,403 @@ mod window_tests {
         assert!(read_session_window_at(dir.path(), &text_file.to_string_lossy(), None, None, None, 100).unwrap_err().starts_with("Refused"));
         let missing = dir.path().join("-home-u-dev-infra").join("gone.jsonl");
         assert!(read_session_window_at(dir.path(), &missing.to_string_lossy(), None, None, None, 100).unwrap_err().starts_with("SOURCE_MISSING"));
+    }
+}
+
+#[cfg(test)]
+mod search_tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    fn user(uuid: &str, text: &str, at: &str) -> String {
+        let value = serde_json::json!({"type": "user", "uuid": uuid, "message": {"role": "user", "content": text}, "timestamp": at});
+        format!("{value}\n")
+    }
+
+    fn assistant(uuid: Option<&str>, blocks: serde_json::Value) -> String {
+        let mut value = serde_json::json!({"type": "assistant", "message": {"role": "assistant", "content": blocks}, "timestamp": "2026-10-08T00:00:00Z"});
+        if let Some(uuid) = uuid {
+            value["uuid"] = serde_json::Value::String(uuid.to_string());
+        }
+        format!("{value}\n")
+    }
+
+    fn filler(count: usize, from: usize) -> String {
+        (from..from + count)
+            .map(|index| user(&format!("f{index}"), &format!("filler record {index} {}", "x".repeat(200)), "2026-10-08T00:00:00Z"))
+            .collect()
+    }
+
+    fn session(dir: &TempDir, body: &str) -> String {
+        let project = dir.path().join("-home-u-dev-infra");
+        fs::create_dir_all(&project).unwrap();
+        let path = project.join("big.jsonl");
+        fs::write(&path, body).unwrap();
+        path.to_string_lossy().to_string()
+    }
+
+    fn search(root: &Path, path: &str, query: &str) -> ClaudeCodeSearchBatch {
+        search_session_at(root, path, query, None, None, None, SEARCH_MAX_HITS, SEARCH_SCAN_BYTES).unwrap()
+    }
+
+    /// Every hit, continuing until the start, with the given request size.
+    fn search_all(root: &Path, path: &str, query: &str, max_hits: usize, scan: u64) -> (Vec<ClaudeCodeSearchHit>, usize) {
+        let mut batch = search_session_at(root, path, query, None, None, None, max_hits, scan).unwrap();
+        let mut hits = batch.hits.clone();
+        let mut requests = 1;
+        while !batch.reached_start {
+            let next = search_session_at(root, path, query, Some(batch.scan_start), Some(&batch.source_id), Some(&batch.scan_start_anchor), max_hits, scan).unwrap();
+            assert_eq!(next.scan_end, batch.scan_start, "requests tile the file without gaps");
+            hits.extend(next.hits.clone());
+            batch = next;
+            requests += 1;
+        }
+        (hits, requests)
+    }
+
+    fn ids(hits: &[ClaudeCodeSearchHit]) -> Vec<String> {
+        hits.iter().map(|hit| hit.message_id.clone()).collect()
+    }
+
+    #[test]
+    fn finds_matches_newest_first_near_the_end_and_the_start() {
+        let dir = TempDir::new().unwrap();
+        let body = format!(
+            "{}{}{}{}",
+            user("start", "the firewall parser at the start", "2026-10-01T00:00:00Z"),
+            filler(50, 0),
+            user("middle", "Firewall Parser again", "2026-10-02T00:00:00Z"),
+            user("end", "last word on the firewall parser", "2026-10-03T00:00:00Z"),
+        );
+        let path = session(&dir, &body);
+        let batch = search(dir.path(), &path, "firewall parser");
+        assert_eq!(ids(&batch.hits), vec!["end", "middle", "start"]);
+        assert!(batch.reached_start && !batch.hit_limit);
+        assert_eq!(batch.scan_end, body.len() as u64);
+        assert_eq!(batch.hits[1].snippet_match, "Firewall Parser", "the match is shown as written");
+    }
+
+    #[test]
+    fn finds_a_match_megabytes_before_the_end_in_bounded_requests() {
+        let dir = TempDir::new().unwrap();
+        let body = format!("{}{}{}", filler(200, 0), user("target", "Decision: Candidate B, SMB served from nuc-srv", "2026-10-08T06:57:15Z"), filler(14_000, 200));
+        assert!(body.len() > 3 * 1024 * 1024);
+        let path = session(&dir, &body);
+        let (hits, requests) = search_all(dir.path(), &path, "candidate b", 20, 256 * 1024);
+        assert_eq!(ids(&hits), vec!["target"]);
+        assert!(requests > 10, "a 3 MiB file is read in 256 KiB requests");
+        let hit = &hits[0];
+        let record = &body.as_bytes()[hit.record_start as usize..hit.record_end as usize];
+        assert!(std::str::from_utf8(record).unwrap().contains("\"uuid\":\"target\""));
+        assert!(record.ends_with(b"\n"));
+    }
+
+    #[test]
+    fn caps_each_request_and_continues_without_duplicates() {
+        let dir = TempDir::new().unwrap();
+        let body: String = (0..7).map(|index| user(&format!("m{index}"), &format!("needle {index}"), "2026-10-08T00:00:00Z")).collect();
+        let path = session(&dir, &body);
+        let first = search_session_at(dir.path(), &path, "needle", None, None, None, 3, SEARCH_SCAN_BYTES).unwrap();
+        assert_eq!(ids(&first.hits), vec!["m6", "m5", "m4"]);
+        assert!(first.hit_limit && !first.reached_start, "a capped request is not a complete search");
+        let (all, _) = search_all(dir.path(), &path, "needle", 3, SEARCH_SCAN_BYTES);
+        assert_eq!(ids(&all), vec!["m6", "m5", "m4", "m3", "m2", "m1", "m0"]);
+    }
+
+    #[test]
+    fn counts_matches_inside_one_message_and_folds_case_and_unicode() {
+        let dir = TempDir::new().unwrap();
+        let body = format!(
+            "{}{}{}",
+            user("ko", "방화벽 파서가 ALLOW를 무시합니다. 방화벽 파서를 고칩니다.", "2026-10-08T00:00:00Z"),
+            user("fr", "L'ÉCOLE est fermée", "2026-10-08T00:00:01Z"),
+            user("multi", "first line\nsecond line names the parser\nthird", "2026-10-08T00:00:02Z"),
+        );
+        let path = session(&dir, &body);
+        let korean = search(dir.path(), &path, "방화벽 파서");
+        assert_eq!(ids(&korean.hits), vec!["ko"]);
+        assert_eq!(korean.hits[0].matches_in_message, 2);
+        assert_eq!(ids(&search(dir.path(), &path, "l'école").hits), vec!["fr"]);
+        let multi = search(dir.path(), &path, "names the parser");
+        assert_eq!(ids(&multi.hits), vec!["multi"]);
+        assert_eq!(multi.hits[0].snippet_before, "first line second line ", "newlines fold to spaces in the preview");
+    }
+
+    #[test]
+    fn matches_what_json_escaping_hides_from_a_raw_byte_search() {
+        let dir = TempDir::new().unwrap();
+        let body = user("q", "she said \"stop\" at C:\\temp", "2026-10-08T00:00:00Z");
+        assert!(!body.contains("said \"stop\""), "the raw line holds the escaped form");
+        let path = session(&dir, &body);
+        assert_eq!(ids(&search(dir.path(), &path, "said \"stop\" at c:\\temp").hits), vec!["q"]);
+    }
+
+    #[test]
+    fn never_matches_thinking_signatures_or_metadata() {
+        let dir = TempDir::new().unwrap();
+        let body = format!(
+            "{}{}{}{}",
+            assistant(Some("think"), serde_json::json!([{"type": "thinking", "thinking": "secret plan zebra", "signature": "zebra-sig"}, {"type": "text", "text": "visible reply"}])),
+            assistant(Some("sig"), serde_json::json!([{"type": "redacted_thinking", "data": "zebra"}])),
+            "{\"type\":\"summary\",\"summary\":\"zebra summary\",\"leafUuid\":\"x\"}\n",
+            "{\"type\":\"user\",\"uuid\":\"meta\",\"cwd\":\"/home/zebra\",\"message\":{\"role\":\"user\",\"content\":\"plain words\"},\"timestamp\":\"2026-10-08T00:00:00Z\"}\n",
+        );
+        let path = session(&dir, &body);
+        let batch = search(dir.path(), &path, "zebra");
+        assert!(batch.hits.is_empty(), "{:?}", ids(&batch.hits));
+        assert!(batch.reached_start);
+        assert_eq!(ids(&search(dir.path(), &path, "visible reply").hits), vec!["think"]);
+    }
+
+    #[test]
+    fn names_a_message_without_uuid_as_the_window_reader_does() {
+        let dir = TempDir::new().unwrap();
+        let body = format!("{}{}", user("a", "hello", "2026-10-08T00:00:00Z"), assistant(None, serde_json::json!([{"type": "text", "text": "anonymous answer"}])));
+        let path = session(&dir, &body);
+        let hit = search(dir.path(), &path, "anonymous").hits.remove(0);
+        let window = read_session_window_with(dir.path(), &path, Some(hit.record_end), Some(&search(dir.path(), &path, "anonymous").source_id), None, Some(&hit.record_anchor), WINDOW_BYTES).unwrap();
+        assert_eq!(window.events.last().unwrap().id, hit.message_id);
+        assert!(hit.message_id.starts_with("offset-"));
+    }
+
+    #[test]
+    fn a_hit_opens_the_window_that_ends_at_its_record() {
+        let dir = TempDir::new().unwrap();
+        let body = format!("{}{}{}", filler(30, 0), user("target", "Finding B: the parser never looks at ALLOW", "2026-10-08T11:51:55Z"), filler(30, 30));
+        let path = session(&dir, &body);
+        let batch = search(dir.path(), &path, "never looks at allow");
+        let hit = &batch.hits[0];
+        let window = read_session_window_with(dir.path(), &path, Some(hit.record_end), Some(&batch.source_id), None, Some(&hit.record_anchor), WINDOW_BYTES).unwrap();
+        let last = window.events.last().unwrap();
+        assert_eq!(last.id, "target");
+        assert!(last.content.contains("never looks at ALLOW"));
+        assert!(!window.reached_end, "a window in the middle is not the latest");
+        // The newer history after it, read forward from the same boundary.
+        let newer = read_session_window_after(dir.path(), &path, window.end_offset, &batch.source_id, &window.end_anchor, WINDOW_BYTES).unwrap();
+        assert_eq!(newer.start_offset, window.end_offset);
+        assert_eq!(newer.events.first().unwrap().id, "f30");
+        assert!(newer.reached_end);
+    }
+
+    #[test]
+    fn a_repeated_uuid_hit_is_the_last_record_of_its_window() {
+        let dir = TempDir::new().unwrap();
+        // Two records share a uuid; only the later one holds the phrase.
+        let body = format!(
+            "{}{}{}{}",
+            filler(3, 0),
+            user("dup", "first version without it", "2026-10-08T00:00:00Z"),
+            user("dup", "second version names the needle", "2026-10-08T00:00:01Z"),
+            filler(3, 3),
+        );
+        let path = session(&dir, &body);
+        let batch = search(dir.path(), &path, "needle");
+        assert_eq!(batch.hits.len(), 1);
+        let hit = &batch.hits[0];
+        let later = body.find("second version").unwrap() as u64;
+        assert!(hit.record_start < later && later < hit.record_end, "the hit names the later record");
+        let window = read_session_window_with(dir.path(), &path, Some(hit.record_end), Some(&batch.source_id), None, Some(&hit.record_anchor), WINDOW_BYTES).unwrap();
+        // Both records are in the window under one id; the hit is the last event.
+        assert_eq!(window.events.iter().filter(|event| event.id == "dup").count(), 2);
+        let last = window.events.last().unwrap();
+        assert_eq!(last.id, "dup");
+        assert!(last.content.contains("needle"));
+        assert!(!window.events.iter().find(|event| event.id == "dup").unwrap().content.contains("needle"));
+    }
+
+    #[test]
+    fn the_newest_record_is_the_latest_window() {
+        let dir = TempDir::new().unwrap();
+        let body = format!("{}{}", filler(3, 0), user("end", "closing note", "2026-10-08T00:00:00Z"));
+        let path = session(&dir, &body);
+        let batch = search(dir.path(), &path, "closing");
+        let hit = &batch.hits[0];
+        let window = read_session_window_with(dir.path(), &path, Some(hit.record_end), Some(&batch.source_id), None, Some(&hit.record_anchor), WINDOW_BYTES).unwrap();
+        assert!(window.reached_end);
+    }
+
+    #[test]
+    fn a_record_straddling_request_boundaries_is_found_exactly_once() {
+        let dir = TempDir::new().unwrap();
+        let long = format!("{} split needle {}", "a".repeat(3000), "b".repeat(3000));
+        let body = format!("{}{}{}", filler(40, 0), user("target", &long, "2026-10-08T00:00:00Z"), filler(40, 40));
+        let path = session(&dir, &body);
+        // Requests larger than the record but smaller than the file, so the
+        // record is cut by some request's start and must be read by the next.
+        for scan in [6500u64, 7000, 9000, 13_000, 20_000] {
+            let (hits, _) = search_all(dir.path(), &path, "split needle", 20, scan);
+            assert_eq!(ids(&hits), vec!["target"], "request size {scan}");
+        }
+    }
+
+    #[test]
+    fn skips_a_trailing_record_still_being_written() {
+        let dir = TempDir::new().unwrap();
+        let body = format!("{}{}", user("done", "needle complete", "2026-10-08T00:00:00Z"), "{\"type\":\"user\",\"uuid\":\"partial\",\"message\":{\"role\":\"user\",\"content\":\"needle partial");
+        let path = session(&dir, &body);
+        let batch = search(dir.path(), &path, "needle");
+        assert_eq!(ids(&batch.hits), vec!["done"]);
+        assert!(batch.scan_end < body.len() as u64);
+    }
+
+    #[test]
+    fn passes_over_a_malformed_record() {
+        let dir = TempDir::new().unwrap();
+        let body = format!("{}{}{}", user("a", "needle one", "2026-10-08T00:00:00Z"), "{not json at all needle}\n", user("b", "needle two", "2026-10-08T00:00:01Z"));
+        let path = session(&dir, &body);
+        assert_eq!(ids(&search(dir.path(), &path, "needle").hits), vec!["b", "a"]);
+    }
+
+    #[test]
+    fn counts_a_record_too_large_to_show_and_returns_no_hit_for_it() {
+        let dir = TempDir::new().unwrap();
+        let huge = format!("needle {}", "z".repeat(WINDOW_BYTES as usize));
+        let body = format!("{}{}{}", user("a", "needle small", "2026-10-08T00:00:00Z"), user("huge", &huge, "2026-10-08T00:00:01Z"), user("b", "after", "2026-10-08T00:00:02Z"));
+        let path = session(&dir, &body);
+        let batch = search(dir.path(), &path, "needle");
+        assert_eq!(ids(&batch.hits), vec!["a"]);
+        assert_eq!(batch.unsearchable_records, 1);
+        assert!(batch.unsearchable_bytes > WINDOW_BYTES);
+        // Larger than a whole request: counted, and the next request continues before it.
+        let (hits, _) = search_all(dir.path(), &path, "needle", 20, 64 * 1024);
+        assert_eq!(ids(&hits), vec!["a"]);
+    }
+
+    #[test]
+    fn refuses_a_cursor_for_a_replaced_or_truncated_transcript() {
+        let dir = TempDir::new().unwrap();
+        let body: String = (0..40).map(|index| user(&format!("m{index}"), &format!("needle {index}"), "2026-10-08T00:00:00Z")).collect();
+        let path = session(&dir, &body);
+        let first = search_session_at(dir.path(), &path, "needle", None, None, None, 2, SEARCH_SCAN_BYTES).unwrap();
+        let next = |root: &Path| search_session_at(root, &path, "needle", Some(first.scan_start), Some(&first.source_id), Some(&first.scan_start_anchor), 2, SEARCH_SCAN_BYTES);
+        // Replaced: a different first line.
+        fs::write(&path, body.replacen("needle 0", "needle Z", 1)).unwrap();
+        assert!(next(dir.path()).unwrap_err().starts_with("SOURCE_CHANGED"));
+        // Rewritten in place after the first line: the record at the cursor differs.
+        // (A rewrite elsewhere is caught when a hit is opened: see below.)
+        fs::write(&path, body.replacen("needle 38", "needle X8", 1)).unwrap();
+        assert!(next(dir.path()).unwrap_err().starts_with("SOURCE_CHANGED"));
+        // Truncated below the cursor.
+        fs::write(&path, &body[..100]).unwrap();
+        assert!(next(dir.path()).unwrap_err().starts_with("SOURCE_CHANGED"));
+        // A hit's jump is refused the same way once its record changed.
+        fs::write(&path, &body).unwrap();
+        let hit = search(dir.path(), &path, "needle 20").hits.remove(0);
+        fs::write(&path, body.replacen("needle 20", "needle Y0", 1)).unwrap();
+        let jump = read_session_window_with(dir.path(), &path, Some(hit.record_end), Some(&first.source_id), None, Some(&hit.record_anchor), WINDOW_BYTES);
+        assert!(jump.unwrap_err().starts_with("SOURCE_CHANGED"));
+    }
+
+    #[test]
+    fn an_append_keeps_the_cursor_and_the_hits_valid() {
+        let dir = TempDir::new().unwrap();
+        let body: String = (0..40).map(|index| user(&format!("m{index}"), &format!("needle {index}"), "2026-10-08T00:00:00Z")).collect();
+        let path = session(&dir, &body);
+        let first = search_session_at(dir.path(), &path, "needle", None, None, None, 5, SEARCH_SCAN_BYTES).unwrap();
+        let hit = first.hits[4].clone();
+        fs::OpenOptions::new().append(true).open(&path).unwrap().write_all(user("late", "needle late", "2026-10-09T00:00:00Z").as_bytes()).unwrap();
+        let next = search_session_at(dir.path(), &path, "needle", Some(first.scan_start), Some(&first.source_id), Some(&first.scan_start_anchor), 5, SEARCH_SCAN_BYTES).unwrap();
+        assert_eq!(ids(&next.hits), vec!["m34", "m33", "m32", "m31", "m30"]);
+        let jump = read_session_window_with(dir.path(), &path, Some(hit.record_end), Some(&first.source_id), None, Some(&hit.record_anchor), WINDOW_BYTES).unwrap();
+        assert_eq!(jump.events.last().unwrap().id, hit.message_id);
+        assert!(!jump.reached_end);
+    }
+
+    #[test]
+    fn refuses_paths_outside_the_root_and_symlink_escapes() {
+        let dir = TempDir::new().unwrap();
+        let outside = TempDir::new().unwrap();
+        let foreign = outside.path().join("foreign.jsonl");
+        fs::write(&foreign, user("x", "needle", "2026-10-08T00:00:00Z")).unwrap();
+        let error = search_session_at(dir.path(), foreign.to_str().unwrap(), "needle", None, None, None, 5, SEARCH_SCAN_BYTES).unwrap_err();
+        assert!(error.starts_with("Refused"), "{error}");
+        let project = dir.path().join("-home-u");
+        fs::create_dir_all(&project).unwrap();
+        let link = project.join("link.jsonl");
+        std::os::unix::fs::symlink(&foreign, &link).unwrap();
+        let error = search_session_at(dir.path(), link.to_str().unwrap(), "needle", None, None, None, 5, SEARCH_SCAN_BYTES).unwrap_err();
+        assert!(error.starts_with("Refused"), "{error}");
+        let text = project.join("notes.txt");
+        fs::write(&text, "needle").unwrap();
+        assert!(search_session_at(dir.path(), text.to_str().unwrap(), "needle", None, None, None, 5, SEARCH_SCAN_BYTES).unwrap_err().starts_with("Refused"));
+    }
+
+    #[test]
+    fn refuses_empty_and_overlong_queries_without_reading() {
+        let dir = TempDir::new().unwrap();
+        let path = session(&dir, &user("a", "needle", "2026-10-08T00:00:00Z"));
+        assert!(search_session_at(dir.path(), &path, "   ", None, None, None, 5, SEARCH_SCAN_BYTES).unwrap_err().starts_with("INVALID_QUERY"));
+        let long = "n".repeat(SEARCH_QUERY_MAX_CHARS + 1);
+        assert!(search_session_at(dir.path(), &path, &long, None, None, None, 5, SEARCH_SCAN_BYTES).unwrap_err().starts_with("INVALID_QUERY"));
+        // A continuing request without its anchor is refused, not read.
+        assert!(search_session_at(dir.path(), &path, "needle", Some(0), Some("x"), None, 5, SEARCH_SCAN_BYTES).unwrap_err().starts_with("INVALID_CURSOR"));
+    }
+
+    /// Measure a search of a real transcript, read-only, the way the view runs
+    /// it: steps until a page of matches or the start, then open the first
+    /// match. `MORI_SEARCH_BENCH=<file> MORI_SEARCH_QUERY=<phrase>`.
+    #[test]
+    #[ignore]
+    fn search_bench() {
+        let (Ok(path), Ok(query)) = (std::env::var("MORI_SEARCH_BENCH"), std::env::var("MORI_SEARCH_QUERY")) else { return };
+        let root = Path::new(&path).parent().and_then(Path::parent).unwrap().to_path_buf();
+        let started = std::time::Instant::now();
+        let mut batch = search_session_at(&root, &path, &query, None, None, None, 20, SEARCH_SCAN_BYTES).unwrap();
+        let scan_end = batch.scan_end;
+        let mut hits = batch.hits.clone();
+        let mut steps = vec![started.elapsed()];
+        while hits.len() < 20 && !batch.reached_start {
+            let step = std::time::Instant::now();
+            batch = search_session_at(&root, &path, &query, Some(batch.scan_start), Some(&batch.source_id), Some(&batch.scan_start_anchor), 20 - hits.len(), SEARCH_SCAN_BYTES).unwrap();
+            hits.extend(batch.hits.clone());
+            steps.push(step.elapsed());
+        }
+        let total = started.elapsed();
+        let payload: usize = hits.iter().map(|hit| serde_json::to_string(hit).unwrap().len()).sum();
+        println!("query={query:?} steps={} total={total:?} slowest_step={:?} scanned_mib={:.1} reached_start={} hits={} unsearchable={} payload_bytes={payload}",
+            steps.len(), steps.iter().max().unwrap(), (scan_end - batch.scan_start) as f64 / 1048576.0, batch.reached_start, hits.len(), batch.unsearchable_records);
+        for hit in hits.iter().take(5) {
+            println!("  {} {} from_end_mib={:.2} matches={}", hit.created_at, hit.message_id, (scan_end - hit.record_end) as f64 / 1048576.0, hit.matches_in_message);
+        }
+        if let Some(hit) = hits.first() {
+            let open = std::time::Instant::now();
+            let window = read_session_window_with(&root, &path, Some(hit.record_end), Some(&batch.source_id), None, Some(&hit.record_anchor), WINDOW_BYTES).unwrap();
+            let newer = read_session_window_after(&root, &path, window.end_offset, &window.source_id, &window.end_anchor, WINDOW_BYTES).unwrap();
+            let shown = window.events.iter().any(|event| event.id == hit.message_id);
+            println!("  open first: {:?} shown={shown} window_events={} newer_events={}", open.elapsed(), window.events.len(), newer.events.len());
+        }
+    }
+
+    #[test]
+    fn forward_reads_tile_to_the_end_and_skip_an_oversized_record() {
+        let dir = TempDir::new().unwrap();
+        let huge = "z".repeat(3000);
+        let body = format!("{}{}{}", filler(20, 0), user("huge", &huge, "2026-10-08T00:00:00Z"), filler(20, 20));
+        let path = session(&dir, &body);
+        let source = search(dir.path(), &path, "filler").source_id;
+        let mut after = 0;
+        let mut anchor = String::new();
+        let mut seen = Vec::new();
+        let mut omitted = 0;
+        loop {
+            let window = read_session_window_after(dir.path(), &path, after, &source, &anchor, 2048).unwrap();
+            assert_eq!(window.start_offset, after);
+            seen.extend(window.events.iter().map(|event| event.id.clone()));
+            omitted += window.omitted_records;
+            if window.reached_end {
+                break;
+            }
+            after = window.end_offset;
+            anchor = window.end_anchor.clone();
+        }
+        assert_eq!(after as usize <= body.len(), true);
+        assert_eq!(omitted, 1, "the 3 KB record is larger than a 2 KB window");
+        assert_eq!(seen.len(), 40);
+        assert_eq!(seen.first().unwrap(), "f0");
+        assert_eq!(seen.last().unwrap(), "f39");
+        // A forward cursor whose preceding record changed is refused.
+        let error = read_session_window_after(dir.path(), &path, after, &source, "0000000000000000", 2048).unwrap_err();
+        assert!(error.starts_with("SOURCE_CHANGED"), "{error}");
     }
 }
