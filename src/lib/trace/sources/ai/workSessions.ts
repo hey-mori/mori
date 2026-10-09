@@ -94,6 +94,9 @@ export type AgentWorkSessionMeta = {
   lastMessageAt?: string;
   /** The source file's size when discovered (Claude Code only). */
   fileBytes?: number;
+  /** The source file's own last change when discovered (Claude Code only):
+   *  the age its cleanup estimate starts from. */
+  modifiedAt?: string;
   messageCount: number;
   /** False when `messageCount` covers only part of the source (a reader that
    *  previews a long session's head). Absent means complete. */
@@ -313,6 +316,7 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     updatedAt: claudeLastActivity(session),
     lastMessageAt: session.lastMessageAt || undefined,
     fileBytes: session.fileBytes,
+    modifiedAt: session.modifiedAt || undefined,
     messageCount: session.messageCount,
     messageCountComplete: session.messageCountComplete,
     title: session.title,
