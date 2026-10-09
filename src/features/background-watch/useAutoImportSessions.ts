@@ -14,7 +14,7 @@
  * hidden and backs off on error; foreground-only, never a daemon.
  */
 import { useEffect, useRef, useState } from "react";
-import { useSessionStore } from "../../app/sessionStore";
+import { loadStoredSessionSummaries, useSessionStore } from "../../app/sessionStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { isClaudeBridgeAvailable } from "../../lib/claude/claudeTauri";
 import { listAllAgentWorkSessions } from "../../lib/trace/sources/ai/workSessions";
@@ -24,11 +24,13 @@ import {
   autoImportedSessionId,
   carryForwardRepository,
   diffDiscoveredSessions,
+  isAutoImportedSessionId,
   seenFingerprintsFromMetas,
 } from "../../lib/session/autoImportSessions";
 import { upsertAgentSessionRecords } from "../../lib/record-kernel/agentSessionRecordAdapter";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
+import { sessionsWithKeptEvidence } from "../../lib/session/retentionInventory";
 import {
   loadAutoImportMetas,
   replaceEmptySources,
@@ -171,6 +173,17 @@ export function useAutoImportSessions(): void {
           // Prune placeholders that dropped out of the recent window (keeping
           // any the user opened) so 과거 does not accumulate stale stubs.
           const keep = new Set(recent.map((meta) => autoImportedSessionId(meta)));
+          // A session Mori keeps an archive or a passage of stays, so what was
+          // kept still opens after the agent removes the original. The kernel
+          // is read only when something would be pruned.
+          const wouldPrune = loadStoredSessionSummaries().some(
+            (summary) => isAutoImportedSessionId(summary.sessionId) && !keep.has(summary.sessionId),
+          );
+          if (wouldPrune) {
+            const sources = await getKernelRepository().listSources();
+            for (const id of sessionsWithKeptEvidence(sources.data)) keep.add(id);
+          }
+          if (cancelled) return;
           for (const removedId of pruneAutoImportedSessions(keep)) {
             seenRef.current.delete(removedId);
           }
