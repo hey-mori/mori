@@ -290,3 +290,10 @@ export async function claudeCodeArchiveDir(): Promise<string> {
   if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
   return invokeTauriCommand("claude_code_archive_dir", {});
 }
+
+/** The agent's transcript cleanup period as its settings files state it.
+ *  Reads only that one key; project-level overrides are not seen. */
+export async function claudeCodeCleanupPolicy(): Promise<{ periodDays: number | null; source: "managed" | "user" | "unset" }> {
+  if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
+  return invokeTauriCommand("claude_code_cleanup_policy", {});
+}

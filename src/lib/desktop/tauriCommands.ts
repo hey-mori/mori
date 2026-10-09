@@ -140,6 +140,7 @@ export type TauriCommandName =
   | "archive_claude_code_session"
   | "remove_claude_code_archive"
   | "claude_code_archive_dir"
+  | "claude_code_cleanup_policy"
   | "resolve_file_locations"
   | "reveal_path_in_os"
   | "llm_http_request"
@@ -420,6 +421,10 @@ export type TauriCommandMap = {
   archive_claude_code_session: { input: { sessionPath: string }; output: ClaudeCodeSessionArchive };
   remove_claude_code_archive: { input: { fileName: string }; output: boolean };
   claude_code_archive_dir: { input: Record<string, never>; output: string };
+  claude_code_cleanup_policy: {
+    input: Record<string, never>;
+    output: { periodDays: number | null; source: "managed" | "user" | "unset" };
+  };
   resolve_file_locations: {
     input: { paths: string[]; searchRoot?: string };
     output: ResolvedFileLocation[];
