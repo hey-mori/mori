@@ -77,7 +77,7 @@ first render before `prepareDurableReads` decided (it captured "no durable stora
 | A · records | records, contexts, revisions, passages | yes |
 | B · evidence | archives and their source records, source links | yes |
 | C · sessions | session list, imports, reopen descriptors: archived sessions open from the archive, imported sessions show their import | yes (isolated release runtime) |
-| D · working context | reviewed membership, project pages, search | see the acceptance record |
+| D · working context | reviewed membership (a `user` revision on the kernel record), project pages, search in an archive | yes: project page, archive search and passage search after a storage-only restore; kernel and document rows content-identical after the restored launch. A reviewed decision was not made through the UI in that run |
 | E · preferences | theme, layout, onboarding, engine settings, current session | **not included** by design |
 
 **Backup:** quit Mori, then copy the whole storage folder (default `~/Mori/Records`, or the
@@ -91,3 +91,15 @@ copies any locally held document that is newer than, or missing from, the restor
 Preferences and engine settings (including any API key) are device-local and are re-entered.
 An archive on the same disk as its original is not an independent backup; agent transcripts are
 not part of Mori's backup.
+
+## 5. Operator acceptance
+
+1. In 설정 › 저장소, note the storage folder; quit Mori.
+2. Copy the whole folder to another disk; keep a checksum list of its files.
+3. On a test account or profile (never over the live folder), put the copy at the storage location
+   with no Mori app data present, and start Mori.
+4. Check: the 프로젝트 page lists the same sessions; a kept session opens from 보관한 원본 and
+   이 대화에서 찾기 works; a saved passage is found in 기록 and 원본 열기 says plainly when the
+   original is gone; an imported session opens from its import.
+5. Quit and confirm the backup on the other disk still matches its checksum list; the restored
+   folder itself changes once Mori runs.
