@@ -34,6 +34,7 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
  */
 import { OverviewView } from "./OverviewView";
 import { SessionSourceWindow } from "./SessionSourceWindow";
+import { RetainedSourceNotice } from "./RetainedSourceNotice";
 import { sessionCrumbs, sessionReturnLink } from "./sessionProjectIdentity";
 import { useSessionProjectIdentity } from "./useSessionProjectIdentity";
 
@@ -95,6 +96,7 @@ export function SessionDetailView() {
         <SessionTitleInline />
         {sessionWindow ? null : <SessionTabBar activeTab={sessionTab} onChange={setSessionTab} />}
       </div>
+      {sessionWindow ? null : <RetainedSourceNotice />}
       {sessionWindow ? (
         <SessionSourceWindow state={sessionWindow} />
       ) : (
