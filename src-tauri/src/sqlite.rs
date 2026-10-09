@@ -96,6 +96,12 @@ pub fn list_browser_evidence_page(
 #[tauri::command]
 pub fn get_sqlite_migration_status(state: tauri::State<'_, SqliteState>) -> Result<DatabaseStatus, String> {
     with_connection(&state, |conn, path| {
+        // The same check every other command runs first. Without it a database
+        // that cannot migrate (a changed checksum, a failed apply) reported a
+        // healthy status, so the recovery card, which appears only on an error
+        // status, never offered its restore or start-fresh: every other call
+        // failed and fell back while this one said all was well.
+        ensure_migrated(conn)?;
         let records = applied_migrations(conn)?;
         let applied_versions: Vec<String> = records.iter().map(|record| record.version.clone()).collect();
         let pending_versions: Vec<String> = MIGRATIONS
