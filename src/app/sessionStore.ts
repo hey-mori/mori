@@ -1956,10 +1956,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return false;
     }
 
-    const storedDraft = repository.saveCurrentSessionDraft({
-      project: loaded.draft.project,
-      session: loaded.draft.session,
+    // Opening is not activity: keep the session's own `savedAt` (as the
+    // startup restore does) so recency surfaces do not rank a session as just
+    // active because it was looked at (#169).
+    repository.putStoredSessionDraft({
+      ...loaded.draft,
+      savedAt: repository.loadStoredSessionDraft(sessionId)?.savedAt ?? loaded.draft.savedAt,
     });
+    const storedDraft = repository.setCurrentSession(sessionId) ?? loaded.draft;
     repository.clearSessionImports(storedDraft.session.id);
     for (const entry of loaded.imports) {
       repository.addSessionImport(storedDraft.session.id, {

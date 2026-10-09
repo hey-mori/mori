@@ -301,10 +301,11 @@ describe("useSessionStore Quick Pass provider flow", () => {
 
 describe("useSessionStore desktop persistence", () => {
   let desktopClearCalls = 0;
+  let repository: BrowserDraftRepository;
   beforeEach(() => {
     desktopClearCalls = 0;
     const storage = new MemoryKeyValueStorage();
-    const repository = new BrowserDraftRepository(storage);
+    repository = new BrowserDraftRepository(storage);
     setSessionRepositoryForTesting(repository);
     const service = new SessionPersistenceService({
       runtime: "desktop",
@@ -371,6 +372,18 @@ describe("useSessionStore desktop persistence", () => {
     expect(state.draft?.session.id).toBe(mockSession.session.id);
     expect(state.imports.length).toBe(mockSession.sources.length);
     expect(state.source).toBe("desktop-sqlite");
+  });
+
+  it("opening a saved SQLite session does not restamp when it was last active (#169)", async () => {
+    repository.putStoredSessionDraft({
+      project: mockSession.project,
+      session: mockSession.session,
+      savedAt: "2026-05-01T00:00:00.000Z",
+      adapter: "browser-local-storage",
+    });
+    await useSessionStore.getState().loadDesktopSession(mockSession.session.id);
+    expect(useSessionStore.getState().draft?.savedAt).toBe("2026-05-01T00:00:00.000Z");
+    expect(repository.loadStoredSessionDraft(mockSession.session.id)?.savedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 
   it("clearAllDataAndViewDemo wipes SQLite and returns to an empty real session", async () => {
