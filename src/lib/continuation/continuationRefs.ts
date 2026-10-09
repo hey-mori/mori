@@ -3,8 +3,8 @@
  * the preview can open what each item cites.
  *
  * The pack's text is what leaves Mori and is never changed here. Only refs the
- * pack itself issued are linked: a string that merely looks like one (inside a
- * title, say) stays text, so a link always leads to the item it stands for.
+ * pack itself issued, where the pack wrote them, are linked: a ref-shaped
+ * string inside a title stays text, so a link leads to the item it ends.
  */
 import type { ProjectContinuationPack } from "./projectContinuation";
 
@@ -12,9 +12,10 @@ export type ContinuationRef = { kind: "session" | "record"; id: string };
 
 export type ContinuationSegment = { text: string; ref?: ContinuationRef };
 
-// The pack writes each ref in parentheses at the end of its item line
-// (`itemLine`), so the parentheses bound the id whatever characters it holds.
-const REF = /\((mori:(session|record)\/[^()\s]+)\)/g;
+// The pack writes each ref in parentheses at the END of its item line
+// (`itemLine`). Anchoring there means a ref quoted inside a title, even one
+// naming another item of the pack, stays text.
+const REF = /\((mori:(session|record)\/[^()\s]+)\)$/gm;
 
 /** Every ref the pack's own items carry. */
 export function packRefs(pack: Pick<ProjectContinuationPack, "sessions" | "decisions" | "openTasks" | "notes">): Set<string> {

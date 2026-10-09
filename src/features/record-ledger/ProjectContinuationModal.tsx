@@ -89,7 +89,7 @@ export function ProjectContinuationModal({
             <strong>이어가기</strong>
             <InfoHint label="이어가기 설명">
               다음 AI 세션에 붙여 넣을 이 프로젝트의 맥락입니다. 확정된 기록만 담고, 각 항목은
-              출처 기록을 가리킵니다. 출처를 누르면 그 기록을 엽니다. 노트 본문과 에이전트 요청 원문은 넣지 않습니다. 비밀
+              출처 기록을 가리킵니다. 출처를 누르면 그 세션이나 기록을 엽니다. 노트 본문과 에이전트 요청 원문은 넣지 않습니다. 비밀
               정보로 보이는 항목은 통째로 뺍니다. 다만 이 검사는 알려진 형태를 찾는 보호
               장치일 뿐, 비밀이 없다는 보증은 아닙니다.
             </InfoHint>
@@ -108,6 +108,7 @@ export function ProjectContinuationModal({
                   type="button"
                   className="continuation-ref"
                   title={segment.ref.kind === "session" ? "이 세션 열기" : "이 기록 열기"}
+                  aria-label={`${segment.ref.kind === "session" ? "이 세션 열기" : "이 기록 열기"}: ${segment.text}`}
                   onClick={() => onOpenRef(segment.ref!)}
                 >
                   {segment.text}

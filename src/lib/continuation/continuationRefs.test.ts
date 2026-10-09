@@ -20,6 +20,17 @@ describe("finding a pack's refs in its text", () => {
     expect(linked.map((s) => s.ref?.id)).toEqual(["auto-claude-abc"]);
   });
 
+  it("leaves another item's issued ref inside a title as text", () => {
+    const text = "- 후속 작업 (mori:session/auto-claude-abc) 정리 (mori:record/rec-1.2)\n";
+    const linked = splitContinuationRefs(text, issued).filter((s) => s.ref);
+    expect(linked.map((s) => s.ref?.id)).toEqual(["rec-1.2"]);
+  });
+
+  it("links a ref at the end of a CRLF line", () => {
+    const text = "- a (mori:record/rec-1.2)\r\n";
+    expect(splitContinuationRefs(text, issued).filter((s) => s.ref).length).toBe(1);
+  });
+
   it("does not link a longer id that starts with an issued one", () => {
     const text = "(mori:session/auto-claude-abcd)";
     expect(splitContinuationRefs(text, issued).some((s) => s.ref)).toBe(false);
