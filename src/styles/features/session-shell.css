@@ -530,6 +530,12 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+/* The kept-copy notice is a third row between the bar and the pane; without
+   its own auto row it took the pane's 1fr and floated mid-page. */
+.session-detail-page .page-shell-content:has(> .session-retained-notice) {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
 .session-tab-pane {
   display: grid;
   grid-template-rows: minmax(0, 1fr);
