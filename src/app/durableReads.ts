@@ -19,6 +19,8 @@ import {
 } from "../lib/storage/durableReadSource";
 import type { KeyValueStorage } from "../lib/storage/storageTypes";
 import { useStorageHealthStore } from "./storageHealthStore";
+import { setAppStorageProvider } from "../lib/storage/appStorage";
+import { adoptDurableDocuments, hasAdopted } from "../lib/storage/adoptDurableDocuments";
 
 let resolved: DurableReadSource | null = null;
 let storage: KeyValueStorage | null = null;
@@ -41,6 +43,26 @@ export function prepareDurableReads(): Promise<void> {
 
   inFlight = (async () => {
     try {
+      // Copy what localStorage holds and SQLite lacks before deciding, so a
+      // class newly made durable (imports, reopen descriptors) does not hold
+      // the flip back on the first launch after an upgrade. Idempotent and
+      // non-destructive; a failed pass simply leaves the decision to report
+      // the gap, as before.
+      if (!hasAdopted(window.localStorage)) {
+        try {
+          await adoptDurableDocuments({
+            storage: window.localStorage,
+            target: {
+              saveDocuments: (documents) => tauriCommands.saveDurableDocumentRows(documents),
+              deleteDocument: (kind, ownerId) => tauriCommands.deleteDurableDocumentRow(kind, ownerId),
+            },
+            listExisting: (kind) => tauriCommands.listDurableDocumentRows(kind),
+            now: () => new Date().toISOString(),
+          });
+        } catch {
+          // Reported through the decision below if anything is missing.
+        }
+      }
       const outcome = await resolveDurableReadSource({
         local: window.localStorage,
         listDocuments: (kind) => tauriCommands.listDurableDocumentRows(kind),
@@ -87,6 +109,36 @@ export function prepareDurableReads(): Promise<void> {
 export function getDurableStorage(): KeyValueStorage | null {
   return storage;
 }
+
+/**
+ * One storage whose every call goes to wherever reads come from *now*: the
+ * SQLite-backed cache once the flip engaged, localStorage until then (and for
+ * good when it did not).
+ *
+ * The repository is created lazily by its first reader, and the shell's first
+ * render reads session summaries before `hydrate` has awaited the decision.
+ * A repository handed `getDurableStorage()` at that moment captured `null` and
+ * read localStorage for the rest of the run, so the flip never reached it: on
+ * a profile restored from its storage folder, the sessions SQLite held stayed
+ * invisible. Deciding per call removes the ordering dependency.
+ */
+export const effectiveStorage: KeyValueStorage = {
+  get length() {
+    return current().length;
+  },
+  key: (index) => current().key(index),
+  getItem: (key) => current().getItem(key),
+  setItem: (key, value) => current().setItem(key, value),
+  removeItem: (key) => current().removeItem(key),
+};
+
+function current(): KeyValueStorage {
+  return storage ?? window.localStorage;
+}
+
+// Library readers (the browser repository's default, the reopen descriptors,
+// the project mappings) follow the same decision through this provider.
+if (typeof window !== "undefined") setAppStorageProvider(() => effectiveStorage);
 
 /** What was decided, for the diagnostics export. `null` before the first call. */
 export function getDurableReadSource(): DurableReadSource | null {

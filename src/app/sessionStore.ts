@@ -168,7 +168,7 @@ import { prewarmLanguageModel, resetPrewarmState } from "../lib/language/prewarm
 import { getSessionImportRepository } from "../lib/storage/sessionImportRepository";
 import { persistMemoryBodyFromAnalysis } from "./sessionMemoryPersistence";
 import { createDesktopDocumentMirror } from "../lib/storage/desktopDocumentMirror";
-import { getDurableStorage, prepareDurableReads } from "./durableReads";
+import { prepareDurableReads } from "./durableReads";
 import { createMirroringDraftRepository } from "../lib/storage/mirroringDraftRepository";
 
 export type SessionMode = "demo" | "draft";
@@ -721,7 +721,10 @@ function getRepository(): DraftRepository {
     // `prepareDurableReads` resolved, which is SQLite-backed only when SQLite
     // provably holds everything localStorage does; otherwise it is null and
     // this is exactly the repository it always was.
-    const base = createBrowserDraftRepository(getDurableStorage() ?? undefined);
+    // The app storage (see `lib/storage/appStorage`), resolved per call rather
+    // than captured now: the first reader can arrive before the read source is
+    // decided, and a captured `null` would pin this repository to localStorage.
+    const base = createBrowserDraftRepository();
     const mirror = createDesktopDocumentMirror();
     lazyRepository = mirror ? createMirroringDraftRepository(base, mirror) : base;
   }
@@ -2663,9 +2666,11 @@ export function loadConnectorImportHistorySavedSessions(options: {
 /**
  * List every locally-persisted session summary, most-recent first. Used by
  * the sidebar session switcher to offer one-click switching between the
- * "1 Claude conversation = 1 session" sessions. Works in both runtimes —
- * desktop hydrate mirrors SQLite sessions into localStorage, so the browser
- * adapter is the single source of truth for the switcher list.
+ * "1 Claude conversation = 1 session" sessions. Works in both runtimes: the
+ * repository reads through the app storage, which on desktop serves the
+ * session drafts from SQLite once the read flip engaged (so a profile
+ * restored from its storage folder lists its sessions) and localStorage
+ * otherwise.
  */
 export function loadStoredSessionSummaries(): StoredSessionSummary[] {
   return getRepository().listStoredSessions();

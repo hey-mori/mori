@@ -1,4 +1,5 @@
 import type { AnalysisResult, QuickPassAnalysisSettings } from "../analysis";
+import { getAppStorage } from "./appStorage";
 import {
   appendAnalysisRun,
   createAnalysisRunHistory,
@@ -706,5 +707,7 @@ export class BrowserDraftRepository implements DraftRepository {
 
 export function createBrowserDraftRepository(storage?: KeyValueStorage): BrowserDraftRepository {
   if (storage) return new BrowserDraftRepository(storage);
-  return new BrowserDraftRepository(window.localStorage);
+  // The app's storage, so a view that builds its own repository reads what the
+  // session store reads (SQLite-backed once the read flip engaged).
+  return new BrowserDraftRepository(getAppStorage() ?? window.localStorage);
 }
