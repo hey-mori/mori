@@ -222,28 +222,30 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
   const pageError = state.pageError;
   return (
     <section className="session-window" aria-label="원본 대화" ref={sectionRef}>
-      <header className="session-window-head">
-        <span className="session-window-coverage">
-          {headline}
-          <InfoHint label="표시 범위">
-            이 대화는 한 번에 가져오기에 길어서 끝에서부터 나눠 읽습니다. 한 번에 {MAX_RETAINED_WINDOWS}구간까지
-            보여 주고, 더 이전으로 가면 가장 최근 구간을 잠시 내려놓습니다. 내려놓은 구간은 아래의 다음 대화
-            보기로 다시 읽습니다. 표시된 메시지 수는 지금 보이는 부분의 수입니다. 분석과 보고서는 전체를 가져온
-            세션에서만 제공합니다.
-          </InfoHint>
-        </span>
-        <span className="session-window-head-side">
-          <span className="session-window-meta">
-            메시지 {state.events.length.toLocaleString("ko-KR")}개{coverage ? ` · ${coverage}` : ""}
-            {position ? ` · ${position}` : ""}
+      <div className="session-window-top">
+        <header className="session-window-head">
+          <span className="session-window-coverage">
+            {headline}
+            <InfoHint label="표시 범위">
+              이 대화는 한 번에 가져오기에 길어서 끝에서부터 나눠 읽습니다. 한 번에 {MAX_RETAINED_WINDOWS}구간까지
+              보여 주고, 더 이전으로 가면 가장 최근 구간을 잠시 내려놓습니다. 내려놓은 구간은 아래의 다음 대화
+              보기로 다시 읽습니다. 표시된 메시지 수는 지금 보이는 부분의 수입니다. 분석과 보고서는 전체를 가져온
+              세션에서만 제공합니다.
+            </InfoHint>
           </span>
-          <Button size="sm" variant="ghost" icon={searchOpen ? X : Search} onClick={toggleSearch} aria-expanded={searchOpen}>
-            {searchOpen ? "찾기 닫기" : "이 대화에서 찾기"}
-          </Button>
-        </span>
-      </header>
+          <span className="session-window-head-side">
+            <span className="session-window-meta">
+              메시지 {state.events.length.toLocaleString("ko-KR")}개{coverage ? ` · ${coverage}` : ""}
+              {position ? ` · ${position}` : ""}
+            </span>
+            <Button size="sm" variant="ghost" icon={searchOpen ? X : Search} onClick={toggleSearch} aria-expanded={searchOpen}>
+              {searchOpen ? "찾기 닫기" : "이 대화에서 찾기"}
+            </Button>
+          </span>
+        </header>
 
-      {searchOpen ? <TranscriptSearch state={state} search={ownSearch} /> : null}
+        {searchOpen ? <TranscriptSearch state={state} search={ownSearch} /> : null}
+      </div>
 
       {reachedStart ? (
         <p className="session-window-start">대화의 시작</p>
