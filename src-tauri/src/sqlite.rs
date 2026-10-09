@@ -512,8 +512,14 @@ pub fn clear_all_sqlite_data(
         clear_all_data(conn)
     })?;
     // The kernel no longer records the kept copies, so they go too.
-    if let Ok(root) = crate::claude::archive::archive_root() {
-        result.archives_deleted = crate::claude::archive::remove_all_archives(&root) as u64;
+    match crate::claude::archive::archive_root() {
+        Ok(root) => {
+            let (removed, left) = crate::claude::archive::remove_all_archives(&root);
+            result.archives_deleted = removed as u64;
+            result.archives_left = left as u64;
+        }
+        // Unknown location: the files cannot be confirmed gone.
+        Err(_) => result.archives_left = 1,
     }
     Ok(result)
 }

@@ -166,6 +166,7 @@ pub fn clear_all_data(conn: &mut Connection) -> Result<ClearAllDataResult, Strin
         kernel_records_deleted,
         durable_documents_deleted,
         archives_deleted: 0,
+        archives_left: 0,
         consolidated_memories_deleted,
     })
 }

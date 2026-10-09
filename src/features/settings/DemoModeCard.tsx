@@ -22,6 +22,7 @@ export function DemoModeCard() {
   );
   const refreshSqlite = useSqliteStore((state) => state.refresh);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [archivesLeft, setArchivesLeft] = useState(0);
   const [resetting, setResetting] = useState(false);
 
   const isDemo = mode === "demo";
@@ -77,7 +78,9 @@ export function DemoModeCard() {
         <SettingsRow
           label="데이터 전체 초기화"
           description={
-            confirmingReset
+            archivesLeft > 0 && !confirmingReset
+              ? `보관한 원본 ${archivesLeft}개를 지우지 못했습니다. 저장 폴더의 archives에 남아 있습니다.`
+              : confirmingReset
               ? "저장된 세션, 가져오기, 기록, 보관한 원본, 프로젝트 메모리, 보고서 초안을 영구 삭제합니다. 분석 엔진 설정은 유지됩니다."
               : "이 기기에 저장된 작업 데이터를 모두 삭제합니다. 설정은 유지됩니다."
           }
@@ -100,7 +103,8 @@ export function DemoModeCard() {
                   onClick={async () => {
                     setResetting(true);
                     try {
-                      await clearAllDataAndViewDemo();
+                      const { archivesLeft } = await clearAllDataAndViewDemo();
+                      setArchivesLeft(archivesLeft);
                       await refreshSqlite();
                     } finally {
                       setResetting(false);
