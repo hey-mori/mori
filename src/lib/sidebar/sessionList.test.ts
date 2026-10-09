@@ -28,14 +28,22 @@ function summary(partial: Partial<StoredSessionSummary>): StoredSessionSummary {
 }
 
 describe("toSidebarRow", () => {
-  it("prefers startedAt over savedAt as the sort timestamp", () => {
+  it("dates a session by its last activity, not its start (#169)", () => {
     const row = toSidebarRow(
       summary({
         savedAt: "2026-05-22T18:00:00.000Z",
         startedAt: "2026-05-22T12:00:00.000Z",
       }),
     );
-    expect(row.timestamp).toBe("2026-05-22T12:00:00.000Z");
+    expect(row.timestamp).toBe("2026-05-22T18:00:00.000Z");
+  });
+
+  it("files a long conversation written to today under today", () => {
+    const now = new Date("2026-10-09T12:00:00").getTime();
+    const row = toSidebarRow(
+      summary({ startedAt: "2026-09-16T06:15:31.000Z", savedAt: new Date(now - 3_600_000).toISOString() }),
+    );
+    expect(groupSidebarRows([row], now)[0]?.bucket).toBe("today");
   });
 
   it("falls back to savedAt when startedAt is missing", () => {

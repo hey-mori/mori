@@ -3,6 +3,7 @@ import {
   buildProjectContinuationPack,
   CONTINUATION_SECTION_CAP,
   type ContinuationInput,
+  type ContinuationSessionInput,
 } from "./projectContinuation";
 import type { MoriRecord, RecordStatus } from "../record-kernel/kernelTypes";
 
@@ -43,7 +44,8 @@ function session(id: string, status: RecordStatus | null, overrides: Partial<Mor
           properties: { agentId: "claude" },
           ...overrides,
         });
-  return { kernel, summary: { id, title: kernel?.title ?? `세션 ${id}`, startedAt: "2026-10-05T12:00:00.000Z" } };
+  const summary: ContinuationSessionInput = { id, title: kernel?.title ?? `세션 ${id}`, startedAt: "2026-10-05T12:00:00.000Z" };
+  return { kernel, summary };
 }
 
 function input(parts: {
@@ -166,6 +168,20 @@ describe("buildProjectContinuationPack · selection", () => {
     expect(pack.notes).toEqual([]);
     expect(pack.decisions.map((item) => item.ref)).toEqual(["mori:record/d-old"]);
     expect(pack.excluded).toEqual({ unconfirmed: 0, removed: 0, secretLike: 0 });
+  });
+
+  it("keeps a conversation begun before the window that is still written to (#169)", () => {
+    const begun = "2026-08-20T12:00:00.000Z";
+    const live = session("auto-claude-live", "active", {
+      occurredStart: begun,
+      occurredEnd: "2026-10-07T11:00:00.000Z",
+    });
+    const pack = buildProjectContinuationPack(
+      input({ sessions: [{ ...live, summary: { ...live.summary, startedAt: begun, savedAt: "2026-10-07T11:00:00.000Z" } }] }),
+    );
+    expect(pack.sessions.map((item) => [item.ref, item.day, item.lastDay])).toEqual([
+      ["mori:session/auto-claude-live", "2026-08-20", "2026-10-07"],
+    ]);
   });
 
   it("orders newest first and caps each section, counting the overflow", () => {

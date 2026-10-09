@@ -28,6 +28,7 @@ import {
 import { useProjectStore } from "../../app/projectStore";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
+import { sessionLastActiveAt } from "../../lib/session/sessionActivity";
 import { buildSessionsBrowserModel } from "../../lib/workspace/sessionsBrowser";
 import {
   applyDashboardFilters,
@@ -195,7 +196,7 @@ export function DashboardView() {
   );
   const lastActivityLabel = useMemo(() => {
     const latest = rangedSessions.reduce((max, session) => {
-      const stamp = session.startedAt || session.savedAt || "";
+      const stamp = sessionLastActiveAt(session);
       return stamp > max ? stamp : max;
     }, "");
     return latest ? `${timeRangeLabel} · 최근 활동 ${formatRelative(latest)}` : timeRangeLabel;
