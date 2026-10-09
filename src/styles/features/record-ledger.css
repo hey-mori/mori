@@ -4145,6 +4145,13 @@
 
 /* Under the document: what it put in the ledger, and what points back at it.
    Obsidian's linked-mentions position, and calm enough to ignore. */
+/* Under a note the passage sits in a foot group, which draws the rule. */
+.note-foot-group > .saved-passage {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 .note-foot-group {
   flex-shrink: 0;
   margin-top: 28px;

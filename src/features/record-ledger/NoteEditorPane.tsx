@@ -31,6 +31,7 @@ import { noteBacklinks, resolveNoteByTitle, wikiLinkKey } from "./wikiLinks";
 import { ContextPicker } from "./ContextPicker";
 import { RecordHistory } from "./recordEditing";
 import { useRecordProvenance } from "./useRecordProvenance";
+import { SavedPassage, savedPassageOf } from "./SavedPassage";
 import { KeptRecordRow } from "./KeptRecordRow";
 import { NoteReading, type ReadingState } from "./NoteReading";
 import { detectNoteNature } from "./noteNature";
@@ -123,7 +124,19 @@ export function NoteEditorPane({
   const [showHistory, setShowHistory] = useState(false);
   // One kept record open at a time: the strip is a correction, not a workspace.
   const [openKeptId, setOpenKeptId] = useState<string | null>(null);
-  const { revisions } = useRecordProvenance(note?.id ?? null, note?.updatedAt ?? "");
+  const { revisions, source, link, loading: provenanceLoading } = useRecordProvenance(note?.id ?? null, note?.updatedAt ?? "");
+  // A note kept from a conversation (기록으로 남기기 saves a 노트 by default)
+  // shows that passage under the document, as every other record type does.
+  // Provenance reloads after each autosave; the passage shown stays until the
+  // reload settles, so it never blinks while the user types.
+  // Only what was loaded for this note: right after a switch the hook still
+  // holds the previous note's provenance for one render.
+  const loadedPassage = note && link?.recordId === note.id ? savedPassageOf(source, link) : null;
+  const heldPassage = useRef<{ recordId: string | null; value: ReturnType<typeof savedPassageOf> }>({ recordId: null, value: null });
+  if (!provenanceLoading || heldPassage.current.recordId !== (note?.id ?? null)) {
+    heldPassage.current = { recordId: note?.id ?? null, value: provenanceLoading ? null : loadedPassage };
+  }
+  const passage = provenanceLoading ? heldPassage.current.value : loadedPassage;
 
   // Load a different note's body when the workspace selects one; a brand-new
   // note (note === null) starts blank. The just-created case is a no-op because
@@ -479,6 +492,12 @@ export function NoteEditorPane({
               revealSpan={pendingSpan}
             />
             </Suspense>
+
+            {note && passage ? (
+              <div className="note-foot-group">
+                <SavedPassage source={passage.source} locator={passage.locator} />
+              </div>
+            ) : null}
 
             {/* What this note already put in the ledger, and what points back at
                 it. Both belong under the document (Obsidian's linked-mentions

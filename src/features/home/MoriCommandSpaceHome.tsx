@@ -21,10 +21,10 @@ import {
 import { useAppStore, type SessionTab } from "../../app/store";
 import {
   loadStoredSessionSummaries,
-  selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
 import { RetentionStatus } from "../session/RetentionStatus";
+import { useSessionResolver } from "../session/useSessionResolver";
 import { DEMO_SESSION_SUMMARIES } from "../../lib/demo/demoSessionFixtures";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import {
@@ -135,12 +135,9 @@ export function MoriCommandSpaceHome() {
   const openCommandPalette = useAppStore((state) => state.openCommandPalette);
   const openProject = useAppStore((state) => state.openProject);
   const openSession = useAppStore((state) => state.openSession);
-  const source = useSessionStore((state) => state.source);
   const initialized = useSessionStore((state) => state.initialized);
   const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
-  const activeSessionId = useSessionStore((state) => selectSessionView(state).session.id);
-  const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
-  const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
+  const resolveSession = useSessionResolver();
 
   const storedSessions = useMemo(
     () => loadStoredSessionSummaries(),
@@ -211,20 +208,13 @@ export function MoriCommandSpaceHome() {
     rowRefs.current[safeIndex]?.scrollIntoView({ block: "nearest" });
   }, [open, safeIndex]);
 
+  // The shared open path (세션 · 프로젝트 · 기록 · palette use it too): a
+  // discovered session is read on open, never shown as an empty placeholder.
   function openSessionById(sessionId: string, tab: SessionTab = "flow"): void {
-    if (sessionId === activeSessionId) {
-      openSession(tab);
-      return;
-    }
-    if (source === "desktop-sqlite") {
-      void loadDesktopSession(sessionId).then((ok) => {
-        if (!ok) loadBrowserSession(sessionId);
-        openSession(tab);
-      });
-      return;
-    }
-    loadBrowserSession(sessionId);
-    openSession(tab);
+    void resolveSession(sessionId).then((outcome) => {
+      if (outcome === "opened") openSession(tab);
+      else if (outcome === "unavailable") navigate("sessions");
+    });
   }
 
   function runAsk(question: string): void {
