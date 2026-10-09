@@ -32,6 +32,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import {
+  freshnessOf,
   buildScopedProjection,
   buildProjectProjections,
   getIntakeStore,
@@ -103,6 +104,13 @@ export type ConfirmedLiveScope = {
   label: string;
   /** Source files of the project's confirmed sessions (`liveSourcesOf`). */
   keys: readonly string[];
+  /**
+   * Whether a session seen in the folder named like the project is one the
+   * operator has not placed anywhere yet. A session filed to another project,
+   * or rejected for this one, is not "unconfirmed" and is not mentioned.
+   * Absent, every non-member counts.
+   */
+  unplaced?: (sessionKey: string) => boolean;
 };
 
 export type ConfirmedProjectLive = {
@@ -131,14 +139,22 @@ type IntakeReader = Pick<
  * project that are not its members. That count is never folded into the
  * project's rows: the folder name is a hint for the user, not a join.
  */
-export async function readConfirmedLive(store: IntakeReader, scope: ConfirmedLiveScope): Promise<ConfirmedLiveRead> {
+export async function readConfirmedLive(
+  store: IntakeReader,
+  scope: ConfirmedLiveScope,
+  now: number = Date.now(),
+): Promise<ConfirmedLiveRead> {
   const keys = [...scope.keys];
   const perSession = await Promise.all(keys.map((key) => store.listSessionRows(key)));
   const folder = selectProjectPathForLabel(await store.listProjectPaths(), scope.label);
   const confirmed = new Set(keys);
   const unconfirmed = folder
     ? new Set(
-        (await store.listProjectRows(folder)).map((row) => row.sessionKey).filter((key) => !confirmed.has(key)),
+        (await store.listProjectRows(folder))
+          // Only what is still worth saying: an observation gone stale is history.
+          .filter((row) => freshnessOf(row.observedAt, now) !== "stale")
+          .map((row) => row.sessionKey)
+          .filter((key) => !confirmed.has(key) && (scope.unplaced?.(key) ?? true)),
       ).size
     : 0;
   return {

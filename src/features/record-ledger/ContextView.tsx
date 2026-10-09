@@ -50,7 +50,7 @@ import { SessionMembershipControl } from "./SessionMembershipControl";
 import { buildProjectContinuationPack } from "../../lib/continuation/projectContinuation";
 import { ProjectLiveSection } from "./ProjectLiveSection";
 import { useConfirmedProjectLive, useProjectLive } from "./useProjectLive";
-import { liveSourcesOf } from "../../lib/live-intake/confirmedLiveSources";
+import { confirmedLiveScopeFor } from "./confirmedLiveScope";
 import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import { sessionLastActiveAt } from "../../lib/session/sessionActivity";
@@ -373,14 +373,22 @@ export function ContextView() {
   // say what happened and how long ago. Nothing is read while the kernel is
   // loading, since an empty member list then means "not known yet".
   const liveSources = useMemo(() => {
-    if (!activeContext || loading) return null;
-    return liveSourcesOf(searchInventory?.kind === "ok" ? searchInventory.entries : []);
-  }, [activeContext, loading, searchInventory]);
-  const confirmedLive = useConfirmedProjectLive(
-    activeContext && liveSources
-      ? { projectId: activeContext.id, label: activeContext.name, keys: liveSources.keys }
-      : null,
-  );
+    const sessionIdByPath = new Map<string, string>();
+    if (activeContext && !loading) {
+      for (const meta of loadAutoImportMetas()) {
+        if (meta.sourceFilePath) sessionIdByPath.set(meta.sourceFilePath, autoImportedSessionId(meta));
+      }
+    }
+    return confirmedLiveScopeFor({
+      project: activeContext,
+      loading,
+      inventory: searchInventory,
+      records,
+      contexts,
+      sessionIdOfFile: (key) => sessionIdByPath.get(key),
+    });
+  }, [activeContext, loading, searchInventory, records, contexts]);
+  const confirmedLive = useConfirmedProjectLive(liveSources?.scope ?? null);
   // A folder group has no reviewed membership: it is matched by the folder's
   // display leaf and refused when two observed folders share it (see
   // `selectProjectPathForLabel`).

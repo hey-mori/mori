@@ -282,6 +282,21 @@ describe("each request is judged by its own observation", () => {
       { now: NOW },
     );
     expect([out[0].waitingCount, out[0].runningCount]).toEqual([1, 1]);
+    // The counts are dated by their oldest observation, not the newest.
+    expect(out[0].countedObservedAt).toBe(ago(30));
+  });
+
+  it("measures a request not seen moments ago only up to when it was seen", () => {
+    const out = buildProjectProjections(
+      [row({ id: "r", status: "running", startedAt: ago(60 * 5), observedAt: ago(60 * 2) })],
+      { now: NOW },
+    );
+    expect(out[0].running[0]?.elapsedMs).toBe(3 * 60 * 60_000);
+  });
+
+  it("dates nothing when nothing is counted", () => {
+    const out = buildProjectProjections([row({ id: "c", status: "completed" })], { now: NOW });
+    expect(out[0].countedObservedAt).toBeNull();
   });
 });
 

@@ -22,7 +22,7 @@ import { CircleAlert, Hand, Radio } from "lucide-react";
 import { withoutPasteMarkers } from "../../lib/session/agentText";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
-import type { ProjectProjection } from "../../lib/live-intake";
+import { freshnessOf, type ProjectProjection } from "../../lib/live-intake";
 
 /** Elapsed wall time as calm Korean, coarse on purpose. */
 function formatElapsed(ms: number): string {
@@ -89,8 +89,11 @@ export function ProjectLiveSection({
   ) : null;
   if (!projection) return asideOnly;
 
-  const { freshness } = projection;
-  const stale = freshness === "stale";
+  const stale = projection.freshness === "stale";
+  // The counts are as current as their oldest observation, not their newest:
+  // a session seen a minute ago does not make another one's count live.
+  const basisAt = projection.countedObservedAt ?? projection.observedAt;
+  const freshness = stale ? "stale" : freshnessOf(basisAt, now);
   const counts: Array<{ key: string; label: string; value: number }> = [
     { key: "running", label: "진행 중", value: projection.runningCount },
     { key: "waiting", label: "내 확인 대기", value: projection.waitingCount },
@@ -133,7 +136,7 @@ export function ProjectLiveSection({
               ))}
               {freshness === "recent" ? (
                 <span className="ctx-live-asof">
-                  {formatSidebarRelative(projection.observedAt, now)} 기준
+                  {formatSidebarRelative(basisAt, now)} 기준
                 </span>
               ) : null}
             </div>

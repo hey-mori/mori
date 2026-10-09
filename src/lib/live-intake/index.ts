@@ -15,6 +15,7 @@ export {
 export {
   buildProjectProjections,
   buildScopedProjection,
+  freshnessOf,
   selectProjectionForLabel,
   selectProjectPathForLabel,
   type BuildProjectProjectionOptions,

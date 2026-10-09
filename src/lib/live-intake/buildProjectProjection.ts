@@ -71,6 +71,12 @@ export type ProjectProjection = {
   /** Newest observation across contributing rows. */
   observedAt: string;
   freshness: ProjectFreshness;
+  /**
+   * The oldest observation behind a present-tense count, or null when nothing
+   * is counted. The header dates the counts by this, not by the newest row, so
+   * one session seen a minute ago cannot make a count from hours ago read live.
+   */
+  countedObservedAt: string | null;
   /** Present-tense counts. All zero once `freshness` is `stale`, by D11. */
   runningCount: number;
   waitingCount: number;
@@ -158,10 +164,14 @@ function foldProject(
   const running: ProjectRunningRequest[] = [];
   const waiting: ProjectRecentRequest[] = [];
   const blocked: ProjectRecentRequest[] = [];
+  let countedObservedAt: string | null = null;
 
   {
     for (const row of rows) {
       if (!rowIsCurrent(row)) continue;
+      if (row.status === "running" || row.status === "waitingForUser" || row.status === "blocked") {
+        if (countedObservedAt === null || epoch(row.observedAt) < epoch(countedObservedAt)) countedObservedAt = row.observedAt;
+      }
       if (row.status === "running") {
         runningCount += 1;
         running.push({
@@ -170,7 +180,12 @@ function foldProject(
           sessionLabel: row.sessionLabel,
           sessionKey: row.sessionKey,
           startedAt: row.startedAt,
-          elapsedMs: Math.max(0, now - epoch(row.startedAt)),
+          // Elapsed up to the last time it was seen running, unless that was
+          // moments ago: a request seen hours ago is not known to run since.
+          elapsedMs: Math.max(
+            0,
+            (freshnessOf(row.observedAt, now) === "live" ? now : epoch(row.observedAt)) - epoch(row.startedAt),
+          ),
           stepCount: row.stepCount,
         });
       } else if (row.status === "waitingForUser") {
@@ -194,6 +209,7 @@ function foldProject(
     label,
     observedAt,
     freshness,
+    countedObservedAt,
     runningCount,
     waitingCount,
     waiting,
@@ -240,7 +256,7 @@ export function buildScopedProjection(
   return foldProject("", rows, opts.now, recentLimit, fileLimit, opts.label);
 }
 
-function freshnessOf(observedAt: string, now: number): ProjectFreshness {
+export function freshnessOf(observedAt: string, now: number): ProjectFreshness {
   const age = now - epoch(observedAt);
   if (age <= LIVE_MS) return "live";
   if (age <= RECENT_MS) return "recent";

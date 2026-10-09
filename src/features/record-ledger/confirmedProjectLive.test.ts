@@ -4,6 +4,7 @@ import { buildProjectSearchInventory, type SourceDescriptor } from "../../lib/se
 import { liveSourcesOf } from "../../lib/live-intake/confirmedLiveSources";
 import { INTAKE_ROW_VERSION, type IntakeRequestRow } from "../../lib/live-intake/intakeTypes";
 import { selectProjectPathForLabel } from "../../lib/live-intake";
+import { confirmedLiveScopeFor } from "./confirmedLiveScope";
 import {
   projectConfirmedLive,
   readConfirmedLive,
@@ -292,5 +293,74 @@ describe("negative control", () => {
     // It finds the unrelated folder named infra, and only that.
     expect(folder).toBe("/home/me/dev/infra");
     expect(ALL.filter((r) => r.projectPath === folder).map((r) => r.id)).toEqual(["f1"]);
+  });
+});
+
+describe("what the aside counts", () => {
+  const folderRow = (id: string, key: string, observedAt = ago(1)) =>
+    row({ id, sessionKey: key, projectPath: "/home/me/dev/infra", sessionLabel: "infra", observedAt });
+  const FILED = "/f/filed-elsewhere.jsonl";
+  const REJECTED = "/f/rejected.jsonl";
+  const UNKNOWN = "/f/unknown.jsonl";
+  const OLD = "/f/old.jsonl";
+  const extra = [
+    rec("filed", { contextIds: ["ctx-other"] }),
+    rec("rejected", { properties: { agentId: "claude", projectReview: { rejected: ["ctx-infra"] } } }),
+    rec("old"),
+  ];
+  const fileToSession: Record<string, string> = { [FILED]: "filed", [REJECTED]: "rejected", [OLD]: "old" };
+
+  function liveFor(recs = [...records, ...extra]) {
+    const sources = confirmedLiveScopeFor({
+      project: infra,
+      loading: false,
+      inventory: buildProjectSearchInventory({ projectId: "ctx-infra", contexts, records: recs, descriptorOf }),
+      records: recs,
+      contexts,
+      sessionIdOfFile: (key) => fileToSession[key] ?? (key === SOURCES.folder ? "folder" : undefined),
+    });
+    return sources!.scope;
+  }
+
+  it("leaves out sessions filed elsewhere, rejected here, or seen long ago", async () => {
+    const scope = liveFor();
+    const rows = [
+      waitingGate4,
+      runningInFolder,
+      folderRow("x1", FILED),
+      folderRow("x2", REJECTED),
+      folderRow("x3", UNKNOWN),
+      folderRow("x4", OLD, ago(60 * 24)),
+    ];
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(rows), scope, NOW), scope, NOW);
+    // The unfiled folder session and the one with no record are counted.
+    expect(out.unconfirmedObserved).toBe(2);
+  });
+});
+
+describe("the page's scope", () => {
+  const input = {
+    project: infra,
+    inventory: buildProjectSearchInventory({ projectId: "ctx-infra", contexts, records, descriptorOf }),
+    records,
+    contexts,
+    sessionIdOfFile: () => undefined,
+  };
+
+  it("reads nothing while the kernel is loading", () => {
+    expect(confirmedLiveScopeFor({ ...input, loading: true })).toBeNull();
+  });
+
+  it("reads nothing on a folder group", () => {
+    expect(confirmedLiveScopeFor({ ...input, project: null, loading: false })).toBeNull();
+  });
+
+  it("never uses another project's inventory", () => {
+    const scoped = confirmedLiveScopeFor({ ...input, project: other, loading: false });
+    expect(scoped?.scope.keys).toEqual([]);
+  });
+
+  it("reads the confirmed sources once loaded", () => {
+    expect(confirmedLiveScopeFor({ ...input, loading: false })?.scope.keys).toContain(WORKTREE);
   });
 });

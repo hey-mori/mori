@@ -372,15 +372,19 @@ through the store's session index. The join is the session's source file as
 the discovery listing names it, which is also the follower's `sessionKey`; a
 file two members name counts for the project but opens neither. A worktree
 session whose agent ran under a parent folder therefore still shows under
-its project. Sessions observed in the folder named like the project that are
-not members are never counted; the section only says how many there were.
+its project. Sessions observed in the folder named like the project are
+never counted; the section only says how many were recently seen there that
+the operator has not placed anywhere (not filed to another project, not
+rejected for this one).
 Folder groups that have no reviewed membership keep the leaf-name lookup.
 
 Freshness is per row. Each row is judged by its own `observedAt` (the last
 time the writer stored that session's rows), so one active session cannot
 make another session's old running or waiting request look current; the old
-request appears in 최근 작업 without a status. The projection's own
-`observedAt` stays the newest observation and only dates the header.
+request appears in 최근 작업 without a status. The header dates the counts by
+the oldest observation behind them (`countedObservedAt`), so the live dot
+appears only when every counted request was seen moments ago, and a running
+request not seen moments ago is timed only up to when it was seen.
 
 Session rows should support status-first grouping:
 
