@@ -16,6 +16,7 @@ import { ActivityDateEditor, InlineEditable, RecordHistory } from "./recordEditi
 import { kindColorClass, originLabel, retypeTargets, schemaLabel, sourceKindLabel } from "./recordPresentation";
 import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
+import { SavedPassage, savedPassageOf } from "./SavedPassage";
 
 export function DocumentEditor({
   record,
@@ -118,7 +119,10 @@ function RecordDocument({
   onOpenRecord: (recordId: string) => void;
   now: Date;
 }) {
-  const { source, revisions, relations } = useRecordProvenance(record.id, record.updatedAt);
+  const { source, link, revisions, relations } = useRecordProvenance(record.id, record.updatedAt);
+  // A record kept from a conversation shows that passage as its evidence, not
+  // behind a 원문 toggle: it is the reason the record exists.
+  const passage = savedPassageOf(source, link);
 
   // The note this record was kept out of. `confirmExtraction` has always stored
   // the derived-from relation and nothing ever rendered it, so a record reached
@@ -143,7 +147,7 @@ function RecordDocument({
   }, [record.contextIds, ledger.contexts]);
 
   const isCandidate = record.status === "candidate";
-  const provenance = originLabel(record.origin);
+  const provenance = passage ? { label: "대화에서 남김", tone: "user" as const } : originLabel(record.origin);
   return (
     <div className="doc-editor">
       <div className="doc-editor-bar">
@@ -167,7 +171,7 @@ function RecordDocument({
           {provenance.label}
         </span>
         <span className="doc-bar-sp" />
-        {source?.rawBody ? (
+        {source?.rawBody && !passage ? (
           <button type="button" className="doc-bar-act" onClick={() => setShowRaw((v) => !v)}>
             원문
           </button>
@@ -240,7 +244,9 @@ function RecordDocument({
           />
         </div>
 
-        {showRaw && source?.rawBody ? (
+        {passage ? <SavedPassage source={passage.source} locator={passage.locator} /> : null}
+
+        {showRaw && source?.rawBody && !passage ? (
           <section className="doc-disclosure">
             <h4>원문 · {sourceKindLabel(source.kind)}</h4>
             <pre className="doc-raw">{source.rawBody}</pre>

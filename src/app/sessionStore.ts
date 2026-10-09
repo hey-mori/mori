@@ -17,6 +17,8 @@ import type {
   AnalysisRunStatus,
   QuickPassAnalysisSettings,
 } from "../lib/analysis";
+import { sha256Hex, type PassageLocatorV1 } from "../lib/capture/passageCapture";
+import { redactText } from "../lib/connectors/redaction";
 import {
   DEFAULT_QUICK_PASS_SETTINGS,
   buildProviderConfigFromSettings,
@@ -589,6 +591,14 @@ export type SessionState = {
     sourcePath: string;
     stillWanted: () => boolean;
   }) => Promise<SourceHitOutcome>;
+  /**
+   * Open a session at a passage a record was saved from: read back to the
+   * stored record through the cursor check, then require that record's text
+   * at the stored range to hash to the saved excerpt. "missing" when the
+   * session or its transcript is gone, "changed" when the transcript no
+   * longer holds that text there. Nothing is imported or written.
+   */
+  openSessionAtPassage: (args: { locator: PassageLocatorV1; stillWanted: () => boolean }) => Promise<SourceHitOutcome>;
   /**
    * Open an already-saved browser session draft as the active session.
    * Used by the Workspace project hub to continue a previous session.
@@ -1795,38 +1805,47 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // The window ends at the matched record: its last event is that record.
     const shown = hitWindow.events[hitWindow.events.length - 1];
     if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, query, wholeWords)) return "changed";
-    let newer: ClaudeCodeSessionWindow | null = null;
-    if (!hitWindow.reachedEnd) {
-      try {
-        newer = await getClaudeCodeSessionWindow(sourcePath, {
-          afterOffset: hitWindow.endOffset,
-          sourceId: hitWindow.sourceId,
-          endAnchor: hitWindow.endAnchor,
-        });
-      } catch {
-        newer = null;
-      }
+    return showWindowAtRecord({ sessionId, sourcePath, hitWindow, token, current, focus: { messageId: hit.messageId, query, wholeWords } });
+  },
+  openSessionAtPassage: async ({ locator, stillWanted }) => {
+    const token = ++discoveredOpenSequence;
+    searchSequence += 1;
+    jumpSequence += 1;
+    const current = () => token === discoveredOpenSequence && stillWanted();
+    // The session is named, never a path: its descriptor says where it lives now.
+    const sourcePath = loadAutoImportMeta(locator.sessionId)?.sourceFilePath;
+    if (!sourcePath) return "missing";
+    let hitWindow: ClaudeCodeSessionWindow;
+    try {
+      hitWindow = await getClaudeCodeSessionWindow(sourcePath, {
+        beforeOffset: locator.end,
+        sourceId: locator.sourceId,
+        endAnchor: locator.anchor,
+      });
+    } catch (error) {
+      if (!current()) return "superseded";
+      const kind = classifyWindowError(error).kind;
+      return kind === "missing" ? "missing" : kind === "changed" ? "changed" : "failed";
     }
     if (!current()) return "superseded";
-    // The same open an ordinary click makes: the stored draft becomes the
-    // active session (a descriptor-only session gets its draft back, as the
-    // resolver's open does). No transcript is read into an import.
-    if (!get().loadBrowserSession(sessionId)) {
-      const meta = loadAutoImportMeta(sessionId);
-      if (meta) getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
-      if (!get().loadBrowserSession(sessionId)) return "missing";
-    }
-    const focusSeq = ++jumpSequence;
-    set({
-      sessionWindow: jumpedWindowState(windowStateFrom(sessionId, hitWindow, token), hitWindow, newer, {
-        messageId: hit.messageId,
-        query,
-        wholeWords,
-        seq: focusSeq,
-      }),
-      sessionSearch: null,
+    // The anchor covers only a record's head (its parentUuid in real
+    // transcripts): the same record id and the saved text decide.
+    const shown = hitWindow.events[hitWindow.events.length - 1];
+    if (!shown || shown.record?.start !== locator.start || shown.id !== locator.messageId) return "changed";
+    const excerpt = shown.content.slice(locator.from, locator.to);
+    // A redacted save kept only the redacted form's hash: compare after the
+    // same redaction.
+    const compared = locator.redacted ? redactText(excerpt).redacted : excerpt;
+    if ((await sha256Hex(compared)) !== locator.excerptHash) return current() ? "changed" : "superseded";
+    if (!current()) return "superseded";
+    return showWindowAtRecord({
+      sessionId: locator.sessionId,
+      sourcePath,
+      hitWindow,
+      token,
+      current,
+      focus: { messageId: shown.id, query: excerpt, wholeWords: false },
     });
-    return "opened";
   },
   loadNewerSessionWindow: () => pageSessionWindow("newer"),
   loadLatestSessionWindow: () => pageSessionWindow("latest"),
@@ -2604,4 +2623,58 @@ function mergeAnalysisIntoView(view: SessionViewModel, analysis: AnalysisResult)
       nextActionIds: analysis.nextActions.map((action) => action.id),
     },
   };
+}
+
+/**
+ * The second half of a checked open: with the window that ends at the wanted
+ * record in hand, read what follows it, make the session active the way an
+ * ordinary click does, and show the window focused on that record.
+ */
+async function showWindowAtRecord({
+  sessionId,
+  sourcePath,
+  hitWindow,
+  token,
+  current,
+  focus,
+}: {
+  sessionId: string;
+  sourcePath: string;
+  hitWindow: ClaudeCodeSessionWindow;
+  token: number;
+  current: () => boolean;
+  focus: { messageId: string; query: string; wholeWords: boolean };
+}): Promise<SourceHitOutcome> {
+  const get = useSessionStore.getState;
+  const set = useSessionStore.setState;
+    let newer: ClaudeCodeSessionWindow | null = null;
+    if (!hitWindow.reachedEnd) {
+      try {
+        newer = await getClaudeCodeSessionWindow(sourcePath, {
+          afterOffset: hitWindow.endOffset,
+          sourceId: hitWindow.sourceId,
+          endAnchor: hitWindow.endAnchor,
+        });
+      } catch {
+        newer = null;
+      }
+    }
+    if (!current()) return "superseded";
+    // The same open an ordinary click makes: the stored draft becomes the
+    // active session (a descriptor-only session gets its draft back, as the
+    // resolver's open does). No transcript is read into an import.
+    if (!get().loadBrowserSession(sessionId)) {
+      const meta = loadAutoImportMeta(sessionId);
+      if (meta) getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
+      if (!get().loadBrowserSession(sessionId)) return "missing";
+    }
+    const focusSeq = ++jumpSequence;
+    set({
+      sessionWindow: jumpedWindowState(windowStateFrom(sessionId, hitWindow, token), hitWindow, newer, {
+        ...focus,
+        seq: focusSeq,
+      }),
+      sessionSearch: null,
+    });
+    return "opened";
 }

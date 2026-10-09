@@ -13,10 +13,14 @@ import type {
   KernelRelation,
   KernelRevision,
   KernelSource,
+  SourceLink,
 } from "../../lib/record-kernel/kernelTypes";
 
 export type RecordProvenance = {
   source: KernelSource | null;
+  /** The link the source was resolved through: its locator says where in the
+   *  source the record came from (a saved passage's record and range). */
+  link: SourceLink | null;
   revisions: KernelRevision[];
   relations: KernelRelation[];
   loading: boolean;
@@ -27,6 +31,7 @@ export function useRecordProvenance(
   reloadKey: string | number = 0,
 ): RecordProvenance {
   const [source, setSource] = useState<KernelSource | null>(null);
+  const [link, setLink] = useState<SourceLink | null>(null);
   const [revisions, setRevisions] = useState<KernelRevision[]>([]);
   const [relations, setRelations] = useState<KernelRelation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,6 +44,7 @@ export function useRecordProvenance(
     // worse than no provenance: it is the one thing this app promises not to get
     // wrong, and a stale trail is indistinguishable from a true one.
     setSource(null);
+    setLink(null);
     setRevisions([]);
     setRelations([]);
     if (!recordId) {
@@ -58,6 +64,7 @@ export function useRecordProvenance(
       const sourceResult = originLink ? await repo.getSource(originLink.sourceId) : null;
       if (cancelled) return;
       setSource(sourceResult?.data ?? null);
+      setLink(originLink ?? null);
       setRevisions(revisionResult.data);
       setRelations(relationResult.data);
       setLoading(false);
@@ -67,5 +74,5 @@ export function useRecordProvenance(
     };
   }, [recordId, reloadKey]);
 
-  return { source, revisions, relations, loading };
+  return { source, link, revisions, relations, loading };
 }
