@@ -26,6 +26,7 @@ function projection(overrides: Partial<ProjectProjection> = {}): ProjectProjecti
     blockedCount: 0,
     running: [],
     recentRequests: [],
+    waiting: [],
     topFiles: [],
     lastActivityAt: new Date(NOW - 60_000).toISOString(),
     rowCount: 1,
