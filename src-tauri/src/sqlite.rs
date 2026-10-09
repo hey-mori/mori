@@ -96,6 +96,12 @@ pub fn list_browser_evidence_page(
 #[tauri::command]
 pub fn get_sqlite_migration_status(state: tauri::State<'_, SqliteState>) -> Result<DatabaseStatus, String> {
     with_connection(&state, |conn, path| {
+        // The same check every other command runs first. Without it a database
+        // that cannot migrate (a changed checksum, a failed apply) reported a
+        // healthy status, so the recovery card, which appears only on an error
+        // status, never offered its restore or start-fresh: every other call
+        // failed and fell back while this one said all was well.
+        ensure_migrated(conn)?;
         let records = applied_migrations(conn)?;
         let applied_versions: Vec<String> = records.iter().map(|record| record.version.clone()).collect();
         let pending_versions: Vec<String> = MIGRATIONS
@@ -521,6 +527,16 @@ pub fn clear_all_sqlite_data(
         // Unknown location: the files cannot be confirmed gone.
         Err(_) => result.archives_left = 1,
     }
+    // A permanent deletion includes the managed recovery snapshots: they hold
+    // the same records and passages. (The recovery reset keeps them.)
+    match crate::db::backup::backups_dir() {
+        Ok(dir) => {
+            let (removed, left) = crate::db::backup::remove_all_backups_in(&dir);
+            result.snapshots_deleted = removed as u64;
+            result.snapshots_left = left as u64;
+        }
+        Err(_) => result.snapshots_left = 1,
+    }
     Ok(result)
 }
 
@@ -691,6 +707,7 @@ pub fn set_storage_location(
     let new_db = chosen.join("mori.sqlite");
     // Kept transcript copies (보관한 원본) live in the storage folder too.
     let old_archives = crate::claude::archive::archive_root()?;
+    let old_backups = crate::db::backup::backups_dir()?;
 
     // Drop the cached connection so the file unlocks (WAL checkpoints on the
     // last close) before anything moves; the next command reopens it.
@@ -710,6 +727,9 @@ pub fn set_storage_location(
     }
     // The archives follow, so the kernel's records of them still resolve.
     crate::claude::archive::move_archives(&old_archives, &crate::claude::archive::archive_root()?)?;
+    // So do the snapshots: left behind they would hold records and passages
+    // that nothing lists, restores or permanently deletes.
+    crate::db::backup::move_backups(&old_backups, &crate::db::backup::backups_dir()?)?;
 
     Ok(StorageRelocation {
         path: Some(chosen.to_string_lossy().to_string()),

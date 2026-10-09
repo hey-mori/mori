@@ -7,7 +7,7 @@ import {
   Palette,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { useSessionStore } from "../../app/sessionStore";
 import { useSqliteStore } from "../../app/sqliteStore";
@@ -70,8 +70,14 @@ export function SettingsView() {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
+  // Once per visit, not on every state change: a refresh passes through
+  // "checking" to "error" on a broken database, and refreshing on each change
+  // looped, so the recovery card (shown only in "error") never stayed up.
+  const refreshedRef = useRef(false);
   useEffect(() => {
-    if (sqliteAvailable && sqliteKind !== "ok") void refreshSqlite();
+    if (refreshedRef.current || !sqliteAvailable || sqliteKind === "ok") return;
+    refreshedRef.current = true;
+    void refreshSqlite();
   }, [sqliteAvailable, sqliteKind, refreshSqlite]);
 
   const desktopRuntime = useMemo(() => isTauriRuntime(), []);

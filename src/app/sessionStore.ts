@@ -444,7 +444,7 @@ export type SessionState = {
    * SQLite database (sessions the user registered there). Irreversible.
    */
   /** Resolves how many kept transcript copies could not be removed. */
-  clearAllDataAndViewDemo: () => Promise<{ archivesLeft: number }>;
+  clearAllDataAndViewDemo: () => Promise<{ archivesLeft: number; snapshotsLeft: number; databaseCleared: boolean }>;
   runQuickPass: (
     provider?: AnalysisProvider,
     runSettings?: QuickPassAnalysisSettings,
@@ -1357,6 +1357,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
   clearAllDataAndViewDemo: async () => {
     let archivesLeft = 0;
+    let snapshotsLeft = 0;
+    let databaseCleared = true;
     // Mirror writes still queued would land after the SQLite wipe and bring
     // rows back: settle them first.
     await getDesktopDocumentMirror()?.drain();
@@ -1376,7 +1378,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       try {
         const result = await service.clearAllDesktopData();
         archivesLeft = result?.archivesLeft ?? 0;
+        snapshotsLeft = result?.snapshotsLeft ?? 0;
       } catch {
+        // Nothing on disk was removed: the native side stops before archives
+        // and snapshots when the database cannot be cleared. Said, not hidden.
+        databaseCleared = false;
         // Intentionally swallowed — see above. The SQLite store's own refresh
         // surfaces the real post-clear state.
       }
@@ -1411,7 +1417,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       dataResetNonce: get().dataResetNonce + 1,
     });
-    return { archivesLeft };
+    return { archivesLeft, snapshotsLeft, databaseCleared };
   },
   runQuickPass: async (provider, runSettings) => {
     const repository = getRepository();
