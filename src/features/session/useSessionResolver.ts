@@ -57,10 +57,14 @@ export function useSessionResolver(): (sessionId: string) => Promise<SessionOpen
   );
 }
 
-/** An auto-imported session open with neither its import nor a readable window. */
+/** An auto-imported session open with neither its import nor a readable
+ *  window, or showing its import because the source was gone: reopening it is
+ *  the retry, so a source that came back is read again. */
 function needsTranscript(sessionId: string): boolean {
   const { imports, sessionWindow } = useSessionStore.getState();
-  if (imports.length > 0) return false;
+  if (imports.length > 0) {
+    return sessionWindow?.sessionId === sessionId && sessionWindow.status === "error" && sessionWindow.error.kind === "missing";
+  }
   if (sessionWindow?.sessionId !== sessionId) return true;
   return sessionWindow.status === "error";
 }

@@ -36,7 +36,12 @@ vi.mock("../lib/session/autoImportMetaStore", async (importOriginal) => ({
   loadAutoImportMeta: (id: string) => reader.meta.get(id) ?? null,
 }));
 
-import { selectActiveSessionWindow, setSessionRepositoryForTesting, useSessionStore } from "./sessionStore";
+import {
+  selectActiveSessionWindow,
+  selectRetainedSourceNotice,
+  setSessionRepositoryForTesting,
+  useSessionStore,
+} from "./sessionStore";
 import { BrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import { MemoryKeyValueStorage } from "../lib/storage/memoryStorage";
 import { agentSessionToStoredDraft, autoImportedSessionId } from "../lib/session/autoImportSessions";
@@ -247,6 +252,46 @@ describe("a session within the import limit", () => {
     expect(useSessionStore.getState().sessionWindow).toBeNull();
     expect(useSessionStore.getState().imports).toHaveLength(1);
     expect(detailMarkup()).toBe("TABS");
+  });
+
+  it("reopening an imported session whose source was gone reads it again", async () => {
+    const id = register(meta("short", "Short"));
+    const m = meta("short", "Short");
+    const messages = [message("u1", "고쳐줘", "human"), message("a1", "done")];
+    const detail = { ...m, messages, claudeDetail: { ...m, filePath: m.sourceFilePath, messages } };
+    reader.detail.mockResolvedValueOnce(detail);
+    const resolve = resolver();
+    await resolve(id);
+    // The next open finds the original gone (a moment of unavailability).
+    reader.detail.mockRejectedValueOnce(new Error("Failed to resolve /x/short.jsonl: No such file or directory"));
+    useSessionStore.setState({ sessionWindow: null });
+    await useSessionStore.getState().openDiscoveredSession(id);
+    expect(useSessionStore.getState().sessionWindow).toMatchObject({ status: "error", error: { kind: "missing" } });
+
+    // It is back: opening the session again is the retry, not "already open".
+    reader.detail.mockResolvedValueOnce(detail);
+    expect(await resolve(id)).toBe("opened");
+    expect(reader.detail).toHaveBeenCalledTimes(3);
+    expect(useSessionStore.getState().sessionWindow).toBeNull();
+  });
+
+  it("a transcript replaced by a shorter one keeps the import and says it no longer matches", async () => {
+    const id = register(meta("short", "Short"));
+    const m = meta("short", "Short");
+    const both = [message("u1", "고쳐줘", "human"), message("a1", "done")];
+    reader.detail.mockResolvedValueOnce({ ...m, messages: both, claudeDetail: { ...m, filePath: m.sourceFilePath, messages: both } });
+    const resolve = resolver();
+    await resolve(id);
+    const before = useSessionStore.getState().imports[0]!.events.length;
+
+    const other = [message("x1", "다른 대화", "human")];
+    reader.detail.mockResolvedValueOnce({ ...m, messages: other, claudeDetail: { ...m, filePath: m.sourceFilePath, messages: other } });
+    useSessionStore.setState({ sessionWindow: null });
+    await useSessionStore.getState().openDiscoveredSession(id);
+
+    const state = useSessionStore.getState();
+    expect(state.imports[0]!.events).toHaveLength(before);
+    expect(selectRetainedSourceNotice(state)?.kind).toBe("replaced");
   });
 
   it("a non-size failure is shown as an error, not retried as a window", async () => {

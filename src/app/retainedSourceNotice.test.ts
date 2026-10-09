@@ -9,12 +9,13 @@ const imp = (savedAt: string, eventTimes: string[]) =>
   ({ savedAt, events: eventTimes.map((start) => ({ start })) }) as unknown as SessionState["imports"][number];
 
 function state(
-  partial: Partial<Pick<SessionState, "sessionWindow" | "imports">> & { draftId?: string },
+  partial: Partial<Pick<SessionState, "sessionWindow" | "imports" | "divergedSourceSessionId">> & { draftId?: string },
 ): SessionState {
   return {
     draft: { session: { id: partial.draftId ?? "s1" } },
     sessionWindow: partial.sessionWindow ?? null,
     imports: partial.imports ?? [],
+    divergedSourceSessionId: partial.divergedSourceSessionId ?? null,
   } as unknown as SessionState;
 }
 
@@ -53,6 +54,15 @@ describe("saying a kept copy is on screen", () => {
         state({ draftId: "s2", sessionWindow: failed("missing") as SessionState["sessionWindow"], imports: [imp("x", ["2026-10-08T06:48:00Z"])] }),
       ),
     ).toBeNull();
+  });
+
+  it("says the kept copy stands when the readable file no longer continues it", () => {
+    const imports = [imp("x", ["2026-10-08T06:48:00Z"])];
+    expect(selectRetainedSourceNotice(state({ divergedSourceSessionId: "s1", imports }))).toEqual({
+      kind: "replaced",
+      lastEventAt: "2026-10-08T06:48:00Z",
+    });
+    expect(selectRetainedSourceNotice(state({ divergedSourceSessionId: "other", imports }))).toBeNull();
   });
 
   it("gives a component a primitive, stable between renders", () => {
