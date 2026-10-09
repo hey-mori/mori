@@ -391,7 +391,8 @@ describe("stale searches and jumps", () => {
   });
 
   it("a new query drops the previous query's late reply", async () => {
-    await openWithSearch({ 3: "alpha here", 30: "beta here" });
+    // "alpha" sits in the first step's range, so a late alpha step would carry a hit.
+    await openWithSearch({ 38: "alpha here", 30: "beta here" });
     const held = deferred();
     fake.gate = ({ kind }) => (kind === "search" ? held.promise : undefined);
     const first = useSessionStore.getState().searchSessionWindow("alpha");
@@ -437,6 +438,26 @@ describe("stale searches and jumps", () => {
     await jumping;
     expect(view()).toBe(before);
     expect(view().focus).toBeNull();
+  });
+
+  it("a jump from one session never lands in another session's new search", async () => {
+    makeTranscript("a", contents(40, { 3: "needle in a" }));
+    makeTranscript("b", contents(40, { 30: "needle in b" }));
+    const a = register("a");
+    const b = register("b");
+    await resolver()(a);
+    await useSessionStore.getState().searchSessionWindow("needle");
+    const hitInA = useSessionStore.getState().sessionSearch!.hits[0]!;
+    const held = deferred();
+    fake.gate = ({ kind, path }) => (kind === "window" && path === "a" ? held.promise : undefined);
+    const jumping = useSessionStore.getState().openSessionSearchHit(hitInA);
+    await resolver()(b);
+    await useSessionStore.getState().searchSessionWindow("needle");
+    const before = view();
+    held.release();
+    await jumping;
+    expect(view()).toBe(before);
+    expect(ids().every((id) => id.startsWith("b-"))).toBe(true);
   });
 
   it("refuses a result whose record or message changed, and leaves the view alone", async () => {
