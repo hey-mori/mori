@@ -19,6 +19,12 @@ import {
 } from "../lib/storage/durableReadSource";
 import type { KeyValueStorage } from "../lib/storage/storageTypes";
 import { useStorageHealthStore } from "./storageHealthStore";
+import { setAppStorageProvider } from "../lib/storage/appStorage";
+import { adoptDurableDocuments } from "../lib/storage/adoptDurableDocuments";
+import { appScopedSavedAt, replayPendingDeletes } from "../lib/storage/desktopDocumentMirror";
+import { durableKeyToDocument } from "../lib/storage/durableKeyMap";
+import { adoptReopenDescriptors } from "../lib/session/autoImportMetaStore";
+import { recordAdoptionReport } from "./useDurableDocumentAdoption";
 
 let resolved: DurableReadSource | null = null;
 let storage: KeyValueStorage | null = null;
@@ -41,6 +47,41 @@ export function prepareDurableReads(): Promise<void> {
 
   inFlight = (async () => {
     try {
+      // 1. Deletes a previous run recorded and SQLite never confirmed: gone
+      //    before anything can be served from them.
+      await replayPendingDeletes(window.localStorage, (kind, ownerId) =>
+        tauriCommands.deleteDurableDocumentRow(kind, ownerId),
+      );
+      // 2. Copy every body localStorage holds newer than SQLite (or SQLite
+      //    lacks), on every launch: the adoption of classes newly made durable
+      //    and the repair of a mirror write lost at a quit. Idempotent and
+      //    non-destructive; a failure leaves the decision to report the gap.
+      try {
+        recordAdoptionReport(
+          await adoptDurableDocuments({
+            storage: window.localStorage,
+            target: {
+              saveDocuments: (documents) => tauriCommands.saveDurableDocumentRows(documents),
+              deleteDocument: (kind, ownerId) => tauriCommands.deleteDurableDocumentRow(kind, ownerId),
+            },
+            listExisting: (kind) => tauriCommands.listDurableDocumentRows(kind),
+            savedAtOf: (key) => {
+              const doc = durableKeyToDocument(key);
+              return doc ? appScopedSavedAt(window.localStorage, doc.kind) : null;
+            },
+            now: () => new Date().toISOString(),
+          }),
+        );
+      } catch {
+        // Reported through the decision below if anything is missing.
+      }
+      // 3. Reopen descriptors: one document per session, merged with the
+      //    local map rather than flipped (see autoImportMetaStore).
+      try {
+        adoptReopenDescriptors(await tauriCommands.listDurableDocumentRows("reopen_descriptor"));
+      } catch {
+        // Unreadable: the local map still serves; nothing is overwritten.
+      }
       const outcome = await resolveDurableReadSource({
         local: window.localStorage,
         listDocuments: (kind) => tauriCommands.listDurableDocumentRows(kind),
@@ -87,6 +128,36 @@ export function prepareDurableReads(): Promise<void> {
 export function getDurableStorage(): KeyValueStorage | null {
   return storage;
 }
+
+/**
+ * One storage whose every call goes to wherever reads come from *now*: the
+ * SQLite-backed cache once the flip engaged, localStorage until then (and for
+ * good when it did not).
+ *
+ * The repository is created lazily by its first reader, and the shell's first
+ * render reads session summaries before `hydrate` has awaited the decision.
+ * A repository handed `getDurableStorage()` at that moment captured `null` and
+ * read localStorage for the rest of the run, so the flip never reached it: on
+ * a profile restored from its storage folder, the sessions SQLite held stayed
+ * invisible. Deciding per call removes the ordering dependency.
+ */
+export const effectiveStorage: KeyValueStorage = {
+  get length() {
+    return current().length;
+  },
+  key: (index) => current().key(index),
+  getItem: (key) => current().getItem(key),
+  setItem: (key, value) => current().setItem(key, value),
+  removeItem: (key) => current().removeItem(key),
+};
+
+function current(): KeyValueStorage {
+  return storage ?? window.localStorage;
+}
+
+// Library readers (the browser repository's default, the reopen descriptors,
+// the project mappings) follow the same decision through this provider.
+if (typeof window !== "undefined") setAppStorageProvider(() => effectiveStorage);
 
 /** What was decided, for the diagnostics export. `null` before the first call. */
 export function getDurableReadSource(): DurableReadSource | null {

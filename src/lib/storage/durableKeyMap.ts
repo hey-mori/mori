@@ -23,6 +23,10 @@ export const DURABLE_PREFIXES: ReadonlyArray<{ prefix: string; kind: DurableDocu
   { prefix: "mori.sessionDraft.", kind: "session_draft" },
   { prefix: "mori.sessionPendingReview.", kind: "pending_review" },
   { prefix: "mori.packageDraft.", kind: "package_draft" },
+  // An imported transcript is the session's evidence, and for a session whose
+  // original is gone it is all there is. The owner is `<sessionId>.<importId>`,
+  // the suffix of the per-entry key.
+  { prefix: "mori.sessionImportEntry.", kind: "session_import" },
 ];
 
 /**

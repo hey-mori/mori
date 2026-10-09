@@ -65,13 +65,16 @@ export function createReadThroughStorage(
     },
     key: (index) => cache.key(index),
     getItem: (key) => cache.getItem(key),
+    // localStorage first: a write it refuses (a full store) must throw before
+    // the cache shows it, or the rest of the run would read a value that is
+    // persisted nowhere and the mirror would never be asked to copy it.
     setItem: (key, value) => {
-      cache.setItem(key, value);
       local.setItem(key, value);
+      cache.setItem(key, value);
     },
     removeItem: (key) => {
-      cache.removeItem(key);
       local.removeItem(key);
+      cache.removeItem(key);
     },
   };
 }

@@ -78,7 +78,9 @@ import {
   loadAutoImportMeta,
   removeAutoImportMeta,
   upsertAutoImportMetas,
+  forgetReopenDescriptors,
 } from "../lib/session/autoImportMetaStore";
+import { getDesktopDocumentMirror } from "../lib/storage/desktopDocumentMirror";
 import {
   decideFollowReaction,
   followReducer,
@@ -131,7 +133,7 @@ import {
   type TimelineDataSource,
   type Unsubscribe,
 } from "../lib/session/timelineDataSource";
-import { createBrowserDraftRepository } from "../lib/storage/localStorageAdapter";
+import { BrowserDraftRepository, createBrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import {
   getSessionPersistenceService,
   type SessionPersistenceService,
@@ -167,9 +169,7 @@ import { syncLlmAllowedEndpoints } from "../lib/desktop/llmEndpointRegistry";
 import { prewarmLanguageModel, resetPrewarmState } from "../lib/language/prewarm";
 import { getSessionImportRepository } from "../lib/storage/sessionImportRepository";
 import { persistMemoryBodyFromAnalysis } from "./sessionMemoryPersistence";
-import { createDesktopDocumentMirror } from "../lib/storage/desktopDocumentMirror";
-import { getDurableStorage, prepareDurableReads } from "./durableReads";
-import { createMirroringDraftRepository } from "../lib/storage/mirroringDraftRepository";
+import { prepareDurableReads } from "./durableReads";
 
 export type SessionMode = "demo" | "draft";
 
@@ -721,9 +721,11 @@ function getRepository(): DraftRepository {
     // `prepareDurableReads` resolved, which is SQLite-backed only when SQLite
     // provably holds everything localStorage does; otherwise it is null and
     // this is exactly the repository it always was.
-    const base = createBrowserDraftRepository(getDurableStorage() ?? undefined);
-    const mirror = createDesktopDocumentMirror();
-    lazyRepository = mirror ? createMirroringDraftRepository(base, mirror) : base;
+    // The app storage (see `lib/storage/appStorage`), resolved per call rather
+    // than captured now: the first reader can arrive before the read source is
+    // decided, and a captured `null` would pin this repository to localStorage.
+    // Already mirrored on desktop (see createBrowserDraftRepository).
+    lazyRepository = createBrowserDraftRepository();
   }
   return lazyRepository;
 }
@@ -1355,8 +1357,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
   clearAllDataAndViewDemo: async () => {
     let archivesLeft = 0;
+    // Mirror writes still queued would land after the SQLite wipe and bring
+    // rows back: settle them first.
+    await getDesktopDocumentMirror()?.drain();
     const repository = getRepository();
     repository.clearAllLocalData();
+    // The repository reads through the startup cache once the read flip
+    // engaged, so keys other modules wrote straight to localStorage since are
+    // not in it: clear localStorage itself too.
+    if (typeof window !== "undefined") new BrowserDraftRepository(window.localStorage).clearAllLocalData();
+    forgetReopenDescriptors();
     const service = getPersistenceService();
     if (service.isDesktop()) {
       // Desktop sessions live in SQLite, not localStorage — wipe them too.
@@ -2663,9 +2673,11 @@ export function loadConnectorImportHistorySavedSessions(options: {
 /**
  * List every locally-persisted session summary, most-recent first. Used by
  * the sidebar session switcher to offer one-click switching between the
- * "1 Claude conversation = 1 session" sessions. Works in both runtimes —
- * desktop hydrate mirrors SQLite sessions into localStorage, so the browser
- * adapter is the single source of truth for the switcher list.
+ * "1 Claude conversation = 1 session" sessions. Works in both runtimes: the
+ * repository reads through the app storage, which on desktop serves the
+ * session drafts from SQLite once the read flip engaged (so a profile
+ * restored from its storage folder lists its sessions) and localStorage
+ * otherwise.
  */
 export function loadStoredSessionSummaries(): StoredSessionSummary[] {
   return getRepository().listStoredSessions();

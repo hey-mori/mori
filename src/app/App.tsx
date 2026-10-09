@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { AppShell } from "../components/layout/AppShell";
 import { ErrorBoundary } from "../components/layout/ErrorBoundary";
 import { useAppStore } from "./store";
@@ -9,11 +9,11 @@ import { useOnboardingStore } from "./onboardingStore";
 import { FirstRunGuide } from "../features/onboarding/FirstRunGuide";
 import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
 import { isTauriRuntime } from "../lib/desktop";
+import { prepareDurableReads } from "./durableReads";
 import { writeLensCapability } from "../lib/connectors/lensConnector";
 import { isImportFlowView } from "../lib/session/importFlowView";
 import { isClaudeBridgeAvailable } from "../lib/claude/claudeTauri";
 import { AmbientObservationProvider } from "../features/live-session/useAmbientObservation";
-import { useDurableDocumentAdoption } from "./useDurableDocumentAdoption";
 // HomeView is the landing surface — stay eager so first paint never waits
 // on a chunk fetch. Every other surface is loaded on demand; Vite emits a
 // separate chunk per dynamic import, shrinking the entry bundle.
@@ -160,9 +160,23 @@ export default function App() {
     }
   }, []);
 
-  // Copies durable documents that predate dual-write into SQLite, once per
-  // device. Desktop-only, and nothing on screen waits for it.
-  useDurableDocumentAdoption();
+  // Nothing renders until the read source is decided (immediate in the
+  // browser). Readers that load once at mount (the project store, project
+  // pages, the shell's session list) would otherwise read localStorage, and a
+  // save from one of them could replace what SQLite holds with that subset,
+  // which on a restored profile is everything.
+  const [durableReady, setDurableReady] = useState(() => !isTauriRuntime());
+  useEffect(() => {
+    if (durableReady) return;
+    let cancelled = false;
+    void prepareDurableReads().finally(() => {
+      if (!cancelled) setDurableReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [durableReady]);
+  if (!durableReady) return <div className="app-starting" aria-busy="true" />;
 
   // Settings + profile no longer have a standing route — they live behind the
   // top-bar user button as a sheet (`SettingsSheet`, rendered inside AppShell).

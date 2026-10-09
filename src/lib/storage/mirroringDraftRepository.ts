@@ -46,6 +46,7 @@ import type {
   StoredPendingReview,
   StoredSessionAnalysis,
   StoredSessionDraft,
+  StoredSessionImport,
   StoredSessionMemoryBody,
 } from "./storageTypes";
 import type { MoriPackageV0 } from "../mori-package";
@@ -57,6 +58,12 @@ const ANALYSIS_HISTORY_VERSION = 1;
 const SESSION_DRAFT_VERSION = 1;
 const PACKAGE_DRAFT_VERSION = 1;
 const PENDING_REVIEW_VERSION = 1;
+const SESSION_IMPORT_VERSION = 1;
+
+/** The document owner of one import: the suffix of its per-entry key. */
+function importOwner(sessionId: string, importId: string): string {
+  return `${sessionId}.${importId}`;
+}
 
 export function createMirroringDraftRepository(
   inner: DraftRepository,
@@ -178,8 +185,63 @@ export function createMirroringDraftRepository(
       mirror.remove("analysis_history", sessionId);
     },
 
+    selectSessionAnalysisRun(sessionId: string, runId: string) {
+      const history = inner.selectSessionAnalysisRun(sessionId, runId);
+      // Choosing a run rewrites both the current analysis and the history's
+      // pointer; both are read back, so the SQLite copy follows the choice.
+      if (history) {
+        mirror.write({
+          kind: "analysis_history",
+          ownerId: sessionId,
+          schemaVersion: ANALYSIS_HISTORY_VERSION,
+          body: history,
+          updatedAt: history.savedAt,
+        });
+        const current = inner.loadSessionAnalysis(sessionId);
+        if (current) {
+          mirror.write({
+            kind: "analysis",
+            ownerId: sessionId,
+            schemaVersion: ANALYSIS_VERSION,
+            body: current,
+            updatedAt: current.savedAt,
+          });
+        }
+      }
+      return history;
+    },
+
+    addSessionImport(sessionId, candidate, options) {
+      const stored = inner.addSessionImport(sessionId, candidate, options);
+      mirrorImport(stored);
+      return stored;
+    },
+
+    putSessionImports(sessionId: string, imports: StoredSessionImport[]): StoredSessionImport[] {
+      const listed = inner.putSessionImports(sessionId, imports);
+      // What was stored for the ids written, read back rather than rebuilt.
+      const written = new Set(imports.map((entry) => entry.id));
+      for (const entry of listed) if (written.has(entry.id)) mirrorImport(entry);
+      return listed;
+    },
+
+    removeSessionImport(sessionId: string, importId: string): void {
+      inner.removeSessionImport(sessionId, importId);
+      mirror.remove("session_import", importOwner(sessionId, importId));
+    },
+
+    clearSessionImports(sessionId: string): void {
+      const before = inner.listSessionImports(sessionId);
+      inner.clearSessionImports(sessionId);
+      for (const entry of before) mirror.remove("session_import", importOwner(sessionId, entry.id));
+    },
+
     clearStoredSession(sessionId: string): void {
+      // The adapter clears the imports itself, from inside, where no override
+      // runs: list them first so their documents go too.
+      const imports = inner.listSessionImports(sessionId);
       inner.clearStoredSession(sessionId);
+      for (const entry of imports) mirror.remove("session_import", importOwner(sessionId, entry.id));
       mirror.remove("memory_body", sessionId);
       mirror.remove("analysis", sessionId);
       mirror.remove("analysis_history", sessionId);
@@ -187,6 +249,16 @@ export function createMirroringDraftRepository(
       mirror.remove("pending_review", sessionId);
     },
   };
+
+  function mirrorImport(stored: StoredSessionImport): void {
+    mirror.write({
+      kind: "session_import",
+      ownerId: importOwner(stored.sessionId, stored.id),
+      schemaVersion: SESSION_IMPORT_VERSION,
+      body: stored,
+      updatedAt: stored.savedAt,
+    });
+  }
 
   function mirrorDraft(stored: StoredSessionDraft): void {
     mirror.write({

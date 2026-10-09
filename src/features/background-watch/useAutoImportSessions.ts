@@ -32,9 +32,12 @@ import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { sessionsWithKeptEvidence } from "../../lib/session/retentionInventory";
 import { sessionIdsWithStoredImports } from "../../lib/storage/localStorageAdapter";
+import { getAppStorage } from "../../lib/storage/appStorage";
+import { prepareDurableReads } from "../../app/durableReads";
 import {
   loadAutoImportMetas,
   replaceEmptySources,
+  setProtectedDescriptorIds,
   upsertAutoImportMetas,
 } from "../../lib/session/autoImportMetaStore";
 import {
@@ -106,7 +109,10 @@ export function useAutoImportSessions(): void {
     if (quotaFailure) return;
     // Seed the "seen" set from the reopen metas we persisted last session, so a
     // fresh launch does not re-flag every already-registered session as new.
-    seenRef.current = seenFingerprintsFromMetas(loadAutoImportMetas());
+    // Seeded in the first pass, after the read source is decided: on a
+    // restored profile the descriptors arrive with the SQLite reads, and an
+    // empty seed would announce every known session as new.
+    let seeded = false;
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -122,6 +128,27 @@ export function useAutoImportSessions(): void {
       }
       let nextMs = VISIBLE_INTERVAL_MS;
       try {
+        if (!seeded) {
+          await prepareDurableReads();
+          if (cancelled) return;
+          seenRef.current = seenFingerprintsFromMetas(loadAutoImportMetas());
+          seeded = true;
+          // Know what Mori keeps from the first pass on, so the descriptor
+          // cap protects it before any prune has had to ask.
+          const sources = await getKernelRepository().listSources();
+          if (cancelled) return;
+          if (!sources.fellBack) {
+            keptRef.current = { ids: sessionsWithKeptEvidence(sources.data), at: Date.now() };
+          }
+        }
+        setProtectedDescriptorIds(
+          new Set([
+            ...(keptRef.current?.ids ?? []),
+            ...sessionIdsWithStoredImports(getAppStorage() ?? window.localStorage),
+          ]),
+          // Without the kernel's answer the cap must not drop durable copies.
+          { complete: keptRef.current !== null },
+        );
         const discovered = await listAllAgentWorkSessions();
         if (!cancelled) {
           // Bound to the most-recent window so the draft + seen sets stay small.
@@ -147,6 +174,8 @@ export function useAutoImportSessions(): void {
               written.has(autoImportedSessionId(meta)),
             );
             if (persisted.length > 0) {
+              // Descriptors of sessions Mori keeps something of are exempt
+              // from the recency cap (the protected set published above).
               upsertAutoImportMetas(persisted);
               let newCount = 0;
               let updatedCount = 0;
@@ -184,7 +213,7 @@ export function useAutoImportSessions(): void {
           // is read only for a would-be-pruned session the cached kept set has
           // not seen (or when that set is stale), and a fallback read (which
           // on the desktop is not the real kernel) skips pruning this pass.
-          const imported = sessionIdsWithStoredImports(window.localStorage);
+          const imported = sessionIdsWithStoredImports(getAppStorage() ?? window.localStorage);
           const candidates = loadStoredSessionSummaries()
             .map((summary) => summary.sessionId)
             .filter((id) => isAutoImportedSessionId(id) && !keep.has(id) && !imported.has(id));

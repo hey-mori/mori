@@ -1,4 +1,7 @@
 import type { AnalysisResult, QuickPassAnalysisSettings } from "../analysis";
+import { getAppStorage } from "./appStorage";
+import { getDesktopDocumentMirror } from "./desktopDocumentMirror";
+import { createMirroringDraftRepository } from "./mirroringDraftRepository";
 import {
   appendAnalysisRun,
   createAnalysisRunHistory,
@@ -359,7 +362,14 @@ export class BrowserDraftRepository implements DraftRepository {
     for (const entry of legacy) {
       if (!entry || typeof entry.id !== "string") continue;
       const key = this.importEntryKey(sessionId, entry.id);
-      if (this.storage.getItem(key) !== null) continue;
+      const existing = this.storage.getItem(key);
+      if (existing !== null) {
+        // Written back unchanged rather than skipped: under the read flip the
+        // entry can exist only in the SQLite-backed cache, and dropping the
+        // array below would then leave localStorage without the import.
+        this.storage.setItem(key, existing);
+        continue;
+      }
       this.write(key, entry);
     }
     this.storage.removeItem(legacyKey);
@@ -706,5 +716,12 @@ export class BrowserDraftRepository implements DraftRepository {
 
 export function createBrowserDraftRepository(storage?: KeyValueStorage): BrowserDraftRepository {
   if (storage) return new BrowserDraftRepository(storage);
-  return new BrowserDraftRepository(window.localStorage);
+  // The app's storage, so a view that builds its own repository reads what the
+  // session store reads (SQLite-backed once the read flip engaged), and on
+  // desktop mirrored: a view that writes a durable class (a new session, a
+  // package draft) must reach SQLite like every other writer, or the backup
+  // misses it and the read flip is held back by it.
+  const base = new BrowserDraftRepository(getAppStorage() ?? window.localStorage);
+  const mirror = getDesktopDocumentMirror();
+  return mirror ? (createMirroringDraftRepository(base, mirror) as BrowserDraftRepository) : base;
 }

@@ -32,6 +32,7 @@
  */
 import { mirrorAppScopedDocument } from "../storage/desktopDocumentMirror";
 import { isQuotaExceededError, notifyQuotaFailure } from "../storage/storageQuota";
+import { getAppStorage } from "../storage/appStorage";
 
 export type ProjectIdentity = {
   /**
@@ -295,7 +296,7 @@ const CONNECTIONS_STORAGE_KEY = "mori.projectConnections.v1";
 export function loadConnectedProjects(): ConnectedProject[] {
   if (typeof localStorage === "undefined") return [];
   try {
-    const raw = localStorage.getItem(CONNECTIONS_STORAGE_KEY);
+    const raw = (getAppStorage() ?? localStorage).getItem(CONNECTIONS_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -311,7 +312,7 @@ export function saveConnectedProjects(
   if (typeof localStorage === "undefined") return;
   const savedAt = new Date().toISOString();
   try {
-    localStorage.setItem(CONNECTIONS_STORAGE_KEY, JSON.stringify(connections));
+    (getAppStorage() ?? localStorage).setItem(CONNECTIONS_STORAGE_KEY, JSON.stringify(connections));
   } catch (error) {
     // Reported rather than swallowed. This is a user-authored mapping, and
     // losing it silently rewires every projection built on it, so a failure

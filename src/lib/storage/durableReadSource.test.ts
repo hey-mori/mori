@@ -125,3 +125,39 @@ describe("resolveDurableReadSource", () => {
     expect(local.getItem("mori.sessionDraft.sess-1")).toBeNull();
   });
 });
+
+describe("the read-through storage under the flip", () => {
+  it("never shows in the cache a write localStorage refused", async () => {
+    const { createReadThroughStorage } = await import("./durableReadSource");
+    const { MemoryKeyValueStorage } = await import("./memoryStorage");
+    const cache = new MemoryKeyValueStorage();
+    const full = {
+      length: 0,
+      key: () => null,
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+      removeItem: () => undefined,
+    };
+    const storage = createReadThroughStorage(cache, full);
+    expect(() => storage.setItem("mori.sessionDraft.s1", "{}")).toThrow();
+    expect(storage.getItem("mori.sessionDraft.s1")).toBeNull();
+  });
+
+  it("keeps a legacy import in localStorage when its entry exists only in the cache", async () => {
+    const { createReadThroughStorage } = await import("./durableReadSource");
+    const { MemoryKeyValueStorage } = await import("./memoryStorage");
+    const { BrowserDraftRepository } = await import("./localStorageAdapter");
+    const entry = { id: "imp-a", sessionId: "s1", savedAt: "2026-01-01T00:00:00Z", events: [], source: { id: "imp-a" } };
+    const cache = new MemoryKeyValueStorage();
+    const local = new MemoryKeyValueStorage();
+    // Adoption converted the array; the flip filled the cache from SQLite.
+    cache.setItem("mori.sessionImportEntry.s1.imp-a", JSON.stringify(entry));
+    local.setItem("mori.sessionImports.s1", JSON.stringify([entry]));
+    cache.setItem("mori.sessionImports.s1", JSON.stringify([entry]));
+    const repository = new BrowserDraftRepository(createReadThroughStorage(cache, local));
+    repository.removeSessionImport("s1", "missing");
+    expect(new BrowserDraftRepository(local).listSessionImports("s1").map((i) => i.id)).toEqual(["imp-a"]);
+  });
+});

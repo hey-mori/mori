@@ -1,6 +1,8 @@
 /**
- * The one-time adoption pass: copy the durable documents that already exist in
- * localStorage into SQLite.
+ * The adoption pass, run on every desktop launch before the read source is
+ * decided: copy into SQLite every durable document localStorage holds newer
+ * than SQLite (or SQLite lacks). Once, it adopted classes newly made durable;
+ * from then on it repairs mirror writes a quit or an error lost.
  *
  * The other half of R2 in `docs/design/sqlite-source-of-truth-promotion.md` §7.
  * Dual-write only covers documents written from now on, so without this a
@@ -44,9 +46,9 @@
  * must not flip under.
  *
  * So the pass reads what SQLite already holds and skips any owner whose stored
- * document is at least as new. Three list calls against a table that is empty
- * or nearly so, in exchange for removing a race that would only ever show up as
- * data missing after the flip.
+ * document is newer, or as new with the same content. One listing per kind,
+ * once per launch, in exchange for removing a race that would only ever show
+ * up as data missing after the flip.
  */
 import type { KeyValueStorage } from "./storageTypes";
 import type { DocumentMirrorTarget } from "./documentMirror";
@@ -74,7 +76,18 @@ const CHUNK = 50;
  * Set only after a pass that completed with no failures, so an interrupted or
  * failed run is retried on the next launch rather than recorded as done.
  */
-export const ADOPTION_MARKER_KEY = "mori.adoption.durableDocuments.v1";
+export const ADOPTION_MARKER_KEY = "mori.adoption.durableDocuments.v2";
+
+/**
+ * The marker of the first pass, before imported transcripts and reopen
+ * descriptors were durable classes. A device carrying only it has every other
+ * class in SQLite already; v2 runs once more to copy the two new ones (the
+ * pass skips what SQLite already holds at least as new).
+ */
+export const LEGACY_ADOPTION_MARKER_KEY = "mori.adoption.durableDocuments.v1";
+
+/** Older builds stored a session's imports as one array under this prefix. */
+const LEGACY_IMPORTS_PREFIX = "mori.sessionImports.";
 
 export type AdoptionReport = {
   /** Matching keys found in localStorage. */
@@ -106,6 +119,8 @@ export async function adoptDurableDocuments(input: {
    * about the race; production always passes it.
    */
   listExisting?: (kind: DurableDocumentKind) => Promise<SqliteDurableDocumentRow[]>;
+  /** When an undated body (an app-scoped array) was last saved, by key. */
+  savedAtOf?: (key: string) => string | null;
 }): Promise<AdoptionReport> {
   const { storage, target, now, listExisting } = input;
   const report: AdoptionReport = {
@@ -118,12 +133,12 @@ export async function adoptDurableDocuments(input: {
 
   // Read before scanning, so a document written between the two is treated as
   // fresher and left alone rather than compared against a stale snapshot.
-  const existing = new Map<string, string>();
+  const existing = new Map<string, { updatedAt: string; bodyJson: string }>();
   if (listExisting) {
     for (const kind of durableKinds()) {
       try {
         for (const row of await listExisting(kind)) {
-          existing.set(`${row.kind} ${row.ownerId}`, row.updatedAt);
+          existing.set(`${row.kind} ${row.ownerId}`, { updatedAt: row.updatedAt, bodyJson: row.bodyJson });
         }
       } catch (error) {
         report.stoppedBecause = error instanceof Error ? error.message : String(error);
@@ -138,6 +153,10 @@ export async function adoptDurableDocuments(input: {
   for (let index = 0; index < storage.length; index += 1) {
     const key = storage.key(index);
     if (!key) continue;
+    if (key.startsWith(LEGACY_IMPORTS_PREFIX)) {
+      collectLegacyImports(key);
+      continue;
+    }
     // One shared mapping with the read flip, so the two directions cannot
     // disagree about what a key holds.
     const match = durableKeyToDocument(key);
@@ -160,11 +179,17 @@ export async function adoptDurableDocuments(input: {
     }
 
     const ownerId = match.ownerId;
-    const updatedAt = readSavedAt(body) ?? now();
     const held = existing.get(`${match.kind} ${ownerId}`);
-    if (held !== undefined && held >= updatedAt) {
-      // Equal counts as fresher: an identical timestamp means the same
-      // document, and rewriting it would be work for no change.
+    // A body without its own `savedAt` (the project-mapping arrays) is dated
+    // by the time its writer recorded beside it. Undated and already held:
+    // left alone, since a stale local copy (a storage folder restored onto a
+    // device with older localStorage) must not replace the restored one.
+    const updatedAt = readSavedAt(body) ?? input.savedAtOf?.(key) ?? null;
+    if (updatedAt === null && held !== undefined) {
+      report.skippedFresher += 1;
+      continue;
+    }
+    if (held !== undefined && !isNewer(updatedAt ?? now(), body, held)) {
       report.skippedFresher += 1;
       continue;
     }
@@ -175,9 +200,52 @@ export async function adoptDurableDocuments(input: {
         ownerId,
         schemaVersion: readSchemaVersion(body),
         body,
-        updatedAt,
+        updatedAt: updatedAt ?? now(),
       }),
     );
+  }
+
+  /**
+   * A legacy import array becomes one document per entry, under the owner the
+   * per-entry key would have (`<sessionId>.<importId>`), so a restore reads it
+   * back as the entries the adapter already merges with the array. The array
+   * stays in localStorage: nothing is deleted.
+   */
+  function collectLegacyImports(key: string): void {
+    const sessionId = key.slice(LEGACY_IMPORTS_PREFIX.length);
+    const raw = storage.getItem(key);
+    let entries: unknown;
+    try {
+      entries = raw === null ? null : JSON.parse(raw);
+    } catch {
+      entries = null;
+    }
+    if (!sessionId || !Array.isArray(entries)) {
+      report.scanned += 1;
+      report.unreadable += 1;
+      return;
+    }
+    for (const entry of entries) {
+      report.scanned += 1;
+      const id = entry && typeof entry === "object" ? (entry as { id?: unknown }).id : undefined;
+      if (typeof id !== "string" || !id) {
+        report.unreadable += 1;
+        continue;
+      }
+      const ownerId = `${sessionId}.${id}`;
+      // A per-entry key for the same import is newer than the array (the
+      // adapter writes entries since), and it is adopted under this owner too.
+      if (storage.getItem(`mori.sessionImportEntry.${ownerId}`) !== null) continue;
+      const updatedAt = readSavedAt(entry) ?? now();
+      const held = existing.get(`session_import ${ownerId}`);
+      if (held !== undefined && !isNewer(updatedAt, entry, held)) {
+        report.skippedFresher += 1;
+        continue;
+      }
+      rows.push(
+        toDurableDocumentRow({ kind: "session_import", ownerId, schemaVersion: 1, body: entry, updatedAt }),
+      );
+    }
   }
 
   for (let start = 0; start < rows.length; start += CHUNK) {
@@ -205,6 +273,18 @@ export async function adoptDurableDocuments(input: {
 function readSchemaVersion(body: unknown): number {
   const value = (body as { schemaVersion?: unknown } | null)?.schemaVersion;
   return typeof value === "number" ? value : 1;
+}
+
+/**
+ * Whether the local body should replace SQLite's: dated later, or dated the
+ * same with different content. An edit that keeps its `savedAt` (a rename
+ * keeps the session's time) whose mirror write was lost has the same date and
+ * new content; skipping it would let the read flip serve the old version.
+ */
+function isNewer(updatedAt: string, body: unknown, held: { updatedAt: string; bodyJson: string }): boolean {
+  if (updatedAt > held.updatedAt) return true;
+  if (updatedAt < held.updatedAt) return false;
+  return JSON.stringify(body) !== held.bodyJson;
 }
 
 function readSavedAt(body: unknown): string | null {
