@@ -362,13 +362,14 @@ loop must not manufacture vague polish to avoid this:
    from imported timeline cards are not built; the redaction used for a redacted
    passage has no version, so a future pattern change reads old redacted passages
    as "could not verify"; archives exist for Claude Code transcripts only.
-
 5. Recovery follow-ups · open (see `docs/design/recoverable-storage.md`):
    project search and the latest-reply open still read a replaced original rather
-   than the kept copy; the head-fingerprint identity assumes a transcript's first
-   line never changes; accepted project memory is still read from app storage when a
-   discovered session opens; a folder chosen with 변경 is read in full only after a
-   restart; a restore on a device that still holds data merges rather than rolls
+   than the kept copy, and the latest-reply open has no kept-copy fallback when the
+   original is gone; the head-fingerprint identity assumes a transcript's first
+   line never changes; accepted project memory is still read from localStorage when a
+   discovered session opens, so after a storage-only restore a reopen can renumber
+   events that SQLite-held accepted memory cites; a folder chosen with 변경 is
+   read in full only after a restart; a restore on a device that still holds data merges rather than rolls
    back; a cross-machine restore and launch-time cost with large stores are not
    measured. Preferences and the API key are device-local by design.
 
