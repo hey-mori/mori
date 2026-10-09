@@ -5,22 +5,34 @@
  * user reviews what leaves Mori before it leaves. What was left out is stated
  * inside that text, as counts only, so the receiving agent knows it too. Shape is the house modal (`ProjectCreateModal`'s
  * scrim, headed bar, round close, Esc, focus trap), widened for a document.
+ *
+ * Each item's source ref opens what it cites, so the user can check an item
+ * before handing it on. The links are drawn over the same text: what is shown
+ * and what is copied stay one string.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { trapTabKey } from "../../components/ui/focusTrap";
 import type { ProjectContinuationPack } from "../../lib/continuation/projectContinuation";
+import {
+  packRefs,
+  splitContinuationRefs,
+  type ContinuationRef,
+} from "../../lib/continuation/continuationRefs";
 
 type CopyState = "idle" | "copied" | "failed";
 
 export function ProjectContinuationModal({
   pack,
   onClose,
+  onOpenRef,
 }: {
   pack: ProjectContinuationPack;
   onClose: () => void;
+  /** Opens the session or record an item cites. Without it, refs stay text. */
+  onOpenRef?: (ref: ContinuationRef) => void;
 }) {
   const [copy, setCopy] = useState<CopyState>("idle");
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -47,6 +59,11 @@ export function ProjectContinuationModal({
     };
   }, [onClose]);
 
+  const segments = useMemo(
+    () => (onOpenRef ? splitContinuationRefs(pack.markdown, packRefs(pack)) : [{ text: pack.markdown }]),
+    [pack, onOpenRef],
+  );
+
   const copyPack = async () => {
     try {
       await navigator.clipboard.writeText(pack.markdown);
@@ -72,7 +89,7 @@ export function ProjectContinuationModal({
             <strong>이어가기</strong>
             <InfoHint label="이어가기 설명">
               다음 AI 세션에 붙여 넣을 이 프로젝트의 맥락입니다. 확정된 기록만 담고, 각 항목은
-              출처 기록을 가리킵니다. 노트 본문과 에이전트 요청 원문은 넣지 않습니다. 비밀
+              출처 기록을 가리킵니다. 출처를 누르면 그 기록을 엽니다. 노트 본문과 에이전트 요청 원문은 넣지 않습니다. 비밀
               정보로 보이는 항목은 통째로 뺍니다. 다만 이 검사는 알려진 형태를 찾는 보호
               장치일 뿐, 비밀이 없다는 보증은 아닙니다.
             </InfoHint>
@@ -84,7 +101,21 @@ export function ProjectContinuationModal({
 
         <div className="project-modal-body">
           <pre className="continuation-preview" aria-label="복사될 내용">
-            {pack.markdown}
+            {segments.map((segment, index) =>
+              segment.ref && onOpenRef ? (
+                <button
+                  key={index}
+                  type="button"
+                  className="continuation-ref"
+                  title={segment.ref.kind === "session" ? "이 세션 열기" : "이 기록 열기"}
+                  onClick={() => onOpenRef(segment.ref!)}
+                >
+                  {segment.text}
+                </button>
+              ) : (
+                segment.text
+              ),
+            )}
           </pre>
         </div>
 

@@ -2524,6 +2524,24 @@
   overflow-wrap: anywhere;
 }
 
+/* A cited source inside the preview: still the copied text, quietly openable. */
+.continuation-ref {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.continuation-ref:hover,
+.continuation-ref:focus-visible {
+  color: var(--accent);
+}
+
 .continuation-copy-state {
   margin-right: auto;
   color: var(--muted);

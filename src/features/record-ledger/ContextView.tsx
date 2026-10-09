@@ -799,7 +799,15 @@ export function ContextView() {
       </div>
 
       {continuationPack ? (
-        <ProjectContinuationModal pack={continuationPack} onClose={closeContinuation} />
+        <ProjectContinuationModal
+          pack={continuationPack}
+          onClose={closeContinuation}
+          onOpenRef={(ref) => {
+            setContinuing(false);
+            if (ref.kind === "session") openSessionById(ref.id);
+            else openRecordInLedger(ref.id);
+          }}
+        />
       ) : null}
 
       {creating ? (
