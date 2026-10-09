@@ -252,6 +252,19 @@ export class KernelRepository {
     return { ...listed, data: listed.data.find((source) => source.id === id) ?? null };
   }
 
+  /** Every source. Sources are few and small (a capture's raw trace or a
+   *  saved passage), and the desktop store already lists them to find one. */
+  async listSources(): Promise<KernelResult<KernelSource[]>> {
+    if (!this.isDesktop()) return browserResult(this.store().listSources());
+    return this.listObjects<KernelSource>("source", () => this.store().listSources());
+  }
+
+  /** Every source link, for a check that spans records (a passage saved twice). */
+  async listSourceLinks(): Promise<KernelResult<SourceLink[]>> {
+    if (!this.isDesktop()) return browserResult(this.store().listSourceLinks());
+    return this.listObjects<SourceLink>("sourceLink", () => this.store().listSourceLinks());
+  }
+
   async listSourceLinksForRecord(recordId: string): Promise<KernelResult<SourceLink[]>> {
     if (!this.isDesktop()) {
       return browserResult(this.store().listSourceLinksForRecord(recordId));

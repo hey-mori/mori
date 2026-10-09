@@ -833,6 +833,118 @@
   font-weight: 600;
 }
 
+/* 기록으로 남기기: quiet until the reader is on the message. */
+.session-window-capture {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 0 var(--base-space-2);
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--base-text-muted);
+  font: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.session-window-message:hover .session-window-capture,
+.session-window-capture:focus-visible {
+  opacity: 1;
+}
+
+.session-window-capture:hover {
+  color: var(--accent);
+}
+
+.session-window-capture-refusal {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  margin: 0 0 var(--base-space-3);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+/* The capture preview: the kept excerpt read-only, then the record's fields. */
+.passage-capture-modal {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.passage-capture-excerpt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-space-2);
+}
+
+.passage-capture-excerpt-head,
+.passage-capture-existing {
+  margin: 0;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.passage-capture-quote {
+  max-height: 180px;
+  margin: 0;
+  padding: var(--base-space-3) var(--base-space-4);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft, transparent);
+  color: var(--base-text);
+  font-size: var(--base-font-size-sm);
+  line-height: var(--base-line-relaxed);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.passage-capture-secret {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--base-font-size-sm);
+}
+
+.passage-capture-types {
+  display: flex;
+  gap: var(--base-space-2);
+}
+
+.passage-capture-type {
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--base-text-muted);
+  font: inherit;
+  font-size: var(--base-font-size-sm);
+  cursor: pointer;
+}
+
+.passage-capture-type.is-selected {
+  border-color: var(--base-text);
+  color: var(--base-text);
+}
+
+.passage-capture-body {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  font-size: var(--base-font-size-sm);
+  font-weight: 400;
+}
+
+.passage-capture-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
 .session-window-message.is-tool .session-window-role {
   color: var(--base-text-muted);
 }

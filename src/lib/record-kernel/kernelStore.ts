@@ -134,6 +134,10 @@ export class KernelBrowserStore {
     this.write(`${PREFIX.sourceLink}${link.sourceId}.${link.recordId}.${link.role}`, link);
   }
 
+  listSourceLinks(): SourceLink[] {
+    return this.list<SourceLink>(PREFIX.sourceLink);
+  }
+
   listSourceLinksForRecord(recordId: string): SourceLink[] {
     return this.list<SourceLink>(PREFIX.sourceLink).filter((link) => link.recordId === recordId);
   }

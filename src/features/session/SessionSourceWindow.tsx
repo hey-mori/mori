@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
+import { BookmarkPlus, ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
@@ -22,6 +22,17 @@ import {
   type SessionWindowState,
 } from "../../lib/session/sessionWindow";
 import { useSessionResolver } from "./useSessionResolver";
+import { PassageCaptureModal } from "./PassageCaptureModal";
+import { buildPassageDraft, type PassageDraft, type PassageDraftRefusal } from "../../lib/capture/passageCapture";
+
+/** Why a message could not be kept, in the words the viewer shows. */
+const CAPTURE_REFUSAL: Record<PassageDraftRefusal, string> = {
+  "no-record": "이 메시지의 위치를 확인하지 못해 남길 수 없습니다. 대화를 다시 열어 주세요.",
+  "not-a-message": "도구 실행 결과는 기록으로 남길 수 없습니다.",
+  empty: "남길 내용이 없습니다.",
+  "too-long": "메시지가 너무 깁니다. 남길 부분을 선택한 뒤 다시 눌러 주세요.",
+  "selection-outside": "선택한 글이 이 메시지 안에 있지 않습니다.",
+};
 
 /** Characters of a message shown before it folds; keeps a long window's DOM small. */
 const CLIP_CHARS = 700;
@@ -208,6 +219,18 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
     void loadLatest();
   };
 
+  // 기록으로 남기기: a preview for one message, or why it cannot be kept.
+  const sessionTitle = useSessionStore((store) => store.draft?.session.title ?? "");
+  const [captureDraft, setCaptureDraft] = useState<PassageDraft | null>(null);
+  const [captureRefusal, setCaptureRefusal] = useState<string | null>(null);
+  const capturePassage = (message: ClaudeMessage, selection: string | undefined) => {
+    setCaptureRefusal(null);
+    void buildPassageDraft({ sessionId: state.sessionId, sourceId: state.sourceId, message, selection }).then((result) => {
+      if ("draft" in result) setCaptureDraft(result.draft);
+      else setCaptureRefusal(CAPTURE_REFUSAL[result.refused]);
+    });
+  };
+
   const reachedStart = state.startOffset === 0;
   const atLatest = isAtLatest(state);
   const focusIndex = focus ? state.events.map((event) => event.id).lastIndexOf(focus.messageId) : -1;
@@ -237,6 +260,17 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
   const pageError = state.pageError;
   return (
     <section className="session-window" aria-label="원본 대화" ref={sectionRef}>
+      {captureDraft ? (
+        <PassageCaptureModal draft={captureDraft} sessionTitle={sessionTitle} onClose={() => setCaptureDraft(null)} />
+      ) : null}
+      {captureRefusal ? (
+        <p className="session-window-capture-refusal" role="alert">
+          {captureRefusal}
+          <button type="button" className="session-window-fold" onClick={() => setCaptureRefusal(null)}>
+            닫기
+          </button>
+        </p>
+      ) : null}
       <div className="session-window-top">
         <header className="session-window-head">
           <span className="session-window-coverage">
@@ -287,7 +321,12 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
       ) : (
         <ol className="session-window-list">
           {state.events.map((message, index) => (
-            <WindowMessage key={rowKey(message.id)} message={message} focus={index === focusIndex ? focus : null} />
+            <WindowMessage
+              key={rowKey(message.id)}
+              message={message}
+              focus={index === focusIndex ? focus : null}
+              onCapture={capturePassage}
+            />
           ))}
         </ol>
       )}
@@ -373,10 +412,26 @@ function PageFailure({
 function WindowMessage({
   message,
   focus,
+  onCapture,
 }: {
   message: ClaudeMessage;
   focus: { query: string; wholeWords: boolean; seq: number } | null;
+  /** Opens 기록으로 남기기 for this message, with the text selected in it. */
+  onCapture?: (message: ClaudeMessage, selection: string | undefined) => void;
 }) {
+  const textRef = useRef<HTMLParagraphElement>(null);
+  // Read on press, before the click moves focus: a selection inside this
+  // message's text narrows the excerpt; anything else means the whole message.
+  const selectedHere = (): string | undefined => {
+    const selection = typeof window === "undefined" ? null : window.getSelection();
+    const text = textRef.current;
+    if (!selection || selection.isCollapsed || !text) return undefined;
+    const range = selection.getRangeAt(0);
+    if (!text.contains(range.commonAncestorContainer)) return undefined;
+    return selection.toString();
+  };
+  // Only what someone wrote: tool calls and their output are not messages.
+  const capturable = onCapture && message.record && (messageKind(message) === "user" || messageKind(message) === "assistant");
   const [open, setOpen] = useState(focus !== null);
   // A search result opened at this message: show it whole, so the match is
   // never folded away.
@@ -398,8 +453,29 @@ function WindowMessage({
       <div className="session-window-message-head">
         <span className="session-window-role">{ROLE_LABEL[kind]}</span>
         {message.createdAt ? <time dateTime={message.createdAt}>{clockLabel(message.createdAt)}</time> : null}
+        {capturable ? (
+          <button
+            type="button"
+            className="session-window-capture"
+            title="이 메시지를 기록으로 남깁니다. 일부를 선택하면 그 부분만 남깁니다."
+            onMouseDown={(event) => {
+              // Keep the reader's selection: it is the excerpt.
+              event.preventDefault();
+              onCapture(message, selectedHere());
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onCapture(message, selectedHere());
+              }
+            }}
+          >
+            <BookmarkPlus size={12} aria-hidden="true" />
+            기록으로 남기기
+          </button>
+        ) : null}
       </div>
-      <p className="session-window-text">
+      <p className="session-window-text" ref={textRef}>
         {focus
           ? splitOnPhrase(text, focus.query, focus.wholeWords).map((part, index) =>
               part.match ? <mark key={index}>{part.text}</mark> : <span key={index}>{part.text}</span>,
