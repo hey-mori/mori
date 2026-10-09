@@ -158,7 +158,15 @@ export function searchStatusLine(state: SessionSearchState): string {
     case "cancelled":
       return `검색을 멈췄습니다 · ${share}에서 ${found}개`;
     case "idle":
-      if (state.reachedStart) return found > 0 ? `원본 전체에서 ${found}개 메시지` : "원본 전체에서 찾지 못했습니다";
+      if (state.reachedStart) {
+        // Searched to the start, but a record the viewer cannot show was not
+        // searched: say "readable", never "whole".
+        if (state.unsearchableRecords > 0) {
+          const skipped = `너무 큰 기록 ${state.unsearchableRecords}개는 찾지 못했습니다`;
+          return found > 0 ? `읽을 수 있는 원본에서 ${found}개 메시지 · ${skipped}` : `읽을 수 있는 원본에서 찾지 못했습니다 · ${skipped}`;
+        }
+        return found > 0 ? `원본 전체에서 ${found}개 메시지` : "원본 전체에서 찾지 못했습니다";
+      }
       if (found >= SEARCH_MAX_HELD_HITS) return `${SEARCH_MAX_HELD_HITS}개까지만 보여 줍니다 · 더 구체적으로 찾아 보세요`;
       return found > 0 ? `${share}에서 ${found}개 메시지 · 이전 부분은 아직 찾지 않았습니다` : `${share}에서 찾지 못했습니다`;
   }

@@ -343,10 +343,14 @@ export function projectSearchStatusLine(state: ProjectSearchState): string {
   if (c.searchable === 0) return `확정된 세션 ${c.confirmed}개 · 찾을 수 있는 대화가 없습니다`;
   const found = c.hits > 0 ? `세션 ${c.sessionsWithHits}개에서 메시지 ${c.hits}개` : null;
   if (state.status === "searching") return `찾는 중… ${scope}${found ? ` · ${found}` : ""}`;
-  const whole = c.complete && c.unsupported === 0 && c.unavailable === 0 && c.excluded === 0;
+  // "전체" needs every confirmed session searchable, searched to its start,
+  // and every record in it searchable: a record too large to show was not.
+  const whole =
+    c.complete && c.unsupported === 0 && c.unavailable === 0 && c.excluded === 0 && c.unsearchableRecords === 0;
+  const skipped = c.unsearchableRecords > 0 ? ` · 너무 큰 기록 ${c.unsearchableRecords}개는 찾지 못했습니다` : "";
   if (c.hits >= PROJECT_SEARCH_MAX_HITS) return `${scope} · ${PROJECT_SEARCH_MAX_HITS}개까지만 보여 줍니다`;
-  if (found) return `${scope} · ${found}`;
+  if (found) return `${scope} · ${found}${skipped}`;
   if (whole) return `${scope} · 확정된 대화 전체에서 찾지 못했습니다`;
-  if (c.complete) return `${scope} · 찾은 대화에서는 없었습니다`;
+  if (c.complete) return `${scope} · 찾은 대화에서는 없었습니다${skipped}`;
   return `${scope} · 아직 찾지 않은 부분이 있습니다`;
 }

@@ -327,6 +327,18 @@ describe("searching a project's confirmed sessions", () => {
     expect(projectSearchStatusLine(search())).not.toContain("전체에서");
   });
 
+  it("never claims the whole project was searched when a record was too large to search", async () => {
+    // The only place the phrase could be is a record the viewer cannot show.
+    session("a", lines(6), { contextId: "ctx-infra", unsearchable: 1 });
+    session("b", lines(4), { contextId: "ctx-infra" });
+    await useProjectSearchStore.getState().start(inventory(), "needle");
+    const coverage = projectSearchCoverage(search());
+    expect(coverage).toMatchObject({ complete: true, unsearchableRecords: 1, hits: 0 });
+    const line = projectSearchStatusLine(search());
+    expect(line).not.toContain("전체에서 찾지 못했습니다");
+    expect(line).toContain("너무 큰 기록 1개");
+  });
+
   it("gives every source a step before any gets a second, with bounded concurrency", async () => {
     const big = session("big", lines(40), { contextId: "ctx-infra", activeAt: "2026-10-09T00:00:00Z" });
     session("small", lines(4, { 1: "needle" }), { contextId: "ctx-infra", activeAt: "2026-10-01T00:00:00Z" });

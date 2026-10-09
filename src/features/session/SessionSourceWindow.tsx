@@ -490,8 +490,8 @@ function TranscriptSearch({ state, search }: { state: LoadedState; search: Sessi
           <p className="session-search-status" role="status" aria-live="polite">
             {searching ? <Loader2 className="session-window-spin" size={12} aria-hidden="true" /> : null}
             <span>{searchStatusLine(search)}</span>
-            {search.unsearchableRecords > 0 ? (
-              <span className="session-search-note">· 너무 큰 기록 {search.unsearchableRecords}개는 찾지 않았습니다</span>
+            {search.unsearchableRecords > 0 && !(search.status === "idle" && search.reachedStart) ? (
+              <span className="session-search-note">· 너무 큰 기록 {search.unsearchableRecords}개는 찾지 못했습니다</span>
             ) : null}
             {search.hits.length > 0 ? (
               <button type="button" className="session-search-toggle" onClick={() => setListOpen((open) => !open)}>

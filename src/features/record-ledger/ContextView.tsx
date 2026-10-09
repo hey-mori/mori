@@ -34,7 +34,9 @@ import { useRecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
 import { groupRecordsBySection } from "./contextGrouping";
 import { buildProjectGroups, sessionKey, type ProjectGroup } from "./projectGroups";
-import { loadAutoImportMeta, loadEmptySourceLabels } from "../../lib/session/autoImportMetaStore";
+import { loadAutoImportMetas, loadEmptySourceLabels } from "../../lib/session/autoImportMetaStore";
+import { autoImportedSessionId } from "../../lib/session/autoImportSessions";
+import type { SourceDescriptor } from "../../lib/session/projectSearch";
 import { buildProjectSearchInventory } from "../../lib/session/projectSearch";
 import { useProjectSearchStore } from "../../app/projectSearchStore";
 import { ProjectTranscriptSearch } from "./ProjectTranscriptSearch";
@@ -264,10 +266,7 @@ export function ContextView() {
       projectId: activeContext.id,
       contexts,
       records,
-      descriptorOf: (sessionId) => {
-        const meta = loadAutoImportMeta(sessionId);
-        return meta ? { agentName: meta.agentName, importKind: meta.importKind, sourcePath: meta.sourceFilePath ?? null } : null;
-      },
+      descriptorOf: descriptorLookup(),
       sessionOf: (sessionId) => {
         const summary = summaryById.get(sessionId);
         return summary ? { title: summary.title, lastActiveAt: sessionLastActiveAt(summary) } : null;
@@ -290,10 +289,7 @@ export function ContextView() {
             projectId: projectSearchId,
             contexts,
             records,
-            descriptorOf: (sessionId) => {
-              const meta = loadAutoImportMeta(sessionId);
-              return meta ? { agentName: meta.agentName, importKind: meta.importKind, sourcePath: meta.sourceFilePath ?? null } : null;
-            },
+            descriptorOf: descriptorLookup(),
           });
     restrictProjectSearch(
       projectSearchId,
@@ -774,6 +770,17 @@ function buildRecent(group: ProjectGroup | null): RecentItem[] {
   return [...fromRecords, ...fromSessions]
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 10);
+}
+
+/** Each discovered session's source descriptor by session id, read once. */
+function descriptorLookup(): (sessionId: string) => SourceDescriptor | null {
+  const byId = new Map(
+    loadAutoImportMetas().map((meta) => [
+      autoImportedSessionId(meta),
+      { agentName: meta.agentName, importKind: meta.importKind, sourcePath: meta.sourceFilePath ?? null },
+    ]),
+  );
+  return (sessionId) => byId.get(sessionId) ?? null;
 }
 
 function safeSummaries(): StoredSessionSummary[] {
