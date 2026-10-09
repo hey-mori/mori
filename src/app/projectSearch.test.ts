@@ -335,7 +335,8 @@ describe("searching a project's confirmed sessions", () => {
     const order = fake.calls.filter((call) => call.kind === "search").map((call) => call.path.split("/").pop());
     // The large source's second step comes only after both others had theirs.
     expect(order.slice(0, 3).sort()).toEqual(["big.jsonl", "small.jsonl", "tiny.jsonl"]);
-    expect(fake.maxInflight).toBeLessThanOrEqual(PROJECT_SEARCH_CONCURRENCY);
+    expect(PROJECT_SEARCH_CONCURRENCY).toBe(2);
+    expect(fake.maxInflight).toBe(2);
     expect(search().sources[big]!.steps).toBe(10);
   });
 
@@ -395,6 +396,22 @@ describe("searching a project's confirmed sessions", () => {
     expect(search().projectId).toBe("ctx-home");
     expect(Object.keys(search().sources)).toEqual(["auto-claude-h"]);
     expect(hitsOf("auto-claude-h")).toEqual(["h-m3"]);
+  });
+
+  it("an old query's step landing while the new query's step for the same source runs is dropped", async () => {
+    const only = session("only", lines(4, { 3: "alpha here", 2: "beta here" }), { contextId: "ctx-infra" });
+    const oldStep = deferred();
+    const newStep = deferred();
+    let calls = 0;
+    fake.gate = ({ kind }) => (kind === "search" ? (++calls === 1 ? oldStep.promise : newStep.promise) : undefined);
+    const first = useProjectSearchStore.getState().start(inventory(), "alpha");
+    const second = useProjectSearchStore.getState().start(inventory(), "beta");
+    oldStep.release();
+    await first;
+    newStep.release();
+    await second;
+    expect(search().query).toBe("beta");
+    expect(hitsOf(only)).toEqual(["only-m2"]);
   });
 
   it("a session that leaves the project mid-search stops being searched and its results are not offered", async () => {
