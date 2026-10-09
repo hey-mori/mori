@@ -287,6 +287,25 @@ describe("a kept copy and a changed original", () => {
     expect(detailMarkup()).toContain("kept words");
   });
 
+  it("reads again on reopen once a missing kept copy is restored", async () => {
+    const id = register(meta("short", "Short"));
+    const m = meta("short", "Short");
+    const messages = [message("u1", "question", "human"), message("a1", "answer")];
+    reader.detail.mockResolvedValueOnce({ ...m, messages, claudeDetail: { ...m, filePath: m.sourceFilePath, messages } });
+    const resolve = resolver();
+    await resolve(id);
+    reader.detail.mockRejectedValue(new Error("Failed to resolve /x/short.jsonl: No such file or directory"));
+    reader.kept.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00Z", bytes: 900 }, integrity: "missing", sourceId: "src-1" });
+    useSessionStore.setState({ sessionWindow: null });
+    await useSessionStore.getState().openDiscoveredSession(id);
+    expect(useSessionStore.getState().sessionWindow).toMatchObject({ status: "error", error: { kind: "archiveMissing" } });
+    // The user restores archives/ and opens the session again.
+    reader.kept.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00Z", bytes: 900 }, integrity: "ok", sourceId: "src-1" });
+    reader.window.mockResolvedValue(window(0, 900, [message("k1", "kept words")], { sourceId: "src-1" }));
+    await resolve(id);
+    expect(detailMarkup()).toContain("kept words");
+  });
+
   it("says a kept copy is damaged instead of showing it when the original is gone", async () => {
     const id = register(meta("gone", "Gone"));
     reader.detail.mockRejectedValue(new Error("Failed to resolve /x/gone.jsonl: No such file or directory"));

@@ -118,11 +118,11 @@ const FAILURE_COPY: Record<SessionWindowError["kind"], { title: string; descript
   },
   archiveMissing: {
     title: "보관한 원본 파일이 없습니다",
-    description: "원본 대화도, Mori에 보관한 사본도 찾을 수 없습니다. 저장 폴더의 archives를 복원하면 다시 열 수 있습니다.",
+    description: "원본 대화를 쓸 수 없어 보관한 사본을 찾았지만 파일이 없습니다. 저장 폴더의 archives를 복원하면 다시 열 수 있습니다.",
   },
   archiveDamaged: {
     title: "보관한 원본이 손상되었습니다",
-    description: "보관할 때와 내용이 달라 원본으로 보여 주지 않습니다. 백업에서 archives를 복원하면 다시 열 수 있습니다.",
+    description: "보관할 때와 내용이 달라 원본으로 보여주지 않습니다. 백업에서 archives를 복원하면 다시 열 수 있습니다.",
   },
   error: {
     title: "대화를 읽지 못했습니다",

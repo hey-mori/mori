@@ -1813,20 +1813,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const plan = meta.sessionId
         ? planSourceReopen(repository.listSessionImports(sessionId), candidate, (eventId) => cited.has(eventId))
         : ({ kind: "add" } as const);
-      // A transcript that no longer continues the import: when the user kept
-      // a copy of the original, that copy is what this session was, so it is
-      // shown (and says the file at the path changed). Nothing is written on
-      // this branch, so awaiting here cannot race a write.
-      if (plan.kind === "keep" && plan.reason === "diverged") {
-        const kept = await keptArchiveRead(sessionId);
-        if (!current()) return "superseded";
-        if (kept && isUsableArchive(kept)) {
-          set({ divergedSourceSessionId: null });
-          return openWindow(kept.path, { ...kept.archive, replacedOriginal: true });
-        }
-      }
-      // Otherwise the import is kept as stored; say so rather than let the
-      // readable file vouch for it.
+      // A transcript that no longer continues the import keeps the import as
+      // stored; say so rather than let the readable file vouch for it. (A file
+      // that is another conversation altogether was caught above by its head
+      // fingerprint when a copy is kept; this is the same conversation read
+      // differently, so the stored import, possibly newer than any copy,
+      // stays on screen.)
       set({ divergedSourceSessionId: plan.kind === "keep" && plan.reason === "diverged" ? sessionId : null });
       if (plan.kind === "add") {
         get().addImport(candidate);
@@ -1979,7 +1971,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
     }
     if (!current()) return "superseded";
-    if (!hitWindow && gone) {
+    // The file at the path is now another conversation: the passage was saved
+    // from the original, so a copy kept of that same original (same head
+    // fingerprint as the passage records) still holds it.
+    let replaced = false;
+    if (!hitWindow && !gone && failure?.kind === "changed") {
+      const keptId = await keptArchiveSourceId(locator.sessionId);
+      if (!current()) return "superseded";
+      replaced = keptId !== null && keptId === locator.sourceId;
+    }
+    if (!hitWindow && (gone || replaced)) {
       const kept = await keptArchiveRead(locator.sessionId);
       if (!current()) return "superseded";
       // A copy kept before this passage was written cannot hold it: the
@@ -1991,7 +1992,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         try {
           hitWindow = await readAt(kept.path);
           sourcePath = kept.path;
-          archive = kept.archive;
+          archive = replaced ? { ...kept.archive, replacedOriginal: true } : kept.archive;
           failure = null;
         } catch (error) {
           failure = classifyWindowError(error);

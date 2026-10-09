@@ -48,9 +48,10 @@ export type SessionWindowErrorKind =
   | "refused"
   /** Over the detailed reader's cap, for an agent with no window reader yet. */
   | "tooLarge"
-  /** The original is gone and the copy the user kept is gone too. */
+  /** The original cannot stand (gone, or another conversation now) and the
+   *  copy the user kept is missing. */
   | "archiveMissing"
-  /** The original is gone and the kept copy is no longer the file kept. */
+  /** The original cannot stand and the kept copy is no longer the file kept. */
   | "archiveDamaged"
   | "error";
 

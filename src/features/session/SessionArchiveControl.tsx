@@ -36,7 +36,11 @@ export function SessionArchiveControl({ sessionId }: { sessionId: string }) {
     if (selectRetainedSourceKind(state) !== null) return true;
     // A placeholder with nothing imported shows the read failure instead.
     const window = state.sessionWindow;
-    return window?.sessionId === sessionId && window.status === "error" && window.error.kind === "missing";
+    return (
+      window?.sessionId === sessionId &&
+      window.status === "error" &&
+      (window.error.kind === "missing" || window.error.kind === "archiveMissing" || window.error.kind === "archiveDamaged")
+    );
   });
 
   useEffect(() => {

@@ -284,6 +284,7 @@ pub(crate) fn verify_archive_at(archive_dir: &Path, file_name: &str, bytes: u64)
         match file.read(&mut buffer) {
             Ok(0) => break,
             Ok(read) => hasher.update(&buffer[..read]),
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
             Err(_) => return "damaged",
         }
     }
@@ -320,7 +321,6 @@ pub fn remove_claude_code_archive(file_name: String) -> Result<bool, String> {
     remove_archive_at(&archive_root()?, file_name.trim())
 }
 
-/// The archive directory, so a stored archive name can be read again.
 /// Verify one kept copy before it is read in place of its original.
 #[tauri::command]
 pub async fn verify_claude_code_archive(file_name: String, bytes: u64) -> Result<String, String> {
@@ -330,6 +330,7 @@ pub async fn verify_claude_code_archive(file_name: String, bytes: u64) -> Result
         .map_err(|error| error.to_string())
 }
 
+/// The archive directory, so a stored archive name can be read again.
 #[tauri::command]
 pub fn claude_code_archive_dir() -> Result<String, String> {
     Ok(archive_root()?.to_string_lossy().to_string())
