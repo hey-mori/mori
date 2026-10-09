@@ -41,6 +41,27 @@ const IMPORTS_PREFIX = "mori.sessionImports.";
 // array under `IMPORTS_PREFIX + sessionId` is still merged on read and
 // migrated to entry keys on the next write.
 const IMPORT_ENTRY_PREFIX = "mori.sessionImportEntry.";
+
+/**
+ * Ids of sessions with at least one stored import, from key names alone (no
+ * entry is parsed), for a caller that only needs to know an import exists.
+ */
+export function sessionIdsWithStoredImports(storage: Pick<Storage, "length" | "key">): Set<string> {
+  const ids = new Set<string>();
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (!key) continue;
+    if (key.startsWith(IMPORT_ENTRY_PREFIX)) {
+      const rest = key.slice(IMPORT_ENTRY_PREFIX.length);
+      const dot = rest.lastIndexOf(".");
+      if (dot > 0) ids.add(rest.slice(0, dot));
+    } else if (key.startsWith(IMPORTS_PREFIX)) {
+      const id = key.slice(IMPORTS_PREFIX.length);
+      if (id) ids.add(id);
+    }
+  }
+  return ids;
+}
 const ANALYSIS_PREFIX = "mori.sessionAnalysis.";
 const ANALYSIS_HISTORY_PREFIX = "mori.sessionAnalysisHistory.";
 const MEMORY_PREFIX = "mori.sessionMemory.";

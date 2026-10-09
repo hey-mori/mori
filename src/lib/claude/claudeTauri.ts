@@ -293,7 +293,16 @@ export async function claudeCodeArchiveDir(): Promise<string> {
 
 /** The agent's transcript cleanup period as its settings files state it.
  *  Reads only that one key; project-level overrides are not seen. */
-export async function claudeCodeCleanupPolicy(): Promise<{ periodDays: number | null; source: "managed" | "user" | "unset" }> {
+export async function claudeCodeCleanupPolicy(): Promise<{
+  periodDays: number | null;
+  source: "managed" | "user" | "unset" | "invalid";
+}> {
   if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
   return invokeTauriCommand("claude_code_cleanup_policy", {});
+}
+
+/** Whether each transcript still exists; "unknown" when the check itself failed. */
+export async function claudeCodeSourcePresence(paths: string[]): Promise<("present" | "missing" | "unknown")[]> {
+  if (!isClaudeBridgeAvailable()) throw new ClaudeBridgeUnavailableError();
+  return invokeTauriCommand("claude_code_source_presence", { paths });
 }

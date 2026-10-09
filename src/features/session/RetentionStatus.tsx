@@ -56,16 +56,18 @@ export function RetentionStatus({
 
   return (
     <>
-      <button
-        type="button"
-        className="mcs-retention"
-        onClick={() => {
-          setOpen(true);
-          reload();
-        }}
-      >
-        정리될 수 있는 대화 {attention.length}개
-      </button>
+      {attention.length > 0 ? (
+        <button
+          type="button"
+          className="mcs-retention"
+          onClick={() => {
+            setOpen(true);
+            reload();
+          }}
+        >
+          정리될 수 있는 대화 {attention.length}개
+        </button>
+      ) : null}
       {open
         ? // Out of the status row: its backdrop filter would contain a fixed
           // layer, and its button styles would reach the dialog's buttons.
@@ -141,7 +143,7 @@ function RetentionDialog({
             <strong>정리될 수 있는 대화</strong>
             <InfoHint label="정리 시점 설명">
               Claude Code는 마지막 변경 뒤 {period ?? 30}일이 지난 대화 기록을 지웁니다
-              {period === null ? "(설정이 없어 기본값으로 계산)" : ""}. 날짜는 파일 시각으로 계산한
+              {view.policy.source === "unset" ? "(설정이 없어 기본값으로 계산)" : ""}. 날짜는 파일 시각으로 계산한
               추정이고, 프로젝트별 설정이나 정리가 실제로 도는 시점에 따라 달라질 수 있습니다.
               보관은 Mori 저장 폴더 안의 사본이며 백업이 아닙니다. Mori는 직접 고르기 전에는
               아무것도 보관하지 않습니다.

@@ -214,6 +214,7 @@ fn main() {
             claude::archive::remove_claude_code_archive,
             claude::archive::claude_code_archive_dir,
             claude::retention::claude_code_cleanup_policy,
+            claude::retention::claude_code_source_presence,
             files::resolve_file_locations,
             files::reveal_path_in_os,
             llm_http::llm_http_request,

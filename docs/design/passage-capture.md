@@ -157,13 +157,15 @@ Mori cannot read or search; this keeps one chosen session readable and searchabl
 
 Mori may say that a source conversation may soon be removed; it never keeps one for the user.
 
-- **Facts, kept apart**: whether the original is there (an existence check, only for the few
-  sources near or past their estimate, only when the user looks: Home or the dialog opening;
+- **Facts, kept apart**: whether the original is there (an existence check that never opens
+  the file, only for the few sources near or past their estimate, while Home is showing or the
+  dialog opens; "missing" only when the system says not found, any other error stays unknown;
   absence from discovery proves nothing, because a failed read lists nothing); when the cleanup
-  *may* reach it (the file's last change plus `cleanupPeriodDays` from managed or user settings,
-  else the documented default of 30; a project's own settings are not read, and the docs do not
-  say which age or when the sweep runs, so the copy says 정리 대상일 수 있음, never a date it
-  will be deleted); and what Mori keeps (an archive, and whether it covers the transcript as it
+  *may* reach it (the file's last change plus `cleanupPeriodDays` from the managed settings file
+  or the user's settings, else the documented default of 30; a value Mori cannot read as a
+  period, such as 0, makes no estimate at all; project settings, MDM policy and
+  `managed-settings.d` drop-ins are not read, and the docs do not say which age or when the
+  sweep runs, so the copy says 정리 대상일 수 있음, never a date it will be deleted); and what Mori keeps (an archive, and whether it covers the transcript as it
   is now; saved passages that still back a live record; an earlier import). No score, no
   transcript read, no hashing.
 - **Placement**: a quiet count in Home's status row (정리될 수 있는 대화 N개) only when a present
@@ -176,8 +178,10 @@ Mori may say that a source conversation may soon be removed; it never keeps one 
 - **Ignoring it** changes nothing: no archive, no notification, no background work.
 - **Kept sessions outlive their original**: auto-import prunes placeholders whose transcript
   left discovery unless they were imported. A session with a kept archive or a saved passage is
-  now kept too (the kernel is read only when something would be pruned), so what was kept still
-  opens from the session list after the agent removes the original.
+  now kept too, so what was kept still opens from the session list after the agent removes the
+  original. The kernel is read only for an unimported would-be-pruned session the cached kept
+  set has not seen (or every 30 minutes), and a fallback kernel read skips pruning that pass.
+  The session-bar chip estimates from the stored meta and does not check presence.
 
 ## 6. Scope
 

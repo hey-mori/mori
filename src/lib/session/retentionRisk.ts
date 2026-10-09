@@ -23,7 +23,9 @@ const DAY_MS = 86_400_000;
 export type CleanupPolicyInput = {
   /** Null when no checked settings file sets it: the default is assumed. */
   periodDays: number | null;
-  source: "managed" | "user" | "unset";
+  /** "invalid": the deciding file sets a value Mori cannot read as a period,
+   *  so no estimate is made at all. */
+  source: "managed" | "user" | "unset" | "invalid";
 };
 
 export type RetentionSourceInput = {
@@ -71,7 +73,7 @@ export function estimateCleanup(
   const periodDays = policy.periodDays ?? DEFAULT_CLEANUP_DAYS;
   const basis = policy.periodDays === null ? "default" : "configured";
   const changed = modifiedAt ? Date.parse(modifiedAt) : Number.NaN;
-  if (Number.isNaN(changed)) return { state: "unknown", basis, periodDays };
+  if (policy.source === "invalid" || Number.isNaN(changed)) return { state: "unknown", basis, periodDays };
   const eligible = changed + periodDays * DAY_MS;
   const daysLeft = Math.ceil((eligible - now) / DAY_MS);
   const state = eligible <= now ? "mayBeEligible" : daysLeft <= APPROACHING_DAYS ? "approaching" : "ok";
@@ -84,9 +86,9 @@ export function assessRetention(
   now: number,
 ): RetentionAssessment {
   const cleanup = estimateCleanup(source.modifiedAt, policy, now);
-  // An archive older than the transcript's current size misses what was said
-  // after it was taken.
-  const archiveCurrent = Boolean(source.archive && source.bytes !== undefined && source.archive.bytes >= source.bytes);
+  // An archive smaller than the transcript is now misses what was said after
+  // it was taken. An unknown current size establishes nothing either way.
+  const archiveCurrent = Boolean(source.archive && (source.bytes === undefined || source.archive.bytes >= source.bytes));
   const atRisk = cleanup.state === "approaching" || cleanup.state === "mayBeEligible";
   return {
     ...source,
@@ -108,7 +110,7 @@ export function cleanupPhrase(cleanup: CleanupEstimate): string {
   if (cleanup.state === "unknown") return "정리 시점을 알 수 없음";
   if (cleanup.state === "mayBeEligible") return "지금 정리 대상일 수 있음";
   if (cleanup.state === "approaching") return `약 ${Math.max(cleanup.daysLeft, 1)}일 뒤 정리 대상일 수 있음`;
-  return `약 ${cleanup.daysLeft}일 뒤 정리 대상`;
+  return `약 ${cleanup.daysLeft}일 뒤 정리 대상일 수 있음`;
 }
 
 /** What Mori keeps of a source, in one line. */

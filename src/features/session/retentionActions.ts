@@ -4,8 +4,7 @@
  * settings state, and, only for sources near or past their estimate, whether
  * the file is still there (an existence check, never a read).
  */
-import { claudeCodeCleanupPolicy } from "../../lib/claude/claudeTauri";
-import { resolveFileLocations } from "../../lib/file-provenance/fileProvenanceBridge";
+import { claudeCodeCleanupPolicy, claudeCodeSourcePresence } from "../../lib/claude/claudeTauri";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import { loadAutoImportMetas } from "../../lib/session/autoImportMetaStore";
 import { retentionSources } from "../../lib/session/retentionInventory";
@@ -15,7 +14,7 @@ import {
   type RetentionAssessment,
   type RetentionSourceInput,
 } from "../../lib/session/retentionRisk";
-import { loadStoredSessionSummariesWithMetrics } from "../../app/sessionStore";
+import { sessionIdsWithStoredImports } from "../../lib/storage/localStorageAdapter";
 
 export type RetentionView = {
   policy: CleanupPolicyInput;
@@ -40,11 +39,13 @@ export async function loadRetentionView(now: number = Date.now()): Promise<Reten
     repo.listSourceLinks(),
     repo.listRecords(),
   ]);
-  const importedSessionIds = new Set(
-    loadStoredSessionSummariesWithMetrics()
-      .filter((summary) => (summary.eventCount ?? 0) > 0)
-      .map((summary) => summary.sessionId),
-  );
+  // Desktop mirrors its sessions into local storage, so key names suffice.
+  let importedSessionIds = new Set<string>();
+  try {
+    importedSessionIds = sessionIdsWithStoredImports(window.localStorage);
+  } catch {
+    // No storage: no import is claimed.
+  }
   const inputs = retentionSources({
     metas: loadAutoImportMetas(),
     sources: sources.data,
@@ -65,10 +66,11 @@ async function withPresence(
   const toCheck = first.filter(
     (a) => a.sourcePath && (a.cleanup.state === "approaching" || a.cleanup.state === "mayBeEligible"),
   );
-  let found = new Map<string, "present" | "missing">();
+  let found = new Map<string, "present" | "missing" | "unknown">();
   try {
-    const located = await resolveFileLocations(toCheck.map((a) => a.sourcePath!));
-    found = new Map(located.map((l) => [l.path, l.status === "present" ? "present" : "missing"] as const));
+    const paths = toCheck.map((a) => a.sourcePath!);
+    const presence = paths.length > 0 ? await claudeCodeSourcePresence(paths) : [];
+    found = new Map(paths.map((path, i) => [path, presence[i] ?? "unknown"] as const));
   } catch {
     // Unknown stays unknown: nothing is flagged on a failed check.
   }

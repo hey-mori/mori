@@ -40,6 +40,14 @@ describe("estimating when cleanup may reach a source", () => {
     expect(cleanupPhrase(estimate)).toBe("지금 정리 대상일 수 있음");
   });
 
+  it("makes no estimate when the configured period cannot be read", () => {
+    expect(estimateCleanup(daysAgo(40), { periodDays: null, source: "invalid" }, NOW)).toMatchObject({ state: "unknown" });
+  });
+
+  it("phrases even a distant estimate as a possibility", () => {
+    expect(cleanupPhrase(estimateCleanup(daysAgo(10), unset, NOW))).toBe("약 20일 뒤 정리 대상일 수 있음");
+  });
+
   it("does not guess without a file time", () => {
     expect(estimateCleanup(undefined, unset, NOW)).toMatchObject({ state: "unknown" });
     expect(estimateCleanup("not a date", unset, NOW)).toMatchObject({ state: "unknown" });
@@ -63,6 +71,12 @@ describe("what deserves attention", () => {
     const a = assessRetention(source({ modifiedAt: daysAgo(29), bytes: 5000, archive: { archivedAt: daysAgo(5), bytes: 1000 } }), unset, NOW);
     expect(a.needsAttention).toBe(true);
     expect(keptPhrase(a)).toBe("보관 이후 대화 있음");
+  });
+
+  it("does not claim newer messages when the current size is unknown", () => {
+    const a = assessRetention(source({ modifiedAt: daysAgo(29), bytes: undefined, archive: { archivedAt: daysAgo(1), bytes: 10 } }), unset, NOW);
+    expect(a.archiveCurrent).toBe(true);
+    expect(a.needsAttention).toBe(false);
   });
 
   it("is quiet for a source far from cleanup, however large", () => {
