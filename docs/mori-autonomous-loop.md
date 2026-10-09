@@ -158,6 +158,15 @@ only · no phase numbers.
   chosen session's transcript as a content-named archive in Mori's storage
   that opening, 원본 열기 and project search read when the original is gone
   (#198).
+- Evidence survival and retention (2026-10-09, design `docs/design/passage-capture.md`
+  §5c–§5f): Home says 정리될 수 있는 대화 N개 only when a present source is near or past
+  its estimated cleanup and not wholly kept, with a list that routes to 원본 보관 and
+  never keeps anything on its own (#202); a record is found by the passage it was
+  saved from after its body is rewritten (#204); reopening a session no longer
+  re-announces an old import (#206); the kept-copy notice covers restored sessions,
+  replaced transcripts and retry (#208); a full reset deletes archive files (#210);
+  Home opens sessions through the shared resolver and notes show their saved
+  passage (#212).
 - Work Bundle import · composite multi-source preview. `buildWorkBundlePreview`
   (pure) reconstructs several normalized candidates (transcript + Codex/OpenCode
   run JSONL + git diff + terminal log + note) into one work unit (detected
@@ -336,18 +345,20 @@ loop must not manufacture vague polish to avoid this:
 1. Project Memory UX polish · open; needs a concrete defect /
    improvement observed against real captured data.
 2. Queryable Memory extensions · open; needs a clear, safe slice.
-3. Kept-copy follow-ups (#190) · open, small: no retry from the notice
-   (the resolver does not re-read an open session that has imports); the
-   session restored at startup is shown without a read, so a deleted source
-   is only noticed on the next open; a replaced transcript keeps its stored
-   copy silently.
-4. Durable-context follow-ups · open, small (see
-   `docs/design/passage-capture.md`): saved passages are searchable through
-   the record body only (a body the user rewrites drops the excerpt words
-   from search); multi-message excerpts and capture from imported timeline
-   cards are not built; the redaction used for a redacted passage has no
-   version, so a future pattern change reads old redacted passages as "could
-   not verify"; archives exist for Claude Code transcripts only.
+3. Retention follow-ups · open (see `docs/design/passage-capture.md` §5c–§5f):
+   - Owner decisions: whether a full reset also deletes the pre-migration
+     `backups/` snapshots (they keep the kernel, passage text included); whether
+     auto-import reopen descriptors move from app storage into the database, so
+     that backing up the storage folder alone restores session access to archives
+     (today a backup needs `Mori/Records` and the app data folder).
+   - Small: with a kept archive and a replaced transcript present, the import is
+     shown rather than the archive; "replaced" is known only within a run; the
+     session-bar chip estimates from the stored meta without a presence check; a
+     project-scoped retention line is not built.
+4. Durable-context follow-ups · open, small: multi-message excerpts and capture
+   from imported timeline cards are not built; the redaction used for a redacted
+   passage has no version, so a future pattern change reads old redacted passages
+   as "could not verify"; archives exist for Claude Code transcripts only.
 
 Deferred · revisit when a concrete need appears:
 - Evidence / Import Review polish · audited; the Import Review view,
