@@ -2658,6 +2658,31 @@
   background: var(--gray-50);
 }
 
+/* A row that opens its session: the button carries the row's layout. */
+.ctx-live-row.is-openable {
+  padding: 0;
+}
+
+.ctx-live-row-open {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctx-live-row-open:hover {
+  background: var(--base-surface-subtle);
+}
+
 .ctx-live-row-icon {
   flex: none;
   color: var(--muted-2);

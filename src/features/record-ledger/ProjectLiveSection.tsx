@@ -17,7 +17,8 @@
  * Copy stays minimal per the house convention: the explanation lives in an
  * InfoHint, not in always-visible prose.
  */
-import { Radio } from "lucide-react";
+import type { ReactNode } from "react";
+import { Hand, Radio } from "lucide-react";
 import { withoutPasteMarkers } from "../../lib/session/agentText";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
@@ -32,12 +33,45 @@ function formatElapsed(ms: number): string {
   return `${hours}시간째`;
 }
 
+/**
+ * Opens the conversation a request belongs to, or null when the page cannot
+ * map its session file to a Mori session (the row then stays plain text).
+ */
+type OpenRequestSession = ((sessionKey: string) => (() => void) | null) | undefined;
+
+/** A request row: a button that opens its session when it can, else text. */
+function RequestRow({
+  sessionKey,
+  open,
+  children,
+}: {
+  sessionKey: string;
+  open: OpenRequestSession;
+  children: ReactNode;
+}) {
+  const action = open?.(sessionKey) ?? null;
+  return (
+    <li className={action ? "ctx-live-row is-openable" : "ctx-live-row"}>
+      {action ? (
+        <button type="button" className="ctx-live-row-open" onClick={action} title="이 대화를 최신 메시지부터 엽니다">
+          {children}
+        </button>
+      ) : (
+        children
+      )}
+    </li>
+  );
+}
+
 export function ProjectLiveSection({
   projection,
   now = Date.now(),
+  openSession,
 }: {
   projection: ProjectProjection | null;
   now?: number;
+  /** Maps a request's session file to an action that opens it. */
+  openSession?: OpenRequestSession;
 }) {
   if (!projection) return null;
 
@@ -95,23 +129,33 @@ export function ProjectLiveSection({
             </p>
           )}
 
-          {projection.running.length > 0 ? (
+          {projection.running.length > 0 || projection.waiting.length > 0 ? (
             <ul className="ctx-live-running">
+              {/* What waits for the user first: it is the part only they can move. */}
+              {projection.waiting.map((request) => (
+                <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
+                  <Hand size={12} aria-hidden="true" className="ctx-live-row-icon" />
+                  <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
+                  <span className="ctx-live-row-meta">
+                    내 확인 대기{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
+                  </span>
+                </RequestRow>
+              ))}
               {projection.running.map((request) => (
-                <li key={request.id} className="ctx-live-row">
+                <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
                   <Radio size={12} aria-hidden="true" className="ctx-live-row-icon" />
                   <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     {formatElapsed(request.elapsedMs)} · {request.stepCount}단계
                   </span>
-                </li>
+                </RequestRow>
               ))}
             </ul>
           ) : null}
         </>
       )}
 
-      <RecentWork projection={projection} now={now} />
+      <RecentWork projection={projection} now={now} openSession={openSession} />
     </section>
   );
 }
@@ -133,9 +177,11 @@ export function ProjectLiveSection({
 function RecentWork({
   projection,
   now,
+  openSession,
 }: {
   projection: ProjectProjection;
   now: number;
+  openSession: OpenRequestSession;
 }) {
   const requests = projection.recentRequests;
   const files = projection.topFiles;
@@ -151,13 +197,13 @@ function RecentWork({
       {requests.length > 0 ? (
         <ul className="ctx-live-list">
           {requests.map((request) => (
-            <li key={request.id} className="ctx-live-row">
+            <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
               <span className="ctx-live-row-title">{withoutPasteMarkers(request.title)}</span>
               <span className="ctx-live-row-meta">
                 {STATUS_LABEL[request.status] ?? ""}
                 {request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
               </span>
-            </li>
+            </RequestRow>
           ))}
         </ul>
       ) : null}

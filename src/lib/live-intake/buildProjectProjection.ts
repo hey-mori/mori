@@ -41,6 +41,8 @@ export type ProjectRunningRequest = {
   id: string;
   title: string;
   sessionLabel: string;
+  /** The session file the request belongs to, to open its conversation. */
+  sessionKey: string;
   startedAt: string;
   /** Wall time since the request opened. */
   elapsedMs: number;
@@ -51,6 +53,7 @@ export type ProjectRecentRequest = {
   id: string;
   title: string;
   sessionLabel: string;
+  sessionKey: string;
   status: SessionActivityStatus;
   endedAt: string;
 };
@@ -71,6 +74,9 @@ export type ProjectProjection = {
   /** Present-tense counts. All zero once `freshness` is `stale`, by D11. */
   runningCount: number;
   waitingCount: number;
+  /** Requests whose agent finished its turn and waits for the user, newest
+   *  first. Present tense, so empty once the observation is stale. */
+  waiting: ProjectRecentRequest[];
   blockedCount: number;
   /** Detail for each in-flight request; empty unless `freshness` is not stale. */
   running: ProjectRunningRequest[];
@@ -145,6 +151,7 @@ function foldProject(
   let waitingCount = 0;
   let blockedCount = 0;
   const running: ProjectRunningRequest[] = [];
+  const waiting: ProjectRecentRequest[] = [];
 
   if (reportsPresent) {
     for (const row of rows) {
@@ -154,14 +161,19 @@ function foldProject(
           id: row.id,
           title: row.title,
           sessionLabel: row.sessionLabel,
+          sessionKey: row.sessionKey,
           startedAt: row.startedAt,
           elapsedMs: Math.max(0, now - epoch(row.startedAt)),
           stepCount: row.stepCount,
         });
-      } else if (row.status === "waitingForUser") waitingCount += 1;
+      } else if (row.status === "waitingForUser") {
+        waitingCount += 1;
+        waiting.push({ id: row.id, title: row.title, sessionLabel: row.sessionLabel, sessionKey: row.sessionKey, status: row.status, endedAt: row.endedAt });
+      }
       else if (row.status === "blocked") blockedCount += 1;
     }
     running.sort((a, b) => b.elapsedMs - a.elapsedMs);
+    waiting.sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
   }
 
   const ordered = [...rows].sort((a, b) => epoch(b.endedAt) - epoch(a.endedAt));
@@ -173,12 +185,14 @@ function foldProject(
     freshness,
     runningCount,
     waitingCount,
+    waiting,
     blockedCount,
     running,
     recentRequests: ordered.slice(0, recentLimit).map((row) => ({
       id: row.id,
       title: row.title,
       sessionLabel: row.sessionLabel,
+      sessionKey: row.sessionKey,
       // A past request's own status is a past fact and does not decay; only the
       // present-tense reading of a live row does.
       status: reportsPresent ? row.status : decay(row.status),

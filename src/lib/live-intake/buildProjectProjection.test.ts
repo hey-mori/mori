@@ -153,6 +153,34 @@ describe("buildProjectProjections", () => {
     });
   });
 
+  describe("waiting for the user", () => {
+    it("lists what waits for the user, newest first, with the session to open", () => {
+      const out = buildProjectProjections(
+        [
+          row({ id: "older", status: "waitingForUser", endedAt: ago(30), sessionKey: "/c/a.jsonl" }),
+          row({ id: "newer", status: "waitingForUser", endedAt: ago(5), sessionKey: "/c/b.jsonl" }),
+          row({ id: "busy", status: "running", startedAt: ago(3) }),
+        ],
+        { now: NOW },
+      );
+      expect(out[0].waitingCount).toBe(2);
+      expect(out[0].waiting.map((r) => [r.id, r.sessionKey])).toEqual([
+        ["newer", "/c/b.jsonl"],
+        ["older", "/c/a.jsonl"],
+      ]);
+      expect(out[0].running[0]?.sessionKey).toBeDefined();
+    });
+
+    it("lists nothing as waiting once the observation is stale", () => {
+      const out = buildProjectProjections(
+        [row({ id: "w", status: "waitingForUser", endedAt: ago(60 * 25), observedAt: ago(60 * 25) })],
+        { now: NOW },
+      );
+      expect(out[0].waiting).toEqual([]);
+      expect(out[0].waitingCount).toBe(0);
+    });
+  });
+
   describe("running detail", () => {
     it("carries elapsed time and step count, so a long run is visible as one", () => {
       const out = buildProjectProjections(

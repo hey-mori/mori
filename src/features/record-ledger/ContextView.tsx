@@ -371,6 +371,22 @@ export function ContextView() {
   // by, and refused when two observed projects share it (see
   // `selectProjectionForLabel`).
   const live = useProjectLive(title || null);
+  // A live request names its session by file; the session list knows it by
+  // its Mori id. The discovery descriptors map one to the other.
+  const sessionIdByFile = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const meta of loadAutoImportMetas()) {
+      const id = autoImportedSessionId(meta);
+      if (meta.filePath) map.set(meta.filePath, id);
+      if (meta.sourceFilePath) map.set(meta.sourceFilePath, id);
+    }
+    return map;
+    // Re-read when the live projection changes (a poll may discover a session).
+  }, [live]);
+  const openLiveSession = (sessionKey: string) => {
+    const sessionId = sessionIdByFile.get(sessionKey);
+    return sessionId ? () => openSessionById(sessionId) : null;
+  };
   const count = activeGroup ? activeGroup.sessions.length + activeGroup.records.length : 0;
   const isEmpty = !loading && tree.length === 0 && linkedFolders.length === 0;
 
@@ -610,7 +626,7 @@ export function ContextView() {
                   }}
                 />
               ) : null}
-              <ProjectLiveSection projection={live} />
+              <ProjectLiveSection projection={live} openSession={openLiveSession} />
               {children.length > 0 ? (
                 <section className="ctx-section">
                   <p className="ctx-section-label">하위 프로젝트</p>
