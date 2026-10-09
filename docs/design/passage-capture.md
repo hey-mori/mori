@@ -1,6 +1,7 @@
 # Passage capture and evidence retention
 
-Status: designed 2026-10-09; implementation tracked in the PRs that cite this file.
+Status: implemented 2026-10-09 (capture #193, provenance #196, archive #198); verified in isolated
+runtimes against real and synthetic transcripts, not yet by the operator or in production.
 Governing architecture: [`mori-context-workspace-architecture.md`](mori-context-workspace-architecture.md)
 (Source / Record / SourceLink / Revision). This document does not add a store, an index or
 a review queue; it routes one more kind of input through the ones that exist.
