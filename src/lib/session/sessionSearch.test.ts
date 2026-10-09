@@ -75,6 +75,12 @@ describe("search state", () => {
     expect(searchStatusLine(found)).toBe("최근 1% 미만에서 1개 메시지 · 이전 부분은 아직 찾지 않았습니다");
   });
 
+  it("does not call a search whole when a record was too large to search", () => {
+    const complete = { ...applySearchBatch(fresh(), { ...batch(1000, 0, []), unsearchableRecords: 2, unsearchableBytes: 5 }), status: "idle" as const };
+    expect(searchStatusLine(complete)).not.toContain("원본 전체에서 찾지 못했습니다");
+    expect(searchStatusLine(complete)).toContain("너무 큰 기록 2개");
+  });
+
   it("accepts only a bounded, non-empty phrase", () => {
     expect(normalizeQuery("  firewall parser ")).toBe("firewall parser");
     expect(normalizeQuery("   ")).toBeNull();

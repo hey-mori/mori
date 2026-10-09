@@ -22,6 +22,7 @@ import {
   PenLine,
   Radio,
   Search,
+  MessageSquareText,
 } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { useAppStore } from "../../app/store";
@@ -33,7 +34,12 @@ import { useRecordLedger } from "./useRecordLedger";
 import { LedgerRow } from "./LedgerRow";
 import { groupRecordsBySection } from "./contextGrouping";
 import { buildProjectGroups, sessionKey, type ProjectGroup } from "./projectGroups";
-import { loadEmptySourceLabels } from "../../lib/session/autoImportMetaStore";
+import { loadAutoImportMetas, loadEmptySourceLabels } from "../../lib/session/autoImportMetaStore";
+import { autoImportedSessionId } from "../../lib/session/autoImportSessions";
+import type { SourceDescriptor } from "../../lib/session/projectSearch";
+import { buildProjectSearchInventory } from "../../lib/session/projectSearch";
+import { useProjectSearchStore } from "../../app/projectSearchStore";
+import { ProjectTranscriptSearch } from "./ProjectTranscriptSearch";
 import { loadConnectedProjects } from "../../lib/projects/projectConnection";
 import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
 import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
@@ -84,6 +90,11 @@ export function ContextView() {
   const [dragging, setDragging] = useState<string | null>(null);
   const [continuing, setContinuing] = useState(false);
   const closeContinuation = useCallback(() => setContinuing(false), []);
+  // 이 프로젝트의 대화에서 찾기: open for one project id. A search that is
+  // still held for the project (the way back from a result) reopens it.
+  const [transcriptSearchFor, setTranscriptSearchFor] = useState<string | null>(
+    () => useProjectSearchStore.getState().search?.projectId ?? null,
+  );
 
   const openSessionById = (sessionId: string) => {
     void resolveSession(sessionId).then((outcome) => {
@@ -244,6 +255,58 @@ export function ContextView() {
         : [],
     [tree, activeContext],
   );
+
+  // The confirmed sessions of the selected project, from the records and
+  // contexts the page holds now. Recomputed when membership changes, so a
+  // running search stops reading a session that left the project.
+  const searchInventory = useMemo(() => {
+    if (!activeContext) return null;
+    const summaryById = new Map(summaries.map((summary) => [summary.sessionId, summary]));
+    return buildProjectSearchInventory({
+      projectId: activeContext.id,
+      contexts,
+      records,
+      descriptorOf: descriptorLookup(),
+      sessionOf: (sessionId) => {
+        const summary = summaryById.get(sessionId);
+        return summary ? { title: summary.title, lastActiveAt: sessionLastActiveAt(summary) } : null;
+      },
+    });
+  }, [activeContext, contexts, records, summaries]);
+  const restrictProjectSearch = useProjectSearchStore((state) => state.restrict);
+  const stopProjectSearch = useProjectSearchStore((state) => state.stop);
+  const closeProjectSearch = useProjectSearchStore((state) => state.close);
+  const projectSearchId = useProjectSearchStore((state) => state.search?.projectId ?? null);
+  useEffect(() => {
+    // While the kernel is still loading, the page holds no records yet: that is
+    // not "every session left the project", so nothing is restricted.
+    if (!projectSearchId || loading) return;
+    // Recompute the scope for the searched project itself, whatever is selected.
+    const scoped =
+      searchInventory?.kind === "ok" && searchInventory.projectId === projectSearchId
+        ? searchInventory
+        : buildProjectSearchInventory({
+            projectId: projectSearchId,
+            contexts,
+            records,
+            descriptorOf: descriptorLookup(),
+          });
+    restrictProjectSearch(
+      projectSearchId,
+      new Set(scoped.kind === "ok" ? scoped.entries.map((entry) => entry.sessionId) : []),
+    );
+  }, [projectSearchId, loading, searchInventory, contexts, records, restrictProjectSearch]);
+  // Selecting another project stops the scan (what it found stays for the
+  // way back); leaving 프로젝트 does too.
+  useEffect(() => {
+    if (projectSearchId && activeContext && activeContext.id !== projectSearchId) stopProjectSearch();
+  }, [projectSearchId, activeContext, stopProjectSearch]);
+  useEffect(() => () => useProjectSearchStore.getState().stop(), []);
+  const unconfirmedInGroup = useMemo(() => {
+    if (!activeGroup || searchInventory?.kind !== "ok") return 0;
+    const confirmed = new Set(searchInventory.entries.map((entry) => entry.sessionId));
+    return activeGroup.sessions.filter((session) => !confirmed.has(session.sessionId)).length;
+  }, [activeGroup, searchInventory]);
 
   const parentPath = useMemo(() => {
     if (!activeContext?.parentId) return "";
@@ -479,6 +542,20 @@ export function ContextView() {
             <button
               type="button"
               className="ctx-pane-new"
+              onClick={() =>
+                setTranscriptSearchFor((current) => (current === activeContext.id ? null : activeContext.id))
+              }
+              aria-expanded={transcriptSearchFor === activeContext.id}
+              title="이 프로젝트에 확정한 세션의 원본 대화에서 찾습니다"
+            >
+              <MessageSquareText size={13} aria-hidden="true" />
+              대화에서 찾기
+            </button>
+          ) : null}
+          {activeContext ? (
+            <button
+              type="button"
+              className="ctx-pane-new"
               onClick={() => findInProject(activeContext.id)}
               title="이 프로젝트에 확정된 기록과 세션만 찾습니다"
             >
@@ -507,6 +584,19 @@ export function ContextView() {
             />
           ) : (
             <div className="ctx-pane-inner">
+              {activeContext && transcriptSearchFor === activeContext.id && searchInventory?.kind === "ok" ? (
+                <ProjectTranscriptSearch
+                  key={activeContext.id}
+                  inventory={searchInventory}
+                  unconfirmed={unconfirmedInGroup}
+                  contextLabel={(contextId) => contextPath(contextId, contexts)}
+                  onOpened={() => openSession("flow")}
+                  onClose={() => {
+                    closeProjectSearch();
+                    setTranscriptSearchFor(null);
+                  }}
+                />
+              ) : null}
               <ProjectLiveSection projection={live} />
               {children.length > 0 ? (
                 <section className="ctx-section">
@@ -680,6 +770,17 @@ function buildRecent(group: ProjectGroup | null): RecentItem[] {
   return [...fromRecords, ...fromSessions]
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, 10);
+}
+
+/** Each discovered session's source descriptor by session id, read once. */
+function descriptorLookup(): (sessionId: string) => SourceDescriptor | null {
+  const byId = new Map(
+    loadAutoImportMetas().map((meta) => [
+      autoImportedSessionId(meta),
+      { agentName: meta.agentName, importKind: meta.importKind, sourcePath: meta.sourceFilePath ?? null },
+    ]),
+  );
+  return (sessionId) => byId.get(sessionId) ?? null;
 }
 
 function safeSummaries(): StoredSessionSummary[] {

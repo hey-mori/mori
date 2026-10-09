@@ -34,7 +34,7 @@ import {
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
 import { planSourceReopen } from "../lib/import/autoSourceReopen";
 import { getClaudeCodeSessionWindow, searchClaudeCodeSession } from "../lib/claude/claudeTauri";
-import type { ClaudeCodeSearchHit } from "../lib/claude/types";
+import type { ClaudeCodeSearchHit, ClaudeCodeSessionWindow } from "../lib/claude/types";
 import {
   applySearchBatch,
   canSearchMore,
@@ -562,6 +562,21 @@ export type SessionState = {
   /** Open the view at a search result: the window that ends at its record. */
   openSessionSearchHit: (hit: ClaudeCodeSearchHit) => Promise<void>;
   /**
+   * Open a session directly at a result another surface found (the project
+   * search): read and check the matched record's window first, then make the
+   * session active with that window. Nothing is imported or written beyond
+   * what an ordinary open writes. `stillWanted` is asked before the session
+   * changes, so a click the user has moved on from changes nothing.
+   */
+  openSessionAtSourceHit: (args: {
+    sessionId: string;
+    sourcePath: string;
+    sourceId: string;
+    hit: ClaudeCodeSearchHit;
+    query: string;
+    stillWanted: () => boolean;
+  }) => Promise<SourceHitOutcome>;
+  /**
    * Open an already-saved browser session draft as the active session.
    * Used by the Workspace project hub to continue a previous session.
    * Returns `false` when no draft is stored for the id.
@@ -700,9 +715,16 @@ export type OpenDiscoveredOutcome = "opened" | "failed" | "missing" | "supersede
  */
 export function selectActiveSessionWindow(state: SessionState): SessionWindowState | null {
   const window = state.sessionWindow;
-  if (!window || window.sessionId !== state.draft?.session.id || state.imports.length > 0) return null;
+  if (!window || window.sessionId !== state.draft?.session.id) return null;
+  // A search result opened this view at its passage: show it even for a
+  // session with a whole import, until the focus is let go of (최신 대화로,
+  // closing the search), when the session's own tabs return.
+  if (state.imports.length > 0 && !(isLoadedWindow(window) && window.focus)) return null;
   return window;
 }
+
+/** Why opening a session at a search result did not happen. */
+export type SourceHitOutcome = "opened" | "changed" | "missing" | "failed" | "superseded";
 
 /** Bumped by every discovered-session open; a read that finishes after a newer
  *  open began must not touch the store (it would land on the wrong session). */
@@ -1673,6 +1695,57 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
   },
   openSessionSearchHit: (hit) => openSearchHit(hit),
+  openSessionAtSourceHit: async ({ sessionId, sourcePath, sourceId, hit, query, stillWanted }) => {
+    // An open of its own: it supersedes any other open in flight, and any
+    // in-session search or jump of the session shown before.
+    const token = ++discoveredOpenSequence;
+    searchSequence += 1;
+    jumpSequence += 1;
+    const current = () => token === discoveredOpenSequence && stillWanted();
+    let hitWindow: ClaudeCodeSessionWindow;
+    try {
+      hitWindow = await getClaudeCodeSessionWindow(sourcePath, { beforeOffset: hit.recordEnd, sourceId, endAnchor: hit.recordAnchor });
+    } catch (error) {
+      if (!current()) return "superseded";
+      const kind = classifyWindowError(error).kind;
+      return kind === "missing" ? "missing" : kind === "changed" ? "changed" : "failed";
+    }
+    if (!current()) return "superseded";
+    // The window ends at the matched record: its last event is that record.
+    const shown = hitWindow.events[hitWindow.events.length - 1];
+    if (!shown || shown.id !== hit.messageId || !containsPhrase(shown.content, query)) return "changed";
+    let newer: ClaudeCodeSessionWindow | null = null;
+    if (!hitWindow.reachedEnd) {
+      try {
+        newer = await getClaudeCodeSessionWindow(sourcePath, {
+          afterOffset: hitWindow.endOffset,
+          sourceId: hitWindow.sourceId,
+          endAnchor: hitWindow.endAnchor,
+        });
+      } catch {
+        newer = null;
+      }
+    }
+    if (!current()) return "superseded";
+    // The same open an ordinary click makes: the stored draft becomes the
+    // active session (a descriptor-only session gets its draft back, as the
+    // resolver's open does). No transcript is read into an import.
+    if (!get().loadBrowserSession(sessionId)) {
+      const meta = loadAutoImportMeta(sessionId);
+      if (meta) getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
+      if (!get().loadBrowserSession(sessionId)) return "missing";
+    }
+    const focusSeq = ++jumpSequence;
+    set({
+      sessionWindow: jumpedWindowState(windowStateFrom(sessionId, hitWindow, token), hitWindow, newer, {
+        messageId: hit.messageId,
+        query,
+        seq: focusSeq,
+      }),
+      sessionSearch: null,
+    });
+    return "opened";
+  },
   loadNewerSessionWindow: () => pageSessionWindow("newer"),
   loadLatestSessionWindow: () => pageSessionWindow("latest"),
   pauseFollow: () => set({ follow: followReducer(get().follow, { type: "pause" }) }),

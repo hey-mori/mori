@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
+import { useProjectSearchStore } from "../../app/projectSearchStore";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -245,6 +247,7 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
             </InfoHint>
           </span>
           <span className="session-window-head-side">
+            <BackToProjectSearch sessionId={state.sessionId} />
             <span className="session-window-meta">
               메시지 {state.events.length.toLocaleString("ko-KR")}개{coverage ? ` · ${coverage}` : ""}
               {position ? ` · ${position}` : ""}
@@ -412,6 +415,25 @@ function WindowMessage({
 }
 
 /**
+ * The way back to the project search a result opened this session from. A
+ * navigation context only: it says where the user came from, never that the
+ * session belongs to the project (that is the breadcrumb's job).
+ */
+function BackToProjectSearch({ sessionId }: { sessionId: string }) {
+  const projectId = useProjectSearchStore((store) =>
+    store.search && store.openedSessionId === sessionId ? store.search.projectId : null,
+  );
+  const query = useProjectSearchStore((store) => store.search?.query ?? "");
+  const openProjectContext = useAppStore((store) => store.openProjectContext);
+  if (!projectId) return null;
+  return (
+    <Button size="sm" variant="ghost" icon={ArrowLeft} onClick={() => openProjectContext(projectId)} title={`"${query}" 검색 결과로`}>
+      프로젝트 검색 결과
+    </Button>
+  );
+}
+
+/**
  * Search inside this transcript: a phrase, bounded steps from the end back,
  * and results that open the view at their message. The list folds after a
  * result is opened and stays one click away.
@@ -468,8 +490,8 @@ function TranscriptSearch({ state, search }: { state: LoadedState; search: Sessi
           <p className="session-search-status" role="status" aria-live="polite">
             {searching ? <Loader2 className="session-window-spin" size={12} aria-hidden="true" /> : null}
             <span>{searchStatusLine(search)}</span>
-            {search.unsearchableRecords > 0 ? (
-              <span className="session-search-note">· 너무 큰 기록 {search.unsearchableRecords}개는 찾지 않았습니다</span>
+            {search.unsearchableRecords > 0 && !(search.status === "idle" && search.reachedStart) ? (
+              <span className="session-search-note">· 너무 큰 기록 {search.unsearchableRecords}개는 찾지 못했습니다</span>
             ) : null}
             {search.hits.length > 0 ? (
               <button type="button" className="session-search-toggle" onClick={() => setListOpen((open) => !open)}>
