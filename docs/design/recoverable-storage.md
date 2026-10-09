@@ -83,7 +83,11 @@ first render before `prepareDurableReads` decided (it captured "no durable stora
 **Backup:** quit Mori, then copy the whole storage folder (default `~/Mori/Records`, or the
 location shown in 설정 › 저장소), including `mori.sqlite`, `mori.sqlite-wal`, `mori.sqlite-shm` and
 `archives/`. A copy taken while Mori runs can miss writes still in the WAL. **Restore:** with Mori
-closed, put the folder back at the storage location (or choose it in settings), then start Mori.
+closed, put the folder back at the storage location (or choose it with 변경 in settings), then
+start Mori again; a folder chosen while Mori runs is only read in full on the next launch.
+A restore onto a device that still holds Mori data is a merge, not a rollback: launch adoption
+copies any locally held document that is newer than, or missing from, the restored database.
+`backups/` (pre-migration snapshots) belongs to the folder too.
 Preferences and engine settings (including any API key) are device-local and are re-entered.
 An archive on the same disk as its original is not an independent backup; agent transcripts are
 not part of Mori's backup.
