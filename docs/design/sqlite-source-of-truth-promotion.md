@@ -40,6 +40,15 @@ not exist when §7 was written.
 free number is now **`V009`**, and any plan that reuses `V008` will
 collide.
 
+**Correction · 2026-10-10.** Two rows above were not true when written and
+stayed untrue: nothing in the app writes the `V004` `session_imports` table
+(only readers call `SessionImportRepository`), and nothing writes the `V001`
+session snapshot (`persist_session_snapshot` has no caller), so on desktop
+imported transcripts lived in localStorage only. Imports are now a
+durable-document class (`session_import`, see
+[`recoverable-storage.md`](recoverable-storage.md)); the two tables remain as
+read-only legacy paths.
+
 ### 0.2 What is still localStorage-only, on desktop too
 
 This is the actual remaining scope, and it is smaller and heavier than §7
