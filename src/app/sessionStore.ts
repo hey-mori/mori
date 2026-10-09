@@ -579,6 +579,17 @@ export type SessionState = {
     stillWanted: () => boolean;
   }) => Promise<SourceHitOutcome>;
   /**
+   * Open a session at its latest reply: the newest window of its source, with
+   * the last reply from the agent focused (what a waiting request waits on).
+   * Nothing is imported; the session becomes active the way an ordinary open
+   * does, and `stillWanted` is asked before it changes.
+   */
+  openSessionAtLatestReply: (args: {
+    sessionId: string;
+    sourcePath: string;
+    stillWanted: () => boolean;
+  }) => Promise<SourceHitOutcome>;
+  /**
    * Open an already-saved browser session draft as the active session.
    * Used by the Workspace project hub to continue a previous session.
    * Returns `false` when no draft is stored for the id.
@@ -1697,6 +1708,38 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
   },
   openSessionSearchHit: (hit) => openSearchHit(hit),
+  openSessionAtLatestReply: async ({ sessionId, sourcePath, stillWanted }) => {
+    const token = ++discoveredOpenSequence;
+    searchSequence += 1;
+    jumpSequence += 1;
+    const current = () => token === discoveredOpenSequence && stillWanted();
+    let latest: ClaudeCodeSessionWindow;
+    try {
+      latest = await getClaudeCodeSessionWindow(sourcePath);
+    } catch (error) {
+      if (!current()) return "superseded";
+      const kind = classifyWindowError(error).kind;
+      return kind === "missing" ? "missing" : kind === "changed" ? "changed" : "failed";
+    }
+    if (!current()) return "superseded";
+    const events = latest.events;
+    const reply = [...events].reverse().find((event) => event.role === "assistant" && !event.subkind) ?? events[events.length - 1];
+    if (!reply) return "failed";
+    if (!get().loadBrowserSession(sessionId)) {
+      const meta = loadAutoImportMeta(sessionId);
+      if (meta) getRepository().putStoredSessionDraft(agentSessionToStoredDraft(meta));
+      if (!get().loadBrowserSession(sessionId)) return "missing";
+    }
+    const focusSeq = ++jumpSequence;
+    set({
+      sessionWindow: {
+        ...windowStateFrom(sessionId, latest, token),
+        focus: { messageId: reply.id, query: "", wholeWords: true, seq: focusSeq },
+      },
+      sessionSearch: null,
+    });
+    return "opened";
+  },
   openSessionAtSourceHit: async ({ sessionId, sourcePath, sourceId, hit, query, wholeWords, stillWanted }) => {
     // An open of its own: it supersedes any other open in flight, and any
     // in-session search or jump of the session shown before.

@@ -605,6 +605,19 @@ describe("opening a project search result", () => {
     expect(useSessionStore.getState().sessionWindow).toBeNull();
   });
 
+  it("opens a session at its latest reply without importing it, and only if still wanted", async () => {
+    const id = session("waiting", lines(12, { 11: "Gate 4 waits for you" }), { contextId: "ctx-infra" });
+    const path = "/home/u/.claude/projects/-home-u-dev-infra/waiting.jsonl";
+    expect(await useSessionStore.getState().openSessionAtLatestReply({ sessionId: id, sourcePath: path, stillWanted: () => false })).toBe("superseded");
+    expect(useSessionStore.getState().draft).toBeNull();
+    expect(await useSessionStore.getState().openSessionAtLatestReply({ sessionId: id, sourcePath: path, stillWanted: () => true })).toBe("opened");
+    expect(view().focus).toMatchObject({ messageId: "waiting-m11", query: "" });
+    expect(isAtLatest(view())).toBe(true);
+    expect(repository.listSessionImports(id)).toEqual([]);
+    fake.transcripts.delete(path);
+    expect(await useSessionStore.getState().openSessionAtLatestReply({ sessionId: id, sourcePath: path, stillWanted: () => true })).toBe("missing");
+  });
+
   it("searching and opening results write nothing durable beyond the active-session pointer", async () => {
     const target = session("t", lines(20, { 5: "needle" }), { contextId: "ctx-infra" });
     const drafts = JSON.stringify(repository.listStoredSessions());

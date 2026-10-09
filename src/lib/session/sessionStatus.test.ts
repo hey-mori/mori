@@ -83,6 +83,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   closeSessionSearch: () => {},
   openSessionSearchHit: async () => {},
   openSessionAtSourceHit: async () => "superseded",
+  openSessionAtLatestReply: async () => "superseded",
   loadBrowserSession: () => false,
   renameSession: () => false,
   setNextActionCompletion: () => false,

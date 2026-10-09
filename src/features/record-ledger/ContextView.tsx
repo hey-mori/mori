@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { useAppStore } from "../../app/store";
-import { loadStoredSessionSummaries } from "../../app/sessionStore";
+import { loadStoredSessionSummaries, useSessionStore } from "../../app/sessionStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import { useSessionResolver } from "../session/useSessionResolver";
@@ -383,9 +383,27 @@ export function ContextView() {
     return map;
     // Re-read when the live projection changes (a poll may discover a session).
   }, [live]);
+  // A live row opens its session at the agent's latest reply, the part a
+  // waiting request waits on; if that cannot be read, the ordinary open.
+  const liveOpenSequence = useRef(0);
   const openLiveSession = (sessionKey: string) => {
     const sessionId = sessionIdByFile.get(sessionKey);
-    return sessionId ? () => openSessionById(sessionId) : null;
+    if (!sessionId) return null;
+    return () => {
+      const sequence = ++liveOpenSequence.current;
+      setSessionReturn(
+        activeContextRef.current
+          ? { sessionId, contextId: activeContextRef.current.id, label: activeContextRef.current.name, viaSearch: false }
+          : null,
+      );
+      void useSessionStore
+        .getState()
+        .openSessionAtLatestReply({ sessionId, sourcePath: sessionKey, stillWanted: () => sequence === liveOpenSequence.current })
+        .then((outcome) => {
+          if (outcome === "opened") openSession("flow");
+          else if (outcome !== "superseded") openSessionById(sessionId);
+        });
+    };
   };
   const count = activeGroup ? activeGroup.sessions.length + activeGroup.records.length : 0;
   const isEmpty = !loading && tree.length === 0 && linkedFolders.length === 0;
