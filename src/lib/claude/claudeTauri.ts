@@ -11,6 +11,7 @@
 import { isTauriRuntime } from "../desktop/environment";
 import { invokeTauriCommand } from "../desktop/tauriCommands";
 import type {
+  ClaudeCodeSearchBatch,
   ClaudeCodeSessionDelta,
   ClaudeCodeSessionDetail,
   ClaudeCodeSessionMeta,
@@ -113,12 +114,16 @@ export async function getClaudeCodeSessionDelta(
  *  transcript: the record AT the cursor (`anchor`, for the window before a
  *  held one) or the record that ENDS at it (`endAnchor`, to read back a window
  *  the view let go of). At least one is required. */
-export type ClaudeCodeWindowCursor = {
-  beforeOffset: number;
-  sourceId: string;
-  anchor?: string;
-  endAnchor?: string;
-};
+export type ClaudeCodeWindowCursor =
+  | {
+      beforeOffset: number;
+      sourceId: string;
+      anchor?: string;
+      endAnchor?: string;
+    }
+  /** Newer history after a part opened in the middle of the transcript: the
+   *  records from `afterOffset`, whose preceding record `endAnchor` names. */
+  | { afterOffset: number; sourceId: string; endAnchor: string };
 
 /**
  * Read one bounded window of a session's history, ending at the transcript's
@@ -138,12 +143,54 @@ export async function getClaudeCodeSessionWindow(
   if (!isClaudeBridgeAvailable()) {
     throw new ClaudeBridgeUnavailableError();
   }
+  if (cursor && "afterOffset" in cursor) {
+    return invokeTauriCommand("get_claude_code_session_window", {
+      sessionPath: trimmed,
+      beforeOffset: null,
+      sourceId: cursor.sourceId,
+      anchor: null,
+      endAnchor: cursor.endAnchor,
+      afterOffset: cursor.afterOffset,
+    });
+  }
   return invokeTauriCommand("get_claude_code_session_window", {
     sessionPath: trimmed,
     beforeOffset: cursor?.beforeOffset ?? null,
     sourceId: cursor?.sourceId ?? null,
     anchor: cursor?.anchor ?? null,
     endAnchor: cursor?.endAnchor ?? null,
+    afterOffset: null,
+  });
+}
+
+/** Where an earlier search step continues: the previous step's `scanStart`. */
+export type ClaudeCodeSearchCursor = { beforeOffset: number; sourceId: string; anchor: string };
+
+/**
+ * Search the visible messages of a Claude Code transcript for a literal phrase
+ * (case-insensitive), in one bounded step backward from the end or from
+ * `cursor`. Nothing is stored; the query and the text stay on this machine.
+ */
+export async function searchClaudeCodeSession(
+  sessionPath: string,
+  query: string,
+  cursor?: ClaudeCodeSearchCursor,
+  maxHits?: number,
+): Promise<ClaudeCodeSearchBatch> {
+  const trimmed = sessionPath.trim();
+  if (!trimmed) {
+    throw new Error("sessionPath is required.");
+  }
+  if (!isClaudeBridgeAvailable()) {
+    throw new ClaudeBridgeUnavailableError();
+  }
+  return invokeTauriCommand("search_claude_code_session", {
+    sessionPath: trimmed,
+    query,
+    beforeOffset: cursor?.beforeOffset ?? null,
+    sourceId: cursor?.sourceId ?? null,
+    anchor: cursor?.anchor ?? null,
+    maxHits: maxHits ?? null,
   });
 }
 

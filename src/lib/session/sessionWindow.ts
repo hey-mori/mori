@@ -16,6 +16,11 @@
  * 보기" reads it back exactly (the record before a cursor never changes as the
  * transcript grows), letting the oldest go. So reading any distance back costs
  * a bounded amount of memory and DOM, and nothing read is unreachable.
+ *
+ * A search result opens the view in the middle of the transcript instead: the
+ * window that ends at the matched record, plus the window after it. Newer
+ * history past what the view holds is then read forward (`unreadNewer`), so a
+ * middle part never reads as the latest conversation.
  */
 import type { ClaudeCodeSessionWindow, ClaudeMessage } from "../claude/types";
 
@@ -62,6 +67,10 @@ export type WindowSpan = {
 /** A newer window the view let go of: its cursor, to read it back exactly. */
 export type ReleasedSpan = { startOffset: number; endOffset: number; endAnchor: string };
 
+/** The message a search result opened the view at, and the phrase to mark in
+ *  it. `seq` tells one jump from the next, so the viewport moves once per jump. */
+export type SessionWindowFocus = { messageId: string; query: string; seq: number };
+
 export type SessionWindowState =
   | { sessionId: string; status: "loading" }
   /** The transcript could not be read at all: say so, never show it empty. */
@@ -79,9 +88,16 @@ export type SessionWindowState =
       fileBytes: number;
       /** Oldest first, contiguous, at most `MAX_RETAINED_WINDOWS`. */
       spans: WindowSpan[];
-      /** Newer windows let go of, the next one last. Empty: the view reaches
-       *  the end the transcript had when it was opened. */
+      /** Newer windows let go of, the next one last. Empty (and no
+       *  `unreadNewer`): the view reaches the end the transcript had when it
+       *  was opened. */
       released: ReleasedSpan[];
+      /** Newer history after everything held or let go of that the view has
+       *  not read yet: true for a view a search result opened in the middle,
+       *  until a forward read reaches the end. */
+      unreadNewer: boolean;
+      /** Set by a search result; cleared by opening the latest conversation. */
+      focus: SessionWindowFocus | null;
       /** Bytes the held windows cover. */
       loadedBytes: number;
       /** The held part's start (the earlier-page cursor). */
@@ -163,7 +179,7 @@ function withSpans(
     spans,
     released,
     events,
-    status: first.startOffset === 0 && released.length === 0 ? "full" : "partial",
+    status: first.startOffset === 0 && released.length === 0 && !state.unreadNewer ? "full" : "partial",
     startOffset: first.startOffset,
     startAnchor: first.startAnchor,
     loadedBytes: spans.reduce((sum, span) => sum + (span.endOffset - span.startOffset), 0),
@@ -185,6 +201,8 @@ export function windowStateFrom(sessionId: string, window: ClaudeCodeSessionWind
     fileBytes: window.fileBytes,
     spans: [],
     released: [],
+    unreadNewer: false,
+    focus: null,
     loadedBytes: 0,
     startOffset: window.startOffset,
     startAnchor: window.startAnchor,
@@ -266,10 +284,88 @@ export function earlierCursor(state: LoadedSessionWindow) {
   return { beforeOffset: state.startOffset, sourceId: state.sourceId, anchor: state.startAnchor };
 }
 
-/** The cursor that reads back the newer window let go of last, or null. */
-export function newerCursor(state: LoadedSessionWindow) {
+/** The cursor that reads back the newer window let go of last; else, for a
+ *  view opened in the middle, the forward cursor after the held part; else
+ *  null (the view is at the latest). */
+export function newerCursor(
+  state: LoadedSessionWindow,
+): { beforeOffset: number; sourceId: string; endAnchor: string } | { afterOffset: number; sourceId: string; endAnchor: string } | null {
   const next = state.released[state.released.length - 1];
-  return next ? { beforeOffset: next.endOffset, sourceId: state.sourceId, endAnchor: next.endAnchor } : null;
+  if (next) return { beforeOffset: next.endOffset, sourceId: state.sourceId, endAnchor: next.endAnchor };
+  if (!state.unreadNewer) return null;
+  const last = state.spans[state.spans.length - 1]!;
+  return { afterOffset: last.endOffset, sourceId: state.sourceId, endAnchor: last.endAnchor };
+}
+
+/** Is the view at the latest conversation (nothing newer let go of or unread)? */
+export function isAtLatest(state: Pick<LoadedSessionWindow, "released" | "unreadNewer">): boolean {
+  return state.released.length === 0 && !state.unreadNewer;
+}
+
+/**
+ * Append the window read forward from the held part's end, for a view opened
+ * in the middle. It must start exactly where the held part ends; anything else
+ * is ignored. Past `MAX_RETAINED_WINDOWS` the oldest window is let go of.
+ */
+export function appendForwardWindow(
+  state: LoadedSessionWindow,
+  window: ClaudeCodeSessionWindow,
+  maxWindows = MAX_RETAINED_WINDOWS,
+): LoadedSessionWindow {
+  if (
+    state.released.length > 0 ||
+    !state.unreadNewer ||
+    window.sourceId !== state.sourceId ||
+    window.startOffset !== heldEnd(state)
+  ) {
+    return state;
+  }
+  const shown = new Set(state.events.map((event) => event.id));
+  const newer = window.events.filter((event) => !shown.has(event.id));
+  let spans = [...state.spans, spanOf(window, newer.length)];
+  let events = [...state.events, ...newer];
+  while (spans.length > maxWindows) {
+    const oldest = spans[0]!;
+    events = events.slice(oldest.count);
+    spans = spans.slice(1);
+  }
+  return withSpans({ ...state, unreadNewer: !window.reachedEnd }, spans, [], events);
+}
+
+/**
+ * The view a search result opens: the window that ends at the matched record
+ * and, when there is one, the window read forward after it. Held windows and
+ * let-go cursors of the previous position are dropped: this is a new place in
+ * the transcript, not a page of the old one. The open it belongs to stays.
+ */
+export function jumpedWindowState(
+  state: LoadedSessionWindow,
+  hitWindow: ClaudeCodeSessionWindow,
+  newerWindow: ClaudeCodeSessionWindow | null,
+  focus: SessionWindowFocus,
+): LoadedSessionWindow {
+  const base: LoadedSessionWindow = {
+    ...state,
+    sourceId: hitWindow.sourceId,
+    fileBytes: Math.max(hitWindow.fileBytes, newerWindow?.fileBytes ?? 0),
+    unreadNewer: !hitWindow.reachedEnd,
+    focus,
+  };
+  let next = withSpans(base, [spanOf(hitWindow, hitWindow.events.length)], [], hitWindow.events);
+  if (newerWindow) next = appendForwardWindow(next, newerWindow);
+  return next;
+}
+
+/**
+ * Where the held part starts in the transcript file, as an approximate file
+ * position ("파일 앞에서 약 42% 지점"). It is a byte position, not a count of
+ * messages, and is kept apart from how much is loaded. Null at the start of
+ * the file or when the size is unknown.
+ */
+export function filePositionLabel(state: Pick<LoadedSessionWindow, "startOffset" | "fileBytes">): string | null {
+  if (!(state.fileBytes > 0) || state.startOffset <= 0) return null;
+  const percent = Math.floor((state.startOffset / state.fileBytes) * 100);
+  return percent < 1 ? "파일 앞부분" : `파일 앞에서 약 ${Math.min(99, percent)}% 지점`;
 }
 
 /**

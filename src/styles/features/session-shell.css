@@ -841,3 +841,132 @@
 .session-window-fold:hover {
   color: var(--base-text);
 }
+
+.session-window-head-side {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-3);
+}
+
+/* A message a search result opened: a full border, not an accent bar. */
+.session-window-message.is-search-focus {
+  border-color: var(--base-status-warning);
+  outline: none;
+}
+
+.session-window-text mark,
+.session-search-snippet mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--base-status-warning-soft);
+  color: inherit;
+}
+
+/* Search inside the transcript: one compact bar that stays in reach while
+   reading, with the result list folding under it. */
+.session-search {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  gap: var(--base-space-2);
+  padding: var(--base-space-3) var(--base-space-4);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+}
+
+.session-search-form {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-2);
+}
+
+.session-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px var(--base-space-3);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--base-text);
+  font: inherit;
+  font-size: var(--base-font-size-sm);
+}
+
+.session-search-body {
+  display: grid;
+  gap: var(--base-space-2);
+  justify-items: start;
+}
+
+.session-search-status,
+.session-search-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.session-search-error {
+  color: var(--base-status-danger);
+}
+
+.session-search-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--base-text);
+  font-size: var(--base-font-size-xs);
+  cursor: pointer;
+}
+
+.session-search-results {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  max-height: 280px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.session-search-hit {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 6px var(--base-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--base-radius-sm);
+  background: transparent;
+  color: var(--base-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.session-search-hit:hover,
+.session-search-hit.is-current {
+  background: var(--base-surface-subtle);
+}
+
+.session-search-hit.is-current {
+  border-color: var(--base-border);
+}
+
+.session-search-hit-head {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.session-search-snippet {
+  font-size: var(--base-font-size-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}

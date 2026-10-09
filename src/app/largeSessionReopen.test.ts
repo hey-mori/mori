@@ -77,6 +77,7 @@ function window(start: number, end: number, events: ClaudeMessage[], extra: Part
     endAnchor: `end-${end}`,
     endOffset: end,
     reachedStart: start === 0,
+    reachedEnd: end === 140_509_184,
     events,
     fileTouches: [],
     stats: { rawLines: events.length, parsed: events.length, skipped: 0, unparseable: 0 },

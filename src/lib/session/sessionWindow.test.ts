@@ -18,6 +18,7 @@ function win(start: number, end: number, ids: string[], sourceId = "s"): ClaudeC
     endAnchor: `e${end}`,
     endOffset: end,
     reachedStart: start === 0,
+    reachedEnd: end === 1000,
     events: ids.map((id) => ({ id, role: "assistant", content: id, createdAt: "" })),
     fileTouches: [],
     stats: { rawLines: ids.length, parsed: ids.length, skipped: 0, unparseable: 0 },
