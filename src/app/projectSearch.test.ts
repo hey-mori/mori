@@ -28,6 +28,9 @@ const fake = vi.hoisted(() => ({
   /** Kept copies by session id: what `keptArchiveRead` answers. */
   archives: new Map<string, { path: string; archive: { archivedAt: string; bytes: number } }>(),
   calls: [] as { kind: "window" | "search"; path: string; cursor?: unknown }[],
+  /** Anchors that cover only a record's head, as real ones do (its
+   *  parentUuid), instead of its content: the checks after the anchor run. */
+  headAnchors: false,
   inflight: 0,
   maxInflight: 0,
 }));
@@ -96,7 +99,8 @@ function transcript(path: string) {
 
 const endAnchorOf = (records: FakeRecord[], offset: number) => {
   const before = records.find((record) => record.end === offset);
-  return before ? `e-${before.id}:${before.content}` : "";
+  if (!before) return "";
+  return fake.headAnchors ? `e-${before.id}` : `e-${before.id}:${before.content}`;
 };
 
 function windowOf(path: string, picked: FakeRecord[], all: FakeRecord[], sourceId: string, fallback: number): ClaudeCodeSessionWindow {
@@ -711,6 +715,55 @@ describe("opening a project search result", () => {
     it("says changed when another record now ends at that place", async () => {
       const { locator } = await savedPassage("other", lines(6, { 3: "original words" }), 3);
       expect(await useSessionStore.getState().openSessionAtPassage({ locator: { ...locator, messageId: "other-m9" }, stillWanted: () => true })).toBe("changed");
+    });
+
+    describe("with anchors that cover only a record's head, as real ones do", () => {
+      beforeEach(() => {
+        fake.headAnchors = true;
+      });
+      afterEach(() => {
+        fake.headAnchors = false;
+      });
+
+      it("says changed when the saved text was rewritten in place (the excerpt hash decides)", async () => {
+        const { path, locator } = await savedPassage("headedit", lines(6, { 3: "original words" }), 3);
+        const held = fake.transcripts.get(path)!;
+        held.records[3] = { ...held.records[3]!, content: "rewritten words" };
+        expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("changed");
+      });
+
+      it("says changed when the record now starts elsewhere though it ends at the same place", async () => {
+        const { path, locator } = await savedPassage("headstart", lines(6, { 3: "original words" }), 3);
+        const held = fake.transcripts.get(path)!;
+        // The record before it shrank: the saved record begins earlier, with
+        // the same id, the same text and the same end. Only its start differs.
+        held.records[2] = { ...held.records[2]!, end: held.records[2]!.end - 10 };
+        held.records[3] = { ...held.records[3]!, start: held.records[3]!.start - 10 };
+        expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("changed");
+      });
+
+      it("opens a passage after the transcript grew past it", async () => {
+        const { path, locator } = await savedPassage("headgrow", lines(6, { 3: "original words" }), 3);
+        const held = fake.transcripts.get(path)!;
+        const last = held.records[held.records.length - 1]!;
+        held.records.push({ id: "headgrow-m6", content: "later turn", start: last.end, end: last.end + RECORD });
+        expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("opened");
+        expect(view().focus).toMatchObject({ messageId: "headgrow-m3" });
+      });
+
+      it("marks exactly a Korean selection, where the phrase repeats", async () => {
+        const text = "결정: 후보 B로 간다. 다시 말해 후보 B가 맞다.";
+        const { locator } = await savedPassage("headko", lines(6, { 3: text }), 3, "후보 B가");
+        expect(text.slice(locator.from, locator.to)).toBe("후보 B가");
+        expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("opened");
+        expect(markup().match(/<mark>/g)?.length).toBe(1);
+        expect(markup()).toContain("<mark>후보 B가</mark>");
+      });
+
+      it("still opens an unchanged passage", async () => {
+        const { locator } = await savedPassage("headsame", lines(6, { 3: "original words" }), 3);
+        expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("opened");
+      });
     });
 
     it("re-checks a redacted passage after the same redaction", async () => {
