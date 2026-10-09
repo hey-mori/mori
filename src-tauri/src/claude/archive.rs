@@ -258,6 +258,39 @@ fn is_partial_name(name: &str) -> bool {
     digits(parts.next()) && digits(parts.next()) && parts.next().is_none()
 }
 
+/// Whether a kept copy is still the one Mori recorded: present as a regular
+/// file, the recorded size, and hashing to the content name it is stored
+/// under. "missing" only when the system says not found; anything that exists
+/// but is not that file is "damaged". Hashing reads the whole copy, so callers
+/// verify when a copy is about to be read in place of its original, not on
+/// every render.
+pub(crate) fn verify_archive_at(archive_dir: &Path, file_name: &str, bytes: u64) -> &'static str {
+    if !is_archive_name(file_name) {
+        return "damaged";
+    }
+    let path = archive_dir.join(file_name);
+    let meta = match fs::symlink_metadata(&path) {
+        Ok(meta) => meta,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return "missing",
+        Err(_) => return "damaged",
+    };
+    if !meta.is_file() || meta.len() != bytes {
+        return "damaged";
+    }
+    let Ok(mut file) = fs::File::open(&path) else { return "damaged" };
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0u8; COPY_CHUNK];
+    loop {
+        match file.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(read) => hasher.update(&buffer[..read]),
+            Err(_) => return "damaged",
+        }
+    }
+    let sha: String = hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect();
+    if sha == file_name[..64] { "ok" } else { "damaged" }
+}
+
 pub(crate) fn remove_archive_at(archive_dir: &Path, file_name: &str) -> Result<bool, String> {
     if !is_archive_name(file_name) {
         return Err("Refused: not an archive name.".to_string());
@@ -288,6 +321,15 @@ pub fn remove_claude_code_archive(file_name: String) -> Result<bool, String> {
 }
 
 /// The archive directory, so a stored archive name can be read again.
+/// Verify one kept copy before it is read in place of its original.
+#[tauri::command]
+pub async fn verify_claude_code_archive(file_name: String, bytes: u64) -> Result<String, String> {
+    let dir = archive_root()?;
+    tauri::async_runtime::spawn_blocking(move || verify_archive_at(&dir, &file_name, bytes).to_string())
+        .await
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 pub fn claude_code_archive_dir() -> Result<String, String> {
     Ok(archive_root()?.to_string_lossy().to_string())
@@ -440,5 +482,25 @@ mod tests {
         // An archive is not readable through the projects root, nor an original through the archive root.
         assert!(crate::claude::code::read_session_window_with(&projects, &archive.path, None, None, None, None, 1 << 20).is_err());
         assert!(crate::claude::code::read_session_window_with(&archives, &path, None, None, None, None, 1 << 20).is_err());
+    }
+
+    #[test]
+    fn a_kept_copy_verifies_only_as_the_file_it_was() {
+        let (_dir, projects, archives, path) = setup(&format!("{}{}", line(0), line(1)));
+        let archive = archive_session_at(&projects, &archives, &path).unwrap();
+        assert_eq!(verify_archive_at(&archives, &archive.file_name, archive.bytes), "ok");
+        // Truncated: the size no longer matches.
+        let file = archives.join(&archive.file_name);
+        let body = fs::read(&file).unwrap();
+        fs::write(&file, &body[..body.len() - 3]).unwrap();
+        assert_eq!(verify_archive_at(&archives, &archive.file_name, archive.bytes), "damaged");
+        // Same size, different bytes: the hash no longer matches its name.
+        let mut corrupt = body.clone();
+        corrupt[0] ^= 1;
+        fs::write(&file, &corrupt).unwrap();
+        assert_eq!(verify_archive_at(&archives, &archive.file_name, archive.bytes), "damaged");
+        fs::remove_file(&file).unwrap();
+        assert_eq!(verify_archive_at(&archives, &archive.file_name, archive.bytes), "missing");
+        assert_eq!(verify_archive_at(&archives, "../escape.jsonl", 1), "damaged");
     }
 }

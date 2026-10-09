@@ -116,6 +116,14 @@ const FAILURE_COPY: Record<SessionWindowError["kind"], { title: string; descript
     title: "이 파일은 열 수 없습니다",
     description: "에이전트 기록 폴더 밖이거나 대화 형식이 아닙니다.",
   },
+  archiveMissing: {
+    title: "보관한 원본 파일이 없습니다",
+    description: "원본 대화도, Mori에 보관한 사본도 찾을 수 없습니다. 저장 폴더의 archives를 복원하면 다시 열 수 있습니다.",
+  },
+  archiveDamaged: {
+    title: "보관한 원본이 손상되었습니다",
+    description: "보관할 때와 내용이 달라 원본으로 보여 주지 않습니다. 백업에서 archives를 복원하면 다시 열 수 있습니다.",
+  },
   error: {
     title: "대화를 읽지 못했습니다",
     description: "잠시 후 다시 시도해 주세요.",
@@ -289,7 +297,9 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
               <span className="session-window-archive">
                 보관한 원본 · {new Date(state.archive.archivedAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 시점
                 <InfoHint label="보관한 원본 설명">
-                  원본 대화가 없어 Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다.
+                  {state.archive.replacedOriginal
+                    ? "원본 위치의 대화 파일이 다른 대화로 바뀌어, Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다."
+                    : "원본 대화가 없어 Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다."}
                 </InfoHint>
                 {" · "}
               </span>

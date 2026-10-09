@@ -26,7 +26,7 @@ const fake = vi.hoisted(() => ({
   meta: new Map<string, unknown>(),
   gate: null as null | ((call: { kind: "window" | "search"; path: string; cursor?: unknown }) => Promise<void> | void),
   /** Kept copies by session id: what `keptArchiveRead` answers. */
-  archives: new Map<string, { path: string; archive: { archivedAt: string; bytes: number } }>(),
+  archives: new Map<string, { path: string; archive: { archivedAt: string; bytes: number }; integrity?: string }>(),
   calls: [] as { kind: "window" | "search"; path: string; cursor?: unknown }[],
   /** Anchors that cover only a record's head, as real ones do (its
    *  parentUuid), instead of its content: the checks after the anchor run. */
@@ -37,7 +37,11 @@ const fake = vi.hoisted(() => ({
 
 vi.mock("../lib/desktop/llmEndpointRegistry", () => ({ syncLlmAllowedEndpoints: () => {} }));
 vi.mock("../lib/session/sessionArchiveRead", () => ({
-  keptArchiveRead: async (sessionId: string) => fake.archives.get(sessionId) ?? null,
+  keptArchiveRead: async (sessionId: string) => {
+    const kept = fake.archives.get(sessionId);
+    return kept ? { integrity: "ok", ...kept } : null;
+  },
+  isUsableArchive: (kept: { integrity: string }) => kept.integrity === "ok" || kept.integrity === "unknown",
 }));
 vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -773,6 +777,17 @@ describe("opening a project search result", () => {
       const redacted = { ...locator, excerptHash: keptHash, redacted: true as const };
       expect(await useSessionStore.getState().openSessionAtPassage({ locator: redacted, stillWanted: () => true })).toBe("opened");
       expect(await useSessionStore.getState().openSessionAtPassage({ locator: { ...redacted, redacted: undefined }, stillWanted: () => true })).toBe("changed");
+    });
+
+    it("refuses a kept copy that is gone or no longer the file kept", async () => {
+      const { id, path, locator } = await savedPassage("bad", lines(6, { 4: "Decision: Candidate B" }), 4, "Candidate B");
+      const archivePath = `/home/u/Mori/Records/archives/claude-code/${"b".repeat(64)}.jsonl`;
+      fake.transcripts.set(archivePath, fake.transcripts.get(path)!);
+      fake.transcripts.delete(path);
+      for (const integrity of ["damaged", "missing"]) {
+        fake.archives.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 600 }, integrity });
+        expect(await useSessionStore.getState().openSessionAtPassage({ locator, stillWanted: () => true })).toBe("missing");
+      }
     });
 
     it("opens a kept copy when the original is gone, verified the same way, and says so", async () => {

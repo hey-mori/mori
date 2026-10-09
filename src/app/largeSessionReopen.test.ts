@@ -19,6 +19,7 @@ const reader = vi.hoisted(() => ({
   detail: vi.fn(),
   window: vi.fn(),
   meta: new Map<string, unknown>(),
+  kept: new Map<string, { path: string; archive: { archivedAt: string; bytes: number }; integrity: string; sourceId: string }>(),
 }));
 
 vi.mock("../lib/desktop/llmEndpointRegistry", () => ({ syncLlmAllowedEndpoints: () => {} }));
@@ -30,6 +31,11 @@ vi.mock("../lib/trace/sources/ai/workSessions", async (importOriginal) => ({
 vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getClaudeCodeSessionWindow: (path: string, cursor?: unknown) => reader.window(path, cursor),
+}));
+vi.mock("../lib/session/sessionArchiveRead", () => ({
+  keptArchiveRead: async (id: string) => reader.kept.get(id) ?? null,
+  keptArchiveSourceId: async (id: string) => reader.kept.get(id)?.sourceId ?? null,
+  isUsableArchive: (kept: { integrity: string }) => kept.integrity === "ok" || kept.integrity === "unknown",
 }));
 vi.mock("../lib/session/autoImportMetaStore", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -127,6 +133,7 @@ beforeEach(() => {
   reader.detail.mockReset();
   reader.window.mockReset();
   reader.meta.clear();
+  reader.kept.clear();
 });
 
 afterEach(() => {
@@ -232,6 +239,61 @@ describe("reopening a session too long to import", () => {
     expect(state && "pageError" in state ? state.pageError?.error.kind : null).toBe("changed");
     expect(state && "events" in state ? state.events.map((event) => event.id) : []).toEqual(["m3"]);
     expect(detailMarkup()).toContain("최신 대화로 다시 열기");
+  });
+});
+
+describe("a kept copy and a changed original", () => {
+  const archivePath = "/home/u/Mori/Records/archives/claude-code/aa.jsonl";
+
+  it("opens the kept copy when the file at the path is now another conversation", async () => {
+    const id = register(meta("long", "Long"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    reader.kept.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00Z", bytes: 900 }, integrity: "ok", sourceId: "src-original" });
+    reader.window.mockImplementation(async (path: string) =>
+      path === archivePath
+        ? window(0, 900, [message("k1", "kept words")], { sourceId: "src-original" })
+        : window(0, 100, [message("x1", "someone else")], { sourceId: "src-replacement" }),
+    );
+    expect(await resolver()(id)).toBe("opened");
+    const state = useSessionStore.getState().sessionWindow;
+    expect(state && "archive" in state ? state.archive : null).toMatchObject({ replacedOriginal: true });
+    expect(detailMarkup()).toContain("kept words");
+    expect(detailMarkup()).not.toContain("someone else");
+  });
+
+  it("keeps reading the original while it is still the same conversation", async () => {
+    const id = register(meta("long", "Long"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    reader.kept.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00Z", bytes: 900 }, integrity: "ok", sourceId: "src-1" });
+    reader.window.mockResolvedValue(window(0, 100, [message("m1", "grown original")]));
+    await resolver()(id);
+    expect(detailMarkup()).toContain("grown original");
+    expect(reader.window).toHaveBeenCalledTimes(1);
+  });
+
+  it("never imports another conversation under a kept session's identity", async () => {
+    const id = register(meta("short", "Short"));
+    const m = meta("short", "Short");
+    const other = [message("x1", "someone else", "human"), message("x2", "reply")];
+    reader.detail.mockResolvedValue({ ...m, messages: other, claudeDetail: { ...m, filePath: m.sourceFilePath, messages: other } });
+    reader.kept.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00Z", bytes: 900 }, integrity: "ok", sourceId: "src-original" });
+    reader.window.mockImplementation(async (path: string) =>
+      path === archivePath
+        ? window(0, 900, [message("k1", "kept words")], { sourceId: "src-original" })
+        : window(0, 100, [message("x2", "reply")], { sourceId: "src-replacement" }),
+    );
+    expect(await resolver()(id)).toBe("opened");
+    expect(useSessionStore.getState().imports).toEqual([]);
+    expect(detailMarkup()).toContain("kept words");
+  });
+
+  it("says a kept copy is damaged instead of showing it when the original is gone", async () => {
+    const id = register(meta("gone", "Gone"));
+    reader.detail.mockRejectedValue(new Error("Failed to resolve /x/gone.jsonl: No such file or directory"));
+    reader.kept.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00Z", bytes: 900 }, integrity: "damaged", sourceId: "src-1" });
+    await resolver()(id);
+    expect(detailMarkup()).toContain("보관한 원본이 손상되었습니다");
+    expect(reader.window).not.toHaveBeenCalled();
   });
 });
 

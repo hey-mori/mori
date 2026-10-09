@@ -48,6 +48,10 @@ export type SessionWindowErrorKind =
   | "refused"
   /** Over the detailed reader's cap, for an agent with no window reader yet. */
   | "tooLarge"
+  /** The original is gone and the copy the user kept is gone too. */
+  | "archiveMissing"
+  /** The original is gone and the kept copy is no longer the file kept. */
+  | "archiveDamaged"
   | "error";
 
 export type SessionWindowError = { kind: SessionWindowErrorKind; message: string };
@@ -118,7 +122,9 @@ export type SessionWindowState =
       paging: "earlier" | "newer" | "latest" | null;
       /** Set when this view reads Mori's kept copy (보관한 원본) because the
        *  original transcript is gone: when it was kept, and how much. */
-      archive?: { archivedAt: string; bytes: number };
+      /** Shown from Mori's kept copy; `replacedOriginal` when the original
+       *  still exists but is now a different conversation. */
+      archive?: { archivedAt: string; bytes: number; replacedOriginal?: boolean };
       pageError: { direction: "earlier" | "newer" | "latest"; error: SessionWindowError } | null;
     };
 
