@@ -76,3 +76,15 @@ describe("sessions that went on after Mori looked", () => {
     expect(html).not.toContain("ctx-live-count is-blocked");
   });
 });
+
+describe("the live dot when every session moved on", () => {
+  it("is absent when nothing is counted and sessions were set aside", () => {
+    const projection = buildScopedProjection(
+      [row({ id: "w", sessionKey: "/a", status: "waitingForUser", endedAt: ago(4), observedAt: ago(3) })],
+      { now: NOW, label: "infra", sourceActiveAt: () => ago(0) },
+    );
+    expect(projection?.continued).toHaveLength(1);
+    const html = renderToStaticMarkup(<ProjectLiveSection projection={projection} now={NOW} />);
+    expect(html).not.toContain("ctx-live-dot");
+  });
+});

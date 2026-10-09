@@ -111,6 +111,9 @@ export type ClaudeCodeSessionMeta = {
   modifiedAt?: string;
   /** Timestamp of the session's last timestamped record, "" when none was found. */
   lastActivityAt?: string;
+  /** Timestamp of the last user or assistant record (tool steps included),
+   *  ignoring records written while nobody talks. Absent on older reads. */
+  lastMessageAt?: string;
   /** File size in bytes; lets Live Follow tail from near the end of a huge
    *  session instead of reading the whole history. Absent on older reads. */
   fileBytes?: number;

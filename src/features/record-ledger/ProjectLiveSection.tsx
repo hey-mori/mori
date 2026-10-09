@@ -96,7 +96,13 @@ export function ProjectLiveSection({
   // The counts are as current as their oldest observation, not their newest:
   // a session seen a minute ago does not make another one's count live.
   const basisAt = projection.countedObservedAt ?? projection.observedAt;
-  const freshness = stale ? "stale" : freshnessOf(basisAt, now);
+  // With nothing counted and sessions set aside, no dot: the observation that
+  // remains is exactly what those sessions moved past.
+  const freshness = stale
+    ? "stale"
+    : projection.countedObservedAt === null && projection.continued.length > 0
+      ? "recent"
+      : freshnessOf(basisAt, now);
   const counts: Array<{ key: string; label: string; value: number }> = [
     { key: "running", label: "진행 중", value: projection.runningCount },
     { key: "waiting", label: "내 확인 대기", value: projection.waitingCount },

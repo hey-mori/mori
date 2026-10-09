@@ -90,7 +90,8 @@ export type ProjectProjection = {
   running: ProjectRunningRequest[];
   recentRequests: ProjectRecentRequest[];
   topFiles: ProjectTouchedFile[];
-  /** Newest request end across the project, present even when stale. */
+  /** Newest activity across the project: request ends, and the source activity
+   *  of sessions that went on after observation. Present even when stale. */
   lastActivityAt: string | null;
   /** Rows folded in, so a caller can tell an empty projection from a thin one. */
   rowCount: number;
@@ -113,17 +114,19 @@ export type ProjectContinuedSession = {
 };
 
 /**
- * How much later than the last observation a source write must be before the
- * observation counts as superseded. Covers the poller's cadence (at most a few
- * tens of seconds) so a session Mori is watching is never marked as moved on.
+ * How much later than the last observation a conversation message must be
+ * before the observation counts as superseded. Covers the poller's cadence.
+ * The caller passes the last user or assistant message time, not the file's
+ * last record (Claude Code writes idle-time records long after a turn ends),
+ * and passes nothing for a session Mori is following.
  */
 const SUPERSEDE_GRACE_MS = 2 * 60_000;
 
 export type BuildProjectProjectionOptions = {
   now: number;
   /**
-   * When a session's source was last written, as discovery last saw it (an
-   * auto-imported session's `savedAt`). Lets the fold tell an observation the
+   * When a session's conversation last moved (its last user or assistant
+   * message), as discovery last read it. Lets the fold tell an observation the
    * session has since moved past from one that may still hold.
    */
   sourceActiveAt?: (sessionKey: string) => string | undefined;
@@ -214,8 +217,24 @@ function foldProject(
   }
   continued.sort((a, b) => epoch(b.activeAt) - epoch(a.activeAt));
   const superseded = new Set(continued.map((session) => session.sessionKey));
+  // Only a session's newest request can be in the present: a user who sent a
+  // later prompt has moved past the earlier one, whatever it ended on. An older
+  // request that ended on an error keeps `blocked` as a past fact (최근 작업),
+  // but counting it as 막힘 now would report a session stuck that went on.
+  const newestRequestBySession = new Map<string, IntakeRequestRow>();
+  for (const row of rows) {
+    const held = newestRequestBySession.get(row.sessionKey);
+    if (
+      !held ||
+      epoch(row.startedAt) > epoch(held.startedAt) ||
+      (epoch(row.startedAt) === epoch(held.startedAt) && epoch(row.endedAt) > epoch(held.endedAt))
+    ) {
+      newestRequestBySession.set(row.sessionKey, row);
+    }
+  }
+  const isNewestRequest = (row: IntakeRequestRow) => newestRequestBySession.get(row.sessionKey)?.id === row.id;
   const rowIsCurrent = (row: IntakeRequestRow) =>
-    !superseded.has(row.sessionKey) && freshnessOf(row.observedAt, now) !== "stale";
+    !superseded.has(row.sessionKey) && isNewestRequest(row) && freshnessOf(row.observedAt, now) !== "stale";
 
   let runningCount = 0;
   let waitingCount = 0;
@@ -282,7 +301,10 @@ function foldProject(
       sessionKey: row.sessionKey,
       // A past request's own status is a past fact and does not decay; only the
       // present-tense reading of a live row does.
-      status: rowIsCurrent(row) ? row.status : decay(row.status),
+      // An earlier request of a session is over: what it ended on (completed,
+      // or blocked on an error) is a past fact; a stored "running" or
+      // "waiting" from before the session moved on is not.
+      status: rowIsCurrent(row) ? row.status : isNewestRequest(row) ? decay(row.status) : pastStatus(row.status),
       endedAt: row.endedAt,
     })),
     topFiles: rollUpFiles(rows, fileLimit),
@@ -301,6 +323,10 @@ function foldProject(
  * about the past and survives; every present-tense status becomes `unknown`,
  * because Mori has no evidence either way and would otherwise be guessing.
  */
+function pastStatus(status: SessionActivityStatus): SessionActivityStatus {
+  return status === "completed" || status === "blocked" ? status : "unknown";
+}
+
 function decay(status: SessionActivityStatus): SessionActivityStatus {
   return status === "completed" ? "completed" : "unknown";
 }

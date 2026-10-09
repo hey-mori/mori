@@ -89,6 +89,9 @@ export type AgentWorkSessionMeta = {
   sourceFilePath: string;
   startedAt: string;
   updatedAt: string;
+  /** When the conversation itself last moved (Claude Code only): the last user
+   *  or assistant record, not idle-time bookkeeping. Absent when unknown. */
+  lastMessageAt?: string;
   messageCount: number;
   /** False when `messageCount` covers only part of the source (a reader that
    *  previews a long session's head). Absent means complete. */
@@ -306,6 +309,7 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     sourceFilePath: session.filePath,
     startedAt: session.startedAt,
     updatedAt: claudeLastActivity(session),
+    lastMessageAt: session.lastMessageAt || undefined,
     messageCount: session.messageCount,
     messageCountComplete: session.messageCountComplete,
     title: session.title,
