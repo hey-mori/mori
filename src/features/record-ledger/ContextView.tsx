@@ -49,7 +49,7 @@ import { ProjectContinuationModal } from "./ProjectContinuationModal";
 import { SessionMembershipControl } from "./SessionMembershipControl";
 import { buildProjectContinuationPack } from "../../lib/continuation/projectContinuation";
 import { ProjectLiveSection } from "./ProjectLiveSection";
-import { buildSourceActivity } from "./sourceActivity";
+import { buildSourceActivity, reportedSessionKeys } from "./sourceActivity";
 import { useObservedSessions } from "../live-session/useAmbientObservation";
 import { useConfirmedProjectLive, useProjectLive } from "./useProjectLive";
 import { confirmedLiveScopeFor } from "./confirmedLiveScope";
@@ -392,22 +392,19 @@ export function ContextView() {
   }, [activeContext, loading, searchInventory, records, contexts]);
   // When each session's conversation last moved, by source file, as discovery
   // last read it (`lastMessageAt`: the last user or assistant record, not the
-  // bookkeeping Claude Code writes while nobody talks). A session Mori is
-  // following right now is never set aside: its rows are what Mori sees.
-  const { snapshot: observed } = useObservedSessions();
-  const followedKeys = useMemo(
-    () => new Set(observed.sessions.map((session) => session.meta.filePath)),
-    [observed.sessions],
-  );
+  // bookkeeping the agent writes while nobody talks). A session the live feed
+  // is reporting on is never set aside: its rows are what Mori sees.
+  const { feed: observedFeed } = useObservedSessions();
+  const reportedKeys = useMemo(() => reportedSessionKeys(observedFeed), [observedFeed]);
   const sourceActivity = useMemo(() => {
     const summaryById = new Map(summaries.map((summary) => [summary.sessionId, summary]));
     return buildSourceActivity({
       metas: loadAutoImportMetas(),
-      followedKeys,
+      reportedKeys,
       titleOfMeta: (meta) => summaryById.get(autoImportedSessionId(meta))?.title,
     });
     // Re-read as the poller publishes, so a session discovered since is known.
-  }, [summaries, followedKeys]);
+  }, [summaries, reportedKeys]);
   const sourceActiveAt = sourceActivity.activeAt;
   const confirmedLive = useConfirmedProjectLive(liveSources?.scope ?? null, sourceActiveAt);
   // A folder group has no reviewed membership: it is matched by the folder's
