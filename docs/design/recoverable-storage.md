@@ -208,5 +208,8 @@ the latest reply read a replaced original as if it were the session, and the lat
 nothing when the original was gone even with a usable copy. Limitations: an original that exists
 but cannot be read is still worded as "missing"; when two sessions share one file path, project
 search reads it for the newest only, so a session whose copy stands in for that file is searched in
-its copy and the other is counted as the same source; discovery still re-titles a session from the
-file now at its path.
+its copy and the other is counted as the same source. Discovery does not re-describe a session with a
+kept copy from a file that is not that conversation by the same rule (other fingerprint, or smaller
+than the copy): its stored descriptor stays, or nothing is written when none describes the kept
+conversation. Not covered: a descriptor an older build already rewrote, a session with saved passages
+but no kept copy, and the other conversation at that path, which is not registered while held.

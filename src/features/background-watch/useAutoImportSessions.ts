@@ -13,7 +13,10 @@
  * (transparency), and a registration is reversible. It pauses while the tab is
  * hidden and backs off on error; foreground-only, never a daemon.
  */
+
 import { useEffect, useRef, useState } from "react";
+import { fingerprintChanged, holdReplacedSessions, type KeptFingerprint } from "../../lib/session/heldReplacedSessions";
+import { keptIdentitiesOf } from "../../lib/session/sessionArchiveRead";
 import { loadStoredSessionSummaries, useSessionStore } from "../../app/sessionStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { isClaudeBridgeAvailable } from "../../lib/claude/claudeTauri";
@@ -64,6 +67,11 @@ const ERROR_BACKOFF_MS = 120_000;
  *  the kernel is read again for it. Errs toward keeping. */
 const KEPT_REFRESH_MS = 30 * 60_000;
 
+/** The kept set and the kept copies' fingerprints from one kernel listing. */
+function keptFrom(sources: Parameters<typeof sessionsWithKeptEvidence>[0]) {
+  return { ids: sessionsWithKeptEvidence(sources), fingerprints: keptIdentitiesOf(sources), at: Date.now() };
+}
+
 export function useAutoImportSessions(): void {
   const registerDiscoveredSessions = useSessionStore(
     (state) => state.registerDiscoveredSessions,
@@ -99,7 +107,7 @@ export function useAutoImportSessions(): void {
   }, []);
 
   const seenRef = useRef<Map<string, string>>(new Map());
-  const keptRef = useRef<{ ids: Set<string>; at: number } | null>(null);
+  const keptRef = useRef<{ ids: Set<string>; fingerprints: Map<string, KeptFingerprint>; at: number } | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -138,7 +146,7 @@ export function useAutoImportSessions(): void {
           const sources = await getKernelRepository().listSources();
           if (cancelled) return;
           if (!sources.fellBack) {
-            keptRef.current = { ids: sessionsWithKeptEvidence(sources.data), at: Date.now() };
+            keptRef.current = keptFrom(sources.data);
           }
         }
         setProtectedDescriptorIds(
@@ -149,11 +157,24 @@ export function useAutoImportSessions(): void {
           // Without the kernel's answer the cap must not drop durable copies.
           { complete: keptRef.current !== null },
         );
-        const discovered = await listAllAgentWorkSessions();
+        const listed = await listAllAgentWorkSessions();
+        const stored = new Map(loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), meta]));
+        // What is kept, and the kept copies' fingerprints, come from the same
+        // kernel listing as the kept set: refreshed when stale, or at once
+        // when a listed file's fingerprint differs from its descriptor's (a
+        // copy kept since the last refresh must be known before that file is
+        // allowed to describe the session).
+        const keptAge = keptRef.current ? Date.now() - keptRef.current.at : Infinity;
+        if (keptAge > KEPT_REFRESH_MS || fingerprintChanged(listed, stored)) {
+          const sources = await getKernelRepository().listSources();
+          if (cancelled) return;
+          if (!sources.fellBack) keptRef.current = keptFrom(sources.data);
+        }
+        const kept = keptRef.current;
+        const discovered = kept ? holdReplacedSessions(listed, stored, (id) => kept.fingerprints.get(id) ?? null) : listed;
         if (!cancelled) {
           // Bound to the most-recent window so the draft + seen sets stay small.
           // A partial rescan does not erase a checkout a fuller read found.
-          const stored = new Map(loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), meta]));
           const recent = [
             ...discovered.map((meta) => carryForwardRepository(meta, stored.get(autoImportedSessionId(meta)))),
           ]
@@ -225,7 +246,7 @@ export function useAutoImportSessions(): void {
               const sources = await getKernelRepository().listSources();
               if (cancelled) return;
               if (sources.fellBack) canPrune = false;
-              else keptRef.current = { ids: sessionsWithKeptEvidence(sources.data), at: Date.now() };
+              else keptRef.current = keptFrom(sources.data);
             }
             for (const id of keptRef.current?.ids ?? []) keep.add(id);
           }

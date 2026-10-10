@@ -77,6 +77,10 @@ pub struct ClaudeCodeSessionMeta {
     /// False when the preview stopped at its byte budget, so `message_count`
     /// counts only the file's head: a lower bound, never the session's total.
     pub message_count_complete: bool,
+    /// The file's head fingerprint (`source_id_of`), "" if it could not be
+    /// read. Lets discovery notice that the file at a kept session's path is
+    /// now another conversation.
+    pub source_id: String,
     pub title: String,
     pub token_usage: ClaudeTokenUsage,
     /// What the transcript holds, decided only from a complete read:
@@ -454,6 +458,10 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 file_bytes,
                 message_count: preview.message_count,
                 message_count_complete: preview.complete,
+                source_id: fs::File::open(&session_path)
+                    .ok()
+                    .and_then(|mut file| source_id_of(&mut file).ok())
+                    .unwrap_or_default(),
                 title,
                 token_usage: preview.token_usage,
                 activity_class,
@@ -2025,6 +2033,9 @@ mod tests {
         assert!(listing[0].message_count_complete);
         // The file time is explicit UTC, so JavaScript cannot read it as local.
         assert!(listing[0].modified_at.ends_with('Z'));
+        // The head fingerprint, the same one a window read reports.
+        let mut file = fs::File::open(temp.path().join("-home-u-dev-mori").join("small.jsonl")).unwrap();
+        assert_eq!(listing[0].source_id, source_id_of(&mut file).unwrap());
     }
 
     fn away_summary_line(at: &str) -> String {

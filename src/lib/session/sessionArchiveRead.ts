@@ -8,7 +8,7 @@
  */
 import { claudeCodeArchiveDir, verifyClaudeCodeArchive } from "../claude/claudeTauri";
 import { getKernelRepository } from "../record-kernel/kernelRepository";
-import { keptArchiveOf } from "./sessionArchive";
+import { keptArchiveOf, parseArchiveLocator } from "./sessionArchive";
 
 export type ArchiveIntegrity = "ok" | "missing" | "damaged" | "unknown";
 
@@ -88,7 +88,10 @@ export async function keptArchiveIdentity(sessionId: string): Promise<{ sourceId
  */
 export async function keptArchiveIdentityLookup(): Promise<((sessionId: string) => { sourceId: string; bytes: number } | null) | null> {
   try {
-    const sources = (await getKernelRepository().listSources()).data;
+    const listed = await getKernelRepository().listSources();
+    // A listing that fell back does not know what is kept.
+    if (listed.fellBack) return null;
+    const sources = listed.data;
     return (sessionId) => {
       const kept = keptArchiveOf(sources, sessionId);
       return kept?.locator.sourceId ? { sourceId: kept.locator.sourceId, bytes: kept.locator.bytes } : null;
@@ -101,4 +104,17 @@ export async function keptArchiveIdentityLookup(): Promise<((sessionId: string) 
 /** Whether a kept copy may stand in for its original. */
 export function isUsableArchive(kept: KeptArchiveRead): boolean {
   return kept.integrity === "ok" || kept.integrity === "unknown";
+}
+
+/** The kept copy's fingerprint and size per session, from a listing the
+ *  caller already has (no read of its own). */
+export function keptIdentitiesOf(sources: Parameters<typeof keptArchiveOf>[0]): Map<string, { sourceId: string; bytes: number }> {
+  const out = new Map<string, { sourceId: string; bytes: number }>();
+  for (const source of sources) {
+    const sessionId = parseArchiveLocator(source.locator)?.sessionId;
+    if (!sessionId || out.has(sessionId)) continue;
+    const kept = keptArchiveOf(sources, sessionId);
+    if (kept?.locator.sourceId) out.set(sessionId, { sourceId: kept.locator.sourceId, bytes: kept.locator.bytes });
+  }
+  return out;
 }
