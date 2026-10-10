@@ -262,6 +262,10 @@ export function inspectorEventSummary(event: TimelineEvent, shownTitle: string):
  * event's summary is shown as read.
  */
 export function hoverEventSummary(event: TimelineEvent, shownTitle: string, level: DisclosureLevel): string {
+  // An injected notice (a slash command, an interrupt, a task notification)
+  // also arrives as a user message; its title names it, and its text is
+  // neither the user's request nor worth reading on hover.
+  if (isAgentBoilerplateTitle(event.summary)) return "";
   if (!isUserRequestEvent(event)) return readableEventSummary(event, shownTitle);
   const text = readableAgentText(projectEventRequestSummary(event, level).text);
   return sameText(text, shownTitle) ? "" : text;

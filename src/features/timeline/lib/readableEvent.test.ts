@@ -38,18 +38,32 @@ describe("the inspector's summary", () => {
 });
 
 describe("the hover preview of a user's request", () => {
-  const ask = { title: "배포 스크립트 고쳐줘", summary: "배포 스크립트 고쳐줘. 비밀 토큰은 abc123 이고 서버는 prod-7 입니다.", actor: "user" } as never;
+  // As imports build a lone ask: the title is the start of the same text.
+  const ask = { title: "배포 스크립트 고쳐줘. 서버는 prod-7", summary: "배포 스크립트 고쳐줘. 서버는 prod-7 이고 비밀 토큰은 abc123 입니다.", actor: "user" } as never;
   const reply = { title: "고쳤습니다", summary: "배포 스크립트의 경로를 고쳤습니다.", actor: "assistant" } as never;
 
   it("shows the original only at 원문", () => {
-    expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘", "raw")).toContain("abc123");
+    expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘. 서버는 prod-7", "raw")).toContain("abc123");
   });
 
   it("never shows the original when the level withholds it", () => {
     for (const level of ["summary", "abstract", "hidden"] as const) {
-      expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘", level)).not.toContain("abc123");
+      expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘. 서버는 prod-7", level)).not.toContain("abc123");
     }
-    expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘", "hidden")).toBe("");
+    expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘. 서버는 prod-7", "hidden")).toBe("");
+  });
+
+  it("shows nothing for an injected notice that arrived as a user message", () => {
+    const notices = [
+      "<command-name>/clear</command-name>",
+      "[Request interrupted by user for tool use]",
+      "This session is being continued from a previous conversation that ran out of context.",
+    ];
+    for (const summary of notices) {
+      for (const level of ["raw", "summary", "abstract"] as const) {
+        expect(hoverEventSummary({ title: "명령", summary, actor: "user" } as never, "명령", level)).toBe("");
+      }
+    }
   });
 
   it("leaves other events as read", () => {
