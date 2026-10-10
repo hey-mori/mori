@@ -82,8 +82,8 @@ export function ReviewDetailPanel({
   /** False in demo mode — Review writes cannot be persisted there. */
   canEditReview: boolean;
 }) {
-  // Linked events read as the request disclosure level shows them: an issue
-  // lifted from a request must not reveal that request at 숨김.
+  // Linked events read as the request disclosure level shows them. The
+  // issue's own title is stored text and is not gated here yet.
   const view = useDisclosedView(storedView);
   if (selection.kind === "none") {
     return (
