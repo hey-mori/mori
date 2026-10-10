@@ -458,7 +458,8 @@ describe("release review · what an answered prompt must keep", () => {
         evidenceRefs: [{ kind: "event", sessionId, eventId: promptId }],
       } as never);
     });
-    expect(events.some((event) => event.id === prompt.id)).toBe(true);
+    expect(events[1]!.id).toBe(prompt.id);
+    expect(events[1]!.summary).not.toBe(prompt.summary);
     expect(events).toHaveLength(3);
   });
 
@@ -472,8 +473,34 @@ describe("release review · what an answered prompt must keep", () => {
       });
     });
     expect(repository.listAllAcceptedProjectMemories()).toHaveLength(0);
-    expect(events.some((event) => event.id === prompt.id)).toBe(true);
+    // Same id, so the citation lands; the turn now carries its reply.
+    expect(events[1]!.id).toBe(prompt.id);
+    expect(events[1]!.actor).not.toBe("user");
+    expect(events[1]!.summary).not.toBe(prompt.summary);
     expect(events).toHaveLength(3);
+  });
+
+  it("a cited prompt kept as stored does not freeze the import when the session grows again", async () => {
+    const { a, prompt } = await openAnsweredLater((sessionId, promptId) => {
+      acceptedStore.list = async () => ({
+        data: [{ id: "mem-1", projectId: "p", evidenceRefs: [{ kind: "event", sessionId, eventId: promptId }] }],
+        source: "desktop-sqlite",
+        fellBack: false,
+      });
+    });
+    sources.set("a", transcript(5));
+    const resolve = resolver();
+    await resolve(register(meta("c", "C"), transcript(1)));
+    await resolve(a);
+    const events = repository.listSessionImports(a)[0]!.events;
+    expect(events[1]!.id).toBe(prompt.id);
+    expect(events).toHaveLength(5);
+    expect(useSessionStore.getState().divergedSourceSessionId).toBeNull();
+    // A third read of the same transcript changes nothing.
+    const settled = JSON.stringify(repository.listSessionImports(a));
+    await resolve(register(meta("d", "D"), transcript(1)));
+    await resolve(a);
+    expect(JSON.stringify(repository.listSessionImports(a))).toBe(settled);
   });
 
   it("when accepted memory cannot be read from its store, nothing is renamed", async () => {
