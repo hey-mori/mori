@@ -77,12 +77,34 @@ describe("discloseEventForView", () => {
   const reply = { actor: "assistant" as const, title: "경로를 고쳤습니다", summary: "경로를 고쳤습니다." };
   const tool = { actor: "tool" as const, title: "Bash: npm test", summary: "ok" };
 
-  it("hides a request's title, and a lone request's text, only at 숨김", () => {
+  it("hides a request's title, and a lone request's text, at 숨김", () => {
     expect(discloseEventForView(ask, "hidden")).toMatchObject({ title: HIDDEN_REQUEST_TITLE, summary: "" });
     expect(discloseEventForView(paired, "hidden")).toMatchObject({ title: HIDDEN_REQUEST_TITLE, summary: "경로를 고쳤습니다." });
-    for (const level of ["raw", "summary", "abstract"] as const) {
-      expect(discloseEventForView(ask, level)).toBe(ask);
-    }
+    expect(discloseEventForView(ask, "raw")).toBe(ask);
+  });
+
+  it("at 요지 reads a request as its intent line, keeping the agent's reply", () => {
+    expect(discloseEventForView(ask, "abstract")).toMatchObject({
+      title: "사용자가 수정·디버깅을 요청함",
+      summary: "사용자가 수정·디버깅을 요청함",
+    });
+    expect(discloseEventForView(paired, "abstract")).toMatchObject({
+      title: "사용자가 수정·디버깅을 요청함",
+      summary: "경로를 고쳤습니다.",
+    });
+  });
+
+  it("at 요약 never shows more of a request than its first sentence, cut shorter than a raw title", () => {
+    const long = {
+      actor: "user" as const,
+      title: "로그인 화면의 오류 메시지를 고쳐줘. 토큰 abc123을 쓰는 테스트 계정으로 재현돼.",
+      summary: "로그인 화면의 오류 메시지를 고쳐줘. 토큰 abc123을 쓰는 테스트 계정으로 재현돼.",
+    };
+    const shown = discloseEventForView(long, "summary");
+    expect(shown.title).toBe("로그인 화면의 오류 메시지를 고쳐줘.");
+    expect(shown.summary).not.toContain("abc123");
+    const runOn = { actor: "user" as const, title: "가".repeat(90), summary: "가".repeat(90) };
+    expect(discloseEventForView(runOn, "summary").title.length).toBeLessThanOrEqual(61);
   });
 
   it("hides a pasted transcript turn titled by its ask, keeping the reply", () => {
