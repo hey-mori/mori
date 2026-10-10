@@ -50,6 +50,28 @@ type EventField = (typeof CONTENT_FIELDS)[number] | (typeof ENRICHMENT_FIELDS)[n
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
+/** A tool result as the reader renders it ("↳ 도구 결과: …", "↳ 도구 오류: …",
+ *  "↳ (도구 결과 없음)"). Not anything the user or the agent wrote. */
+const TOOL_RESULT_TEXT = /^\s*↳\s*\(?\s*도구\s*(결과|오류)/;
+
+/**
+ * Whether a turn differs from its stored copy only in how the reader renders
+ * a tool result: a tool turn with no tool name and no reply (a result read
+ * mid tool loop), whose stored and fresh summaries are both tool-result
+ * renderings, and nothing else in what it says changed. A reader upgrade
+ * (terminal codes dropped, an image result named) changes that text without
+ * the transcript changing, so it is refreshed rather than taken as a rewrite.
+ */
+function onlyToolResultRendering(stored: TimelineEvent, fresh: TimelineEvent): boolean {
+  if (stored.actor !== "tool" || stored.toolName || fresh.actor !== "tool" || fresh.toolName) return false;
+  if (!TOOL_RESULT_TEXT.test(stored.summary) || !TOOL_RESULT_TEXT.test(fresh.summary)) return false;
+  // The summary only: such a turn's title is a fixed label that never moves.
+  return CONTENT_FIELDS.every((field) => field === "summary" || same(stored[field], fresh[field]));
+}
+
+/** The text field a reader-rendering refresh takes from the read. */
+const RENDERED_FIELDS = ["summary"] as const;
+
 /** `stored` with `fields` taken from `fresh`. Every other field (notes, links,
  *  relationships, artifacts, extra source references, edits) stays. */
 function withFields(stored: TimelineEvent, fresh: TimelineEvent, fields: readonly EventField[]): TimelineEvent {
@@ -122,12 +144,17 @@ export function planSourceReopen(
     const fresh = candidate.events[index]!;
     if (stored.id === fresh.id) {
       // Same turn. Its text must not have changed unless the user changed it.
-      if (!stored.userModified && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
+      const rerendered =
+        !stored.userModified &&
+        CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field])) &&
+        onlyToolResultRendering(stored, fresh);
+      if (!stored.userModified && !rerendered && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
         return { kind: "keep", reason: "diverged", importIds: [existing.id] };
       }
       const enriched = ENRICHMENT_FIELDS.some((field) => !same(stored[field], fresh[field]));
-      if (enriched) refreshed += 1;
-      kept.push(enriched ? withFields(stored, fresh, ENRICHMENT_FIELDS) : stored);
+      if (enriched || rerendered) refreshed += 1;
+      const fields: EventField[] = [...(enriched ? ENRICHMENT_FIELDS : []), ...(rerendered ? RENDERED_FIELDS : [])];
+      kept.push(fields.length > 0 ? withFields(stored, fresh, fields) : stored);
       continue;
     }
     // The same turn under a pinned id: answered at an earlier reopen while a
@@ -143,12 +170,17 @@ export function planSourceReopen(
     // id and never gets here.)
     const waiting = stored.actor === "user" || (stored.actor === "tool" && !stored.toolName);
     if (sameTurnKey && stored.start === fresh.start) {
-      if (!stored.userModified && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
+      const rerendered =
+        !stored.userModified &&
+        CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field])) &&
+        onlyToolResultRendering(stored, fresh);
+      if (!stored.userModified && !rerendered && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
         return { kind: "keep", reason: "diverged", importIds: [existing.id] };
       }
       const enriched = ENRICHMENT_FIELDS.some((field) => !same(stored[field], fresh[field]));
-      if (enriched) refreshed += 1;
-      kept.push(enriched ? withFields(stored, fresh, ENRICHMENT_FIELDS) : stored);
+      if (enriched || rerendered) refreshed += 1;
+      const fields: EventField[] = [...(enriched ? ENRICHMENT_FIELDS : []), ...(rerendered ? RENDERED_FIELDS : [])];
+      kept.push(fields.length > 0 ? withFields(stored, fresh, fields) : stored);
       continue;
     }
     // Otherwise only a turn that was waiting for its reply and has it now may

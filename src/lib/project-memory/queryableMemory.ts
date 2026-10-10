@@ -245,7 +245,7 @@ function normalise(value: string): string {
 
 /** True when text is a Claude tool envelope ("🔧 …" or "↳ 도구 결과/오류 …"). */
 function isToolEnvelopeText(value: string): boolean {
-  return /^\s*(↳\s*도구\s*(결과|오류)|🔧)/.test(value);
+  return /^\s*(↳\s*\(?\s*도구\s*(결과|오류)|🔧)/.test(value);
 }
 
 function collapse(value: string): string {

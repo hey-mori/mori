@@ -1093,7 +1093,12 @@ fn untitled_fallback(command_name: &str, project_label: &str) -> String {
 fn classify_subkind(role: &str, content: &str) -> String {
     let trimmed = content.trim_start();
     if role == "human" {
-        if trimmed.starts_with("↳ 도구 결과") || trimmed.starts_with("↳ 도구 오류") {
+        // "↳ (도구 결과 없음)" too: an empty result is still a tool response,
+        // never the user's turn (the TypeScript `classifyMessage` agrees).
+        if trimmed.starts_with("↳ 도구 결과")
+            || trimmed.starts_with("↳ 도구 오류")
+            || trimmed.starts_with("↳ (도구 결과")
+        {
             return "tool_result".to_string();
         }
         return String::new();
@@ -1468,6 +1473,9 @@ fn render_content_block(item: &Value) -> Option<String> {
     // Tool result — the response coming back to the assistant. Surface a
     // short preview so the user can see what the tool produced.
     if block_type == "tool_result" {
+        // An image result (a screenshot the agent read) has no text, but it is
+        // a result: count it so it never reads as "no result".
+        let mut images = 0usize;
         let body = item
             .get("content")
             .map(|c| match c {
@@ -1475,7 +1483,9 @@ fn render_content_block(item: &Value) -> Option<String> {
                 Value::Array(items) => {
                     let mut out = String::new();
                     for sub in items {
-                        if let Some(text) = sub.get("text").and_then(Value::as_str) {
+                        if sub.get("type").and_then(Value::as_str) == Some("image") {
+                            images += 1;
+                        } else if let Some(text) = sub.get("text").and_then(Value::as_str) {
                             if !out.is_empty() {
                                 out.push('\n');
                             }
@@ -1492,11 +1502,17 @@ fn render_content_block(item: &Value) -> Option<String> {
                 _ => String::new(),
             })
             .unwrap_or_default();
-        if body.trim().is_empty() {
-            return Some("↳ (도구 결과 없음)".to_string());
-        }
         let is_error = item.get("is_error").and_then(Value::as_bool).unwrap_or(false);
         let prefix = if is_error { "↳ 도구 오류" } else { "↳ 도구 결과" };
+        // Judged after the terminal codes are gone: a result that only moved
+        // the cursor printed nothing.
+        let body = strip_ansi(&body);
+        if body.trim().is_empty() {
+            if images > 0 {
+                return Some(format!("{prefix}: (이미지 {images}개)"));
+            }
+            return Some("↳ (도구 결과 없음)".to_string());
+        }
         // Keep a generous, newline-preserving slice so a live surface can show
         // what the tool actually produced, not just a one-line snippet.
         return Some(format!("{prefix}: {}", cap_text(&body, 1500)));
@@ -1703,6 +1719,84 @@ fn truncate(input: &str, max: usize) -> String {
     }
     let mut out: String = clean.chars().take(max).collect();
     out.push_str("...");
+    out
+}
+
+/// Remove terminal escape sequences (colours, cursor moves, titles) that a
+/// command printed for a terminal, so a tool result reads as text instead of
+/// "[32m✓[39m". CSI (`ESC [ … final`), OSC (`ESC ] … BEL` or `ESC \\`), and
+/// any other two-byte escape are dropped; everything else is kept as is.
+fn strip_ansi(input: &str) -> String {
+    const ESC: char = '\u{1b}';
+    if !input.contains(ESC) {
+        return input.to_string();
+    }
+    let chars: Vec<char> = input.chars().collect();
+    let mut out = String::with_capacity(input.len());
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if c != ESC {
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        i += 1;
+        match chars.get(i).copied() {
+            Some('[') => {
+                // Parameter and intermediate bytes (0x20..=0x3F), then one
+                // final byte (0x40..=0x7E). Anything else ends a malformed
+                // sequence without eating the text after it.
+                i += 1;
+                while let Some(&next) = chars.get(i) {
+                    if (' '..='?').contains(&next) {
+                        i += 1;
+                    } else {
+                        if ('@'..='~').contains(&next) {
+                            i += 1;
+                        }
+                        break;
+                    }
+                }
+            }
+            Some(']') | Some('P') | Some('_') | Some('^') => {
+                // A string sequence (OSC, DCS, APC, PM) ends at BEL or ST
+                // (ESC \\). An unterminated one ends before a line break or
+                // the next escape, which are then read as usual.
+                i += 1;
+                while let Some(&next) = chars.get(i) {
+                    if next == '\u{7}' {
+                        i += 1;
+                        break;
+                    }
+                    if next == ESC {
+                        if chars.get(i + 1) == Some(&'\\') {
+                            i += 2;
+                        }
+                        break;
+                    }
+                    if next == '\n' {
+                        break;
+                    }
+                    i += 1;
+                }
+            }
+            Some('(') | Some(')') | Some('*') | Some('+') | Some('#') | Some('%') => {
+                // Character set and line attributes: ESC ( B, ESC # 8 and the like.
+                i += 1;
+                if chars.get(i).is_some_and(|next| next.is_ascii_graphic()) {
+                    i += 1;
+                }
+            }
+            // Two-byte escapes: ESC 7 / ESC 8 (save, restore cursor), ESC = and
+            // the like, and the C1 forms.
+            Some(next) if ('0'..='~').contains(&next) => {
+                i += 1;
+            }
+            // A lone ESC before a line break or ordinary text: drop only it.
+            _ => {}
+        }
+    }
     out
 }
 
@@ -2429,6 +2523,47 @@ mod tests {
         });
         let rendered = render_content_block(&tool_result).unwrap();
         assert!(rendered.contains("wrapped result"), "got: {rendered}");
+    }
+
+    #[test]
+    fn tool_results_drop_terminal_escape_sequences() {
+        let tool_result = serde_json::json!({
+            "type": "tool_result",
+            "content": "\u{1b}[32m✓\u{1b}[39m built in 3.68s\n\u{1b}]0;title\u{7}done \u{1b}[1;31mERR\u{1b}[0m"
+        });
+        let rendered = render_content_block(&tool_result).unwrap();
+        assert_eq!(rendered, "↳ 도구 결과: ✓ built in 3.68s\ndone ERR");
+        assert_eq!(strip_ansi("plain [32m text"), "plain [32m text");
+        // Character-set selection, a malformed CSI, an unterminated OSC, and a
+        // lone ESC before text all keep the text around them.
+        assert_eq!(strip_ansi("\u{1b}[1mbold\u{1b}(B\u{1b}[m rest"), "bold rest");
+        assert_eq!(strip_ansi("\u{1b}[3\n한글 줄 끝 next"), "\n한글 줄 끝 next");
+        assert_eq!(strip_ansi("a\u{1b}]0;title\nline2"), "a\nline2");
+        assert_eq!(strip_ansi("x\u{1b}\n한"), "x\n한");
+        assert_eq!(strip_ansi("\u{1b}7saved\u{1b}8 ok \u{1b}=\u{1b}>x \u{1b}#8y"), "saved ok x y");
+        assert_eq!(strip_ansi("\u{1b}]0;t\u{1b}[32mgreen\nnext"), "green\nnext");
+        let cursor_only = serde_json::json!({ "type": "tool_result", "content": "\u{1b}[?25l\u{1b}[?25h" });
+        assert_eq!(render_content_block(&cursor_only).unwrap(), "↳ (도구 결과 없음)");
+    }
+
+    #[test]
+    fn renders_an_image_only_tool_result_as_a_result() {
+        let tool_result = serde_json::json!({
+            "type": "tool_result",
+            "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "AAAA"}}]
+        });
+        let rendered = render_content_block(&tool_result).unwrap();
+        assert_eq!(rendered, "↳ 도구 결과: (이미지 1개)");
+        assert_eq!(classify_subkind("human", &rendered), "tool_result");
+    }
+
+    #[test]
+    fn renders_an_empty_tool_result_as_a_tool_response() {
+        let tool_result = serde_json::json!({ "type": "tool_result", "content": [] });
+        let rendered = render_content_block(&tool_result).unwrap();
+        assert_eq!(rendered, "↳ (도구 결과 없음)");
+        assert_eq!(classify_subkind("human", &rendered), "tool_result");
+        assert!(!is_titleable_user_text(&rendered));
     }
 
     #[test]

@@ -110,3 +110,36 @@ describe("a turn whose id a citation holds (pinned)", () => {
     expect(planSourceReopen([first.next], grown)).toMatchObject({ kind: "update", added: 1 });
   });
 });
+
+describe("a reader upgrade that renders a tool result differently", () => {
+  const SRC = "src-claude-code-aaa";
+  const toolTurn = (id: string, summary: string) => event(id, { actor: "tool", title: "도구 실행", summary, sourceRefs: [`${SRC}-20261008000000`] });
+  const read = (events: TimelineEvent[]) =>
+    ({ ...candidate(`${SRC}-20261009000000`, events.map((e) => e.id)), events }) as NormalizedImportCandidate;
+  const asStored = (events: TimelineEvent[]) =>
+    stored({ ...candidate(`${SRC}-20261008000000`, events.map((e) => e.id)), events } as NormalizedImportCandidate);
+
+  it("refreshes a tool result's rendering and still appends new turns", () => {
+    const before = asStored([event("e1"), toolTurn("e2", "↳ 도구 결과: \u001b[32m✓\u001b[39m built"), toolTurn("e3", "↳ (도구 결과 없음)")]);
+    const plan = planSourceReopen(
+      [before],
+      read([event("e1"), toolTurn("e2", "↳ 도구 결과: ✓ built"), toolTurn("e3", "↳ 도구 결과: (이미지 1개)"), event("e4")]),
+    );
+    expect(plan).toMatchObject({ kind: "update", added: 1, refreshed: 2 });
+    if (plan.kind !== "update") return;
+    expect(plan.next.events.map((e) => e.summary)).toEqual(["e1", "↳ 도구 결과: ✓ built", "↳ 도구 결과: (이미지 1개)", "e4"]);
+  });
+
+  it("still treats changed words of a person or the agent as a rewrite", () => {
+    const before = asStored([event("e1", { summary: "원래 질문" }), toolTurn("e2", "↳ 도구 결과: ok")]);
+    expect(planSourceReopen([before], read([event("e1", { summary: "바뀐 질문" }), toolTurn("e2", "↳ 도구 결과: ok"), event("e3")]))).toMatchObject({
+      kind: "keep",
+      reason: "diverged",
+    });
+    // A tool turn whose text stopped being a tool result is not a rendering change either.
+    expect(planSourceReopen([before], read([event("e1", { summary: "원래 질문" }), toolTurn("e2", "다른 글"), event("e3")]))).toMatchObject({
+      kind: "keep",
+      reason: "diverged",
+    });
+  });
+});

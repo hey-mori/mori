@@ -74,7 +74,7 @@ const KNOWN_SUBCOMMANDS = new Set([
 /** Mori's own import labels · a user never types these, so they are machine
  *  noise wherever they appear. The wrench emoji is language-neutral and handled
  *  separately (noise only on a non-Korean line). */
-const ARROW_TOOL_MARKERS = ["↳ 도구 결과", "↳ 도구 오류", "↳ 도구"];
+const ARROW_TOOL_MARKERS = ["↳ 도구 결과", "↳ 도구 오류", "↳ 도구", "↳ (도구"];
 
 function nonEmptyLines(text: string): string[] {
   return text
