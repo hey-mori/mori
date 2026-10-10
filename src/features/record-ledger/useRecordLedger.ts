@@ -571,7 +571,9 @@ export function useRecordLedger(): RecordLedger {
     async (record: MoriRecord, status: RecordStatus) => {
       if (record.status === status) return;
       const repo = getKernelRepository();
-      const { record: next, revision } = applyRecordPatch(record, { status }, "user", registry);
+      // The stored record, not this render's copy (see updateRecord).
+      const base = await latestRecordFor(repo, record);
+      const { record: next, revision } = applyRecordPatch(base, { status }, "user", registry);
       await repo.saveRecord(next, revision);
       await reload();
     },
@@ -587,7 +589,8 @@ export function useRecordLedger(): RecordLedger {
       const patch = date
         ? { occurredStart: date, timeBasis: "user-provided" as const, timeConfidence: undefined }
         : { timeBasis: "capture-fallback" as const };
-      const { record: next, revision } = applyRecordPatch(record, patch, "user", registry);
+      const base = await latestRecordFor(repo, record);
+      const { record: next, revision } = applyRecordPatch(base, patch, "user", registry);
       await repo.saveRecord(next, revision);
       await reload();
     },

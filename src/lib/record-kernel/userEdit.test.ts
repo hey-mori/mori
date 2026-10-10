@@ -12,6 +12,12 @@ describe("userEditOf", () => {
     });
   });
 
+  it("keeps the mark when a revert restores an earlier observed title with it", () => {
+    const stored = { title: "B 요청", properties: { agentId: "claude", titleFromRequest: true } };
+    const revert = { title: "A 요청", properties: { agentId: "claude", titleFromRequest: true } };
+    expect(userEditOf(stored, revert)).toEqual(revert);
+  });
+
   it("leaves every other edit as it is", () => {
     const stored = { title: "배포 고쳐줘", properties: { agentId: "claude", titleFromRequest: true } };
     expect(userEditOf(stored, { body: "메모" })).toEqual({ body: "메모" });

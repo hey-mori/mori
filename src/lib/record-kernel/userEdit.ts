@@ -9,6 +9,8 @@ import type { RecordPatch } from "./recordFactory";
  */
 export function userEditOf(base: Pick<MoriRecord, "title" | "properties">, patch: RecordPatch): RecordPatch {
   if (patch.title === undefined || patch.title === base.title || base.properties?.titleFromRequest !== true) return patch;
+  // Restoring an earlier observed title with its mark (a revert) keeps it.
+  if (patch.properties?.titleFromRequest === true) return patch;
   const { titleFromRequest: _fromRequest, ...properties } = patch.properties ?? base.properties;
   return { ...patch, properties };
 }

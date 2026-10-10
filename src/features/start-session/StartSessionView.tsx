@@ -74,6 +74,7 @@ import {
 } from "../../lib/trace/sources/ai/agentRegistry";
 import { DetectedConversationsModal } from "./DetectedConversationsModal";
 import { ProjectFormModal, type ProjectFormValues } from "../project/ProjectFormModal";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * 새 세션 — create one session, the way you'd provision one real thing.
@@ -270,6 +271,7 @@ export function StartSessionView() {
   }
 
   const requestLevel = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
+  const shownTitle = useSessionTitle();
   function pickDetected(meta: AgentWorkSessionMeta) {
     setSelectedDetected(meta);
     // Auto-fill the session name from the conversation's own title; still
@@ -431,7 +433,9 @@ export function StartSessionView() {
     ? sessionTitle.trim()
     : method === "records" && !selectedDetected
       ? "대화 선택 필요"
-      : "무제 Mori 세션";
+      : method === "records" && selectedDetected
+        ? shownTitle(selectedDetected.title, selectedDetected.titleFromRequest)
+        : "무제 Mori 세션";
 
   const createTitle = canCreate
     ? undefined
@@ -523,7 +527,7 @@ export function StartSessionView() {
                       <History size={16} />
                     </span>
                     <span className="records-chosen-main">
-                      <strong>{selectedDetected.title}</strong>
+                      <strong>{shownTitle(selectedDetected.title, selectedDetected.titleFromRequest)}</strong>
                       <span>
                         {shortProjectLabel(selectedDetected.projectName)} · 메시지{" "}
                         {selectedDetected.messageCount} ·{" "}
