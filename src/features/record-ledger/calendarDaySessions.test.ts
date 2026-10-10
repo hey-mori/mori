@@ -46,11 +46,15 @@ describe("a calendar day's sessions", () => {
 });
 
 describe("the way-back label of a calendar day", () => {
+  const now = new Date(2026, 9, 10);
   it("names the day from its key", () => {
-    expect(calendarDayLabel("2026-10-10")).toBe("캘린더 10월 10일");
-    expect(calendarDayLabel("2026-01-05")).toBe("캘린더 1월 5일");
+    expect(calendarDayLabel("2026-10-10", now)).toBe("캘린더 10월 10일");
+    expect(calendarDayLabel("2026-01-05", now)).toBe("캘린더 1월 5일");
+  });
+  it("names the year of a day in another year", () => {
+    expect(calendarDayLabel("2025-10-10", now)).toBe("캘린더 2025년 10월 10일");
   });
   it("falls back to the calendar for a malformed key", () => {
-    expect(calendarDayLabel("oops")).toBe("캘린더");
+    expect(calendarDayLabel("oops", now)).toBe("캘린더");
   });
 });

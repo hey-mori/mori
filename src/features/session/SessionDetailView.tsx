@@ -136,6 +136,7 @@ function SessionTitleInline() {
   const openProject = useAppStore((state) => state.openProject);
   const openProjectContext = useAppStore((state) => state.openProjectContext);
   const openCalendarAt = useAppStore((state) => state.openCalendarAt);
+  const setSessionReturn = useAppStore((state) => state.setSessionReturn);
   const identity = useSessionProjectIdentity(draft?.session.id ?? null);
   const context = useMemo(
     () =>
@@ -160,7 +161,10 @@ function SessionTitleInline() {
           type="button"
           className="session-detail-back"
           title="열었던 캘린더 날짜로 돌아갑니다"
-          onClick={() => openCalendarAt(back.date)}
+          onClick={() => {
+            setSessionReturn(null);
+            openCalendarAt(back.date);
+          }}
         >
           <ArrowLeft size={12} aria-hidden="true" />
           <span>{back.label}</span>
@@ -170,7 +174,10 @@ function SessionTitleInline() {
           type="button"
           className="session-detail-back"
           title={back.viaSearch ? "프로젝트 검색 결과로 돌아갑니다" : "열었던 프로젝트로 돌아갑니다"}
-          onClick={() => openProjectContext(back.contextId)}
+          onClick={() => {
+            setSessionReturn(null);
+            openProjectContext(back.contextId);
+          }}
         >
           <ArrowLeft size={12} aria-hidden="true" />
           <span>{back.viaSearch ? `${back.label} 검색 결과` : back.label}</span>
