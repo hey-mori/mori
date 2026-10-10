@@ -29,6 +29,7 @@ import { calendarDayLabel } from "./calendarDaySessions";
 import { recordsByDate } from "./calendarGrouping";
 import { isDateUndecided } from "./dateResolution";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { useRecordTitle } from "../../app/useDisclosedView";
 
 function pad(value: number): string {
   return value.toString().padStart(2, "0");
@@ -84,6 +85,7 @@ export function CalendarView() {
 
   const records = useMemo(() => ledgerVisibleRecords(ledger.records), [ledger.records]);
   const byDate = useMemo(() => recordsByDate(records), [records]);
+  const recordTitle = useRecordTitle();
   const undecided = useMemo(() => records.filter(isDateUndecided), [records]);
 
   const monthPrefix = `${cursor.year}-${pad(cursor.month + 1)}`;
@@ -260,9 +262,9 @@ export function CalendarView() {
                     type="button"
                     className="cal-tray-open"
                     onClick={() => openRecordInLedger(record.id)}
-                    title={record.title}
+                    title={recordTitle(record)}
                   >
-                    {record.title}
+                    {recordTitle(record)}
                   </button>
                   {selectedDate ? (
                     <button

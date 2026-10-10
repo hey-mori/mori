@@ -132,6 +132,7 @@ export function OverviewView() {
       await captureAgentSession({
         sessionId: view.session.id,
         title: view.session.title,
+        titleFromRequest: view.session.titleFromRequest,
         agentId: view.session.llmProvider,
         projectKey,
         projectName: shortProjectLabel(view.session.sourceLabel) || projectKey,

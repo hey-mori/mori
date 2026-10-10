@@ -33,6 +33,7 @@ import {
   type SessionRow,
   type SessionsBrowserFilters,
 } from "../../lib/workspace/sessionsBrowser";
+import { useSessionTitle, useShownSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * Workspace — the first-class "projects → sessions" browser.
@@ -48,6 +49,9 @@ import {
  */
 export function WorkspaceView() {
   const view = useSessionStore(selectSessionView);
+  // The session's title as the request disclosure level shows it.
+  const shownTitle = useShownSessionTitle(view.session);
+  const sessionTitle = useSessionTitle();
   const mode = useSessionStore(selectSessionMode);
   const draft = useSessionStore((state) => state.draft);
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -109,7 +113,7 @@ export function WorkspaceView() {
       buildSessionsBrowserModel({
         active: {
           sessionId: activeSessionId,
-          title: view.session.title,
+          title: shownTitle,
           status: view.session.status,
           sourceLabel: view.session.sourceLabel?.trim() || null,
           startedAt: view.session.startedAt || null,
@@ -117,12 +121,14 @@ export function WorkspaceView() {
           isDemo: mode === "demo",
           isStored: Boolean(draft),
         },
-        storedSessions: mergeDemoSessionSummaries(
-          repository.listStoredSessions(),
-        ),
+        // Stored rows (the active one included) take their title from here.
+        storedSessions: mergeDemoSessionSummaries(repository.listStoredSessions()).map((summary) => ({
+          ...summary,
+          title: sessionTitle(summary.title, summary.titleFromRequest),
+        })),
         filters,
       }),
-    [activeSessionId, view, mode, draft, repository, filters],
+    [activeSessionId, view, mode, draft, repository, filters, shownTitle, sessionTitle],
   );
 
   const openSession = (

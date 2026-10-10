@@ -62,6 +62,7 @@ import { AttentionDonut } from "./charts/AttentionDonut";
 import { TokenDistribution } from "./charts/TokenDistribution";
 import { useChartTooltip } from "./charts/ChartTooltip";
 import { DashboardInsights, type WorkFlowStage } from "./DashboardInsights";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * Dashboard — the project-axis surface of the four-tab IA.
@@ -121,9 +122,16 @@ export function DashboardView() {
   const tooltip = useChartTooltip();
   const activeSessionId = draft?.session.id ?? view.session.id;
 
+  // Session titles as the request disclosure level shows them, for every
+  // card, list and search on the dashboard.
+  const sessionTitle = useSessionTitle();
   const storedSessions = useMemo(
-    () => mergeDemoSessionSummaries(repository.listStoredSessionsWithMetrics()),
-    [repository],
+    () =>
+      mergeDemoSessionSummaries(repository.listStoredSessionsWithMetrics()).map((summary) => ({
+        ...summary,
+        title: sessionTitle(summary.title, summary.titleFromRequest),
+      })),
+    [repository, sessionTitle],
   );
 
   const rangedSessions = useMemo(
@@ -136,7 +144,7 @@ export function DashboardView() {
       buildSessionsBrowserModel({
         active: {
           sessionId: activeSessionId,
-          title: view.session.title,
+          title: sessionTitle(view.session.title, view.session.titleFromRequest),
           status: view.session.status,
           sourceLabel: view.session.sourceLabel?.trim() || null,
           startedAt: view.session.startedAt || null,
@@ -147,7 +155,7 @@ export function DashboardView() {
         storedSessions: rangedSessions,
         filters: { query: "", origin: "all", sort: "recent" },
       }),
-    [activeSessionId, draft, mode, rangedSessions, view],
+    [activeSessionId, draft, mode, rangedSessions, view, sessionTitle],
   );
 
   const projects = useMemo(

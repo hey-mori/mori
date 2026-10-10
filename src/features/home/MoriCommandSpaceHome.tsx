@@ -35,6 +35,7 @@ import {
   type CommandSpaceActionTarget,
   type CommandSpaceRow,
 } from "../../lib/home/commandSpace";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 const HomeAskMoriPanel = lazy(() =>
   import("./HomeAskMoriPanel").then((module) => ({ default: module.HomeAskMoriPanel })),
@@ -149,7 +150,14 @@ export function MoriCommandSpaceHome() {
   // user's real work. When they show, the status row says so (no-fabrication
   // invariant): the ambient canvas stays populated, but honestly labelled.
   const usingDemoData = storedSessions.length === 0;
-  const sessions = usingDemoData ? DEMO_SESSION_SUMMARIES : storedSessions;
+  const rawSessions = usingDemoData ? DEMO_SESSION_SUMMARIES : storedSessions;
+  // Titles as the request disclosure level shows them, for every surface and
+  // search on this page: none may show or match words a shown title hides.
+  const sessionTitle = useSessionTitle();
+  const sessions = useMemo(
+    () => rawSessions.map((session) => ({ ...session, title: sessionTitle(session.title, session.titleFromRequest) })),
+    [rawSessions, sessionTitle],
+  );
 
   const activeMode = COMMAND_MODES.find((mode) => mode.id === activeModeId) ?? COMMAND_MODES[0];
   const sessionNodes = useMemo(() => buildCommandNodes(sessions), [sessions]);

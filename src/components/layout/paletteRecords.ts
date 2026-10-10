@@ -33,8 +33,10 @@ export function recordToEntry(
   registry: SchemaRegistry,
   contexts: readonly KernelContext[],
   relations: readonly KernelRelation[] = [],
+  /** A session record's title as the request disclosure level shows it. */
+  titleOf: (record: MoriRecord) => string = (r) => r.title,
 ): CommandEntry {
-  const label = record.title.trim() || bodySnippet(record.body) || "제목 없음";
+  const label = titleOf(record).trim() || bodySnippet(record.body) || "제목 없음";
   const activity = displayTime(record);
   const project = recordProject(record, contexts, relations);
   const hint = [

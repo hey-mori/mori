@@ -10,6 +10,8 @@ export type CodexSessionMeta = {
   updatedAt: string;
   messageCount: number;
   title: string;
+  /** True when `title` is the first user message (no thread or meta title). */
+  titleFromRequest?: boolean;
   originator: string;
   /** `session_meta.source` (`exec`, `cli`, `vscode`, ...), "" when absent. */
   source?: string;

@@ -13,6 +13,8 @@ import type { RecordProposal } from "./captureTypes";
 export type AgentSessionInput = {
   sessionId: string;
   title: string;
+  /** True when `title` is the user's first request (see `Session`). */
+  titleFromRequest?: boolean;
   /** The agent that ran the session (claude / codex / …), or a fallback. */
   agentId: string;
   /** The project the session belongs to (its context key + display name). */
@@ -39,6 +41,7 @@ export function agentSessionToProposals(input: AgentSessionInput): RecordProposa
   const timeBasis: RecordProposal["timeBasis"] = input.occurredStart ? "source-observed" : "unknown";
   const properties: RecordProposal["properties"] = { agentId: input.agentId };
   if (typeof input.stepCount === "number") properties.stepCount = input.stepCount;
+  if (input.titleFromRequest) properties.titleFromRequest = true;
 
   const proposals: RecordProposal[] = [
     {

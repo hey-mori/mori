@@ -31,6 +31,7 @@ import {
   type AgentWorkAgentId,
   type AgentWorkSessionMeta,
 } from "../../lib/trace/sources/ai/workSessions";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * 작업 대화 둘러보기 — a two-pane modal for browsing an agent's detected work
@@ -125,15 +126,17 @@ export function DetectedConversationsModal({
     };
   }, []);
 
+  // Matched on the title as shown: nothing is found by words it hides.
+  const shownTitle = useSessionTitle();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return sessions;
     return sessions.filter(
       (session) =>
-        session.title.toLowerCase().includes(q) ||
+        shownTitle(session.title, session.titleFromRequest).toLowerCase().includes(q) ||
         session.projectName.toLowerCase().includes(q),
     );
-  }, [sessions, query]);
+  }, [sessions, query, shownTitle]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, AgentWorkSessionMeta[]>();
@@ -255,6 +258,7 @@ function ConversationList({
   activePath: string | null;
   onActivate: (filePath: string | null) => void;
 }) {
+  const shownTitle = useSessionTitle();
   const [openProjects, setOpenProjects] = useState<Set<string>>(() => new Set());
   const activeProject = useMemo(() => {
     if (!activePath) return null;
@@ -358,7 +362,7 @@ function ConversationList({
                         onClick={() => onActivate(selected ? null : session.filePath)}
                       >
                         <span className="start-detected-main">
-                          <strong>{session.title}</strong>
+                          <strong>{shownTitle(session.title, session.titleFromRequest)}</strong>
                           <span className="start-detected-meta">
                             메시지 {session.messageCount} · {formatClaudeRelativeKo(session.startedAt)}
                           </span>
@@ -381,6 +385,7 @@ function ConversationList({
 }
 
 function ConversationPreview({ session }: { session: AgentWorkSessionMeta | null }) {
+  const shownTitle = useSessionTitle();
   if (!session) {
     return (
       <div className="detected-preview-empty">
@@ -392,7 +397,7 @@ function ConversationPreview({ session }: { session: AgentWorkSessionMeta | null
   return (
     <div className="detected-preview">
       <header className="detected-preview-head">
-        <h3>{session.title}</h3>
+        <h3>{shownTitle(session.title, session.titleFromRequest)}</h3>
         <p className="detected-preview-project" title={session.projectPath}>
           <FolderGit2 size={12} aria-hidden="true" /> {shortProjectLabel(session.projectName)}
         </p>

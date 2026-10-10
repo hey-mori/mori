@@ -89,6 +89,7 @@ export function InlineEditable({
   placeholder,
   ariaLabel,
   className,
+  display,
   onSave,
 }: {
   value: string;
@@ -96,6 +97,9 @@ export function InlineEditable({
   placeholder?: string;
   ariaLabel: string;
   className?: string;
+  /** What to show at rest when it differs from the stored value (a title the
+   *  request disclosure level hides). Choosing to edit opens the stored value. */
+  display?: string;
   onSave: (next: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -141,7 +145,7 @@ export function InlineEditable({
       onClick={begin}
       title="클릭해서 편집"
     >
-      {empty ? placeholder ?? "" : value}
+      {empty ? placeholder ?? "" : display ?? value}
     </button>
   );
 }

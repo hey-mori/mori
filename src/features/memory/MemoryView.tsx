@@ -67,6 +67,7 @@ import { KeyEvidenceCard } from "./KeyEvidenceCard";
 import { SavedReportsCard } from "./SavedReportsCard";
 import { ReimportHistoryCard } from "./ReimportHistoryCard";
 import { ConsolidationReviewView } from "./ConsolidationReviewView";
+import { useShownSessionTitle } from "../../app/useDisclosedView";
 
 /** Stable empty proposal list so the auto-organize effect's deps do not churn
  *  before the consolidation preview is ready. */
@@ -85,6 +86,8 @@ export function MemoryView() {
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
   const view = useSessionStore(selectSessionView);
+  // The session's title as the request disclosure level shows it.
+  const shownTitle = useShownSessionTitle(view.session);
   const mode = useSessionStore(selectSessionMode);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
@@ -301,7 +304,7 @@ export function MemoryView() {
     entries.push({
       sessionId: view.session.id,
       projectId: view.project.id,
-      title: view.session.title,
+      title: shownTitle,
       projectName: view.project.name,
       startedAt: view.session.startedAt,
       savedAt: view.session.endedAt,
@@ -352,7 +355,7 @@ export function MemoryView() {
       });
     }
     return entries;
-  }, [view, mode, sqliteSessions, browserSessionSummaries]);
+  }, [view, mode, sqliteSessions, browserSessionSummaries, shownTitle]);
 
   const stats = useMemo(
     () =>

@@ -347,6 +347,8 @@ export type SessionState = {
   importAsNewSession: (params: {
     candidate: NormalizedImportCandidate;
     title: string;
+    /** True when `title` is the user's first request (see `Session`). */
+    titleFromRequest?: boolean;
     startedAt: string;
     endedAt: string;
     projectLabel?: string;
@@ -364,6 +366,8 @@ export type SessionState = {
   importAndOpenAsNewSession: (params: {
     candidate: NormalizedImportCandidate;
     title: string;
+    /** True when `title` is the user's first request (see `Session`). */
+    titleFromRequest?: boolean;
     startedAt: string;
     endedAt: string;
     projectLabel?: string;
@@ -1059,15 +1063,16 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const projectName =
       previous?.project.name ?? params.projectLabel ?? "Claude 가져오기";
 
+    // Drop agent boilerplate (e.g. Claude's "continued from a previous
+    // conversation" notice) and fall back to the first real turn, then the
+    // project, so the session never reads as the compaction message.
+    const cleanedTitle = cleanImportedTitle(params.title);
+    const firstTurnTitle = cleanedTitle ? "" : firstMeaningfulTitle(params.candidate.events.map((event) => event.title));
+    // The first turn's title is a request's own words; the given title is
+    // when the source says so.
+    const titleFromRequest = cleanedTitle ? params.titleFromRequest === true : Boolean(firstTurnTitle);
     const built = createSessionDraft({
-      // Drop agent boilerplate (e.g. Claude's "continued from a previous
-      // conversation" notice) and fall back to the first real turn, then the
-      // project, so the session never reads as the compaction message.
-      sessionTitle:
-        cleanImportedTitle(params.title) ||
-        firstMeaningfulTitle(params.candidate.events.map((event) => event.title)) ||
-        projectName ||
-        "제목 없는 Claude 대화",
+      sessionTitle: cleanedTitle || firstTurnTitle || projectName || "제목 없는 Claude 대화",
       projectName,
       selectedSources: [],
       recordingMode: params.recordingMode ?? previous?.session.recordingMode ?? "summary",
@@ -1084,9 +1089,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     // Keep the new session inside the existing project when one is active so
     // the imported events stay associated with the same project memory.
-    const session = previous
-      ? { ...built.session, projectId: previous.project.id }
-      : built.session;
+    const baseSession = titleFromRequest ? { ...built.session, titleFromRequest: true } : built.session;
+    const session = previous ? { ...baseSession, projectId: previous.project.id } : baseSession;
     const project = previous?.project ?? built.project;
 
     const stored = repository.saveCurrentSessionDraft({ project, session });

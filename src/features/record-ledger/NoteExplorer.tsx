@@ -27,6 +27,7 @@ import { displayTime, ledgerVisibleRecords, schemaLabel } from "./recordPresenta
 import { isDateUndecided } from "./dateResolution";
 import { matchingPassage, PASSAGE_MATCH_LABEL, passageSnippet } from "../../lib/capture/passageSearch";
 import { inProjectScope, resolveProjectScope } from "./projectScope";
+import { useRecordTitle } from "../../app/useDisclosedView";
 
 export function NoteExplorer({
   ledger,
@@ -66,13 +67,16 @@ export function NoteExplorer({
 }) {
   const [groupMode, setGroupMode] = useState<ExplorerGroupMode>("day");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  // A session's title as the request disclosure level shows it, for the rows
+  // and for search: nothing is found by words its shown title hides.
+  const recordTitle = useRecordTitle();
 
   // NFC the needle too: a note written before the factory normalized on write,
   // or typed here as NFD, must still match the NFC text stored on the record.
   const text = query.trim().normalize("NFC").toLowerCase();
   const matchesOwn = (record: MoriRecord) =>
     !text ||
-    record.title.toLowerCase().includes(text) ||
+    recordTitle(record).toLowerCase().includes(text) ||
     record.body.toLowerCase().includes(text) ||
     schemaLabel(record, ledger.registry).toLowerCase().includes(text);
   // A record whose body was rewritten is still found by the passage it was
@@ -87,8 +91,8 @@ export function NoteExplorer({
       if (hit) hits.set(record.id, hit);
     }
     return hits;
-    // matchesOwn closes over `text` and the registry.
-  }, [ledger.records, ledger.registry, passages, text]);
+    // matchesOwn closes over `text`, the registry and the title rule.
+  }, [ledger.records, ledger.registry, passages, text, recordTitle]);
   const passageHit = (record: MoriRecord): string | null => passageHits.get(record.id) ?? null;
   const matches = (record: MoriRecord) => matchesOwn(record) || passageHits.has(record.id);
 
@@ -147,7 +151,7 @@ export function NoteExplorer({
   const pinned = useMemo(
     () => (scope ? [] : [...candidates, ...dateUnknown].filter(matches)),
     // matches closes over `text`; recompute when records or query change.
-    [candidates, dateUnknown, text, ledger.registry, scope, passageHits],
+    [candidates, dateUnknown, text, ledger.registry, scope, passageHits, recordTitle],
   );
 
   const groups = useMemo(() => {
@@ -167,7 +171,7 @@ export function NoteExplorer({
     );
     return buildExplorerGroups(visible, ledger.contexts, ledger.relations, sort, groupMode, now);
     // matches closes over `text`.
-  }, [visibleRecords, ledger.contexts, ledger.relations, sort, groupMode, typeFilter, text, pinnedIds, derivedIds, ledger.registry, now, scope, passageHits]);
+  }, [visibleRecords, ledger.contexts, ledger.relations, sort, groupMode, typeFilter, text, pinnedIds, derivedIds, ledger.registry, now, scope, passageHits, recordTitle]);
 
   return (
     <div className="note-explorer">
@@ -424,6 +428,7 @@ function NoteItem({
   passageHit?: string | null;
   now: Date;
 }) {
+  const recordTitle = useRecordTitle();
   // NFC like the stored text, so a query typed in another form still marks.
   const needle = query.normalize("NFC");
   const snippet = passageHit
@@ -455,7 +460,7 @@ function NoteItem({
     >
       <span className="note-item-body">
         <span className="note-item-title">
-          <Highlighted text={record.title} query={needle} />
+          <Highlighted text={recordTitle(record)} query={needle} />
         </span>
         {snippet ? (
           <span className="note-item-snippet">

@@ -22,6 +22,7 @@ import {
   type WorkGraphProject,
 } from "../../lib/graph/workGraph";
 import { GraphCanvas } from "./GraphCanvas";
+import { useSessionTitle, useShownSessionTitle } from "../../app/useDisclosedView";
 
 /** Items hung off each session node — a few decisions then open issues. */
 const MAX_DECISIONS_PER_SESSION = 3;
@@ -42,6 +43,9 @@ export function GraphView() {
   const initialized = useSessionStore((state) => state.initialized);
   const mode = useSessionStore(selectSessionMode);
   const view = useSessionStore(selectSessionView);
+  // The session's title as the request disclosure level shows it.
+  const shownTitle = useShownSessionTitle(view.session);
+  const sessionTitle = useSessionTitle();
   const draft = useSessionStore((state) => state.draft);
 
   useEffect(() => {
@@ -53,14 +57,17 @@ export function GraphView() {
   const { graph, unsourcedKeys } = useMemo(() => {
     let stored: ReturnType<typeof repository.listStoredSessions>;
     try {
-      stored = mergeDemoSessionSummaries(repository.listStoredSessions());
+      stored = mergeDemoSessionSummaries(repository.listStoredSessions()).map((summary) => ({
+        ...summary,
+        title: sessionTitle(summary.title, summary.titleFromRequest),
+      }));
     } catch {
       stored = [];
     }
     const model = buildSessionsBrowserModel({
       active: {
         sessionId: view.session.id,
-        title: view.session.title,
+        title: shownTitle,
         status: view.session.status,
         sourceLabel: view.session.sourceLabel?.trim() || null,
         startedAt: view.session.startedAt || null,
@@ -87,7 +94,7 @@ export function GraphView() {
 
     return { graph: buildWorkGraph(projects), unsourcedKeys: unsourced };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repository, mode, initialized, view, draft]);
+  }, [repository, mode, initialized, view, draft, shownTitle, sessionTitle]);
 
   const hasWork = graph.nodes.some((node) => node.kind === "project");
 

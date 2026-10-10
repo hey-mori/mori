@@ -28,6 +28,7 @@ import {
   type NotificationPreferences,
 } from "../../lib/settings/notificationPreferences";
 import { useCompanionSignals } from "./useCompanionSignals";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * Producer-neutral notifications hook.
@@ -126,9 +127,16 @@ export function useNotifications(): {
   // Fifth producer: the cross-session feed — one timestamped event per stored
   // session. This is what turns the surface from active-session triage into a
   // real activity stream ("이 세션이 정리됐습니다 · 프로젝트 · 2시간 전").
+  const sessionTitle = useSessionTitle();
   const sessionFeedNotifications = useMemo<CompanionNotification[]>(
-    () => buildSessionFeedNotifications(mergeDemoSessionSummaries(summaries)),
-    [summaries],
+    () =>
+      buildSessionFeedNotifications(
+        mergeDemoSessionSummaries(summaries).map((summary) => ({
+          ...summary,
+          title: sessionTitle(summary.title, summary.titleFromRequest),
+        })),
+      ),
+    [summaries, sessionTitle],
   );
 
   // Sixth producer: the background watch's inbox detections — newly-arrived or
