@@ -50,7 +50,7 @@ export type TimelineCanvasHandle = {
   /** Scroll an item (an event id, or a bundle holding it) into view when it
    *  is off screen; with `focus`, also move keyboard focus onto its card so
    *  focus and selection stay on the same item. */
-  revealItem: (itemId: string, options?: { focus?: boolean }) => void;
+  revealItem: (itemId: string, options?: { focus?: boolean; redo?: boolean }) => void;
 };
 
 const MIN_FRAME_WIDTH = 1100;
@@ -108,7 +108,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
         );
         emitViewport();
       },
-      revealItem(itemId: string, options?: { focus?: boolean }) {
+      revealItem(itemId: string, options?: { focus?: boolean; redo?: boolean }) {
         const element = scrollerRef.current;
         if (!element) return;
         const item =
@@ -129,7 +129,9 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
           element.scrollLeft = next;
           emitViewport();
         }
-        revealedRef.current = { id: itemId, at: Date.now() };
+        // A redo keeps the original time, so it cannot keep re-arming itself
+        // through a stream of rescales (a brush drag, a window resize).
+        if (!options?.redo) revealedRef.current = { id: itemId, at: Date.now() };
         const card = element.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(item.id)}"]`);
         if (!card) return;
         // Vertical scrolling belongs to the page; bring a lane below the fold
@@ -177,7 +179,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
   useLayoutEffect(() => {
     const last = revealedRef.current;
     if (!last || Date.now() - last.at > 1000) return;
-    handleRef.current.revealItem(last.id);
+    handleRef.current.revealItem(last.id, { redo: true });
   }, [model.layout.frameWidth]);
 
   // Trust the parent's model; only fall back to local frame width when the

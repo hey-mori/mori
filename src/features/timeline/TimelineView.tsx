@@ -332,7 +332,7 @@ export function TimelineView({
       if (
         target instanceof Element &&
         target !== document.body &&
-        !target.closest("[data-timeline-keys]")
+        (!target.closest("[data-timeline-keys]") || target.closest('[role="dialog"]'))
       ) {
         return;
       }
