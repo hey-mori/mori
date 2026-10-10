@@ -87,10 +87,12 @@ export function CalendarView() {
   const undecided = useMemo(() => records.filter(isDateUndecided), [records]);
 
   const monthPrefix = `${cursor.year}-${pad(cursor.month + 1)}`;
+  // Records, not placements: a multi-day session on two days of the month
+  // is still one record.
   const monthCount = useMemo(() => {
-    let total = 0;
-    for (const [date, list] of byDate) if (date.startsWith(monthPrefix)) total += list.length;
-    return total;
+    const ids = new Set<string>();
+    for (const [date, list] of byDate) if (date.startsWith(monthPrefix)) for (const record of list) ids.add(record.id);
+    return ids.size;
   }, [byDate, monthPrefix]);
 
   const shiftMonth = (delta: number) => {

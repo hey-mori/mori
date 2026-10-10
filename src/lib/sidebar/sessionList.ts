@@ -30,6 +30,8 @@ export type SidebarSessionRow = {
   /** When the session was last active (`sessionLastActiveAt`): the more
    *  recent of `startedAt` / `savedAt`. */
   timestamp: string;
+  /** When the session started, if known: tells same-titled rows apart. */
+  startedAt?: string;
   /** Optional grouping label (Claude project path). */
   sourceLabel?: string;
 };
@@ -72,6 +74,7 @@ export function toSidebarRow(summary: StoredSessionSummary): SidebarSessionRow {
     sessionId: summary.sessionId,
     title: summary.title?.trim() || "제목 없음",
     timestamp,
+    startedAt: summary.startedAt || undefined,
     sourceLabel: summary.sourceLabel?.trim() || undefined,
   };
 }

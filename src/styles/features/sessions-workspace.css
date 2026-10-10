@@ -308,6 +308,17 @@
   min-width: 0;
 }
 
+/* Beside a title that another visible row shares: when it started. Never
+   shrinks away, so the look-alikes stay apart even when the title clips. */
+.session-index-row-hint {
+  flex-shrink: 0;
+  margin-left: var(--base-space-2);
+  font-size: 10.5px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .session-index-row-meta {
   font-size: 10.5px;
   line-height: 1.3;

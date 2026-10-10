@@ -3,6 +3,7 @@ import type { ViewKey } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 import { sessionLastActiveAt } from "../session/sessionActivity";
 import type { ThemeId } from "../settings/themePreference";
+import { lookAlikeHints } from "../sidebar/lookAlike";
 
 /**
  * Command palette — pure helpers.
@@ -154,6 +155,15 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
   // Every session becomes a searchable entry (not just the recent few), so a
   // typed query reaches the whole history. The renderer trims the *browse* list
   // (empty query) with `capBrowseCommands`; searching sees them all.
+  // Same-titled sessions read apart by when they started (see lookAlikeHints).
+  const lookAlike = lookAlikeHints(
+    input.sessions.map((summary) => ({
+      id: summary.sessionId,
+      title: summary.title?.trim() || "제목 없음",
+      startedAt: summary.startedAt,
+      at: sessionLastActiveAt(summary),
+    })),
+  );
   const sessions: CommandEntry[] = [...input.sessions]
     .sort(
       (a, b) =>
@@ -164,7 +174,8 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
       id: `session:${summary.sessionId}`,
       group: "session",
       label: summary.title?.trim() || "제목 없음",
-      hint: summary.sourceLabel || summary.projectName,
+      // The distinguisher first, so a long checkout path cannot cut it off.
+      hint: [lookAlike.get(summary.sessionId), summary.sourceLabel || summary.projectName].filter(Boolean).join(" · "),
       keywords: [summary.projectName, summary.sourceLabel ?? ""].filter(Boolean),
       target: { kind: "openSession", sessionId: summary.sessionId, tab: "flow" },
     }));

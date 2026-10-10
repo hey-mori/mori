@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 import { createSchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { CommandEntry } from "../../lib/commandPalette/commandPalette";
-import { passageOnlyRecordIds, recordTextHolds, recordToEntry, viaSavedPassage, withoutDuplicateSessions } from "./paletteRecords";
+import {
+  passageOnlyRecordIds,
+  recordTextHolds,
+  recordToEntry,
+  viaSavedPassage,
+  withLookAlikeHints,
+  withoutDuplicateSessions,
+} from "./paletteRecords";
 
 const registry = createSchemaRegistry();
 const contexts: KernelContext[] = [
@@ -84,5 +91,22 @@ describe("records found through a saved passage", () => {
   it("says where the match came from", () => {
     const entry = viaSavedPassage(recordToEntry(record({}), registry, contexts));
     expect(entry.hint?.startsWith("저장한 구절에서 찾음 · ")).toBe(true);
+  });
+});
+
+describe("withLookAlikeHints", () => {
+  it("adds the start time to same-titled results only, after the date already shown", () => {
+    const records = [
+      record({ id: "auto-claude-a", title: "Nightly run", occurredStart: "2026-10-09T05:02:00Z" }),
+      record({ id: "auto-claude-b", title: "Nightly run", occurredStart: "2026-10-09T06:30:00Z" }),
+      record({ id: "auto-claude-c", title: "다른 일", occurredStart: "2026-10-09T07:00:00Z" }),
+    ];
+    const entries = withLookAlikeHints(
+      records.map((r) => recordToEntry(r, registry, contexts)),
+      records,
+    );
+    expect(entries[0].hint?.endsWith("· 14:02 시작")).toBe(true);
+    expect(entries[1].hint?.endsWith("· 15:30 시작")).toBe(true);
+    expect(entries[2].hint).not.toContain("시작");
   });
 });
