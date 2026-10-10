@@ -82,6 +82,10 @@ pub struct ClaudeCodeSessionMeta {
     /// now another conversation.
     pub source_id: String,
     pub title: String,
+    /// True when `title` is distilled from the first user message (no title
+    /// of Claude's own, no summary): the user's own words, which the request
+    /// disclosure level then governs.
+    pub title_from_request: bool,
     pub token_usage: ClaudeTokenUsage,
     /// What the transcript holds, decided only from a complete read:
     /// `conversation` (a user request or an assistant turn), `command-only`
@@ -109,6 +113,8 @@ pub struct ClaudeCodeSessionDetail {
     pub started_at: String,
     pub message_count: usize,
     pub title: String,
+    /// True when `title` is distilled from the first user message.
+    pub title_from_request: bool,
     pub messages: Vec<ClaudeCodeMessage>,
     pub token_usage: ClaudeTokenUsage,
     /// Every file the session's tool calls touched, in order, faithful to the
@@ -418,6 +424,10 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             // Prefer Claude's own generated title (the clean resume-list label),
             // then the conversation summary, then a format-tolerant title match
             // (survives a field rename), then a distilled first user message.
+            let title_from_request = preview.ai_title.trim().is_empty()
+                && preview.summary.trim().is_empty()
+                && preview.generic_title.trim().is_empty()
+                && !preview.first_user_text.trim().is_empty();
             let title = if !preview.ai_title.trim().is_empty() {
                 truncate(&preview.ai_title, 90)
             } else if !preview.summary.trim().is_empty() {
@@ -463,6 +473,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                     .and_then(|mut file| source_id_of(&mut file).ok())
                     .unwrap_or_default(),
                 title,
+                title_from_request,
                 token_usage: preview.token_usage,
                 activity_class,
                 entrypoint: preview.entrypoint,
@@ -548,6 +559,7 @@ pub(crate) fn read_session_at(
         started_at,
         message_count: parsed.messages.len(),
         title,
+        title_from_request: parsed.title_from_request,
         token_usage: parsed.token_usage,
         file_touches: parsed.file_touches,
         messages: parsed.messages,
@@ -895,6 +907,8 @@ fn activity_class(preview: Option<&SessionPreview>) -> &'static str {
 struct ParsedSession {
     messages: Vec<ClaudeCodeMessage>,
     title: String,
+    /// True when `title` is the first user message (nothing better recorded).
+    title_from_request: bool,
     /// The first slash command, for a session that holds nothing else.
     command_name: String,
     cwd: String,
@@ -1048,8 +1062,13 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         }
     }
 
+    let title_from_request = ai_title.trim().is_empty()
+        && summary.trim().is_empty()
+        && generic_title.trim().is_empty()
+        && !title.trim().is_empty();
     ParsedSession {
         messages,
+        title_from_request,
         // Prefer Claude's own generated title, then the conversation summary,
         // then a format-tolerant title match, then the first user message (a
         // session that was never titled).
@@ -1970,6 +1989,8 @@ mod tests {
         let row = &listing[0];
         assert_eq!(row.session_id, "session-aaa");
         assert!(row.title.contains("plan"));
+        // Nothing better was recorded: the title is the user's own words.
+        assert!(row.title_from_request);
         assert_eq!(row.message_count, 2);
         // The decoded project name should be human readable.
         assert!(row.project_name.contains("Users"));
@@ -2018,12 +2039,14 @@ mod tests {
         let listing = list_sessions_at(temp.path()).unwrap();
         let row = listing.iter().find(|r| r.session_id == "session-ai").unwrap();
         assert_eq!(row.title, "Fix calendar time mismatch");
+        assert!(!row.title_from_request);
         // Neither the ai-title nor the summary line counts as a conversation message.
         assert_eq!(row.message_count, 2);
 
         let path = project.join("session-ai.jsonl");
         let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
         assert_eq!(detail.title, "Fix calendar time mismatch");
+        assert!(!detail.title_from_request);
         assert_eq!(detail.messages.len(), 2);
     }
 
