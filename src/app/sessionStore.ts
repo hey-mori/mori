@@ -41,6 +41,8 @@ import {
 } from "../lib/trace/sources/ai/workSessions";
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
 import { planSourceReopen } from "../lib/import/autoSourceReopen";
+import { eventIdsCitedOutsideAdoptedRun } from "../lib/import/reopenCitations";
+import { AcceptedMemoryRepository } from "../lib/project-memory/acceptedMemoryRepository";
 import {
   claudeCodeSourcePresence,
   getClaudeCodeSessionWindow,
@@ -146,6 +148,7 @@ import {
 import type {
   ConnectorEventIdentitySnapshot,
   DraftRepository,
+  StoredAcceptedProjectMemory,
   StoredPendingReview,
   StoredSessionDraft,
   StoredSessionImport,
@@ -915,15 +918,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return;
     }
 
-    // Desktop runtime: prefer the SQLite-stored snapshot when one is available
-    // for the active draft session id. Falls back to the browser draft when
-    // SQLite has nothing for that session, or when SQLite is unreachable.
+    // Desktop runtime: a legacy SQLite session snapshot (written only by older
+    // builds; nothing writes one now) may fill in a session whose imports are
+    // not stored here. It never replaces stored imports: replacing clears them
+    // and re-adds only the snapshot's, which is older than anything this build
+    // stored, so later turns, reopen refreshes and their ids would be lost.
     let hydratedFromSqlite = false;
     let draft: StoredSessionDraft | null = localDraft;
     let imports: StoredSessionImport[] = localImports;
     let analysisRecord = localAnalysisRecord;
 
-    if (localDraft) {
+    if (localDraft && localImports.length === 0) {
       try {
         const loaded = await service.loadSessionFromDesktop(localDraft.session.id);
         const sqliteDraft: StoredSessionDraft = {
@@ -1798,20 +1803,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         sessionId,
         capturedAt: new Date().toISOString(),
       });
+      const repository = getRepository();
+      // Events cited where a rename cannot follow (accepted project memory,
+      // analysis runs not adopted): a reopen never renames them. Accepted
+      // memory is read from its own store (SQLite on desktop); when that
+      // read fails the citations are unknown and nothing is renamed.
+      const cited = meta.sessionId ? await citedEventIds(repository, sessionId) : new Set<string>();
+      if (!current()) return "superseded";
       // Reopening reads the transcript again: store it once (#167). The plan
       // and the write run with no await between them, after the open is
       // known to be current, so two opens cannot both decide to add.
-      const repository = getRepository();
-      // Events accepted project memory cites: their ids cannot be re-pointed
-      // from here, so a reopen never renames them.
-      const cited = new Set(
-        repository
-          .listAllAcceptedProjectMemories()
-          .flatMap((memory) => memory.evidenceRefs)
-          .flatMap((ref) => (ref.kind === "event" && ref.sessionId === sessionId ? [ref.eventId] : [])),
-      );
       const plan = meta.sessionId
-        ? planSourceReopen(repository.listSessionImports(sessionId), candidate, (eventId) => cited.has(eventId))
+        ? planSourceReopen(repository.listSessionImports(sessionId), candidate, (eventId) =>
+            cited === null ? true : cited.has(eventId),
+          )
         : ({ kind: "add" } as const);
       // A transcript that no longer continues the import keeps the import as
       // stored; say so rather than let the readable file vouch for it. (A file
@@ -2358,6 +2363,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
     if (get().divergedSourceSessionId) set({ divergedSourceSessionId: null });
     const repository = getRepository();
+    // A legacy snapshot never replaces imports stored here (see hydrate): the
+    // stored session opens as it is.
+    if (repository.listSessionImports(sessionId).length > 0) return get().loadBrowserSession(sessionId);
     let loaded;
     try {
       loaded = await service.loadSessionFromDesktop(sessionId);
@@ -2886,6 +2894,23 @@ function mirrorDesktopImports(
     if (savedAt !== stored.savedAt) kept.push({ ...stored, savedAt });
   }
   if (kept.length > 0) repository.putSessionImports(sessionId, kept);
+}
+
+/** Event ids a reopen must leave as they are, or null when accepted project
+ *  memory could not be read from its own store (see `reopenCitations.ts`). */
+async function citedEventIds(
+  repository: ReturnType<typeof getRepository>,
+  sessionId: string,
+): Promise<Set<string> | null> {
+  let accepted: StoredAcceptedProjectMemory[] | null;
+  try {
+    const result = await new AcceptedMemoryRepository({ repository }).listAllAcceptedProjectMemories();
+    // A desktop save that fell back left its memory in app storage: count it too.
+    accepted = result.fellBack ? null : [...result.data, ...repository.listAllAcceptedProjectMemories()];
+  } catch {
+    accepted = null;
+  }
+  return eventIdsCitedOutsideAdoptedRun(sessionId, accepted, repository.loadSessionAnalysisHistory(sessionId)?.history ?? null);
 }
 
 /** Why a kept copy cannot stand in for its gone original. */

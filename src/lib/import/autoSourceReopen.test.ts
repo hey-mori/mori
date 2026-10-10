@@ -51,3 +51,62 @@ describe("logical source of an auto import", () => {
     });
   });
 });
+
+describe("a turn whose id a citation holds (pinned)", () => {
+  const SRC = "src-claude-code-aaa";
+  /** Turn i of the session, as the reader builds it: its id carries its time. */
+  const turn = (index: number, start: string, extra: Partial<TimelineEvent> = {}) =>
+    event(`evt-claude-aaa-${index}-${start.replace(/\D/g, "").slice(0, 14)}`, {
+      turnIndex: index,
+      connectorEventId: `claude::code::aaa::${index}`,
+      start,
+      sourceRefs: [`${SRC}-20261008000000`],
+      ...extra,
+    });
+  const read = (events: TimelineEvent[], time = "20261009000000") =>
+    ({ ...candidate(`${SRC}-${time}`, events.map((e) => e.id)), events }) as NormalizedImportCandidate;
+  const asStored = (events: TimelineEvent[]) => stored({ ...candidate(`${SRC}-20261008000000`, events.map((e) => e.id)), events } as NormalizedImportCandidate);
+
+  const T0 = "2026-10-08T09:00:00.000Z";
+  const PROMPT = "2026-10-08T09:02:00.000Z";
+  const REPLY = "2026-10-08T09:04:00.000Z";
+  const waiting = turn(1, PROMPT, { actor: "user", title: "q", summary: "q" });
+  const cited = (id: string) => id === waiting.id;
+
+  const LATER = "2026-10-08T09:06:00.000Z";
+  function pin(reply: Partial<TimelineEvent>, withLater = false) {
+    const fresh = [turn(0, T0), turn(1, REPLY, reply), ...(withLater ? [turn(2, LATER)] : [])];
+    const first = planSourceReopen([asStored([turn(0, T0), waiting])], read(fresh), cited);
+    expect(first.kind).toBe("update");
+    if (first.kind !== "update") throw new Error("not updated");
+    expect(first.next.events[1]!.id).toBe(waiting.id);
+    expect(first.renamed).toEqual([]);
+    return first.next;
+  }
+
+  it("keeps refreshing after more turns, even when its reply reads as a tool turn with no tool name", () => {
+    const reply = { actor: "tool" as const, title: "q", summary: "raw model output" };
+    // Pinned with a later turn after it, so it is no longer the last stored turn.
+    const pinned = pin(reply, true);
+    expect(pinned.events).toHaveLength(3);
+    const grown = read([turn(0, T0), turn(1, REPLY, reply), turn(2, LATER), turn(3, "2026-10-08T09:08:00.000Z")], "20261010000000");
+    const second = planSourceReopen([pinned], grown, cited);
+    expect(second).toMatchObject({ kind: "update", added: 1 });
+  });
+
+  it("a later rewrite of the pinned turn's text is a rewrite, not a refresh", () => {
+    const pinned = pin({ actor: "assistant", title: "q", summary: "answer" });
+    const rewritten = read([turn(0, T0), turn(1, REPLY, { actor: "assistant", title: "q", summary: "another answer" })], "20261010000000");
+    expect(planSourceReopen([pinned], rewritten, cited)).toMatchObject({ kind: "keep", reason: "diverged" });
+  });
+
+  it("an edited prompt left waiting is found again after later turns were added", () => {
+    const edited = { ...waiting, userModified: true, title: "my words" };
+    const first = planSourceReopen([asStored([turn(0, T0), edited])], read([turn(0, T0), turn(1, REPLY, { actor: "assistant" }), turn(2, "2026-10-08T09:06:00.000Z")]));
+    expect(first).toMatchObject({ kind: "update", added: 1 });
+    if (first.kind !== "update") throw new Error("not updated");
+    expect(first.next.events[1]).toEqual(edited);
+    const grown = read([turn(0, T0), turn(1, REPLY, { actor: "assistant" }), turn(2, "2026-10-08T09:06:00.000Z"), turn(3, "2026-10-08T09:08:00.000Z")], "20261010000000");
+    expect(planSourceReopen([first.next], grown)).toMatchObject({ kind: "update", added: 1 });
+  });
+});

@@ -22,8 +22,11 @@
  *     result read while the agent was mid tool loop) takes the answered turn. Its id changes (a turn is dated by its reply), so the
  *     plan names the replaced id for references to follow. The event keeps
  *     its note, links and every other field; only its text and identity come
- *     from the read. If the user edited the prompt, or accepted project memory
- *     cites it, it stays as stored and only later turns are added.
+ *     from the read. If something that cannot follow a rename cites it
+ *     (accepted project memory, an analysis run not adopted), it takes the
+ *     reply but keeps its id; later reads know it by its turn key and time.
+ *     If the user edited the prompt, it stays as stored and only later turns
+ *     are added, at this reopen and every later one.
  * - One that no longer matches (rewritten, truncated, or events the user
  *   split or merged): kept as it is, not refreshed.
  * - Several (copies stored by older builds): none is changed, and no further
@@ -127,35 +130,61 @@ export function planSourceReopen(
       kept.push(enriched ? withFields(stored, fresh, ENRICHMENT_FIELDS) : stored);
       continue;
     }
-    // Only the last stored turn may differ, and only as a turn that was
-    // waiting for its reply and has it now: a prompt, or a tool result read
-    // mid tool loop (a tool turn with no reply has no tool name). The same
-    // turn, now dated by its reply.
+    // The same turn under a pinned id: answered at an earlier reopen while a
+    // citation held its id (below), so it kept that id and took the reply's
+    // time. Same turn key and the same time: compared like an unchanged id.
+    const sameTurnKey =
+      stored.turnIndex !== undefined &&
+      stored.turnIndex === fresh.turnIndex &&
+      stored.connectorEventId !== undefined &&
+      stored.connectorEventId === fresh.connectorEventId;
+    // (Not "and no longer waiting": a reply can itself read as a tool turn
+    // with no tool name. A turn truly still waiting with this start has this
+    // id and never gets here.)
     const waiting = stored.actor === "user" || (stored.actor === "tool" && !stored.toolName);
+    if (sameTurnKey && stored.start === fresh.start) {
+      if (!stored.userModified && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
+        return { kind: "keep", reason: "diverged", importIds: [existing.id] };
+      }
+      const enriched = ENRICHMENT_FIELDS.some((field) => !same(stored[field], fresh[field]));
+      if (enriched) refreshed += 1;
+      kept.push(enriched ? withFields(stored, fresh, ENRICHMENT_FIELDS) : stored);
+      continue;
+    }
+    // Otherwise only a turn that was waiting for its reply and has it now may
+    // differ: a prompt, or a tool result read mid tool loop (a tool turn with
+    // no reply has no tool name). The same turn, now dated by its reply. It is
+    // the last stored turn, or one an earlier reopen left waiting because the
+    // user edited it (later turns were added after it since).
     const answered =
-      index === lastIndex &&
+      (index === lastIndex || stored.userModified) &&
       stored.turnIndex !== undefined &&
       stored.turnIndex === fresh.turnIndex &&
       waiting &&
       fresh.actor !== "user" &&
       Date.parse(stored.start) <= Date.parse(fresh.start);
     if (!answered) return { kind: "keep", reason: "diverged", importIds: [existing.id] };
-    if (stored.userModified || isCited(stored.id)) {
-      // The user's edit, or a citation that cannot follow a new id, wins: the
-      // prompt stays as stored, and only later turns are added.
+    if (stored.userModified) {
+      // The user's edit wins: the prompt stays as stored, and only later turns
+      // are added.
       kept.push(stored);
       continue;
     }
     // Keep the stored event and everything Mori or the user added to it; take
-    // the turn's text and its new identity from the read.
-    renamed.push({ from: stored.id, to: fresh.id });
-    refreshed += 1;
-    kept.push({
+    // the turn's text and time from the read.
+    const answeredTurn = {
       ...withFields(stored, fresh, [...CONTENT_FIELDS, ...ENRICHMENT_FIELDS]),
-      id: fresh.id,
       start: fresh.start,
-      ...(fresh.turnId !== undefined ? { turnId: fresh.turnId } : {}),
-    });
+    };
+    refreshed += 1;
+    if (isCited(stored.id)) {
+      // A citation that cannot follow a new id: the turn keeps its id (and its
+      // turn id), so what cites it still lands on it, now answered.
+      kept.push(answeredTurn);
+      continue;
+    }
+    renamed.push({ from: stored.id, to: fresh.id });
+    kept.push({ ...answeredTurn, id: fresh.id, ...(fresh.turnId !== undefined ? { turnId: fresh.turnId } : {}) });
   }
   if (refreshed === 0 && storedIds.length === freshIds.length) return { kind: "unchanged", importId: existing.id };
 
