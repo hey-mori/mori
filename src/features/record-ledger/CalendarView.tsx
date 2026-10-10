@@ -20,6 +20,7 @@ import { useRecordLedger } from "./useRecordLedger";
 import { useSessionResolver } from "../session/useSessionResolver";
 import { loadAutoImportMetas } from "../../lib/session/autoImportMetaStore";
 import { autoImportedSessionId } from "../../lib/session/autoImportSessions";
+import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { ledgerVisibleRecords } from "./recordPresentation";
 import { LedgerCalendarView } from "./LedgerCalendarView";
 import { CalendarAgendaRail } from "./CalendarAgendaRail";
@@ -39,13 +40,15 @@ export function CalendarView() {
   const openSession = useAppStore((state) => state.openSession);
   const setSessionReturn = useAppStore((state) => state.setSessionReturn);
   const resolveSession = useSessionResolver();
-  // The folder each discovered session ran in (its descriptor), read once.
+  // The folder each discovered session ran in (its descriptor), read again
+  // when the records change, so sessions discovered later find theirs.
   const folderOf = useMemo(() => {
     const byId = new Map(
-      loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), folderName(meta.projectPath || meta.projectName)]),
+      loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), shortProjectLabel(meta.projectPath || meta.projectName)]),
     );
     return (sessionId: string) => byId.get(sessionId) || null;
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ledger.records]);
   const openSessionFromCalendar = (sessionId: string) => {
     setSessionReturn(null);
     void resolveSession(sessionId).then((outcome) => {
@@ -256,9 +259,4 @@ export function CalendarView() {
       </div>
     </div>
   );
-}
-
-/** The last segment of a folder path ("/home/u/dev/infra" → "infra"). */
-function folderName(path: string | undefined): string {
-  return (path ?? "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? "";
 }

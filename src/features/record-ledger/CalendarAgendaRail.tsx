@@ -13,7 +13,7 @@ import { forwardRef, useState } from "react";
 import { ChevronDown, ChevronRight, Radio } from "lucide-react";
 import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { readableAgentText } from "../../lib/session/agentText";
-import { groupDaySessions } from "./calendarDaySessions";
+import { groupDaySessions, sessionTime } from "./calendarDaySessions";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { dayLabel } from "./calendarGrouping";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
@@ -139,10 +139,10 @@ export const CalendarAgendaRail = forwardRef<
                               <button
                                 key={session.id}
                                 type="button"
-                                className="cal-day-row is-session"
+                                className="cal-day-row"
                                 onClick={() => onOpenSession(session.id)}
                               >
-                                <span className="cal-day-time">{clock(session.occurredStart)}</span>
+                                <span className="cal-day-time">{clock(sessionTime(session))}</span>
                                 <span className="cal-day-title">
                                   {readableAgentText(session.title) || "제목 없음"}
                                 </span>
@@ -163,7 +163,8 @@ export const CalendarAgendaRail = forwardRef<
 });
 
 function clock(iso: string | undefined): string {
-  if (!iso || Number.isNaN(Date.parse(iso))) return "";
+  // A bare day claims no time of day.
+  if (!iso || /^\d{4}-\d{2}-\d{2}$/.test(iso) || Number.isNaN(Date.parse(iso))) return "";
   const date = new Date(iso);
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }

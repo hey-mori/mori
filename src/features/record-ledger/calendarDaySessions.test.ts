@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { groupDaySessions, NO_PROJECT_LABEL } from "./calendarDaySessions";
+import { groupDaySessions, INVALID_PROJECT_LABEL, NO_PROJECT_LABEL } from "./calendarDaySessions";
 
 const session = (id: string, at: string, contextIds: string[] = []) => ({ id, title: id, occurredStart: at, capturedAt: at, contextIds }) as never;
-const ctx = (id: string, name: string, archived = false) => ({ id, name, type: "project", archived, createdAt: "" }) as never;
+const ctx = (id: string, name: string, archived = false, extra: object = {}) => ({ id, name, type: "project", archived, createdAt: "", ...extra }) as never;
 
 describe("a calendar day's sessions", () => {
   it("groups by reviewed project, busiest first, no-project last, sessions in time order", () => {
@@ -11,7 +11,7 @@ describe("a calendar day's sessions", () => {
       [ctx("c1", "infra"), ctx("c2", "mori")],
     );
     expect(groups.map((group) => [group.label, group.sessions.map((s) => s.id)])).toEqual([
-      ["infra", ["b", "a"]],
+      ["infra", ["a", "b"]],
       ["mori", ["c"]],
       [NO_PROJECT_LABEL, ["d"]],
     ]);
@@ -30,9 +30,17 @@ describe("a calendar day's sessions", () => {
     ]);
   });
 
-  it("never files a session under an archived or unknown project", () => {
-    const groups = groupDaySessions([session("a", "2026-10-08T10:00:00Z", ["gone"]), session("b", "2026-10-08T10:00:00Z", ["old"])], [ctx("old", "old", true)]);
-    expect(groups).toHaveLength(1);
+  it("exposes a session whose reviewed project is missing or archived, never re-filing it", () => {
+    const groups = groupDaySessions(
+      [session("a", "2026-10-08T10:00:00Z", ["ctx-gone"]), session("b", "2026-10-08T10:00:00Z", ["child"])],
+      [ctx("old", "old", true), ctx("child", "child", false, { parentId: "old" })],
+      () => "some-folder",
+    );
+    expect(groups.map((group) => [group.kind, group.label, group.sessions.length])).toEqual([["invalid", INVALID_PROJECT_LABEL, 2]]);
+  });
+
+  it("never treats a non-project context as a project", () => {
+    const groups = groupDaySessions([session("a", "2026-10-08T10:00:00Z", ["t"])], [ctx("t", "topic", false, { type: "topic" })]);
     expect(groups[0]!.label).toBe(NO_PROJECT_LABEL);
   });
 });

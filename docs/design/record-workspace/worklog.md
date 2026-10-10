@@ -1009,3 +1009,12 @@ focused next step, not rushed:
 - Found in the retention acceptance walkthrough. Verified after the fix on an isolated
   synthetic profile: a note whose original was gone showed its passage, and 원본 열기 said
   원본 대화가 더 이상 없습니다.
+
+## 2026-10-10 · 캘린더 day unfolds its sessions (#240)
+
+- A calendar day listed its agent sessions as one "세션 N건" row that left for 세션. The row now
+  unfolds the day's sessions, newest first, each opening its session.
+- Sessions group under their reviewed project through `membershipState` (a missing or archived
+  project shows as 프로젝트 확인 필요, never re-filed), else the folder they ran in, labelled 폴더.
+  A session dated by day only shows no clock.
+- Verified in an isolated release runtime with real transcripts read-only.
