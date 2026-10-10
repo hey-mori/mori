@@ -1,7 +1,8 @@
 import { useCallback, useState, type CSSProperties, type FocusEvent, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
-import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
+import { LABEL_OFFSET_PX, type LaidOutTimelineItem, type TimelineDensity } from "../../lib/timeline/collisionLayout";
+import { labelText } from "./lib/timelineCards";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { SourceKind, SourceRef, TimelineEvent } from "../../domain/types";
 import {
@@ -21,12 +22,6 @@ import {
  *  the tick when the lane has room (layout.labelRoom); the detail is in the
  *  hover preview. */
 const NARROW_CARD_WIDTH = 30;
-
-/** A label beside a tick: the reader's leading tool glyph (the lane already
- *  names the kind of work) is dropped; the title itself is unchanged. */
-export function labelText(title: string): string {
-  return title.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "");
-}
 
 export function TimelineEventCard({
   event,
@@ -105,7 +100,11 @@ export function TimelineEventCard({
         data-preview={`${vm.timeLabel} · ${sourceMark.label}\n${vm.title}\n${event.summary}`}
       >
         {layout.width < NARROW_CARD_WIDTH && layout.labelRoom > 0 ? (
-          <span className="event-card-label" style={{ left: `${layout.width + 4}px`, maxWidth: `${layout.labelRoom}px` }}>
+          <span
+            className="event-card-label"
+            aria-hidden="true"
+            style={{ left: `${layout.width - 1 + LABEL_OFFSET_PX}px`, maxWidth: `${layout.labelRoom}px` }}
+          >
             {labelText(vm.title)}
           </span>
         ) : null}

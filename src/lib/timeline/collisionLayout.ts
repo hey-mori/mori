@@ -226,6 +226,8 @@ function layoutLaneRow(
   return initial.map((placement) => ({ ...placement, rowIndex: 0 }));
 }
 
+/** Where a printed label starts, right of its tick (card border included). */
+export const LABEL_OFFSET_PX = 5;
 /** Gap kept between a printed label and the next item in the lane. */
 const LABEL_GAP_PX = 6;
 /** A label narrower than this would show only an ellipsis: none is printed. */
@@ -234,26 +236,23 @@ export const LABEL_ROOM_MIN = 44;
 export const LABEL_ROOM_MAX = 220;
 
 /**
- * Label room per placement (same order): from the item's right edge to the
- * nearest item that starts after it in the lane, or the content edge. Items
- * that overlap the next one get none. Never moves or resizes an item.
+ * Label room per placement (same order): from where the label starts to the
+ * next item in the lane (by x), or the content edge. None when an earlier,
+ * wider item still covers the tick, so a label is never printed over another
+ * card. Never moves or resizes an item.
  */
 export function labelRooms(placements: readonly { x: number; width: number }[], contentRightPx: number): number[] {
   const order = placements.map((_, index) => index).sort((a, b) => placements[a]!.x - placements[b]!.x);
   const rooms = new Array<number>(placements.length).fill(0);
+  let coveredTo = -Infinity;
   for (let k = 0; k < order.length; k += 1) {
     const item = placements[order[k]!]!;
     const end = item.x + item.width;
-    let limit = contentRightPx;
-    for (let j = k + 1; j < order.length; j += 1) {
-      const next = placements[order[j]!]!;
-      if (next.x >= item.x) {
-        limit = next.x;
-        break;
-      }
-    }
-    const room = Math.min(LABEL_ROOM_MAX, limit - end - LABEL_GAP_PX);
-    rooms[order[k]!] = room >= LABEL_ROOM_MIN ? room : 0;
+    const next = k + 1 < order.length ? placements[order[k + 1]!]! : null;
+    const limit = next ? next.x : contentRightPx;
+    const room = Math.min(LABEL_ROOM_MAX, limit - end - LABEL_OFFSET_PX - LABEL_GAP_PX);
+    rooms[order[k]!] = coveredTo <= end && room >= LABEL_ROOM_MIN ? room : 0;
+    coveredTo = Math.max(coveredTo, end);
   }
   return rooms;
 }

@@ -2299,16 +2299,18 @@ kbd {
   top: 50%;
   transform: translateY(-50%);
   overflow: hidden;
-  color: #3a4256;
+  color: var(--color-text-secondary, #3a4256);
   font-size: 11.5px;
   line-height: 1.3;
   white-space: nowrap;
   text-overflow: ellipsis;
-  pointer-events: auto;
+  /* A halo in the panel colour, so a connector line crossing the lane does
+     not strike through the text. */
+  text-shadow: 0 0 2px var(--panel), 0 0 2px var(--panel), 0 0 3px var(--panel);
 }
 
 .event-card.is-request .event-card-label {
-  color: #172033;
+  color: var(--color-text-primary, #172033);
   font-weight: 650;
 }
 
