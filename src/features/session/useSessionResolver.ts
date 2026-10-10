@@ -33,8 +33,11 @@ export function useSessionResolver(): (sessionId: string) => Promise<SessionOpen
   return useCallback(
     async (sessionId: string): Promise<SessionOpenOutcome> => {
       const token = ++resolveSequence;
-      const settle = (opened: boolean): SessionOpenOutcome =>
-        token !== resolveSequence ? "superseded" : opened ? "opened" : "unavailable";
+      const settle = (opened: boolean): SessionOpenOutcome => {
+        if (token !== resolveSequence) return "superseded";
+        useSessionStore.getState().noteSessionOpenable(sessionId, opened);
+        return opened ? "opened" : "unavailable";
+      };
       const store = useSessionStore.getState();
       if (isAutoImportedSessionId(sessionId)) {
         // Already showing it, with its transcript or its window: nothing to

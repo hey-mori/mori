@@ -28,6 +28,7 @@ import {
   MessageSquareText,
 } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
+import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import { useAppStore } from "../../app/store";
 import { loadStoredSessionSummaries, useSessionStore } from "../../app/sessionStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
@@ -77,10 +78,10 @@ export function ContextView() {
     archiveContext,
     reviewSessionProject,
   } = useRecordLedger();
-  const navigate = useAppStore((state) => state.navigate);
   // The door 캘린더 and the command palette already use. 프로젝트 was the only
   // surface that did not, so one note opened as a real document from the
   // calendar and as a 340px textarea from here.
+  const navigate = useAppStore((state) => state.navigate);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const requestNewRecord = useAppStore((state) => state.requestNewRecord);
   const findInProject = useAppStore((state) => state.findInProject);
@@ -112,7 +113,14 @@ export function ContextView() {
     );
     void resolveSession(sessionId).then((outcome) => {
       if (outcome === "opened") openSession("flow");
-      else if (outcome === "unavailable") navigate("sessions");
+      // No transcript, import or kept copy to open: show the session's
+      // record, what Mori still knows, as the palette does, rather than
+      // dropping the user on the live feed. Only a discovered session has one.
+      else if (outcome === "unavailable") {
+        setSessionReturn(null);
+        if (isAutoImportedSessionId(sessionId)) openRecordInLedger(sessionId);
+        else navigate("sessions");
+      }
     });
   };
 

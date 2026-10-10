@@ -75,6 +75,8 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   recheckRestoredSource: async () => false,
   divergedSourceSessionId: null,
   sessionWindow: null,
+  unopenableSessionIds: new Set<string>(),
+  noteSessionOpenable: () => {},
   loadEarlierSessionWindow: async () => {},
   loadNewerSessionWindow: async () => {},
   loadLatestSessionWindow: async () => {},
