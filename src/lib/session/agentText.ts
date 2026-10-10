@@ -9,28 +9,43 @@
 const PASTE_MARKER = /<\/?pasted_content\b[^>]*>/g;
 
 export function withoutPasteMarkers(text: string): string {
-  return text.replace(PASTE_MARKER, " ").replace(/[ \t]+\n/g, "\n").trim();
+  // Trailing blanks per line by splitting, not a `[ \t]+\n` regex, which
+  // backtracks quadratically over a long run of spaces.
+  return text
+    .replace(PASTE_MARKER, " ")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .trim();
 }
 
-/**
- * Wrappers the agent CLI puts around machine text: a slash command and its
- * arguments, the command's output, the caveat it prepends, shell input and
- * output, and pasted text. Display only, as for paste markers above.
- */
-const HARNESS_TAG = /<\/?(?:pasted_content|command-name|command-message|command-args|local-command-stdout|local-command-stderr|local-command-caveat|bash-input|bash-stdout|bash-stderr|system-reminder)\b[^>]*>/g;
+/** Wrappers the agent CLI puts around a slash command, its arguments and its
+ *  output, and around shell input and output. Their content is kept. */
+const KEPT_WRAPPER = /<\/?(?:command-name|command-args|local-command-stdout|local-command-stderr|bash-input|bash-stdout|bash-stderr)>/g;
+/** Blocks the harness injects whose content is not what the user wrote (the
+ *  repeated command message, the fixed caveat, injected reminders): dropped
+ *  with their content. */
+const DROPPED_BLOCK = /<(command-message|local-command-caveat|system-reminder)>[\s\S]*?<\/\1>/g;
+/** Known wrapper or block tags that open the text (after whitespace). */
+const LEADING_HARNESS_TAG = /^\s*<(?:command-name|command-message|command-args|local-command-stdout|local-command-stderr|local-command-caveat|bash-input|bash-stdout|bash-stderr|system-reminder)>/;
 
 /**
- * Agent transcript text as a person reads it in a row, a preview or a
- * heading: the CLI's wrapper tags dropped, their content kept, a repeated
- * slash-command name said once. The stored message is never changed.
+ * Agent transcript text as a person reads it: paste markers dropped wherever
+ * they are, and, only when the text itself is CLI transport (it opens with
+ * one of its wrapper tags), the wrappers dropped and the injected blocks
+ * removed with their content. Prose that merely mentions such a tag is left
+ * as written, and so are line breaks and indentation. Display only: the
+ * stored message is never changed.
  */
 export function readableAgentText(text: string): string {
-  const named = text.match(/<command-name>\s*([^<]*?)\s*<\/command-name>/);
-  let out = text;
-  if (named) {
-    // `<command-name>/model</command-name> <command-message>model</command-message>`
-    // says the command twice; keep the name and any arguments.
-    out = out.replace(/<command-message>[^<]*<\/command-message>/g, " ");
-  }
-  return out.replace(HARNESS_TAG, " ").replace(/[ \t]+/g, " ").replace(/\s*\n\s*/g, "\n").trim();
+  const pasted = withoutPasteMarkers(text);
+  if (!LEADING_HARNESS_TAG.test(pasted)) return pasted;
+  return pasted
+    .replace(DROPPED_BLOCK, " ")
+    .replace(KEPT_WRAPPER, " ")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
 }

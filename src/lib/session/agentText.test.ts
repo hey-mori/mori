@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readableAgentText, withoutPasteMarkers } from "./agentText";
+import { readableAgentText } from "./agentText";
 
 describe("agent text as a person reads it", () => {
-  it("drops the slash-command wrappers and says the command once, with its arguments", () => {
+  it("drops the slash-command wrappers and the repeated command message, keeping the arguments", () => {
     expect(readableAgentText("<command-name>/model</command-name> <command-message>model</command-message> <command-args>opus</command-args>")).toBe("/model opus");
   });
 
@@ -11,9 +11,22 @@ describe("agent text as a person reads it", () => {
     expect(readableAgentText('<pasted_content id="40b2"> # OCI CI 개선 </pasted_content>')).toBe("# OCI CI 개선");
   });
 
-  it("leaves ordinary text and unknown tags alone", () => {
-    expect(readableAgentText("CI 실행 기록 100건을 수집했습니다.")).toBe("CI 실행 기록 100건을 수집했습니다.");
+  it("drops an injected reminder or caveat with its content", () => {
+    expect(readableAgentText("<system-reminder>Contents of CLAUDE.md: never push</system-reminder>\nfix the bug")).toBe("fix the bug");
+    expect(readableAgentText("<local-command-caveat>Caveat: The messages below were generated</local-command-caveat>")).toBe("");
+  });
+
+  it("leaves prose that mentions a tag, and its line breaks and indentation, as written", () => {
+    const prose = "The importer strips `<command-name>` and `<system-reminder>` wrappers now.";
+    expect(readableAgentText(prose)).toBe(prose);
+    expect(readableAgentText("def f():\n    return 1\n\nnext para")).toBe("def f():\n    return 1\n\nnext para");
     expect(readableAgentText("use <div> here")).toBe("use <div> here");
-    expect(withoutPasteMarkers("a")).toBe("a");
+  });
+
+  it("stays fast on a long unclosed wrapper", () => {
+    const started = Date.now();
+    readableAgentText(`<command-name>${" ".repeat(50_000)}`);
+    readableAgentText(`<command-name>${"\n".repeat(50_000)}x`);
+    expect(Date.now() - started).toBeLessThan(500);
   });
 });

@@ -182,15 +182,7 @@ export function buildTimelineEventCardViewModel(
   // Sessions imported before the boilerplate-aware titler stored the agent's
   // "continued from a previous conversation" preamble as the title; clean it at
   // render so an already-imported session reads right without a re-import.
-  // A notice the agent CLI injected reads as what it is (a slash command, its
-  // output, a continuation); older imports stored "세션 이어가기" for all of
-  // them, so the notice in the summary decides. Display only.
-  const notice = isAgentBoilerplateTitle(event.title)
-    ? boilerplateLabel(event.title)
-    : event.title === "세션 이어가기" && isAgentBoilerplateTitle(event.summary)
-      ? boilerplateLabel(event.summary)
-      : "";
-  const displayTitle = notice || readableAgentText(event.title) || event.title;
+  const displayTitle = readableEventTitle(event);
   // A request opener (a user ask) is the anchor of its work unit; name it first
   // so the signal is not visual-only (the swimlane marks it with a filled dot).
   const requestPrefix = event.openedByUser ? "요청 · " : "";
@@ -221,10 +213,26 @@ export function buildTimelineEventCardViewModel(
 }
 
 /**
+ * An event's title as a person reads it. A notice the agent CLI injected reads
+ * as what it is (a slash command, its output, a continuation); older imports
+ * stored "세션 이어가기" for every notice, so the notice in the summary decides,
+ * without the command's name (the summary is the user's turn, gated by the
+ * request disclosure level). Display only.
+ */
+export function readableEventTitle(event: Pick<TimelineEvent, "title" | "summary">): string {
+  if (isAgentBoilerplateTitle(event.title)) return boilerplateLabel(event.title);
+  if (event.title === "세션 이어가기" && isAgentBoilerplateTitle(event.summary)) {
+    return boilerplateLabel(event.summary, { commandName: false });
+  }
+  return readableAgentText(event.title).trim() || "에이전트 안내";
+}
+
+/**
  * `event.summary` as a person reads it in a preview or a list row, given the
- * title shown beside it: "" when it only repeats that title or is the injected
- * notice the title already names. Kept off the card view model on purpose:
- * the card face never carries prose.
+ * title shown beside it: "" when it is the injected notice the title already
+ * names, or when it only repeats the title (the same text, or the full text of
+ * a title cut short with an ellipsis). Kept off the card view model on
+ * purpose: the card face never carries prose.
  */
 export function readableEventSummary(event: TimelineEvent, shownTitle: string): string {
   if (isAgentBoilerplateTitle(event.summary)) return "";
@@ -232,13 +240,15 @@ export function readableEventSummary(event: TimelineEvent, shownTitle: string): 
   return sameText(summary, shownTitle) ? "" : summary;
 }
 
-/** Whether a summary only repeats its title (ignoring spacing and a trailing
- *  ellipsis or period). */
-function sameText(summary: string, title: string): boolean {
-  const norm = (text: string) => text.replace(/\s+/g, " ").replace(/[.…]+$/, "").trim();
+/** Whether a summary only repeats its title. */
+export function sameText(summary: string, title: string): boolean {
+  const norm = (text: string) => text.replace(/\s+/g, " ").trim();
   const a = norm(summary);
   const b = norm(title);
-  return !a || a === b || (b.length >= 24 && a.startsWith(b));
+  if (!a || a === b || a === b.replace(/[.…]+$/, "")) return true;
+  // A title cut short with an ellipsis, whose summary is the same text in full.
+  const cut = b.match(/^(.*\S)\s*…$/);
+  return Boolean(cut && cut[1]!.length >= 24 && a.startsWith(cut[1]!));
 }
 
 /** Compact diffstat string for the card chip / hover, e.g. "+12 -3". Empty when

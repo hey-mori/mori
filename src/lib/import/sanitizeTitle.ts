@@ -69,11 +69,13 @@ export function firstMeaningfulTitle(titles: readonly string[]): string {
  * system notice, a cancel, a continuation. Only for text that
  * `isAgentBoilerplateTitle` recognises; anything else returns "".
  */
-export function boilerplateLabel(text: string): string {
+export function boilerplateLabel(text: string, options: { commandName?: boolean } = {}): string {
+  if (!isAgentBoilerplateTitle(text)) return "";
   const normalized = text.trim().toLowerCase();
-  if (!isAgentBoilerplateTitle(normalized)) return "";
-  const command = text.match(/<command-name>\s*([^<\s][^<]*?)\s*<\/command-name>/);
-  if (command) return `${command[1]} 명령`;
+  const command = normalized.startsWith("<command-") ? text.match(/<command-name>([^<\s][^<]{0,80})<\/command-name>/) : null;
+  if (normalized.startsWith("<command-")) {
+    return command && options.commandName !== false ? `${command[1]!.trim()} 명령` : "명령";
+  }
   if (normalized.startsWith("this session is being continued") || normalized.startsWith("continue from where you left off")) {
     return "세션 이어가기";
   }

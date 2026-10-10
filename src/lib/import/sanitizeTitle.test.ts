@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  cleanImportedTitle,
-  firstMeaningfulTitle,
-  isAgentBoilerplateTitle,
-} from "./sanitizeTitle";
+import { boilerplateLabel, cleanImportedTitle, firstMeaningfulTitle, isAgentBoilerplateTitle } from "./sanitizeTitle";
 
 describe("sanitizeTitle", () => {
   it("detects the Claude continuation boilerplate as not a real title", () => {
@@ -52,7 +48,6 @@ describe("sanitizeTitle", () => {
   });
 });
 
-import { boilerplateLabel } from "./sanitizeTitle";
 
 describe("what an injected notice is", () => {
   it("names a slash command, its output, a caveat, a continuation and a cancel", () => {
@@ -61,6 +56,10 @@ describe("what an injected notice is", () => {
     expect(boilerplateLabel("<local-command-caveat>Caveat: The messages below were generated</local-command-caveat>")).toBe("로컬 명령 안내");
     expect(boilerplateLabel("This session is being continued from a previous conversation that ran out of context.")).toBe("세션 이어가기");
     expect(boilerplateLabel("[Request interrupted by user]")).toBe("요청 중단");
+  });
+
+  it("names the command only when asked to", () => {
+    expect(boilerplateLabel("<command-name>/deploy-client</command-name>", { commandName: false })).toBe("명령");
   });
 
   it("is empty for a real request", () => {

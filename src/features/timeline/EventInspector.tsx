@@ -1,5 +1,6 @@
 import { StickyNote } from "lucide-react";
 import { readableAgentText } from "../../lib/session/agentText";
+import { readableEventTitle } from "./lib/timelineCards";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import {
@@ -180,7 +181,7 @@ export function EventInspector({
           {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
         </>
       }
-      title={selectedEvent.title}
+      title={readableEventTitle(selectedEvent)}
       meta={formatTimeRange(selectedEvent.start, selectedEvent.end)}
     >
       <InspectorSection>
