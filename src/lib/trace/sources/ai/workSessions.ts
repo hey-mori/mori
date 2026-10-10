@@ -179,8 +179,11 @@ async function listAgentWorkSessionsReport(
       complete = false;
       return [] as T[];
     });
+  // The inbox listing itself still rejects (failing the whole pass, as
+  // before, so nothing is pruned on a bad read); an unreadable file in it
+  // only makes the agent incomplete.
   const connector = (id: AgentWorkAgentId) =>
-    tracked(listConnectorBackedSessions(connectorConfigFor(id), () => (complete = false)));
+    listConnectorBackedSessions(connectorConfigFor(id), () => (complete = false));
   const sorted = (sessions: AgentWorkSessionMeta[]) => ({
     sessions: sessions.sort((a, b) => time(b.startedAt) - time(a.startedAt)),
     complete,
@@ -188,12 +191,20 @@ async function listAgentWorkSessionsReport(
   if (agentId === "claude") {
     const [code, desktop] = await Promise.all([
       tracked(discoverClaudeCodeSessions()),
-      tracked(listClaudeDesktopConversations()),
+      // Claude Desktop not being installed is an answer (no conversations),
+      // not a failed listing; anything else is a failure.
+      listClaudeDesktopConversations().catch((error: unknown) => {
+        if (!isDesktopAbsent(error)) complete = false;
+        return [] as ClaudeConversationMeta[];
+      }),
     ]);
     return sorted([...code.map(mapClaudeMeta), ...desktop.map(mapClaudeDesktopMeta)]);
   }
   if (agentId === "codex") {
     const [direct, viaConnector] = await Promise.all([tracked(discoverCodexSessions()), connector("codex")]);
+    // A rollout file Codex could not read is listed as a placeholder under its
+    // file name, not its session id: the session is on disk but unnamed here.
+    if (direct.some(isUnreadableCodexPlaceholder)) complete = false;
     return sorted([...direct.map(mapCodexMeta), ...viaConnector]);
   }
   if (agentId === "antigravity") {
@@ -208,6 +219,9 @@ async function listAgentWorkSessionsReport(
   if (agentId === "cursor") {
     return sorted((await tracked(discoverCursorSessions())).map(mapCursorMeta));
   }
+  // The remaining branch lists OpenCode; it vouches for OpenCode only, never
+  // for an agent that reaches it without a branch of its own.
+  if (agentId !== "opencode") complete = false;
   const [openCodeDirect, openCodeConnector] = await Promise.all([
     tracked(discoverOpenCodeSessions()),
     connector("opencode"),
@@ -217,6 +231,23 @@ async function listAgentWorkSessionsReport(
 
 export async function listAllAgentWorkSessions(): Promise<AgentWorkSessionMeta[]> {
   return (await listAllAgentWorkSessionsReport()).sessions;
+}
+
+/** The errors `list_claude_desktop_conversations` returns when Claude Desktop
+ *  has no database here (src-tauri/src/claude/desktop.rs): not installed. */
+const DESKTOP_ABSENT = [
+  /^No Claude Desktop SQLite database was found/,
+  /^No recognised Claude Desktop conversation table/,
+];
+function isDesktopAbsent(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return DESKTOP_ABSENT.some((pattern) => pattern.test(message));
+}
+
+/** The placeholder `unreadable_codex_meta` lists for a rollout file it could
+ *  not read (src-tauri/src/codex/sessions.rs). */
+function isUnreadableCodexPlaceholder(session: CodexSessionMeta): boolean {
+  return session.title.startsWith("⚠ 읽을 수 없는 세션");
 }
 
 /**

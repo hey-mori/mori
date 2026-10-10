@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Loader2, Radio, TriangleAlert } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
 import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { LiveSessionView } from "../live-session/LiveSessionView";
@@ -47,6 +48,30 @@ export function SessionsWorkspace() {
     [activeSessionId, resolveSession],
   );
 
+  // A session whose original the last discovery did not find: tried once
+  // through the resolver (a kept copy or a file that is there after all still
+  // opens, with the loading state meanwhile); if nothing opens, its record in
+  // 기록 is the fallback.
+  const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
+  const handleSelectLost = useCallback(
+    (sessionId: string) => {
+      setSelectedPastId(sessionId);
+      setMode("review");
+      setLoadState(sessionId !== activeSessionId ? "loading" : "ready");
+      void resolveSession(sessionId).then((outcome) => {
+        if (outcome === "superseded") return;
+        if (outcome === "unavailable") {
+          setLoadState("ready");
+          setSelectedPastId(null);
+          openRecordInLedger(sessionId);
+          return;
+        }
+        setLoadState("ready");
+      });
+    },
+    [activeSessionId, resolveSession, openRecordInLedger],
+  );
+
   const handleSelectLive = useCallback(() => {
     setMode("live");
     setSelectedPastId(null);
@@ -60,6 +85,7 @@ export function SessionsWorkspace() {
         selectedPastId={selectedPastId}
         onSelectLive={handleSelectLive}
         onSelectPast={handleSelectPast}
+        onSelectLost={handleSelectLost}
       />
       <div className="sessions-main">
         {mode === "live" ? (

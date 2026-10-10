@@ -172,8 +172,9 @@
   color: var(--muted-2);
 }
 
-/* 원본 없는 세션 · records whose transcript is gone, folded under 과거 so they
-   stay reachable without competing with sessions that open normally. */
+/* 원본을 찾지 못한 세션 · records whose transcript the last discovery did not
+   find, folded under 과거 so they stay reachable without competing with
+   sessions that open normally. */
 .session-index-lost {
   margin-top: var(--base-space-4);
 }
@@ -194,6 +195,19 @@
 
 .session-index-lost[open] > summary::before {
   content: "▾";
+}
+
+.session-index-more {
+  padding: var(--base-space-2) var(--base-space-3);
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.session-index-more:hover {
+  color: var(--text);
 }
 
 /* 라이브 피드 · a clickable header row that always returns the main pane to the

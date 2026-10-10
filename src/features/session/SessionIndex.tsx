@@ -4,7 +4,6 @@ import { InfoHint } from "../../components/ui/InfoHint";
 import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { lostSessionRecords } from "../../lib/session/lostSessions";
-import { useSessionResolver } from "./useSessionResolver";
 import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
@@ -39,6 +38,8 @@ import {
  *  recently — so the list stays stable between turns instead of flickering, and
  *  the 30-minute follow window's older sessions fall through to 과거 instead. */
 const LIVE_WINDOW_MS = 4 * 60_000;
+/** Sessions whose original was not found, shown a page at a time. */
+const LOST_PAGE = 50;
 
 /**
  * 세션 인덱스 · the left column of the unified 세션 workspace.
@@ -58,11 +59,14 @@ export function SessionIndex({
   selectedPastId,
   onSelectLive,
   onSelectPast,
+  onSelectLost,
 }: {
   liveActive: boolean;
   selectedPastId: string | null;
   onSelectLive: (focusSessionId?: string) => void;
   onSelectPast: (sessionId: string) => void;
+  /** Open a session whose original was not found: its record if it cannot open. */
+  onSelectLost: (sessionId: string) => void;
 }) {
   const requestStartRecords = useAppStore((state) => state.requestStartRecords);
   const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
@@ -138,19 +142,10 @@ export function SessionIndex({
       (b.occurredEnd ?? b.occurredStart ?? "").localeCompare(a.occurredEnd ?? a.occurredStart ?? ""),
     );
   }, [sessionRecords, summaries, discovered]);
-  const resolveSession = useSessionResolver();
-  const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
-  const openLost = useCallback(
-    (sessionId: string) => {
-      // Tried through the shared resolver (a kept copy still opens, and the
-      // outcome is noted for the record's own notice); otherwise its record.
-      void resolveSession(sessionId).then((outcome) => {
-        if (outcome === "opened") onSelectPast(sessionId);
-        else if (outcome === "unavailable") openRecordInLedger(sessionId);
-      });
-    },
-    [resolveSession, onSelectPast, openRecordInLedger],
-  );
+  // Rows are built only while the group is open, a page at a time: a long
+  // history of cleaned-up transcripts must not weigh on the list.
+  const [lostOpen, setLostOpen] = useState(false);
+  const [lostShown, setLostShown] = useState(LOST_PAGE);
 
   const pastRows = useMemo<SidebarSessionRow[]>(
     () => mergeDemoSessionSummaries(summaries).map(toSidebarRow),
@@ -312,7 +307,7 @@ export function SessionIndex({
           ))
         )}
         {visibleLost.length > 0 ? (
-          <details className="session-index-lost">
+          <details className="session-index-lost" onToggle={(event) => setLostOpen(event.currentTarget.open)}>
             <summary className="session-index-label">
               원본을 찾지 못한 세션 {visibleLost.length}
               <InfoHint label="원본을 찾지 못한 세션">
@@ -320,23 +315,39 @@ export function SessionIndex({
                 원본을 다시 찾아보고, 없으면 Mori가 기록해 둔 내용을 보여 줍니다.
               </InfoHint>
             </summary>
-            <ul>
-              {visibleLost.map((record) => (
-                <li key={record.id}>
-                  <button type="button" className="session-index-row" onClick={() => openLost(record.id)}>
-                    <span className="session-index-row-title">
-                      <span className="session-index-row-name">{record.title || "제목 없음"}</span>
-                    </span>
-                    <span className="session-index-row-meta">
-                      원본 못 찾음
-                      {record.occurredEnd || record.occurredStart
-                        ? ` · ${formatClaudeRelativeKo(record.occurredEnd ?? record.occurredStart ?? "")}`
-                        : ""}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {lostOpen ? (
+              <ul>
+                {visibleLost.slice(0, lostShown).map((record) => {
+                  const active = !liveActive && selectedPastId === record.id;
+                  const at = record.occurredEnd ?? record.occurredStart;
+                  return (
+                    <li key={record.id}>
+                      <button
+                        type="button"
+                        className={`session-index-row${active ? " is-active" : ""}`}
+                        onClick={() => onSelectLost(record.id)}
+                      >
+                        <span className="session-index-row-title">
+                          <span className="session-index-row-name">{record.title || "제목 없음"}</span>
+                        </span>
+                        {at ? <span className="session-index-row-meta">{formatClaudeRelativeKo(at)}</span> : null}
+                      </button>
+                    </li>
+                  );
+                })}
+                {visibleLost.length > lostShown ? (
+                  <li>
+                    <button
+                      type="button"
+                      className="session-index-more"
+                      onClick={() => setLostShown((shown) => shown + LOST_PAGE)}
+                    >
+                      더 보기 ({visibleLost.length - lostShown})
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
           </details>
         ) : null}
       </div>

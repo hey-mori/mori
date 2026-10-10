@@ -13,6 +13,7 @@
  * opening one still goes through the resolver, which opens it if it is there.
  */
 import type { MoriRecord } from "../record-kernel/kernelTypes";
+import { isAutoImportedSessionId } from "./autoImportSessions";
 
 export type DiscoveredSessions = { ids: ReadonlySet<string>; agents: ReadonlySet<string> };
 
@@ -23,7 +24,7 @@ export function lostSessionRecords(
 ): MoriRecord[] {
   if (!discovered) return [];
   return records.filter((record) => {
-    if (record.schemaId !== "agent-session") return false;
+    if (record.schemaId !== "agent-session" || !isAutoImportedSessionId(record.id)) return false;
     if (record.status === "discarded" || record.status === "archived") return false;
     if (storedSessionIds.has(record.id) || discovered.ids.has(record.id)) return false;
     const agentId = (record.properties as Record<string, unknown> | undefined)?.agentId;
