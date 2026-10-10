@@ -7,7 +7,7 @@
  * splits, and only a real socket proves it handles the splits Ollama actually
  * produces.
  *
- * Run: `MORI_LIVE_OLLAMA=1 npx vitest run src/lib/ask-mori/streamParsers.live.test.ts`
+ * Run: `MORI_LIVE_OLLAMA=1 node scripts/run-tests.mjs vitest src/lib/ask-mori/streamParsers.live.test.ts`
  */
 import { describe, expect, it } from "vitest";
 import { OllamaStreamParser } from "./streamParsers";

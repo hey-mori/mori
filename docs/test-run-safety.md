@@ -60,7 +60,8 @@ These rules are also in `CLAUDE.md`.
 2. Never pass `--root` or `--dir`, and never point Vitest at a file outside
    the repository (such as `/tmp`). A filename filter does not bound discovery.
 3. Put a scratch regression test inside an isolated worktree of this
-   repository, run it by its repository path, and delete it afterwards.
+   repository, under `src/` and named `*.test.ts` (discovery is pinned there),
+   run it by its repository path, and delete it afterwards.
 4. Review agents are read-only by default. They do not build, run the full
    suite or start heavy processes. The parent agent decides what runs.
 5. Only one gate runs at a time on this machine. The gate takes a lock, so a
@@ -81,27 +82,29 @@ same files and assertions, only bounded.
 | Limit | Default | Override |
 |---|---|---|
 | Discovery | `src/**/*.{test,spec}.*` (pinned in `vite.config.ts`, same 409 files as before) | n/a |
-| `--root`, `--dir`, an outside config or test path, `--watch` | refused (exit 2); `vite.config.ts` also refuses `--root` | n/a |
-| Vitest workers | 2 (also the config default, for direct calls) | `MORI_TEST_MAX_WORKERS` |
+| Arguments | an allowlist, normalised as Vitest's parser does (any dashes, `=` values, short clusters such as `-ur=/`); anything else refused (exit 2). Test paths must be under `src/`. `vite.config.ts` also refuses every spelling of `--root`. | n/a |
+| Vitest workers | 2, passed as `--maxWorkers` and pinned in `VITEST_MAX_WORKERS` (which outranks the config and the CLI); also the config default for direct calls | `MORI_TEST_MAX_WORKERS` |
 | V8 heap per Node process | 2048 MB | `MORI_TEST_HEAP_MB` |
 | Wall clock, tests and harness | 900 s, then SIGTERM to the group | `MORI_TEST_TIMEOUT_S` |
 | Grace before SIGKILL | 15 s | `MORI_TEST_KILL_GRACE_S` |
 | Production build | 1800 s, same group timeout | n/a |
 | Rust pass | `cargo -j 2`, `--test-threads=2`, 3600 s | `MORI_CARGO_JOBS` |
-| Concurrent test runs | one per machine (lock in the temp dir), exit 75 | n/a |
-| Concurrent gates | one per machine (lock in the temp dir), exit 75 | n/a |
+| Concurrent test runs | one per machine: `flock` on `/tmp/mori-test-run.lock` (a fixed path, not `$TMPDIR`; released by the kernel if the holder dies), exit 75 | n/a |
+| Concurrent gates | one per machine: `flock` on `/tmp/mori-gate.lock`, exit 75 (a directory lock where `flock` is missing, as on macOS) | n/a |
 
 How the wrapper bounds a run:
 - **Its own process group.** The run starts detached, in its own process
   group. On timeout, or when the wrapper receives SIGINT, SIGTERM or SIGHUP,
   the whole group gets SIGTERM, then SIGKILL after the grace. That group
   includes Vitest's workers and the smoke tests' bash, python3 and git.
-- **Leftovers.** Processes still in the group when the run ends are listed
-  and ended. The run's exit code is unchanged in that case: the leftovers are
-  reported, not failed.
-- **A watchdog outside the group.** A small shell loop polls the wrapper every
-  2 s. If the wrapper itself is SIGKILLed (which it cannot catch), or a hard
-  deadline (limit + grace + 10 s) passes, the watchdog ends the group.
+- **Leftovers.** Processes still in the group 2 s after the run ends (time for
+  exiting workers to go) are listed and ended. The run's exit code is
+  unchanged in that case: the leftovers are reported, not failed.
+- **A watchdog outside the group.** A small shell process holds a pipe from
+  the wrapper. If the wrapper itself is SIGKILLed (which it cannot catch), the
+  pipe closes and the watchdog ends the group. It does the same if a hard
+  deadline (limit + grace + 10 s) passes. Before sending SIGKILL it checks
+  again that the group still exists.
 - **Clear failures.** Exit 124 means a timeout; 137 means the run had to be
   killed after the grace; 75 means another run holds the lock; 2 means the
   arguments were refused. Each prints a `[run-tests] FAILED` or `refused`
@@ -110,8 +113,9 @@ How the wrapper bounds a run:
 
 `npm run test:safety` (and the gate's "test safeguards" step) proves the limits
 without running a single test. It uses sleeps only and takes about 10 s. It
-checks:
-- the argument refusals;
+judges by process group, never by scanning the machine, and uses sleep
+durations unique to the run. Its 40 checks cover:
+- the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
 - a wrapper SIGKILLed mid-run, with the watchdog cleaning up;
@@ -124,8 +128,10 @@ together. At most, the following run at once:
 - the Vitest main process;
 - up to `MORI_TEST_MAX_WORKERS` worker processes, shared across the `unit`
   and `smoke` projects (one pool);
-- the short-lived child processes of the smoke test currently running (the
-  `smoke` project is serial);
+- the short-lived child processes of the smoke test currently running. The
+  `smoke` project is serial, and Vitest 4 runs a project with
+  `fileParallelism: false` after the others (per the 4.1.6 source, not
+  measured here), so smoke tests do not overlap the unit tests;
 - the wrapper and its watchdog, which are negligible.
 
 The Rust pass runs alone, with `cargo -j 2` (each rustc can use 1–2 GB) and
@@ -137,17 +143,25 @@ processes) comes on top, and there are about 1 + workers Node processes. A
 whole-run memory ceiling needs a cgroup (section 6).
 
 **The defaults are candidates, not measurements.** 2 workers and 900 s were
-chosen for safety. The last full run took 17 s at the old default of 8 workers.
-With 2 workers, and with the smoke tests enabled (about 230 s on their own),
-the duration is expected to stay well inside 900 s. That has not been measured
-yet: see section 7.
+chosen for safety. The last full run took 17 s at the old default of 8 workers,
+with the smoke tests skipped on this machine. Where the smoke tests run, the
+config's own comment puts them at about 230 s on a loaded machine. Either way
+the run is expected to stay well inside 900 s at 2 workers, but that has not
+been measured yet: see section 7.
 
 ## 5. What this does not cover
 
 - A process that leaves its group on purpose (`setsid`, a daemon) escapes
   group signals. Only a cgroup contains it.
 - `npm run test:watch` remains plain, interactive Vitest. It is for a person
-  at a terminal, never for an agent.
+  at a terminal, never for an agent. It now inherits the config's 2-worker
+  default, which makes watch mode slower; raise `MORI_TEST_MAX_WORKERS` in
+  your own shell if you need more.
+- Ctrl-C reaches the run (the wrapper forwards it). Ctrl-Z suspends only the
+  wrapper; the run keeps going in its own group.
+- Typecheck, stylelint and the unused-file inventory have no limits of their
+  own. A gate's build or Rust pass can overlap another session's test run,
+  because the gate and test locks are separate.
 - Anything outside these scripts: a direct `npx vitest ... --root /` without
   this config is refused only by the rules, because Vitest never loads this
   repository's config in that case.
@@ -209,8 +223,8 @@ Still to verify before adoption:
 ## 7. Verification status of this change
 
 Verified (2026-10-10, without running the test suite):
-- `npm run test:safety` passed all 21 checks, and no process or lock was left
-  behind.
+- `npm run test:safety` passed all 40 checks (after the review fixes), and no
+  process or lock was left behind.
 - `vite.config.ts` evaluates in plain Node: `include` is pinned to `src/`,
   workers default to 2, and `--root /` throws.
 - A static glob shows the pinned `include` selects the same 409 files as

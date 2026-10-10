@@ -126,7 +126,8 @@ every session and every subagent; the reasons and limits are in
 - Never pass `--root` or `--dir`, and never point Vitest at a file outside the
   repository (`/tmp` or elsewhere). A filename filter does not bound discovery.
 - Put a scratch regression test inside an isolated worktree of this
-  repository, run it by its repository path, and delete it afterwards.
+  repository, under `src/` and named `*.test.ts`, run it by its repository
+  path, and delete it afterwards.
 - Review agents work read-only by default. They do not build, run the full
   suite or start heavy processes without the parent agent's approval. Say
   this in every review prompt.

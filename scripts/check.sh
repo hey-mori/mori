@@ -33,20 +33,28 @@ cd "$(dirname "$0")/.."
 
 # One gate at a time on this machine, whichever worktree it runs from: two
 # gates double the load on a machine other work shares. A second gate fails at
-# once rather than waiting unseen; a lock left by a gate that was killed is
-# taken over when its pid is gone.
-GATE_LOCK="${TMPDIR:-/tmp}/mori-gate.lock"
-if ! mkdir "$GATE_LOCK" 2>/dev/null; then
-  holder="$(cat "$GATE_LOCK/pid" 2>/dev/null || true)"
-  if [[ -n "$holder" ]] && kill -0 "$holder" 2>/dev/null; then
-    echo "another verification gate is running (pid $holder): gates never overlap on this machine; wait for it, do not stop it" >&2
-    exit 75
+# once (exit 75) rather than waiting unseen. The path is fixed, not $TMPDIR, so
+# every session sees the same lock. `flock` is released by the kernel even if
+# the gate is killed; without it (macOS) a directory lock is used instead.
+gate_busy() {
+  echo "another verification gate holds $1: gates never overlap on this machine; wait for it, do not stop it" >&2
+  exit 75
+}
+if command -v flock >/dev/null 2>&1; then
+  GATE_LOCK="/tmp/mori-gate.lock"
+  exec 9>"$GATE_LOCK"
+  flock -n 9 || gate_busy "$GATE_LOCK"
+else
+  GATE_LOCK="/tmp/mori-gate.lockdir"
+  if ! mkdir "$GATE_LOCK" 2>/dev/null; then
+    holder="$(cat "$GATE_LOCK/pid" 2>/dev/null || true)"
+    if [[ -z "$holder" ]] || kill -0 "$holder" 2>/dev/null; then gate_busy "$GATE_LOCK"; fi
+    rm -rf "$GATE_LOCK"
+    mkdir "$GATE_LOCK" 2>/dev/null || gate_busy "$GATE_LOCK"
   fi
-  rm -rf "$GATE_LOCK"
-  mkdir "$GATE_LOCK"
+  echo "$$" > "$GATE_LOCK/pid"
+  trap 'rm -rf "$GATE_LOCK"' EXIT
 fi
-echo "$$" > "$GATE_LOCK/pid"
-trap 'rm -rf "$GATE_LOCK"' EXIT
 
 FULL=0
 NO_RUST=0
@@ -178,7 +186,11 @@ if [[ "$FULL" -eq 1 ]] && touches_rust; then
     echo "· left to the macOS job, which is where wry can build"
   else
     jobs="${MORI_CARGO_JOBS:-2}"
-    node scripts/run-tests.mjs limited 3600 -- bash -c \
+    if ! [[ "$jobs" =~ ^[0-9]+$ ]] || (( jobs < 1 || jobs > 16 )); then
+      echo "MORI_CARGO_JOBS=$jobs is not an integer between 1 and 16" >&2
+      exit 2
+    fi
+    MORI_STEP_LABEL="the Rust pass" node scripts/run-tests.mjs limited 3600 -- bash -c \
       "cd src-tauri && cargo check --locked -j $jobs && cargo test --locked -j $jobs -- --test-threads=$jobs"
   fi
 elif touches_rust; then

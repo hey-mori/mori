@@ -969,7 +969,7 @@ guardrails, not preferences.
   or pixel-diff tests. Prefer fixture-driven unit tests like
   `connectorSampleFixture.test.ts`.
 - **Run targeted tests during iteration.** `npm run test:changed`
-  or `npx vitest run <path>` for fast feedback.
+  or `node scripts/run-tests.mjs vitest <path>` for fast feedback.
 - **Run the canonical gate before commit.** `scripts/check.sh`
   (typecheck, tests, stylelint, prose guard, commit guards), and
   `scripts/check.sh --full` before pushing or closing a milestone (adds
@@ -1002,7 +1002,7 @@ guardrails, not preferences.
 ## 12. Validation Policy
 
 - **During implementation.** Targeted tests
-  (`npx vitest run <path>`) or `npm run test:changed` for fast
+  (`node scripts/run-tests.mjs vitest <path>`) or `npm run test:changed` for fast
   feedback. Run `npm run check:quick` (typecheck + changed tests)
   when changing types.
 - **Before commit.** Always `scripts/check.sh`. `npm run check:full`

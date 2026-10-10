@@ -12,19 +12,23 @@ const REPO = fileURLToPath(new URL(".", import.meta.url));
 // `--root /` run once took a shared machine down). scripts/run-tests.mjs
 // refuses it; this refuses it for anyone who calls Vitest directly with this
 // config.
-const rootIndex = process.argv.findIndex(
-  (arg) => arg === "--root" || arg === "-r" || arg.startsWith("--root="),
-);
-if (rootIndex !== -1) {
-  const flag = process.argv[rootIndex];
-  const value = flag.startsWith("--root=")
-    ? flag.slice("--root=".length)
-    : process.argv[rootIndex + 1];
-  if (!value || resolve(value) !== resolve(REPO)) {
-    throw new Error(
-      `Mori runs from its repository (${REPO}); --root ${value ?? ""} is not allowed.`,
-    );
+// Vitest's parser accepts `--root`, `-r`, `--r=`, and `r` inside a short cluster
+// (`-ur=/`), so every spelling is checked.
+const rootValue = (() => {
+  const argv = process.argv;
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (!arg.startsWith("-") || arg === "--") continue;
+    const body = arg.replace(/^-+/, "");
+    const head = body.split("=")[0];
+    const isRoot = arg.startsWith("--") ? head === "root" || head === "r" : head.includes("r");
+    if (isRoot)
+      return body.includes("=") ? body.slice(body.indexOf("=") + 1) : (argv[index + 1] ?? "");
   }
+  return null;
+})();
+if (rootValue !== null && (!rootValue || resolve(rootValue) !== resolve(REPO))) {
+  throw new Error(`Mori runs from its repository (${REPO}); --root ${rootValue} is not allowed.`);
 }
 
 export default defineConfig(({ mode }) => ({
