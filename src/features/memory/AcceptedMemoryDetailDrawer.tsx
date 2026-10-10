@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { InfoHint } from "../../components/ui/InfoHint";
 import {
   ArrowRight,
+  CircleHelp,
   ClipboardCheck,
   Clock4,
   ExternalLink,
@@ -78,7 +79,10 @@ export function AcceptedMemoryDetailDrawer({
     () => countUnlinkableEvidenceRefs(memory),
     [memory],
   );
-  const unresolvedEventCount = useMemo(() => countUnresolvedEventRefs(memory, view), [memory, view]);
+  const unresolvedEventCount = useMemo(
+    () => countUnresolvedEventRefs(memory, view),
+    [memory, view],
+  );
   const hasAnyLinks =
     links.timelineEvents.length +
       links.reviewIssues.length +
@@ -274,11 +278,11 @@ export function AcceptedMemoryDetailDrawer({
 
           {unresolvedEventCount > 0 ? (
             <p className="accepted-memory-detail-links-note">
-              <ClipboardCheck size={11} aria-hidden="true" /> 이 세션에서 근거 이벤트 {unresolvedEventCount}건을 찾을 수
-              없습니다.
+              <CircleHelp size={11} aria-hidden="true" /> 현재 열린 세션에서 근거 이벤트 {unresolvedEventCount}건을
+              찾을 수 없습니다.
               <InfoHint label="찾을 수 없는 근거">
-                메모리가 가리키는 이벤트가 지금 이 세션에 없습니다. 메모리와 그 근거 기록은 그대로 두었고, 비슷한
-                다른 이벤트로 바꾸지 않습니다.
+                메모리가 가리키는 이벤트가 지금 열린 세션에 없습니다. 메모리와 근거 기록은 바꾸지 않으며, 비슷한
+                이벤트로 대신 연결하지 않습니다.
               </InfoHint>
             </p>
           ) : null}

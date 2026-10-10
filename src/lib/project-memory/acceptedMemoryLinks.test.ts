@@ -213,13 +213,14 @@ describe("countUnresolvedEventRefs", () => {
       evidenceRefs: [
         { kind: "event", sessionId: "sess-1", eventId: "evt-1" },
         { kind: "event", sessionId: "sess-1", eventId: "evt-renamed" },
+        { kind: "event", sessionId: "sess-1", eventId: "evt-renamed" },
         { kind: "event", sessionId: "sess-other", eventId: "evt-x" },
       ] as never,
     });
     const view = { events: [makeEvent({ id: "evt-1" })], issues: [], decisions: [] };
     expect(countUnresolvedEventRefs(memory, view)).toBe(1);
     // And the memory itself is left as it was.
-    expect(memory.evidenceRefs).toHaveLength(3);
+    expect(memory.evidenceRefs).toHaveLength(4);
   });
 
   it("is zero when every ref resolves or nothing of the session is open", () => {
