@@ -76,7 +76,7 @@ import { DashboardInsights, type WorkFlowStage } from "./DashboardInsights";
  * It is a *linked* surface: the charts, KPI tiles, and matrix talk to each
  * other. The hover and click contract is deliberate and uniform:
  *  - Hover lights related items and shows a precise tooltip; it never filters.
- *      · 토큰 분포 바  → 프로젝트 · NK 토큰 · share%, matching matrix row lit
+ *      · 토큰 분포 바  → 폴더 · NK 토큰 · share%, matching matrix row lit
  *      · 활동 추이 바  → 이번 주 / N주 전 · N개 · share%, with a guide line
  *      · 검토 세그먼트 → 이슈 / 결정 / 다음 · N개 · share%, centre swaps, rows lit
  *      · KPI 타일     → the week-over-week or breakdown detail behind the figure
@@ -157,9 +157,11 @@ export function DashboardView() {
         storedSessions: rangedSessions,
         repository,
         userProjects,
-        includeCreatedProjects: timeRange === "all",
+        // A created project with no sessions is a name, not a folder with
+        // usage: it has no row on a folder dashboard.
+        includeCreatedProjects: false,
       }),
-    [browserModel.groups, repository, rangedSessions, timeRange, userProjects],
+    [browserModel.groups, repository, rangedSessions, userProjects],
   );
 
   const totals = useMemo(() => summarizeProjects(projects), [projects]);
@@ -248,7 +250,7 @@ export function DashboardView() {
         <EmptyState
           icon={BarChart3}
           title="아직 대시보드에 보여줄 작업이 없습니다"
-          description="작업 기록을 가져오면 프로젝트별 상태와 사용량이 이곳에 모입니다."
+          description="작업 기록을 가져오면 폴더별 상태와 사용량이 이곳에 모입니다."
           actions={
             <Button variant="primary" icon={ArrowUpRight} onClick={() => navigate("connections")}>
               연동 열기
@@ -268,7 +270,7 @@ export function DashboardView() {
           <div className="dashboard-charts">
             <ChartCard
               title="토큰 분포"
-              hint="프로젝트별 누적 토큰(입력+출력)의 비중입니다. 상위 8개만 표시하고 나머지는 기타로 묶습니다. 막대에 마우스를 올리면 정확한 값이, 클릭하면 해당 프로젝트만 추려집니다."
+              hint="세션을 가져온 폴더별 누적 토큰(입력+출력)의 비중입니다. 확정한 프로젝트가 아니라 폴더 기준입니다. 상위 8개만 표시하고 나머지는 기타로 묶습니다. 막대에 마우스를 올리면 정확한 값이, 클릭하면 해당 폴더만 추려집니다."
             >
               <TokenDistribution
                 projects={projects}
@@ -286,7 +288,7 @@ export function DashboardView() {
             </ChartCard>
             <ChartCard
               title="검토 구성"
-              hint="가져온 세션에서 분석된 미해결 이슈·미확정 결정·남은 다음 작업의 합입니다. 조각에 마우스를 올리면 비중이, 클릭하면 그 항목이 있는 프로젝트만 추려집니다."
+              hint="가져온 세션에서 분석된 미해결 이슈·미확정 결정·남은 다음 작업의 합입니다. 조각에 마우스를 올리면 비중이, 클릭하면 그 항목이 있는 폴더만 추려집니다."
             >
               <AttentionDonut
                 totals={totals}
@@ -303,9 +305,9 @@ export function DashboardView() {
             caption={lastActivityLabel}
           />
 
-          <section className="dashboard-matrix" aria-label="프로젝트 현황">
+          <section className="dashboard-matrix" aria-label="폴더 현황">
             <header className="dashboard-matrix-head">
-              <span>프로젝트</span>
+              <span>폴더</span>
               <span>세션</span>
               <span>토큰</span>
               <span>검토</span>
@@ -315,7 +317,7 @@ export function DashboardView() {
               {filteredProjects.length === 0 ? (
                 <p className="dashboard-matrix-empty">
                   <Search size={14} aria-hidden="true" />
-                  조건에 맞는 프로젝트가 없습니다
+                  조건에 맞는 폴더가 없습니다
                 </p>
               ) : (
                 filteredProjects.map((project) => (
@@ -394,7 +396,7 @@ function FilterChips({
           type="button"
           className="dashboard-chip tone-accent"
           onClick={onClearFocus}
-          aria-label={`프로젝트 필터 해제: ${focusName}`}
+          aria-label={`폴더 필터 해제: ${focusName}`}
         >
           <FolderGit2 size={12} aria-hidden="true" />
           <span>{focusName}</span>
@@ -435,7 +437,7 @@ function KpiDeck({
 }) {
   return (
     <section className="dashboard-kpis" aria-label="전체 요약">
-      <KpiTile icon={FolderGit2} label="프로젝트" value={String(totals.projectCount)} />
+      <KpiTile icon={FolderGit2} label="폴더" value={String(totals.projectCount)} />
       <KpiTile
         icon={Layers}
         label="세션"
