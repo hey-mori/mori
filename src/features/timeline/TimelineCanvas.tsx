@@ -53,7 +53,10 @@ export type TimelineCanvasHandle = {
   revealItem: (itemId: string, options?: { focus?: boolean; redo?: boolean }) => void;
 };
 
-const MIN_FRAME_WIDTH = 1100;
+/** The frame follows the scroller, so at zoom 1 the whole span fits what is
+ *  visible (a floor wider than the pane, as 1100 was beside the session list,
+ *  left the span's end off screen). This floor only guards a degenerate pane. */
+const MIN_FRAME_WIDTH = 480;
 const MAX_FRAME_WIDTH = 1640;
 const DEFAULT_FRAME_WIDTH = 1240;
 const LANE_LABEL_WIDTH = 138;

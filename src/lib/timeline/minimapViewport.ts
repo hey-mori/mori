@@ -34,6 +34,22 @@ export const MAX_ZOOM = 40;
 /** The narrowest the minimap brush can get — the inverse of MAX_ZOOM. */
 export const MIN_BRUSH_FRACTION = 1 / MAX_ZOOM;
 
+/** Events per whole-span width a session opens with: about as many as a
+ *  frame shows with room for their labels. */
+const EVENTS_PER_SPAN_WIDTH = 24;
+/** The most a session opens zoomed in; the stepper goes further. */
+const MAX_DEFAULT_ZOOM = 8;
+
+/**
+ * The zoom a session opens at: wide enough that a dense session's cards stop
+ * overlapping, and 1 (the whole span) for a short one, which a fixed 8x
+ * spread over eight screens with nothing between its few cards.
+ */
+export function defaultZoomFor(eventCount: number): number {
+  if (!Number.isFinite(eventCount) || eventCount <= EVENTS_PER_SPAN_WIDTH) return MIN_ZOOM;
+  return Math.min(MAX_DEFAULT_ZOOM, Math.ceil(eventCount / EVENTS_PER_SPAN_WIDTH));
+}
+
 /** Clamp a raw zoom factor into the supported range. */
 export function clampZoom(zoom: number): number {
   if (!Number.isFinite(zoom)) return MIN_ZOOM;

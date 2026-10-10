@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   brushWidthToZoom,
   clampZoom,
+  defaultZoomFor,
   computeMinimapViewport,
   FULL_MINIMAP_VIEWPORT,
   MAX_ZOOM,
@@ -131,5 +132,19 @@ describe("revealScrollLeft", () => {
 
   it("does nothing when the content fits", () => {
     expect(revealScrollLeft(10, 6, 0, 900, 800)).toBeNull();
+  });
+});
+
+describe("defaultZoomFor", () => {
+  it("opens a short session whole", () => {
+    expect(defaultZoomFor(2)).toBe(1);
+    expect(defaultZoomFor(24)).toBe(1);
+    expect(defaultZoomFor(25)).toBe(2);
+  });
+
+  it("widens with the event count, up to 8x", () => {
+    expect(defaultZoomFor(72)).toBe(3);
+    expect(defaultZoomFor(215)).toBe(8);
+    expect(defaultZoomFor(5000)).toBe(8);
   });
 });
