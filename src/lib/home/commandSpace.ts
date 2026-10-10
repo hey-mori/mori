@@ -454,7 +454,8 @@ function withLookAlikeHints(
   );
   return rows.map((row) => {
     const hint = hints.get(row.id);
-    return hint ? { ...row, hint: row.hint ? `${row.hint} · ${hint}` : hint } : row;
+    // First, so a long checkout path cannot cut it off.
+    return hint ? { ...row, hint: row.hint ? `${hint} · ${row.hint}` : hint } : row;
   });
 }
 

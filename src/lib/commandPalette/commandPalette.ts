@@ -174,7 +174,8 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
       id: `session:${summary.sessionId}`,
       group: "session",
       label: summary.title?.trim() || "제목 없음",
-      hint: [summary.sourceLabel || summary.projectName, lookAlike.get(summary.sessionId)].filter(Boolean).join(" · "),
+      // The distinguisher first, so a long checkout path cannot cut it off.
+      hint: [lookAlike.get(summary.sessionId), summary.sourceLabel || summary.projectName].filter(Boolean).join(" · "),
       keywords: [summary.projectName, summary.sourceLabel ?? ""].filter(Boolean),
       target: { kind: "openSession", sessionId: summary.sessionId, tab: "flow" },
     }));

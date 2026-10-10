@@ -230,9 +230,9 @@ export function ProjectView() {
   const sessionLookAlike = useMemo(
     () =>
       lookAlikeHints(
+        // The row's date is its last activity, not its start, so the hint
+        // carries its own date whenever the look-alikes span days.
         filteredSessionRows.map((row) => ({ id: row.sessionId, title: row.title, startedAt: row.startedAt, at: row.timestamp })),
-        // The row already shows its date; the hint adds the time.
-        { omitDate: true },
       ),
     [filteredSessionRows],
   );

@@ -51,10 +51,9 @@ Grade-one work, in recommended order.
    the 세션 list, the palette, the project page and Home show when they
    started, never a guessed label. The first differing word of the prompt was
    not used: it would show request text where 숨김 hides it.
-2. **Session list and lost sources.** A session whose transcript is gone is
-   absent from the 세션 list but present in the calendar; make the 세션 list
-   show it with the same "원본 대화를 열 수 없습니다" state (#251 covers the
-   record).
+2. **Session list and lost sources.** Done in #258: the 세션 list folds
+   sessions whose original the last discovery did not find under
+   "원본을 찾지 못한 세션"; opening one retries, then shows its record.
 3. **Reuse at the start of work.** Extend the project continuation pack
    (#144, `projectContinuation.ts`) rather than duplicating it: surface its
    active decisions where work starts. Where exactly (a session view, the

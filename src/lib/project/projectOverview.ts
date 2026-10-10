@@ -22,7 +22,8 @@ export type ProjectRecencyBucket = "today" | "thisWeek" | "earlier";
 export type ProjectSessionRow = {
   sessionId: string;
   title: string;
-  /** Sort timestamp — `startedAt` when present, else `savedAt`. */
+  /** When the session was last active (`sessionLastActiveAt`): the later of
+   *  its start and its last save. Sorts the list and dates the row. */
   timestamp: string;
   /** When the session started, if known: tells same-titled rows apart. */
   startedAt?: string;

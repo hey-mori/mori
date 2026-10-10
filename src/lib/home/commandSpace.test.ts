@@ -303,8 +303,8 @@ describe("look-alike sessions on Home", () => {
     ];
     const rows = buildCommandSpaceResults({ modeId: "find", query: "", sessions }).rows;
     const hintOf = (id: string) => rows.find((row) => row.id === `session:${id}`)?.hint;
-    expect(hintOf("a")).toBe("mori · 14:02 시작");
-    expect(hintOf("b")).toBe("mori · 15:30 시작");
+    expect(hintOf("a")).toBe("14:02 시작 · mori");
+    expect(hintOf("b")).toBe("15:30 시작 · mori");
     expect(hintOf("c")).toBe("mori");
   });
 });
