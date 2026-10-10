@@ -31,6 +31,7 @@ import {
 } from "./TimelineCanvas";
 import {
   clampZoom,
+  defaultZoomFor,
   FULL_MINIMAP_VIEWPORT,
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
@@ -166,10 +167,18 @@ export function TimelineView({
   );
   // Time-axis zoom. 1 = the whole span fits; >1 widens the layout frame so
   // the canvas scrolls horizontally. Driven by the minimap brush handles.
-  // Defaults to 8x so dense spans open fine-grained rather than overlapping;
-  // the zoom stepper and minimap brush reach much further in (up to MAX_ZOOM)
-  // or snap back to 1 (whole span) on demand.
-  const [zoomFactor, setZoomFactor] = useState<number>(8);
+  // A session opens at a zoom sized to its event count (`defaultZoomFor`): a
+  // dense one fine-grained rather than overlapping, a short one whole. The
+  // zoom stepper and minimap brush reach much further in (up to MAX_ZOOM) or
+  // snap back to 1 (whole span) on demand; a zoom chosen for one session is
+  // not carried to the next.
+  const [chosenZoom, setChosenZoom] = useState<{ sessionId: string; zoom: number } | null>(null);
+  const zoomFactor =
+    chosenZoom && chosenZoom.sessionId === view.session.id ? chosenZoom.zoom : defaultZoomFor(view.events.length);
+  const setZoomFactor = useCallback(
+    (zoom: number) => setChosenZoom({ sessionId: view.session.id, zoom }),
+    [view.session.id],
+  );
   const canvasRef = useRef<TimelineCanvasHandle>(null);
 
   // The tab opens on the 흐름 (AI work-flow) view by default — the AI's reading
