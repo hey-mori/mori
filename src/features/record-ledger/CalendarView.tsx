@@ -24,6 +24,7 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { ledgerVisibleRecords } from "./recordPresentation";
 import { LedgerCalendarView } from "./LedgerCalendarView";
 import { CalendarAgendaRail } from "./CalendarAgendaRail";
+import { calendarDayLabel } from "./calendarDaySessions";
 import { recordsByDate } from "./calendarGrouping";
 import { isDateUndecided } from "./dateResolution";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
@@ -49,15 +50,24 @@ export function CalendarView() {
     return (sessionId: string) => byId.get(sessionId) || null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ledger.records]);
-  const openSessionFromCalendar = (sessionId: string) => {
-    setSessionReturn(null);
+  const openSessionFromCalendar = (sessionId: string, date: string) => {
+    setSessionReturn({ to: "calendar", sessionId, date, label: calendarDayLabel(date) });
     void resolveSession(sessionId).then((outcome) => {
       if (outcome === "opened") openSession("flow");
       else if (outcome === "unavailable") navigate("sessions");
     });
   };
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [cursor, setCursor] = useState(() => ({ year: now.getFullYear(), month: now.getMonth() }));
+  // Coming back from a session opened from a day reopens that day, unfolded.
+  const [focusDate] = useState(() => useAppStore.getState().calendarFocusDate);
+  const clearCalendarFocus = useAppStore((state) => state.clearCalendarFocus);
+  useEffect(() => {
+    if (focusDate) clearCalendarFocus();
+  }, [focusDate, clearCalendarFocus]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(focusDate);
+  const [cursor, setCursor] = useState(() => {
+    const at = focusDate ? new Date(`${focusDate}T00:00:00`) : now;
+    return { year: at.getFullYear(), month: at.getMonth() };
+  });
   const [trayOpen, setTrayOpen] = useState(false);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
@@ -172,6 +182,7 @@ export function CalendarView() {
         onSelectDate={selectDate}
         onSelectRecord={openRecordInLedger}
         onOpenSession={openSessionFromCalendar}
+        unfoldDate={focusDate}
         contexts={ledger.contexts}
         folderOf={folderOf}
         now={now}

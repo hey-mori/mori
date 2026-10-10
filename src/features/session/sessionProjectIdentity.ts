@@ -17,6 +17,7 @@
  * The record is found by id: an auto-imported session's kernel record id IS its
  * session id (`agentSessionRecordAdapter`), never a title or path match.
  */
+import type { SessionReturn } from "../../app/store";
 import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { membershipState } from "../../lib/record-kernel/projectMembership";
 import { projectLabel } from "../record-ledger/projectScope";
@@ -77,17 +78,25 @@ export function sessionCrumbs(identity: SessionProjectIdentity, sourceLabel: str
 }
 
 /**
- * The way back to the project page a session was opened from, or null. Shown
- * for that session only, and not when the breadcrumb already leads to the same
- * project (a confirmed member opened from its own list), unless it came from a
- * search, whose results the link names.
+ * The way back to where a session was opened from, or null. Shown for that
+ * session only. A project return is dropped when the breadcrumb already leads
+ * to the same project (a confirmed member opened from its own list), unless it
+ * came from a search, whose results the link names. A calendar return always
+ * shows: no breadcrumb leads back to a day.
  */
-export function sessionReturnLink<T extends { sessionId: string; contextId: string; viaSearch: boolean }>(
-  sessionReturn: T | null,
+export function sessionReturnLink(
+  sessionReturn: SessionReturn | null,
   sessionId: string | null,
   lead: SessionCrumbs["lead"],
-): T | null {
+): SessionReturn | null {
   if (!sessionReturn || sessionReturn.sessionId !== sessionId) return null;
-  if (!sessionReturn.viaSearch && lead?.kind === "project" && lead.contextId === sessionReturn.contextId) return null;
+  if (
+    sessionReturn.to === "project" &&
+    !sessionReturn.viaSearch &&
+    lead?.kind === "project" &&
+    lead.contextId === sessionReturn.contextId
+  ) {
+    return null;
+  }
   return sessionReturn;
 }

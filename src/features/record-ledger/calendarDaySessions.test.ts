@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupDaySessions, INVALID_PROJECT_LABEL, NO_PROJECT_LABEL } from "./calendarDaySessions";
+import { calendarDayLabel, groupDaySessions, INVALID_PROJECT_LABEL, NO_PROJECT_LABEL } from "./calendarDaySessions";
 
 const session = (id: string, at: string, contextIds: string[] = []) => ({ id, title: id, occurredStart: at, capturedAt: at, contextIds }) as never;
 const ctx = (id: string, name: string, archived = false, extra: object = {}) => ({ id, name, type: "project", archived, createdAt: "", ...extra }) as never;
@@ -42,5 +42,15 @@ describe("a calendar day's sessions", () => {
   it("never treats a non-project context as a project", () => {
     const groups = groupDaySessions([session("a", "2026-10-08T10:00:00Z", ["t"])], [ctx("t", "topic", false, { type: "topic" })]);
     expect(groups[0]!.label).toBe(NO_PROJECT_LABEL);
+  });
+});
+
+describe("the way-back label of a calendar day", () => {
+  it("names the day from its key", () => {
+    expect(calendarDayLabel("2026-10-10")).toBe("캘린더 10월 10일");
+    expect(calendarDayLabel("2026-01-05")).toBe("캘린더 1월 5일");
+  });
+  it("falls back to the calendar for a malformed key", () => {
+    expect(calendarDayLabel("oops")).toBe("캘린더");
   });
 });

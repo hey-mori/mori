@@ -56,3 +56,12 @@ export function groupDaySessions(
 export function sessionTime(session: Pick<MoriRecord, "occurredStart" | "capturedAt">): string {
   return session.occurredStart ?? session.capturedAt;
 }
+
+/** The way-back label for a session opened from a calendar day, e.g.
+ *  "캘린더 10월 10일". Read from the YYYY-MM-DD key itself, so no time zone
+ *  can move it to a neighbouring day. */
+export function calendarDayLabel(date: string): string {
+  const match = date.match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (!match) return "캘린더";
+  return `캘린더 ${Number(match[1])}월 ${Number(match[2])}일`;
+}

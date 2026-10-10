@@ -107,7 +107,7 @@ export function ContextView() {
     // Remember where it was opened from, for the session's way back.
     setSessionReturn(
       activeContextRef.current
-        ? { sessionId, contextId: activeContextRef.current.id, label: activeContextRef.current.name, viaSearch: false }
+        ? { to: "project", sessionId, contextId: activeContextRef.current.id, label: activeContextRef.current.name, viaSearch: false }
         : null,
     );
     void resolveSession(sessionId).then((outcome) => {
@@ -465,7 +465,7 @@ export function ContextView() {
       const sequence = ++liveOpenSequence.current;
       setSessionReturn(
         activeContextRef.current
-          ? { sessionId, contextId: activeContextRef.current.id, label: activeContextRef.current.name, viaSearch: false }
+          ? { to: "project", sessionId, contextId: activeContextRef.current.id, label: activeContextRef.current.name, viaSearch: false }
           : null,
       );
       void useSessionStore
@@ -707,7 +707,7 @@ export function ContextView() {
                   unconfirmed={unconfirmedInGroup}
                   contextLabel={(contextId) => contextPath(contextId, contexts)}
                   onOpened={(sessionId) => {
-                    setSessionReturn({ sessionId, contextId: activeContext.id, label: activeContext.name, viaSearch: true });
+                    setSessionReturn({ to: "project", sessionId, contextId: activeContext.id, label: activeContext.name, viaSearch: true });
                     openSession("flow");
                   }}
                   onClose={() => {
