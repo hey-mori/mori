@@ -1,7 +1,39 @@
 import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from "rollup-plugin-visualizer";
+
+const REPO = fileURLToPath(new URL(".", import.meta.url));
+
+// Tests are discovered from this repository only. A `--root` elsewhere makes
+// Vitest glob the whole filesystem before any filename filter applies (how a
+// `--root /` run once took a shared machine down). scripts/run-tests.mjs
+// refuses it; this refuses it for anyone who calls Vitest directly with this
+// config.
+// Vitest's parser accepts `--root`, `-r`, `--r=`, and `r` inside a short cluster
+// (`-ur=/`), so every spelling is checked.
+const rootValue = (() => {
+  const argv = process.argv;
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (!arg.startsWith("-") || arg === "--") continue;
+    const body = arg.replace(/^-+/, "");
+    const head = body.split("=")[0];
+    // A single-dash argument is a cluster only if every letter is one of
+    // Vitest's short flags (r, c, u, w, t, h, v); a value like `-renders` is not.
+    const isRoot = arg.startsWith("--")
+      ? head === "root" || head === "r"
+      : /^[rcuwthv]+$/.test(head) && head.includes("r");
+    if (isRoot)
+      return body.includes("=") ? body.slice(body.indexOf("=") + 1) : (argv[index + 1] ?? "");
+  }
+  return null;
+})();
+if (rootValue !== null && (!rootValue || resolve(rootValue) !== resolve(REPO))) {
+  throw new Error(`Mori runs from its repository (${REPO}); --root ${rootValue} is not allowed.`);
+}
 
 export default defineConfig(({ mode }) => ({
   // Honour a PORT override (the preview/verify harness assigns a free port via
@@ -20,6 +52,12 @@ export default defineConfig(({ mode }) => ({
       : null,
   ].filter(Boolean),
   test: {
+    // The worker cap matches scripts/run-tests.mjs, which passes it
+    // explicitly; it is here too so a direct `vitest run` on this shared
+    // machine is bounded the same way. Discovery is pinned to src/ in each
+    // project below, not here: a project that extends this block would
+    // concatenate a root `include` with its own.
+    maxWorkers: Number(process.env.MORI_TEST_MAX_WORKERS) || 2,
     // Two pools, because two kinds of test live here.
     //
     // Almost everything is a pure derivation and parallelises happily. A handful
@@ -38,6 +76,8 @@ export default defineConfig(({ mode }) => ({
         extends: true,
         test: {
           name: "unit",
+          // Every test file lives under src/; a stray filter never widens it.
+          include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
           exclude: ["**/node_modules/**", "**/dist/**", "src/lib/connectors/*Smoke.test.ts"],
         },
       },

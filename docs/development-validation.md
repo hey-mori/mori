@@ -13,7 +13,7 @@ indiscriminately wastes time.
 | -------------------------------- | ----------- | ------------- | ---- |
 | `npm run check:types` (tsc)      | ~13–20 s    | ~3–4 s        | **biggest cost** without cache; incremental cache slashes this |
 | `npm test` (vitest, 600+ tests)  | ~9–10 s     | ~9 s          | Actual test execution is <2 s; module load dominates |
-| Single test file via `vitest run path/to/file.test.ts` | ~5 s | ~3 s | Cold start cost amortized when running multiple |
+| Single test file via `node scripts/run-tests.mjs vitest path/to/file.test.ts` | ~5 s | ~3 s | Cold start cost amortized when running multiple |
 | `npm run build` (`tsc && vite build`) | ~10–15 s | ~7 s   | Vite production bundle; only matters before release |
 | `cargo test` (src-tauri)         | <0.1 s      | <0.1 s        | Negligible |
 
@@ -27,9 +27,9 @@ and reuses it on subsequent runs.
 | Script                        | What it does                                     | When to run |
 | ----------------------------- | ------------------------------------------------ | ----------- |
 | `npm run check:types`         | `tsc --noEmit` (incremental)                     | After meaningful TS edits |
-| `npm run test:unit`           | `vitest run` (alias of `npm test`)               | Full suite, one-shot |
+| `npm run test:unit`           | `run-tests.mjs vitest` (bounded `vitest run`)    | Full suite, one-shot |
 | `npm run test:watch`          | `vitest` (interactive watch)                     | Long iteration sessions |
-| `npm run test:changed`        | `vitest run --changed` (git-aware)               | Quick feedback after small edits |
+| `npm run test:changed`        | `run-tests.mjs vitest --changed` (git-aware)     | Quick feedback after small edits |
 | `npm run check:quick`         | typecheck + changed-tests                        | During iteration |
 | `npm run check:full`          | typecheck + full test suite                      | Iteration or diagnosis |
 | `npm run check:release`       | typecheck + tests + production build             | Iteration or diagnosis |
@@ -53,7 +53,7 @@ npm run check:types        # ~3 s warm; ~13 s the first time after pull
 Or run a single test file directly:
 
 ```
-npx vitest run src/lib/foo/bar.test.ts
+node scripts/run-tests.mjs vitest src/lib/foo/bar.test.ts
 ```
 
 For longer sessions, leave `npm run test:watch` running in another
@@ -134,7 +134,7 @@ honest when something fundamental changes.
 When an agent (Claude Code or any contributor) iterates on a milestone:
 
 - **Do not** run `npm run check:full` after every small edit. Use
-  `npm run check:quick` or a targeted `npx vitest run <file>` instead.
+  `npm run check:quick` or a targeted `node scripts/run-tests.mjs vitest <file>` instead.
 - **Do not** run `npm run build` repeatedly during iteration. Run it
   once at the end (or via `check:release`).
 - **Do** run `scripts/check.sh` before committing.
