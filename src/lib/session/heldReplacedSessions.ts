@@ -8,7 +8,9 @@
  * smaller than the copy), the listing does not describe the session:
  *
  * - the stored descriptor still describes the kept conversation (its
- *   fingerprint is the copy's, or it predates fingerprints): it stays;
+ *   fingerprint is the copy's, or it predates fingerprints): its title,
+ *   activity and counts stay, with the file's current location from the
+ *   listing;
  * - otherwise (none, or it already describes the other file): the entry is
  *   left out of this pass, so nothing new is written under the session.
  *
@@ -40,7 +42,12 @@ export function holdReplacedSessions(
       continue;
     }
     const held = stored.get(id);
-    if (held && (!held.sourceId || held.sourceId === kept.sourceId)) out.push(held);
+    if (held && (!held.sourceId || held.sourceId === kept.sourceId)) {
+      // What describes the session stays; where its file lives now comes
+      // from the listing (a restore into another home moves every path), so
+      // the shared source rule reads that file and finds the kept copy.
+      out.push({ ...held, filePath: meta.filePath, sourceFilePath: meta.sourceFilePath, projectPath: meta.projectPath });
+    }
   }
   return out;
 }

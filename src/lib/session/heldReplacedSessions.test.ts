@@ -17,6 +17,12 @@ describe("discovery of a kept session", () => {
     expect(out.map((m) => m.title)).toEqual(["payments ledger import design"]);
   });
 
+  it("takes where the file lives now from the listing, so a restored home can still be read", () => {
+    const restored = meta("payments ledger import design", "src-kept", { filePath: "/old-home/x/s1.jsonl", sourceFilePath: "/old-home/x/s1.jsonl" });
+    const out = holdReplacedSessions([meta("garden planning for spring", "src-other", { filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl" })], storedAs(restored), () => keptCopy);
+    expect(out[0]).toMatchObject({ title: "payments ledger import design", filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl" });
+  });
+
   it("keeps its own descriptor when the file was cut short below the copy", () => {
     const out = holdReplacedSessions([meta("payments ledger import design", "src-kept", { fileBytes: 100, messageCount: 1 })], storedAs(own), () => keptCopy);
     expect(out[0]!.messageCount).toBe(4);
