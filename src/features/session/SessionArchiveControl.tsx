@@ -121,12 +121,12 @@ export function SessionArchiveControl({ sessionId }: { sessionId: string }) {
   );
 }
 
-function useModal(onClose: () => void, busy: () => boolean) {
+function useModal(onClose: () => void, busy: () => boolean, fallbackFocus?: () => HTMLElement | null) {
   const dialogRef = useRef<HTMLDivElement>(null);
   // Read through refs so a re-render (a phase change) never re-runs the effect
   // and bounces focus out of the dialog and back.
-  const latest = useRef({ onClose, busy });
-  latest.current = { onClose, busy };
+  const latest = useRef({ onClose, busy, fallbackFocus });
+  latest.current = { onClose, busy, fallbackFocus };
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKey = (event: KeyboardEvent) => {
@@ -140,7 +140,10 @@ function useModal(onClose: () => void, busy: () => boolean) {
     dialogRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
-      previous?.focus();
+      // The control that opened it may be gone (a pick bar emptied by the
+      // keep): focus then goes back inside the dialog beneath, never to body.
+      if (previous?.isConnected) previous.focus();
+      else latest.current.fallbackFocus?.()?.focus();
     };
   }, []);
   return dialogRef;
@@ -305,19 +308,27 @@ export function KeepFacts({ sizeBytes }: { sizeBytes?: number }) {
  * in turn; one that fails is named and the rest are still kept.
  */
 export function KeepManyDialog({
-  items,
+  items: chosen,
   onClose,
   onKeep,
+  onDone,
+  fallbackFocus,
 }: {
   items: ReadonlyArray<{ sessionId: string; title: string; sizeBytes?: number }>;
   onClose: () => void;
   onKeep: (sessionId: string) => Promise<unknown>;
+  /** Once every keep has run, with the ones that failed. */
+  onDone?: (failed: string[]) => void;
+  fallbackFocus?: () => HTMLElement | null;
 }) {
+  // What the user confirmed, fixed when the dialog opens: a reload behind it
+  // (a kept conversation leaving the list) must not change what it reports.
+  const [items] = useState(chosen);
   const [phase, setPhase] = useState<"asking" | "keeping" | "done">("asking");
   const [progress, setProgress] = useState(0);
   const [failed, setFailed] = useState<string[]>([]);
   const busy = useRef(false);
-  const ref = useModal(onClose, () => busy.current);
+  const ref = useModal(onClose, () => busy.current, fallbackFocus);
   const total = totalBytes(items.map((item) => item.sizeBytes));
   const keep = async () => {
     if (busy.current) return;
@@ -329,7 +340,9 @@ export function KeepManyDialog({
         onKeep,
         (done) => setProgress(done),
       );
-      setFailed(outcomes.filter((outcome) => !outcome.kept).map((outcome) => outcome.sessionId));
+      const failedIds = outcomes.filter((outcome) => !outcome.kept).map((outcome) => outcome.sessionId);
+      setFailed(failedIds);
+      onDone?.(failedIds);
     } finally {
       busy.current = false;
       setPhase("done");

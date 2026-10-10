@@ -94,7 +94,7 @@ describe("what helps decide whether to keep a source", () => {
           projectPath: "/home/u/dev/mori",
           messageCount: 120,
           messageCountComplete: true,
-          evidence: { prs: [{ repository: "o/r", number: 1 }, { repository: "o/r", number: 2 }] } as AgentWorkSessionMeta["evidence"],
+          evidence: { prs: [{ repository: "o/r", number: 1 }, { repository: "o/r", number: 2 }], complete: true } as AgentWorkSessionMeta["evidence"],
         }),
       ],
       sources: [],
@@ -104,7 +104,13 @@ describe("what helps decide whether to keep a source", () => {
     });
     expect(whole).toMatchObject({ projectLabel: "/home/u/dev/mori", messageCount: 120, prCount: 2 });
     const [partial] = retentionSources({
-      metas: [meta("b", { messageCount: 40, messageCountComplete: false })],
+      metas: [
+        meta("b", {
+          messageCount: 40,
+          messageCountComplete: false,
+          evidence: { prs: [{ repository: "o/r", number: 1 }], complete: false } as AgentWorkSessionMeta["evidence"],
+        }),
+      ],
       sources: [],
       links: [],
       records: [],

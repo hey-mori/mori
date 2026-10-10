@@ -96,7 +96,7 @@ export function retentionSources(inputs: RetentionInventoryInputs): RetentionSou
         // A count read from only the head of a long transcript is a lower
         // bound: not shown as the session's length.
         messageCount: meta.messageCountComplete !== false && meta.messageCount > 0 ? meta.messageCount : undefined,
-        prCount: meta.evidence?.prs.length || undefined,
+        prCount: meta.evidence?.complete ? meta.evidence.prs.length || undefined : undefined,
       };
     });
 }

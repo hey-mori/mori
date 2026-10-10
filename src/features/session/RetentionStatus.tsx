@@ -114,6 +114,15 @@ function RetentionDialog({
   const [keepingMany, setKeepingMany] = useState(false);
   const pickable = attention.filter((a) => Boolean(a.sourcePath));
   const pickedItems = pickable.filter((a) => picked.has(a.sessionId));
+  // A pick whose conversation left the list (kept, or no longer at risk) is
+  // dropped, so it never comes back already checked.
+  useEffect(() => {
+    setPicked((current) => {
+      const live = new Set(attention.filter((a) => Boolean(a.sourcePath)).map((a) => a.sessionId));
+      const next = new Set([...current].filter((id) => live.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [attention]);
   const togglePick = (sessionId: string) =>
     setPicked((current) => {
       const next = new Set(current);
@@ -247,13 +256,15 @@ function RetentionDialog({
       {keepingMany ? (
         <KeepManyDialog
           items={pickedItems.map((item) => ({ sessionId: item.sessionId, title: titleOf(item), sizeBytes: item.bytes }))}
-          onClose={() => {
-            setKeepingMany(false);
-            setPicked(new Set());
+          onClose={() => setKeepingMany(false)}
+          onDone={(failed) => {
+            // What failed stays picked, to try again; cancelling keeps every pick.
+            setPicked(new Set(failed));
             onKept();
           }}
+          fallbackFocus={() => ref.current}
           onKeep={async (sessionId) => {
-            const item = pickedItems.find((candidate) => candidate.sessionId === sessionId);
+            const item = pickable.find((candidate) => candidate.sessionId === sessionId);
             if (!item?.sourcePath) throw new Error("no source path");
             await keepSessionArchive(item.sessionId, item.sourcePath);
           }}
