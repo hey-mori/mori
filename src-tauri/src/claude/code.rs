@@ -1512,7 +1512,7 @@ fn render_content_block(item: &Value) -> Option<String> {
         }
         // Keep a generous, newline-preserving slice so a live surface can show
         // what the tool actually produced, not just a one-line snippet.
-        return Some(format!("{prefix}: {}", cap_text(&body, 1500)));
+        return Some(format!("{prefix}: {}", cap_text(&strip_ansi(&body), 1500)));
     }
 
     // Thinking — internal chain-of-thought. We deliberately drop it so it
@@ -1716,6 +1716,47 @@ fn truncate(input: &str, max: usize) -> String {
     }
     let mut out: String = clean.chars().take(max).collect();
     out.push_str("...");
+    out
+}
+
+/// Remove terminal escape sequences (colours, cursor moves, titles) that a
+/// command printed for a terminal, so a tool result reads as text instead of
+/// "[32m✓[39m". CSI (`ESC [ … final`), OSC (`ESC ] … BEL` or `ESC \\`), and
+/// any other two-byte escape are dropped; everything else is kept as is.
+fn strip_ansi(input: &str) -> String {
+    if !input.contains('\u{1b}') {
+        return input.to_string();
+    }
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '\u{1b}' {
+            out.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('[') => {
+                // Parameters and intermediates, then one final byte @..~.
+                for next in chars.by_ref() {
+                    if ('@'..='~').contains(&next) {
+                        break;
+                    }
+                }
+            }
+            Some(']') => {
+                while let Some(next) = chars.next() {
+                    if next == '\u{7}' {
+                        break;
+                    }
+                    if next == '\u{1b}' && chars.peek() == Some(&'\\') {
+                        chars.next();
+                        break;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
     out
 }
 
@@ -2442,6 +2483,17 @@ mod tests {
         });
         let rendered = render_content_block(&tool_result).unwrap();
         assert!(rendered.contains("wrapped result"), "got: {rendered}");
+    }
+
+    #[test]
+    fn tool_results_drop_terminal_escape_sequences() {
+        let tool_result = serde_json::json!({
+            "type": "tool_result",
+            "content": "\u{1b}[32m✓\u{1b}[39m built in 3.68s\n\u{1b}]0;title\u{7}done \u{1b}[1;31mERR\u{1b}[0m"
+        });
+        let rendered = render_content_block(&tool_result).unwrap();
+        assert_eq!(rendered, "↳ 도구 결과: ✓ built in 3.68s\ndone ERR");
+        assert_eq!(strip_ansi("plain [32m text"), "plain [32m text");
     }
 
     #[test]
