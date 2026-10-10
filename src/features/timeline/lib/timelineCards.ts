@@ -20,6 +20,8 @@
 import { eventTypeLabels } from "../../../domain/constants";
 import { boilerplateLabel, isAgentBoilerplateTitle } from "../../../lib/import/sanitizeTitle";
 import { readableAgentText } from "../../../lib/session/agentText";
+import { isUserRequestEvent, projectEventRequestSummary } from "../../../lib/disclosure/eventDisclosure";
+import type { DisclosureLevel } from "../../../lib/disclosure/disclosureLevel";
 import type { FileTouch, SourceRef, TimelineEvent, TrustLevel } from "../../../domain/types";
 import { formatTime, formatTimeRange, minutesBetween } from "../../../lib/formatting/time";
 import { getTrustDisplay } from "../../../lib/evidence/trust";
@@ -252,6 +254,21 @@ export function inspectorEventSummary(event: TimelineEvent, shownTitle: string):
   const a = norm(summary);
   const b = norm(shownTitle);
   return !a || a === b || a === b.replace(/[.…]+$/, "") ? "" : summary;
+}
+
+/**
+ * The hover preview's summary. A user's own request is shown at its
+ * disclosure level, as the inspector and the 원본 list show it; any other
+ * event's summary is shown as read.
+ */
+export function hoverEventSummary(event: TimelineEvent, shownTitle: string, level: DisclosureLevel): string {
+  // An injected notice (a slash command, an interrupt, a task notification)
+  // also arrives as a user message; its title names it, and its text is
+  // neither the user's request nor worth reading on hover.
+  if (isAgentBoilerplateTitle(event.summary)) return "";
+  if (!isUserRequestEvent(event)) return readableEventSummary(event, shownTitle);
+  const text = readableAgentText(projectEventRequestSummary(event, level).text);
+  return sameText(text, shownTitle) ? "" : text;
 }
 
 /** Whether a summary only repeats its title. */

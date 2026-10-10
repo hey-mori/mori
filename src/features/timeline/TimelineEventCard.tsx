@@ -2,7 +2,9 @@ import { useCallback, useState, type CSSProperties, type FocusEvent, type MouseE
 import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
 import { LABEL_OFFSET_PX, type LaidOutTimelineItem, type TimelineDensity } from "../../lib/timeline/collisionLayout";
-import { labelText, readableEventSummary } from "./lib/timelineCards";
+import { hoverEventSummary, labelText } from "./lib/timelineCards";
+import { useSessionStore } from "../../app/sessionStore";
+import { resolveDisclosureLevel } from "../../lib/disclosure";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { SourceKind, SourceRef, TimelineEvent } from "../../domain/types";
 import {
@@ -54,12 +56,17 @@ export function TimelineEventCard({
       ? `${vm.fileActivity.filesLabel}${fileDiff ? ` · ${fileDiff}` : ""}`
       : `${vm.fileActivity.filesLabel} 읽기`
     : null;
+  // A request's body follows its disclosure level here as in the inspector.
+  // Its title is not gated anywhere yet (an open policy question, #237).
+  const disclosureDefault = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
+  const disclosureOverride = useSessionStore((state) => state.requestDisclosureOverrides[event.id]);
+  const hoverSummary = hoverEventSummary(event, vm.title, resolveDisclosureLevel(disclosureOverride, disclosureDefault));
   const preview: TimelineHoverPreview = {
     meta: [vm.timeLabel, sourceMark.label, fileLine, vm.primaryMeta].filter(
       (item): item is string => Boolean(item),
     ),
     title: vm.title,
-    summary: readableEventSummary(event, vm.title),
+    summary: hoverSummary,
   };
 
   const showHover = useCallback(
@@ -98,7 +105,7 @@ export function TimelineEventCard({
         data-item-id={event.id}
         aria-pressed={focusState === "selected"}
         aria-label={vm.ariaLabel}
-        data-preview={`${vm.timeLabel} · ${sourceMark.label}\n${vm.title}\n${readableEventSummary(event, vm.title)}`}
+        data-preview={`${vm.timeLabel} · ${sourceMark.label}\n${vm.title}\n${hoverSummary}`}
       >
         {layout.width < NARROW_CARD_WIDTH && layout.labelRoom > 0 ? (
           <span
