@@ -17,6 +17,7 @@ import {
   type SidebarGroupingMode,
   type SidebarSessionRow,
 } from "../../lib/sidebar/sessionList";
+import { lookAlikeHints } from "../../lib/sidebar/lookAlike";
 import {
   loadGroupingPreference,
   saveGroupingPreference,
@@ -160,6 +161,14 @@ export function SessionIndex({
     () => groupSidebarRows(filteredPast, Date.now(), groupMode),
     [filteredPast, groupMode],
   );
+  // Same-titled sessions in the visible list read apart by when they started.
+  const lookAlike = useMemo(
+    () =>
+      lookAlikeHints(
+        filteredPast.map((row) => ({ id: row.sessionId, title: row.title, startedAt: row.startedAt, at: row.timestamp })),
+      ),
+    [filteredPast],
+  );
 
   const term = query.trim().toLowerCase();
   const visibleLive = useMemo(
@@ -180,7 +189,23 @@ export function SessionIndex({
   );
 
   const isProjectMode = groupMode === "project";
-  const visibleLost = term ? lostRows.filter((record) => record.title.toLowerCase().includes(term)) : lostRows;
+  const visibleLost = useMemo(
+    () => (term ? lostRows.filter((record) => record.title.toLowerCase().includes(term)) : lostRows),
+    [lostRows, term],
+  );
+  // Built only while the group is open, over the page on screen.
+  const lostLookAlike = useMemo(
+    () =>
+      lookAlikeHints(
+        (lostOpen ? visibleLost.slice(0, lostShown) : []).map((record) => ({
+          id: record.id,
+          title: record.title || "제목 없음",
+          startedAt: record.occurredStart,
+          at: record.occurredEnd,
+        })),
+      ),
+    [visibleLost, lostOpen, lostShown],
+  );
   const workingCount = visibleLive.filter((row) => row.working).length;
 
   return (
@@ -295,6 +320,9 @@ export function SessionIndex({
                       >
                         <span className="session-index-row-title">
                           <span className="session-index-row-name">{row.title}</span>
+                          {lookAlike.has(row.sessionId) ? (
+                            <span className="session-index-row-hint">{lookAlike.get(row.sessionId)}</span>
+                          ) : null}
                         </span>
                         {meta ? (
                           <span className="session-index-row-meta">{meta}</span>
@@ -334,6 +362,9 @@ export function SessionIndex({
                       >
                         <span className="session-index-row-title">
                           <span className="session-index-row-name">{record.title || "제목 없음"}</span>
+                          {lostLookAlike.has(record.id) ? (
+                            <span className="session-index-row-hint">{lostLookAlike.get(record.id)}</span>
+                          ) : null}
                         </span>
                         {at ? <span className="session-index-row-meta">{formatClaudeRelativeKo(at)}</span> : null}
                       </button>

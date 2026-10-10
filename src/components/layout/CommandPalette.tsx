@@ -34,6 +34,7 @@ import {
   passageOnlyRecordIds,
   recordTextHolds,
   recordToEntry,
+  withLookAlikeHints,
   viaSavedPassage,
   withoutDuplicateSessions,
 } from "./paletteRecords";
@@ -180,7 +181,7 @@ export function CommandPalette({
               return recordTextHolds(record, text) ? entry : viaSavedPassage(entry);
             }),
           ];
-          setRecordEntries(entries);
+          setRecordEntries(withLookAlikeHints(entries, [...found, ...extra]));
           setRecordError(false);
           setRecordNote(recordSearchNote(result.source, result.fellBack));
         })
