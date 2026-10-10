@@ -44,8 +44,13 @@ export function ReportsView() {
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
   const view = useSessionStore(selectSessionView);
-  // Below 원문 the prompt is not shown: it quotes request titles verbatim.
-  const requestsHidden = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel !== "raw");
+  // While any request reads below 원문 the prompt is not shown: it quotes
+  // request titles verbatim.
+  const requestsWithheld = useSessionStore(
+    (state) =>
+      state.analysisSettings.requestDisclosureLevel !== "raw" ||
+      Object.values(state.requestDisclosureOverrides).some((level) => level !== "raw"),
+  );
   const mode = useSessionStore(selectSessionMode);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysis = useSessionStore((state) => state.analysis);
@@ -141,9 +146,9 @@ export function ReportsView() {
             {/* The prompt quotes request titles verbatim: at 숨김 it is not
                 shown or copied here, as in the report itself. */}
             <ResumePromptCard
-              prompt={requestsHidden ? "" : resumePromptText}
+              prompt={requestsWithheld ? "" : resumePromptText}
               emptyHint={
-                requestsHidden
+                requestsWithheld
                   ? "요청 표시 수준이 원문이 아니라서 요청 내용이 담긴 이어가기 프롬프트는 보여 주지 않습니다."
                   : "분석 탭에서 분석을 실행하면 이어가기 프롬프트가 만들어집니다."
               }

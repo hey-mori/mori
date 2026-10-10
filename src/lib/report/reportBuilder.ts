@@ -381,7 +381,10 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
 
   // The resume prompt quotes request titles verbatim, so below 원문 it stays
   // out of the report, and the report says so.
-  if (input.resumePromptOverride && type !== "clientSafe" && requestDisclosureLevel !== "raw") {
+  const anyRequestWithheld =
+    requestDisclosureLevel !== "raw" ||
+    view.events.some((event) => (requestDisclosureOverrides[event.id] ?? "raw") !== "raw");
+  if (input.resumePromptOverride && type !== "clientSafe" && anyRequestWithheld) {
     warnings.push("요청 표시 수준이 원문이 아니라서 요청 내용이 담긴 Resume 프롬프트는 넣지 않았습니다.");
   } else if (input.resumePromptOverride && type !== "clientSafe") {
     lines.push("## Resume 프롬프트");

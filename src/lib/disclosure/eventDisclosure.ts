@@ -34,6 +34,11 @@ export function projectEventRequestSummary(
   if (!isUserRequestEvent(event)) {
     return { level: "raw", text: event.summary, isWithheld: false, fallbackUsed: false };
   }
+  // An agent notice imported as a user turn is not a request; below 원문 its
+  // text (which can carry the user's command arguments) is not shown.
+  if (level !== "raw" && isAgentBoilerplateTitle(event.summary)) {
+    return { level, text: "", isWithheld: true, fallbackUsed: false };
+  }
   const abstraction = buildRequestAbstraction(event.summary);
   return projectDisclosure(
     {
@@ -96,9 +101,12 @@ export function discloseEventForView<
 >(event: T, level: DisclosureLevel): T {
   if (level === "raw" || !isRequestTitledEvent(event)) return event;
   // An agent notice imported as a user turn (a slash-command caveat, an
-  // interruption, a task notification) is not the user's request: below 숨김
-  // it keeps its own label, which the timeline reads as such.
-  if (level !== "hidden" && (event.title === "세션 이어가기" || isAgentBoilerplateTitle(event.title))) return event;
+  // interruption, a task notification) is not a request to project: below
+  // 숨김 it reads as its label, and its text (which can carry the user's own
+  // command arguments) is left out.
+  const notice =
+    isAgentBoilerplateTitle(event.title) || (event.title === "세션 이어가기" && isAgentBoilerplateTitle(event.summary));
+  if (level !== "hidden" && notice) return { ...event, title: "세션 이어가기", summary: "" };
   // An unanswered pasted ask keeps the ask as its summary too.
   const summaryIsTheAsk =
     isUserRequestEvent(event) || (Boolean(event.requestText?.trim()) && !event.responseText?.trim());
@@ -108,7 +116,7 @@ export function discloseEventForView<
   const ask = event.requestText?.trim() || event.title;
   return {
     ...event,
-    title: requestTextAtLevel(ask, level, SUMMARY_TITLE_CHARS) || event.title,
+    title: requestTextAtLevel(ask, level, SUMMARY_TITLE_CHARS) || HIDDEN_REQUEST_TITLE,
     summary: summaryIsTheAsk ? requestTextAtLevel(event.summary, level) : event.summary,
   };
 }
@@ -119,6 +127,6 @@ export function discloseEventForView<
 export function requestTitleForView(text: string, level: DisclosureLevel): string {
   if (level === "raw" || !text.trim()) return text;
   if (level === "hidden") return HIDDEN_REQUEST_TITLE;
-  return requestTextAtLevel(text, level, SUMMARY_TITLE_CHARS) || text;
+  return requestTextAtLevel(text, level, SUMMARY_TITLE_CHARS) || HIDDEN_REQUEST_TITLE;
 }
 

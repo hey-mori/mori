@@ -189,6 +189,16 @@ describe("buildReportMarkdown", () => {
       requestDisclosureLevel: "summary",
     });
     expect(summaryLevel.markdown).not.toContain("배포 스크립트 고쳐줘: 경로 수정");
+    const overridden = buildReportMarkdown({
+      view: mockSession,
+      type: "personalRetrospective",
+      sections: DEFAULT_SECTIONS,
+      privacy: privacy(),
+      resumePromptOverride: "09:10 배포 스크립트 고쳐줘: 경로 수정",
+      requestDisclosureLevel: "raw",
+      requestDisclosureOverrides: { [mockSession.events[0].id]: "hidden" },
+    });
+    expect(overridden.markdown).not.toContain("배포 스크립트 고쳐줘: 경로 수정");
   });
 
   it("client-safe mode strips event summaries, decision rationale, issue bodies, and source titles", () => {
