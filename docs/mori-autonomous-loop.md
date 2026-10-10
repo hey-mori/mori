@@ -150,6 +150,17 @@ Maintain this list as the project evolves. Capability-based names
 only · no phase numbers.
 
 **Completed (do not redo):**
+- Product renaissance (2026-10-10, record `docs/design/product-renaissance/`):
+  tick cards print their titles, on the left when the right has no room, and
+  agent markup is cleaned for display (#234, #236, #242, #252); arrow keys keep the selection on screen and the inspector is not
+  clipped beside the session list (#244); a session opens at a zoom sized to it
+  (#249); the project 흐름 is a chronology of confirmed members (#239); a calendar
+  day unfolds its sessions by reviewed project and a session opened from it leads
+  back (#241, #245); the session reader marks what was kept (#248); the hover
+  follows request disclosure (#246); empty and image tool results and terminal
+  codes read correctly (#247); the dashboard names folders as folders (#250); a
+  session whose source is gone opens as its record and says so (#251). Owner
+  decisions are listed in that folder's `roadmap.md`.
 - Trustworthy recovery and referential integrity (2026-10-10, design
   `docs/design/recoverable-storage.md` §6-§8): a desktop reopen no longer renames
   an event that accepted memory (read from SQLite) or an unadopted analysis run
