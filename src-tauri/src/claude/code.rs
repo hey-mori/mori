@@ -1504,6 +1504,9 @@ fn render_content_block(item: &Value) -> Option<String> {
             .unwrap_or_default();
         let is_error = item.get("is_error").and_then(Value::as_bool).unwrap_or(false);
         let prefix = if is_error { "↳ 도구 오류" } else { "↳ 도구 결과" };
+        // Judged after the terminal codes are gone: a result that only moved
+        // the cursor printed nothing.
+        let body = strip_ansi(&body);
         if body.trim().is_empty() {
             if images > 0 {
                 return Some(format!("{prefix}: (이미지 {images}개)"));
@@ -1512,7 +1515,7 @@ fn render_content_block(item: &Value) -> Option<String> {
         }
         // Keep a generous, newline-preserving slice so a live surface can show
         // what the tool actually produced, not just a one-line snippet.
-        return Some(format!("{prefix}: {}", cap_text(&strip_ansi(&body), 1500)));
+        return Some(format!("{prefix}: {}", cap_text(&body, 1500)));
     }
 
     // Thinking — internal chain-of-thought. We deliberately drop it so it
@@ -1734,17 +1737,32 @@ fn strip_ansi(input: &str) -> String {
             out.push(c);
             continue;
         }
-        match chars.next() {
+        match chars.peek().copied() {
             Some('[') => {
-                // Parameters and intermediates, then one final byte @..~.
-                for next in chars.by_ref() {
-                    if ('@'..='~').contains(&next) {
+                chars.next();
+                // Parameter and intermediate bytes (0x20..=0x3F), then one
+                // final byte (0x40..=0x7E). Anything else ends a malformed
+                // sequence without eating the text after it.
+                while let Some(&next) = chars.peek() {
+                    if (' '..='?').contains(&next) {
+                        chars.next();
+                    } else {
+                        if ('@'..='~').contains(&next) {
+                            chars.next();
+                        }
                         break;
                     }
                 }
             }
-            Some(']') => {
-                while let Some(next) = chars.next() {
+            Some(']') | Some('P') | Some('_') | Some('^') => {
+                chars.next();
+                // A string sequence (OSC, DCS, APC, PM) ends at BEL or ST. An
+                // unterminated one ends at the line break, which is kept.
+                while let Some(&next) = chars.peek() {
+                    if next == '\n' {
+                        break;
+                    }
+                    chars.next();
                     if next == '\u{7}' {
                         break;
                     }
@@ -1754,6 +1772,17 @@ fn strip_ansi(input: &str) -> String {
                     }
                 }
             }
+            Some('(') | Some(')') | Some('*') | Some('+') => {
+                // Character set selection: ESC ( B and the like.
+                chars.next();
+                if chars.peek().is_some_and(|next| next.is_ascii_graphic()) {
+                    chars.next();
+                }
+            }
+            Some(next) if ('@'..='~').contains(&next) => {
+                chars.next();
+            }
+            // A lone ESC before a line break or ordinary text: drop only it.
             _ => {}
         }
     }
@@ -2494,6 +2523,14 @@ mod tests {
         let rendered = render_content_block(&tool_result).unwrap();
         assert_eq!(rendered, "↳ 도구 결과: ✓ built in 3.68s\ndone ERR");
         assert_eq!(strip_ansi("plain [32m text"), "plain [32m text");
+        // Character-set selection, a malformed CSI, an unterminated OSC, and a
+        // lone ESC before text all keep the text around them.
+        assert_eq!(strip_ansi("\u{1b}[1mbold\u{1b}(B\u{1b}[m rest"), "bold rest");
+        assert_eq!(strip_ansi("\u{1b}[3\n한글 줄 끝 next"), "\n한글 줄 끝 next");
+        assert_eq!(strip_ansi("a\u{1b}]0;title\nline2"), "a\nline2");
+        assert_eq!(strip_ansi("x\u{1b}\n한"), "x\n한");
+        let cursor_only = serde_json::json!({ "type": "tool_result", "content": "\u{1b}[?25l\u{1b}[?25h" });
+        assert_eq!(render_content_block(&cursor_only).unwrap(), "↳ (도구 결과 없음)");
     }
 
     #[test]
