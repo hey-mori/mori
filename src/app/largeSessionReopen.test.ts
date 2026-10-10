@@ -27,6 +27,7 @@ vi.mock("../lib/trace/sources/ai/workSessions", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getAgentWorkSession: (meta: unknown) => reader.detail(meta),
   listAllAgentWorkSessions: async () => [],
+  listAllAgentWorkSessionsReport: async () => ({ sessions: [], vouchingAgents: new Set<string>() }),
 }));
 vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
   ...(await importOriginal<object>()),
