@@ -44,13 +44,12 @@ export function ReportsView() {
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
   const view = useSessionStore(selectSessionView);
-  // While any request reads below 원문 the prompt is not shown: it quotes
-  // request titles verbatim.
-  const requestsWithheld = useSessionStore(
-    (state) =>
-      state.analysisSettings.requestDisclosureLevel !== "raw" ||
-      Object.values(state.requestDisclosureOverrides).some((level) => level !== "raw"),
-  );
+  // While any of this session's requests reads below 원문 the prompt is not
+  // shown: it quotes request titles verbatim.
+  const requestDefault = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
+  const requestOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
+  const requestsWithheld =
+    requestDefault !== "raw" || view.events.some((event) => (requestOverrides[event.id] ?? "raw") !== "raw");
   const mode = useSessionStore(selectSessionMode);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysis = useSessionStore((state) => state.analysis);
@@ -143,8 +142,8 @@ export function ReportsView() {
             {/* 이어가기 sits with the package: both are handoff outputs you carry
                 to a *new* session, so the resume prompt reads as part of the
                 packaging step rather than leading the report. */}
-            {/* The prompt quotes request titles verbatim: at 숨김 it is not
-                shown or copied here, as in the report itself. */}
+            {/* The prompt quotes request titles verbatim: while any request
+                reads below 원문 it is not shown or copied here, as in the report. */}
             <ResumePromptCard
               prompt={requestsWithheld ? "" : resumePromptText}
               emptyHint={

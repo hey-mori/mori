@@ -1,6 +1,6 @@
 import type { EventActor } from "../../domain/types";
 import { buildRequestAbstraction } from "./requestAbstraction";
-import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
+import { boilerplateLabel, isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
   projectDisclosure,
   type DisclosureLevel,
@@ -106,7 +106,11 @@ export function discloseEventForView<
   // command arguments) is left out.
   const notice =
     isAgentBoilerplateTitle(event.title) || (event.title === "세션 이어가기" && isAgentBoilerplateTitle(event.summary));
-  if (level !== "hidden" && notice) return { ...event, title: "세션 이어가기", summary: "" };
+  if (level !== "hidden" && notice) {
+    // Its fixed label ("요청 중단", "작업 알림", ...), never the command's name.
+    const label = boilerplateLabel(isAgentBoilerplateTitle(event.title) ? event.title : event.summary, { commandName: false });
+    return { ...event, title: label || "세션 이어가기", summary: "" };
+  }
   // An unanswered pasted ask keeps the ask as its summary too.
   const summaryIsTheAsk =
     isUserRequestEvent(event) || (Boolean(event.requestText?.trim()) && !event.responseText?.trim());
