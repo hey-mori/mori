@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readableEventSummary, readableEventTitle, sameText } from "./timelineCards";
+import { inspectorEventSummary, readableEventSummary, readableEventTitle, sameText } from "./timelineCards";
 
 const ev = (title: string, summary: string) => ({ title, summary }) as never;
 
@@ -19,5 +19,20 @@ describe("an event as a person reads it", () => {
     expect(sameText("CI 실행 기록 100건의 데이터를 수집했고 분석합니다", "CI 실행 기록 100건의 데이터를 수집했고 …")).toBe(true);
     expect(sameText("A longer title that is complete, then more detail here", "A longer title that is complete")).toBe(false);
     expect(readableEventSummary(ev("t", "<local-command-stdout>x</local-command-stdout>"), "t")).toBe("");
+  });
+});
+
+describe("the inspector's summary", () => {
+  const title = "CI 실행 기록 100건의 데이터를 수집했고 …";
+  const full = "CI 실행 기록 100건의 데이터를 수집했고 대기시간과 실행시간을 나눠 분석합니다";
+
+  it("is left out when it is exactly the heading", () => {
+    expect(inspectorEventSummary(ev("같은 문장입니다.", "같은 문장입니다."), "같은 문장입니다.")).toBe("");
+    expect(inspectorEventSummary(ev("같은 문장…", "같은 문장"), "같은 문장…")).toBe("");
+  });
+
+  it("keeps the full text behind a heading cut short, which the hover may drop", () => {
+    expect(readableEventSummary(ev(title, full), title)).toBe("");
+    expect(inspectorEventSummary(ev(title, full), title)).toBe(full);
   });
 });

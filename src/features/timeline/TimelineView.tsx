@@ -315,6 +315,7 @@ export function TimelineView({
     const swimlaneActive = mode === "timeline" && readingMode === "swimlane";
     if (!swimlaneActive) return;
     function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented) return;
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       const target = event.target as HTMLElement | null;
       if (
@@ -322,6 +323,16 @@ export function TimelineView({
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
           target.isContentEditable)
+      ) {
+        return;
+      }
+      // Arrows belong to the swimlane only from the page itself or from inside
+      // the timeline. A menu, list box, tab list or dialog moves its own focus
+      // with them, and the selection must not pull focus out of it.
+      if (
+        target instanceof Element &&
+        target !== document.body &&
+        !target.closest("[data-timeline-keys]")
       ) {
         return;
       }
@@ -373,8 +384,10 @@ export function TimelineView({
     return () => cancelAnimationFrame(frame);
   }, [selectedEventId]);
 
-  // Entering the swimlane with an item already selected (from the 원본 list,
-  // a search hit, a deep link) shows that item rather than the span's start.
+  // Entering the swimlane with an item already selected (picked in the 원본
+  // list, or left over from an earlier visit) shows that item rather than the
+  // span's start. Only on entering: a selection made while the swimlane is up
+  // came from a click on a card that is already on screen, or from a key.
   const swimlaneShown = mode === "timeline" && readingMode === "swimlane";
   const selectedOnEnterRef = useRef(selectedEventId);
   selectedOnEnterRef.current = selectedEventId;
@@ -455,6 +468,30 @@ export function TimelineView({
     ],
   );
 
+  // Drill from an AI 흐름 phase into the 원본 stream: select the first event at
+  // or after the phase start and switch to the stream, which auto-highlights and
+  // scrolls to it. Reuses the shared selection rail, no new global state. Above
+  // the empty-state return so hook order never depends on it.
+  const selectPhaseInStream = useCallback(
+    (phase: WorkPhase) => {
+      const phaseStart = new Date(phase.startIso).getTime();
+      const target = renderModel.visibleDisplayItems.find((item) => {
+        const at = new Date(item.start).getTime();
+        return Number.isFinite(at) && at >= phaseStart;
+      });
+      if (!target) return;
+      if (readingModes.includes("stream")) {
+        // In-place drill (활동 context): select + switch to the 원본 stream here.
+        setSelectedEventId(target.id);
+        setReadingModeOverride("stream");
+      } else {
+        // Locked to 흐름 (the 분석 tab): 원본 lives in the 활동 tab, so cross-navigate
+        // there with the event focused rather than a dead in-place mode switch.
+        focusTimelineEvent(target.id);
+      }
+    },
+    [renderModel.visibleDisplayItems, setSelectedEventId, readingModes, focusTimelineEvent],
+  );
   if (model.emptyVariant) {
     // Inside the session 흐름 tab the shell content is full-bleed, so wrap the
     // empty state in a padded pane for breathing room.
@@ -488,29 +525,6 @@ export function TimelineView({
     !inspectorHidden &&
     (Boolean(selectedItem) || understandOpen);
 
-  // Drill from an AI 흐름 phase into the 원본 stream: select the first event at
-  // or after the phase start and switch to the stream, which auto-highlights and
-  // scrolls to it. Reuses the shared selection rail — no new global state.
-  const selectPhaseInStream = useCallback(
-    (phase: WorkPhase) => {
-      const phaseStart = new Date(phase.startIso).getTime();
-      const target = renderModel.visibleDisplayItems.find((item) => {
-        const at = new Date(item.start).getTime();
-        return Number.isFinite(at) && at >= phaseStart;
-      });
-      if (!target) return;
-      if (readingModes.includes("stream")) {
-        // In-place drill (활동 context): select + switch to the 원본 stream here.
-        setSelectedEventId(target.id);
-        setReadingModeOverride("stream");
-      } else {
-        // Locked to 흐름 (the 분석 tab): 원본 lives in the 활동 tab, so cross-navigate
-        // there with the event focused rather than a dead in-place mode switch.
-        focusTimelineEvent(target.id);
-      }
-    },
-    [renderModel.visibleDisplayItems, setSelectedEventId, readingModes, focusTimelineEvent],
-  );
   // The 흐름 tab offers two reading modes: the swimlane canvas (시간 축) and a
   // content-rich chronological 목록. The swimlane never auto-degrades to a list
   // on narrow screens; the 목록 appears only when the user picks it (or when a
@@ -521,7 +535,7 @@ export function TimelineView({
         mode === "flow" ? "flow-grid" : ""
       } ${inspectorVisible ? "" : "inspector-collapsed"}`}
     >
-      <section className="timeline-main" data-understand-scope="true">
+      <section className="timeline-main" data-understand-scope="true" data-timeline-keys>
         {mode === "flow" ? (
           <FlowFocusHeader
             onShowTimeline={() => goToMode("timeline")}

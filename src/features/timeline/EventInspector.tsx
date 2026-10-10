@@ -1,6 +1,6 @@
 import { StickyNote } from "lucide-react";
 import { readableAgentText } from "../../lib/session/agentText";
-import { readableEventSummary, readableEventTitle } from "./lib/timelineCards";
+import { inspectorEventSummary, readableEventTitle } from "./lib/timelineCards";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import {
@@ -171,7 +171,7 @@ export function EventInspector({
     0;
 
   const shownTitle = readableEventTitle(selectedEvent);
-  const shownSummary = readableEventSummary(selectedEvent, shownTitle);
+  const shownSummary = inspectorEventSummary(selectedEvent, shownTitle);
 
   return (
     <BaseInspectorPanel

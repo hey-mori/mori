@@ -77,6 +77,9 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
     ref,
   ) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  // The item last revealed, and when: selecting can open the inspector, which
+  // narrows the scroller and rescales the time axis a moment later.
+  const revealedRef = useRef<{ id: string; at: number } | null>(null);
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
 
   // Report the visible horizontal slice of the timeline so the minimap can
@@ -93,8 +96,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
     );
   }, [onViewportChange]);
 
-  useImperativeHandle(
-    ref,
+  const handle = useMemo<TimelineCanvasHandle>(
     () => ({
       scrollToFraction(fraction: number) {
         const element = scrollerRef.current;
@@ -127,15 +129,21 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
           element.scrollLeft = next;
           emitViewport();
         }
+        revealedRef.current = { id: itemId, at: Date.now() };
         const card = element.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(item.id)}"]`);
         if (!card) return;
-        if (options?.focus) card.focus({ preventScroll: true });
-        // Vertical scrolling belongs to the page; bring a lane below the fold up.
+        // Vertical scrolling belongs to the page; bring a lane below the fold
+        // up. Before focusing: the card's focus places its hover preview from
+        // where the card is at that moment.
         card.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+        if (options?.focus) card.focus({ preventScroll: true });
       },
     }),
     [emitViewport, model.visibleDisplayItems, model.layoutIndex, model.layout.contentLeftPx],
   );
+  useImperativeHandle(ref, () => handle, [handle]);
+  const handleRef = useRef(handle);
+  handleRef.current = handle;
 
   useLayoutEffect(() => {
     const element = scrollerRef.current;
@@ -164,6 +172,13 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
   useLayoutEffect(() => {
     emitViewport();
   }, [emitViewport, model.layout.frameWidth, model.visibleEvents.length, density]);
+
+  // A reveal made just before the axis rescaled is redone on the new scale.
+  useLayoutEffect(() => {
+    const last = revealedRef.current;
+    if (!last || Date.now() - last.at > 1000) return;
+    handleRef.current.revealItem(last.id);
+  }, [model.layout.frameWidth]);
 
   // Trust the parent's model; only fall back to local frame width when the
   // model was built with the default width.
