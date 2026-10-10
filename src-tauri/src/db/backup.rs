@@ -50,18 +50,77 @@ pub fn backup_database(conn: &Connection, dir: &Path, label: &str) -> Result<Pat
     // that partially applies then fails would otherwise re-snapshot the same
     // state on every retry, spamming full-DB VACUUMs and pruning the genuine
     // earlier restore point away. If a backup for this label already exists,
-    // reuse it instead of writing another.
+    // reuse it instead of writing another, but only a readable database: a
+    // file an older build left half-written when it was killed is set aside,
+    // never taken for the restore point.
     if let Some(existing) = find_backup_for_label(dir, &safe) {
-        return Ok(existing);
+        if is_readable_snapshot(&existing) {
+            return Ok(existing);
+        }
+        set_aside(&existing);
     }
+    clear_partials(dir, &safe);
     let file = dir.join(format!("mori-{}-{}.sqlite", safe, unix_millis()));
-    // VACUUM INTO fails if the target exists; the millisecond stamp keeps it
-    // unique. Escape any single quote in the path for the SQL string literal.
-    let target = file.to_string_lossy().replace('\'', "''");
+    // Written under a `.partial` name and renamed when complete, so a process
+    // killed mid-write never leaves a file under a snapshot's name. VACUUM INTO
+    // fails if the target exists; the millisecond stamp keeps it unique.
+    // Escape any single quote in the path for the SQL string literal.
+    let partial = with_suffix(&file, PARTIAL_SUFFIX);
+    let target = partial.to_string_lossy().replace('\'', "''");
     conn.execute_batch(&format!("VACUUM INTO '{target}'"))
         .map_err(|error| format!("Failed to write pre-migration backup: {error}"))?;
+    std::fs::rename(&partial, &file)
+        .map_err(|error| format!("Failed to finish pre-migration backup: {error}"))?;
     prune_backups(dir);
     Ok(file)
+}
+
+/// The suffix a snapshot carries while it is being written.
+const PARTIAL_SUFFIX: &str = ".partial";
+/// The suffix a snapshot that cannot be read is set aside under.
+const INVALID_SUFFIX: &str = ".invalid";
+
+/// A complete SQLite database that passes `quick_check`. Opened read-only, so
+/// checking never changes the snapshot.
+fn is_readable_snapshot(path: &Path) -> bool {
+    use rusqlite::OpenFlags;
+    let Ok(conn) = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX) else {
+        return false;
+    };
+    conn.query_row("PRAGMA quick_check", [], |row| row.get::<_, String>(0))
+        .map(|answer| answer == "ok")
+        .unwrap_or(false)
+}
+
+/// Move an unreadable snapshot out of the names Mori lists and restores.
+fn set_aside(path: &Path) {
+    let _ = std::fs::rename(path, with_suffix(path, INVALID_SUFFIX));
+    let _ = std::fs::remove_file(sidecar(path, "-journal"));
+}
+
+/// Remove what a killed write left for this label: `.partial` files and their
+/// rollback journals. They were never a snapshot. A set-aside `.invalid` file
+/// stays, so what happened can still be seen; permanent deletion removes it.
+fn clear_partials(dir: &Path, safe_label: &str) {
+    let prefix = format!("mori-{safe_label}-");
+    let Ok(read) = std::fs::read_dir(dir) else { return };
+    for path in read.flatten().map(|entry| entry.path()) {
+        let Some(name) = path.file_name().and_then(|name| name.to_str()) else { continue };
+        if name.starts_with(&prefix) && name.contains(PARTIAL_SUFFIX) && is_leftover_name(name) {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+}
+
+/// A file Mori's own snapshot writing can leave behind: a half-written
+/// `.partial`, an unreadable snapshot set aside, or a rollback journal of one.
+fn is_leftover_name(name: &str) -> bool {
+    let base = name.strip_suffix("-journal").unwrap_or(name);
+    let snapshot = base
+        .strip_suffix(PARTIAL_SUFFIX)
+        .or_else(|| base.strip_suffix(INVALID_SUFFIX))
+        .unwrap_or(base);
+    snapshot != name && is_backup_name(snapshot)
 }
 
 /// Find an existing snapshot for a label (`mori-<label>-<stamp>.sqlite`).
@@ -114,14 +173,35 @@ pub fn restore_backup(backup_path: &Path, dir: &Path, target_db: &Path) -> Resul
     if !canon_backup.starts_with(&canon_dir) {
         return Err("Refusing to restore a file outside the backups directory.".to_string());
     }
+    // A file that is not a readable database would replace the live one with
+    // nothing usable: refuse before anything is touched.
+    if !is_readable_snapshot(&canon_backup) {
+        return Err("Refusing to restore a backup that is not a readable database.".to_string());
+    }
     if let Some(parent) = target_db.parent() {
         std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
-    std::fs::copy(&canon_backup, target_db)
+    // The database being replaced is kept first (its WAL folded in), so a
+    // restore is never the end of the state it replaced.
+    if target_db.exists() {
+        let keep = canon_dir.join(format!("mori-pre-restore-{}.sqlite", unix_millis()));
+        let live = Connection::open(target_db).map_err(|error| format!("Failed to open the live database: {error}"))?;
+        let partial = with_suffix(&keep, PARTIAL_SUFFIX);
+        let quoted = partial.to_string_lossy().replace('\'', "''");
+        live.execute_batch(&format!("VACUUM INTO '{quoted}'"))
+            .map_err(|error| format!("Failed to keep the current database before restoring: {error}"))?;
+        drop(live);
+        std::fs::rename(&partial, &keep).map_err(|error| format!("Failed to keep the current database: {error}"))?;
+    }
+    // Copied beside the target and renamed over it: a copy cut short never
+    // leaves a half-written live database.
+    let incoming = with_suffix(target_db, ".restoring");
+    std::fs::copy(&canon_backup, &incoming)
         .map_err(|error| format!("Failed to restore backup: {error}"))?;
     for suffix in ["-wal", "-shm"] {
         let _ = std::fs::remove_file(sidecar(target_db, suffix));
     }
+    std::fs::rename(&incoming, target_db).map_err(|error| format!("Failed to restore backup: {error}"))?;
     Ok(())
 }
 
@@ -146,7 +226,8 @@ pub fn remove_all_backups_in(dir: &Path) -> (usize, usize) {
     let (mut removed, mut left) = (0, 0);
     for entry in read.flatten() {
         let path = entry.path();
-        if !is_backup_file(&path) {
+        let leftover = path.file_name().and_then(|name| name.to_str()).is_some_and(is_leftover_name);
+        if !is_backup_file(&path) && !leftover {
             continue;
         }
         if !entry.file_type().map(|kind| kind.is_file()).unwrap_or(false) {
@@ -181,16 +262,23 @@ fn prune_backups(dir: &Path) {
     }
 }
 
-/// Exactly the name `ensure_migrated` writes: `mori-pre-v<N>-<millis>.sqlite`.
-/// Narrow on purpose: prune and permanent deletion remove only these, never a
-/// copy a user saved beside them under a Mori-like name.
+/// Exactly the names Mori writes: `mori-pre-v<N>-<millis>.sqlite` before a
+/// migration, `mori-pre-restore-<millis>.sqlite` before a restore. Narrow on
+/// purpose: prune and permanent deletion remove only these, never a copy a
+/// user saved beside them under a Mori-like name.
 fn is_backup_file(path: &Path) -> bool {
-    let Some(name) = path.file_name().and_then(|name| name.to_str()) else { return false };
+    path.file_name().and_then(|name| name.to_str()).is_some_and(is_backup_name)
+}
+
+fn is_backup_name(name: &str) -> bool {
+    let digits = |part: Option<&str>| part.is_some_and(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
+    if let Some(stamp) = name.strip_prefix("mori-pre-restore-").and_then(|rest| rest.strip_suffix(".sqlite")) {
+        return digits(Some(stamp));
+    }
     let Some(rest) = name.strip_prefix("mori-pre-v").and_then(|rest| rest.strip_suffix(".sqlite")) else {
         return false;
     };
     let mut parts = rest.split('-');
-    let digits = |part: Option<&str>| part.is_some_and(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
     digits(parts.next()) && digits(parts.next()) && parts.next().is_none()
 }
 
@@ -253,6 +341,10 @@ fn sanitize(label: &str) -> String {
         .collect()
 }
 
+fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
+    sidecar(path, suffix)
+}
+
 fn sidecar(db: &Path, suffix: &str) -> PathBuf {
     let mut name = db.as_os_str().to_os_string();
     name.push(suffix);
@@ -291,6 +383,101 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM note", [], |row| row.get(0))
             .unwrap();
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn a_snapshot_cut_short_by_a_kill_is_never_taken_for_the_restore_point() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        let backups = temp.path().join("backups");
+        std::fs::create_dir_all(&backups).unwrap();
+        // What an older build left when killed mid VACUUM INTO: the final name,
+        // a fraction of the bytes, and a rollback journal.
+        let cut = backups.join("mori-pre-v7-1000.sqlite");
+        std::fs::write(&cut, b"SQLite format 3\0 then nothing").unwrap();
+        std::fs::write(sidecar(&cut, "-journal"), b"j").unwrap();
+
+        let file = backup_database(&conn, &backups, "pre-v7").unwrap();
+        assert_ne!(file, cut);
+        assert!(is_readable_snapshot(&file));
+        assert!(!cut.exists());
+        assert!(with_suffix(&cut, INVALID_SUFFIX).exists());
+        assert!(!sidecar(&cut, "-journal").exists());
+        let listed: Vec<String> = list_backups_in(&backups).unwrap().into_iter().map(|b| b.file_name).collect();
+        assert_eq!(listed, vec![file_name_of(&file)]);
+    }
+
+    #[test]
+    fn a_snapshot_is_written_under_a_partial_name_and_renamed_when_complete() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        let backups = temp.path().join("backups");
+        std::fs::create_dir_all(&backups).unwrap();
+        let stale = backups.join("mori-pre-v7-999.sqlite.partial");
+        std::fs::write(&stale, b"half").unwrap();
+
+        let file = backup_database(&conn, &backups, "pre-v7").unwrap();
+        assert!(is_readable_snapshot(&file));
+        let names: Vec<String> = std::fs::read_dir(&backups).unwrap().flatten().map(|e| file_name_of(&e.path())).collect();
+        assert_eq!(names, vec![file_name_of(&file)], "no partial left behind");
+    }
+
+    #[test]
+    fn restore_refuses_a_backup_that_is_not_a_database_and_leaves_the_live_one() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        drop(seed_db(&db));
+        let backups = temp.path().join("backups");
+        std::fs::create_dir_all(&backups).unwrap();
+        let broken = backups.join("mori-pre-v7-1000.sqlite");
+        std::fs::write(&broken, b"not a database").unwrap();
+        let before = std::fs::read(&db).unwrap();
+
+        assert!(restore_backup(&broken, &backups, &db).is_err());
+        assert_eq!(std::fs::read(&db).unwrap(), before);
+        assert_eq!(std::fs::read_dir(&backups).unwrap().count(), 1, "nothing kept, nothing written");
+    }
+
+    #[test]
+    fn restore_keeps_the_database_it_replaces() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        let backups = temp.path().join("backups");
+        let snapshot = backup_database(&conn, &backups, "pre-v7").unwrap();
+        conn.execute_batch("INSERT INTO note (body) VALUES ('after the snapshot');").unwrap();
+        drop(conn);
+
+        restore_backup(&snapshot, &backups, &db).unwrap();
+        let count = |path: &Path| -> i64 {
+            Connection::open(path).unwrap().query_row("SELECT COUNT(*) FROM note", [], |row| row.get(0)).unwrap()
+        };
+        assert_eq!(count(&db), 2);
+        let kept = list_backups_in(&backups).unwrap().into_iter().find(|b| b.file_name.starts_with("mori-pre-restore-")).expect("kept");
+        assert_eq!(count(Path::new(&kept.path)), 3);
+        assert!(!with_suffix(&db, ".restoring").exists());
+    }
+
+    #[test]
+    fn permanent_deletion_also_removes_what_a_killed_snapshot_left() {
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("backups");
+        std::fs::create_dir_all(&dir).unwrap();
+        for name in [
+            "mori-pre-v7-1.sqlite.partial",
+            "mori-pre-v7-1.sqlite.partial-journal",
+            "mori-pre-v7-2.sqlite.invalid",
+            "mori-pre-v7-3.sqlite-journal",
+            "mori-pre-restore-4.sqlite",
+        ] {
+            std::fs::write(dir.join(name), b"x").unwrap();
+        }
+        std::fs::write(dir.join("my-notes.sqlite.partial"), b"mine").unwrap();
+        let (removed, left) = remove_all_backups_in(&dir);
+        assert_eq!((removed, left), (5, 0));
+        assert!(dir.join("my-notes.sqlite.partial").exists());
     }
 
     #[test]
