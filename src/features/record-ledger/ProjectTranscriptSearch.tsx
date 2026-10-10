@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { readableAgentText } from "../../lib/session/agentText";
 import { Loader2, Search, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
@@ -158,7 +159,7 @@ export function ProjectTranscriptSearch({
                 return (
                   <li key={entry.sessionId}>
                     <span className="project-search-coverage-title">
-                      {entry.title}
+                      {readableAgentText(entry.title)}
                       {entry.lastActiveAt ? <span className="project-search-coverage-when"> · {formatClaudeRelativeKo(entry.lastActiveAt)}</span> : null}
                     </span>
                     <span>{label}</span>
@@ -175,7 +176,7 @@ export function ProjectTranscriptSearch({
               {groups.map(({ entry, source }) => (
                 <li key={entry.sessionId} className="project-search-group">
                   <p className="project-search-session">
-                    <span className="project-search-session-title">{entry.title}</span>
+                    <span className="project-search-session-title">{readableAgentText(entry.title)}</span>
                     <span className="project-search-session-meta">
                       {entry.agentName}
                       {entry.contextId !== inventory.projectId ? ` · ${contextLabel(entry.contextId)}` : ""}
