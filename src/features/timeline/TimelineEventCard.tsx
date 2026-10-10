@@ -95,6 +95,7 @@ export function TimelineEventCard({
           height: `${layout.height}px`,
         }}
         type="button"
+        data-item-id={event.id}
         aria-pressed={focusState === "selected"}
         aria-label={vm.ariaLabel}
         data-preview={`${vm.timeLabel} · ${sourceMark.label}\n${vm.title}\n${readableEventSummary(event, vm.title)}`}

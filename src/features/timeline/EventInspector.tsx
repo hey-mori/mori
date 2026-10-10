@@ -1,6 +1,6 @@
 import { StickyNote } from "lucide-react";
 import { readableAgentText } from "../../lib/session/agentText";
-import { readableEventTitle } from "./lib/timelineCards";
+import { inspectorEventSummary, readableEventTitle } from "./lib/timelineCards";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import {
@@ -170,6 +170,9 @@ export function EventInspector({
       inspector.hiddenRelationshipCount >
     0;
 
+  const shownTitle = readableEventTitle(selectedEvent);
+  const shownSummary = inspectorEventSummary(selectedEvent, shownTitle);
+
   return (
     <BaseInspectorPanel
       className="inspector"
@@ -181,9 +184,10 @@ export function EventInspector({
           {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
         </>
       }
-      title={readableEventTitle(selectedEvent)}
+      title={shownTitle}
       meta={formatTimeRange(selectedEvent.start, selectedEvent.end)}
     >
+      {hasTurnText || isUserRequest || shownSummary ? (
       <InspectorSection>
         {hasTurnText ? (
           <>
@@ -198,12 +202,18 @@ export function EventInspector({
               </InspectorCard>
             ) : null}
           </>
-        ) : (
-          <InspectorCard label="요약" action={isUserRequest ? disclosureControl : undefined}>
-            {isUserRequest ? gatedRequestBody : <p>{readableAgentText(selectedEvent.summary)}</p>}
+        ) : isUserRequest ? (
+          <InspectorCard label="요약" action={disclosureControl}>
+            {gatedRequestBody}
           </InspectorCard>
-        )}
+        ) : shownSummary ? (
+          // A summary that only repeats the heading adds nothing; leave it out.
+          <InspectorCard label="요약">
+            <p>{shownSummary}</p>
+          </InspectorCard>
+        ) : null}
       </InspectorSection>
+      ) : null}
 
       <EventFilesSection touches={selectedEvent.fileTouches} />
 

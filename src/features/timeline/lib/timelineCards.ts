@@ -240,6 +240,20 @@ export function readableEventSummary(event: TimelineEvent, shownTitle: string): 
   return sameText(summary, shownTitle) ? "" : summary;
 }
 
+/**
+ * The inspector's summary: left out only when it is exactly the heading. The
+ * hover's looser rule (a summary that merely continues an ellipsis-cut title)
+ * does not apply here, because the inspector is where the longer text is read.
+ */
+export function inspectorEventSummary(event: TimelineEvent, shownTitle: string): string {
+  if (isAgentBoilerplateTitle(event.summary)) return "";
+  const summary = readableAgentText(event.summary);
+  const norm = (text: string) => text.replace(/\s+/g, " ").trim();
+  const a = norm(summary);
+  const b = norm(shownTitle);
+  return !a || a === b || a === b.replace(/[.…]+$/, "") ? "" : summary;
+}
+
 /** Whether a summary only repeats its title. */
 export function sameText(summary: string, title: string): boolean {
   const norm = (text: string) => text.replace(/\s+/g, " ").trim();

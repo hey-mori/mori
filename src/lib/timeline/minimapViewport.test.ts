@@ -7,6 +7,7 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
   minimapClickToScrollLeft,
+  revealScrollLeft,
 } from "./minimapViewport";
 
 describe("computeMinimapViewport", () => {
@@ -104,5 +105,31 @@ describe("brushWidthToZoom", () => {
   it("clamps a hair-thin brush to MAX_ZOOM", () => {
     expect(brushWidthToZoom(0.01)).toBe(MAX_ZOOM);
     expect(brushWidthToZoom(0)).toBe(MAX_ZOOM);
+  });
+});
+
+describe("revealScrollLeft", () => {
+  // A 900px viewport over 6000px of content, scrolled to 1000.
+  const at = (left: number, width = 6) => revealScrollLeft(left, width, 1000, 900, 6000);
+
+  it("leaves an item that is already in view where it is", () => {
+    expect(at(1400)).toBeNull();
+  });
+
+  it("brings an item past the right edge a third of the way in", () => {
+    expect(at(4000)).toBe(3700);
+  });
+
+  it("brings an item before the left edge a third of the way in", () => {
+    expect(at(200)).toBe(0);
+    expect(at(1020)).toBe(720);
+  });
+
+  it("clamps to the end of the content", () => {
+    expect(at(5990)).toBe(5100);
+  });
+
+  it("does nothing when the content fits", () => {
+    expect(revealScrollLeft(10, 6, 0, 900, 800)).toBeNull();
   });
 });

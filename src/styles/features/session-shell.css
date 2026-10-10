@@ -633,6 +633,15 @@
   align-items: start;
 }
 
+/* Embedded, the grid sits beside the sidebar and (on the 세션 tab) the session
+   list, so the window-width minimums of `.content-grid` (680-820px for the
+   canvas) overflow the pane and push the inspector off screen. Size to the
+   pane instead: the canvas scrolls horizontally on its own, and the rail gives
+   up width before the canvas collapses. */
+.content-grid.content-grid-embedded:not(.inspector-collapsed) {
+  grid-template-columns: minmax(0, 1fr) min(var(--base-rail), 42%);
+}
+
 /* Drop the timeline column's own inset — the outer `.content-grid-embedded`
    padding is the single source of truth for the page inset. */
 .content-grid.content-grid-embedded .timeline-main {

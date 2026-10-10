@@ -12,7 +12,7 @@ import {
   shouldHideInspector,
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
-import { selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
+import { firstItem, selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
 import {
   getTimelineLaneForEvent,
   resolveTimelineLaneOrder,
@@ -308,11 +308,14 @@ export function TimelineView({
   // ↑ ↓ jump to the nearest item in the adjacent non-empty lane. Defined
   // before the empty-state early return so hook order stays stable. Disabled
   // in Flow Focus, the list / connection views, and while
-  // the user is typing in an input.
+  // the user is typing in an input. The item a key lands on is scrolled into
+  // view and takes keyboard focus once it has rendered as selected (below).
+  const keyRevealRef = useRef<string | null>(null);
   useEffect(() => {
     const swimlaneActive = mode === "timeline" && readingMode === "swimlane";
     if (!swimlaneActive) return;
     function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented) return;
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       const target = event.target as HTMLElement | null;
       if (
@@ -323,34 +326,77 @@ export function TimelineView({
       ) {
         return;
       }
+      // Arrows belong to the swimlane only from the page itself or from inside
+      // the timeline. A menu, list box, tab list or dialog moves its own focus
+      // with them, and the selection must not pull focus out of it.
+      if (
+        target instanceof Element &&
+        target !== document.body &&
+        (!target.closest("[data-timeline-keys]") || target.closest('[role="dialog"]'))
+      ) {
+        return;
+      }
       const items = renderModel.visibleDisplayItems;
       if (items.length === 0) return;
-      const current = selectedEventId || null;
+      // A selection this view does not show (filtered out, or made in another
+      // view) counts as none, so the first key starts from the beginning.
+      const current =
+        selectedEventId &&
+        items.some((item) => item.id === selectedEventId || item.memberEventIds.includes(selectedEventId))
+          ? selectedEventId
+          : null;
       let nextId: string | null = null;
       switch (event.key) {
         case "ArrowRight":
-          nextId = selectInLane(items, current, "next");
+          nextId = current ? selectInLane(items, current, "next") : firstItem(items, laneOrder);
           break;
         case "ArrowLeft":
-          nextId = selectInLane(items, current, "prev");
+          nextId = current ? selectInLane(items, current, "prev") : firstItem(items, laneOrder);
           break;
         case "ArrowDown":
-          nextId = selectAcrossLane(items, current, "down", laneOrder);
+          nextId = current ? selectAcrossLane(items, current, "down", laneOrder) : firstItem(items, laneOrder);
           break;
         case "ArrowUp":
-          nextId = selectAcrossLane(items, current, "up", laneOrder);
+          nextId = current ? selectAcrossLane(items, current, "up", laneOrder) : firstItem(items, laneOrder);
           break;
         default:
           return;
       }
+      // At a lane edge the selection stays put; without this the key would
+      // fall through and scroll the canvas out from under the selection.
+      if (current || nextId) event.preventDefault();
       if (nextId) {
-        event.preventDefault();
+        keyRevealRef.current = nextId;
         setSelectedEventId(nextId);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mode, viewportWidth, readingMode, renderModel.visibleDisplayItems, selectedEventId, setSelectedEventId, laneOrder]);
+
+  // After a key moves the selection: bring the newly selected card on screen
+  // and move focus onto it, so the ring, the focus and the inspector agree.
+  useEffect(() => {
+    const id = keyRevealRef.current;
+    if (!id || id !== selectedEventId) return;
+    keyRevealRef.current = null;
+    const frame = requestAnimationFrame(() => canvasRef.current?.revealItem(id, { focus: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [selectedEventId]);
+
+  // Entering the swimlane with an item already selected (picked in the 원본
+  // list, or left over from an earlier visit) shows that item rather than the
+  // span's start. Only on entering: a selection made while the swimlane is up
+  // came from a click on a card that is already on screen, or from a key.
+  const swimlaneShown = mode === "timeline" && readingMode === "swimlane";
+  const selectedOnEnterRef = useRef(selectedEventId);
+  selectedOnEnterRef.current = selectedEventId;
+  useEffect(() => {
+    if (!swimlaneShown || !selectedOnEnterRef.current) return;
+    const id = selectedOnEnterRef.current;
+    const frame = requestAnimationFrame(() => canvasRef.current?.revealItem(id));
+    return () => cancelAnimationFrame(frame);
+  }, [swimlaneShown]);
 
   const buildEventMenuItems = useCallback(
     (event: TimelineEvent): BaseMenuItemSpec[] => {
@@ -422,6 +468,30 @@ export function TimelineView({
     ],
   );
 
+  // Drill from an AI 흐름 phase into the 원본 stream: select the first event at
+  // or after the phase start and switch to the stream, which auto-highlights and
+  // scrolls to it. Reuses the shared selection rail, no new global state. Above
+  // the empty-state return so hook order never depends on it.
+  const selectPhaseInStream = useCallback(
+    (phase: WorkPhase) => {
+      const phaseStart = new Date(phase.startIso).getTime();
+      const target = renderModel.visibleDisplayItems.find((item) => {
+        const at = new Date(item.start).getTime();
+        return Number.isFinite(at) && at >= phaseStart;
+      });
+      if (!target) return;
+      if (readingModes.includes("stream")) {
+        // In-place drill (활동 context): select + switch to the 원본 stream here.
+        setSelectedEventId(target.id);
+        setReadingModeOverride("stream");
+      } else {
+        // Locked to 흐름 (the 분석 tab): 원본 lives in the 활동 tab, so cross-navigate
+        // there with the event focused rather than a dead in-place mode switch.
+        focusTimelineEvent(target.id);
+      }
+    },
+    [renderModel.visibleDisplayItems, setSelectedEventId, readingModes, focusTimelineEvent],
+  );
   if (model.emptyVariant) {
     // Inside the session 흐름 tab the shell content is full-bleed, so wrap the
     // empty state in a padded pane for breathing room.
@@ -455,29 +525,6 @@ export function TimelineView({
     !inspectorHidden &&
     (Boolean(selectedItem) || understandOpen);
 
-  // Drill from an AI 흐름 phase into the 원본 stream: select the first event at
-  // or after the phase start and switch to the stream, which auto-highlights and
-  // scrolls to it. Reuses the shared selection rail — no new global state.
-  const selectPhaseInStream = useCallback(
-    (phase: WorkPhase) => {
-      const phaseStart = new Date(phase.startIso).getTime();
-      const target = renderModel.visibleDisplayItems.find((item) => {
-        const at = new Date(item.start).getTime();
-        return Number.isFinite(at) && at >= phaseStart;
-      });
-      if (!target) return;
-      if (readingModes.includes("stream")) {
-        // In-place drill (활동 context): select + switch to the 원본 stream here.
-        setSelectedEventId(target.id);
-        setReadingModeOverride("stream");
-      } else {
-        // Locked to 흐름 (the 분석 tab): 원본 lives in the 활동 tab, so cross-navigate
-        // there with the event focused rather than a dead in-place mode switch.
-        focusTimelineEvent(target.id);
-      }
-    },
-    [renderModel.visibleDisplayItems, setSelectedEventId, readingModes, focusTimelineEvent],
-  );
   // The 흐름 tab offers two reading modes: the swimlane canvas (시간 축) and a
   // content-rich chronological 목록. The swimlane never auto-degrades to a list
   // on narrow screens; the 목록 appears only when the user picks it (or when a
@@ -488,7 +535,7 @@ export function TimelineView({
         mode === "flow" ? "flow-grid" : ""
       } ${inspectorVisible ? "" : "inspector-collapsed"}`}
     >
-      <section className="timeline-main" data-understand-scope="true">
+      <section className="timeline-main" data-understand-scope="true" data-timeline-keys>
         {mode === "flow" ? (
           <FlowFocusHeader
             onShowTimeline={() => goToMode("timeline")}
