@@ -918,15 +918,17 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       return;
     }
 
-    // Desktop runtime: prefer the SQLite-stored snapshot when one is available
-    // for the active draft session id. Falls back to the browser draft when
-    // SQLite has nothing for that session, or when SQLite is unreachable.
+    // Desktop runtime: a legacy SQLite session snapshot (written only by older
+    // builds; nothing writes one now) may fill in a session whose imports are
+    // not stored here. It never replaces stored imports: replacing clears them
+    // and re-adds only the snapshot's, which is older than anything this build
+    // stored, so later turns, reopen refreshes and their ids would be lost.
     let hydratedFromSqlite = false;
     let draft: StoredSessionDraft | null = localDraft;
     let imports: StoredSessionImport[] = localImports;
     let analysisRecord = localAnalysisRecord;
 
-    if (localDraft) {
+    if (localDraft && localImports.length === 0) {
       try {
         const loaded = await service.loadSessionFromDesktop(localDraft.session.id);
         const sqliteDraft: StoredSessionDraft = {
