@@ -169,10 +169,14 @@ Restoring a snapshot refuses a file that is not a readable database and keeps th
 replaces first: a consistent `mori-pre-restore-<millis>.sqlite` (listed as 복원 전 상태) when it
 opens, otherwise, as when it is damaged, its files copied as they are under `.unverified` names that
 are never listed or restored. Only when neither can be written, as on a full disk, is the restore
-refused, before anything is replaced. Pre-restore copies keep their own cap of two and never push
-pre-migration snapshots out. The snapshot is copied beside the database as `.restoring` and renamed
+refused, before anything is replaced. A database that fails `quick_check` is kept raw rather than
+vacuumed, since a vacuum can drop what it cannot read. Pre-restore copies keep their own cap (two
+consistent copies and the newest raw one), never push pre-migration snapshots out, and are pruned
+only after a restore succeeds, never the copy just restored. A restore takes effect for reads at
+the next launch, and the card says so. The snapshot is copied beside the database as `.restoring` and renamed
 over it, with the connection lock held for the whole restore. Permanent deletion and a storage move
-also cover `.partial`, `.invalid`, `.unverified` and a stray `.restoring`. Each migration is
+also cover `.partial`, `.invalid` and `.unverified`, and a stray `.restoring` (a move removes it
+when the database itself moves). Each migration is
 applied in its own transaction, so a kill between or during migrations leaves the last committed
 schema and the next launch retries. `initialize_sqlite_database` takes the same snapshot-first path
 as every other command.

@@ -221,10 +221,14 @@ pub fn restore_backup(backup_path: &Path, dir: &Path, target_db: &Path) -> Resul
     let incoming = with_suffix(target_db, RESTORING_SUFFIX);
     std::fs::copy(&canon_backup, &incoming)
         .map_err(|error| format!("Failed to restore backup: {error}"))?;
-    for suffix in ["-wal", "-shm"] {
+    // A stale WAL or rollback journal would be played onto the restored file
+    // on its next open; the keep step above already copied them.
+    for suffix in ["-wal", "-shm", "-journal"] {
         let _ = std::fs::remove_file(sidecar(target_db, suffix));
     }
     std::fs::rename(&incoming, target_db).map_err(|error| format!("Failed to restore backup: {error}"))?;
+    // Only now, and never the copy just restored.
+    prune_pre_restore(&canon_dir, &canon_backup);
     Ok(())
 }
 
@@ -232,7 +236,8 @@ pub fn restore_backup(backup_path: &Path, dir: &Path, target_db: &Path) -> Resul
 pub const RESTORING_SUFFIX: &str = ".restoring";
 /// The suffix a raw copy of a database that would not open is kept under.
 const UNVERIFIED_SUFFIX: &str = ".unverified";
-/// How many pre-restore copies to keep; they do not count toward `MAX_BACKUPS`.
+/// How many consistent pre-restore copies to keep; they do not count toward
+/// `MAX_BACKUPS`. The newest raw `.unverified` copy is kept on its own slot.
 const MAX_PRE_RESTORE: usize = 2;
 
 /// Keep the live database before a restore replaces it. See `restore_backup`.
@@ -241,7 +246,14 @@ fn keep_before_restore(target_db: &Path, dir: &Path) -> Result<(), String> {
     let partial = with_suffix(&keep, PARTIAL_SUFFIX);
     // Read-only: a damaged database opened for writing can have its WAL
     // discarded on close, the very bytes the raw copy below must keep.
+    // A VACUUM of a partly damaged database can quietly drop what it cannot
+    // read, so only a database that passes quick_check gets the consistent
+    // copy; anything else is kept as its raw files.
     let consistent = Connection::open_with_flags(target_db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).and_then(|live| {
+        let healthy = live.query_row("PRAGMA quick_check", [], |row| row.get::<_, String>(0))? == "ok";
+        if !healthy {
+            return Err(rusqlite::Error::InvalidQuery);
+        }
         let quoted = partial.to_string_lossy().replace('\'', "''");
         live.execute_batch(&format!("VACUUM INTO '{quoted}'"))
     });
@@ -267,7 +279,6 @@ fn keep_before_restore(target_db: &Path, dir: &Path) -> Result<(), String> {
             }
         }
     }
-    prune_pre_restore(dir);
     Ok(())
 }
 
@@ -333,27 +344,38 @@ fn is_pre_restore(path: &Path) -> bool {
 }
 
 /// Pre-restore copies have their own small cap, so they never push genuine
-/// pre-migration snapshots out. Raw `.unverified` copies count with them.
-fn prune_pre_restore(dir: &Path) {
+/// pre-migration snapshots out: the newest `MAX_PRE_RESTORE` consistent copies,
+/// and the newest raw `.unverified` copy (often the only copy of a damaged
+/// database's last state) on its own slot. Debris of a killed keep (`.partial`)
+/// takes no slot and is removed. `spare` (the copy just restored) is never
+/// touched.
+fn prune_pre_restore(dir: &Path, spare: &Path) {
     let Ok(read) = std::fs::read_dir(dir) else { return };
-    let mut stamps: Vec<String> = read
-        .flatten()
-        .filter_map(|entry| entry.file_name().to_str().map(str::to_string))
-        .filter_map(|name| {
-            let stamp = name.strip_prefix("mori-pre-restore-")?;
-            let stamp = &stamp[..stamp.find('.')?];
-            stamp.bytes().all(|b| b.is_ascii_digit()).then(|| stamp.to_string())
-        })
-        .collect();
-    stamps.sort_by(|a, b| b.parse::<u128>().unwrap_or(0).cmp(&a.parse::<u128>().unwrap_or(0)));
-    stamps.dedup();
-    for stamp in stamps.into_iter().skip(MAX_PRE_RESTORE) {
-        let base = dir.join(format!("mori-pre-restore-{stamp}.sqlite"));
-        for path in [base.clone(), with_suffix(&base, UNVERIFIED_SUFFIX)] {
-            for suffix in ["", "-wal", "-journal"] {
-                let _ = std::fs::remove_file(sidecar(&path, suffix));
-            }
+    let names: Vec<String> = read.flatten().filter_map(|entry| entry.file_name().to_str().map(str::to_string)).collect();
+    let stamp_of = |name: &str, suffix: &str| -> Option<u128> {
+        name.strip_prefix("mori-pre-restore-")?.strip_suffix(suffix)?.parse().ok()
+    };
+    let mut consistent: Vec<u128> = names.iter().filter_map(|name| stamp_of(name, ".sqlite")).collect();
+    let mut raw: Vec<u128> = names.iter().filter_map(|name| stamp_of(name, ".sqlite.unverified")).collect();
+    consistent.sort_unstable_by(|a, b| b.cmp(a));
+    raw.sort_unstable_by(|a, b| b.cmp(a));
+    let spare = spare.file_name().and_then(|name| name.to_str()).unwrap_or("").to_string();
+    let remove = |base: String| {
+        if base == spare || base.strip_suffix(UNVERIFIED_SUFFIX).is_some_and(|b| b == spare) {
+            return;
         }
+        for suffix in ["", "-wal", "-journal"] {
+            let _ = std::fs::remove_file(dir.join(format!("{base}{suffix}")));
+        }
+    };
+    for stamp in consistent.into_iter().skip(MAX_PRE_RESTORE) {
+        remove(format!("mori-pre-restore-{stamp}.sqlite"));
+    }
+    for stamp in raw.into_iter().skip(1) {
+        remove(format!("mori-pre-restore-{stamp}.sqlite{UNVERIFIED_SUFFIX}"));
+    }
+    for name in names.iter().filter(|name| name.starts_with("mori-pre-restore-") && name.contains(PARTIAL_SUFFIX)) {
+        let _ = std::fs::remove_file(dir.join(name));
     }
 }
 
@@ -611,6 +633,39 @@ mod tests {
         let names: Vec<String> = list_backups_in(&backups).unwrap().into_iter().map(|b| b.file_name).collect();
         assert_eq!(names.iter().filter(|n| n.starts_with("mori-pre-restore-")).count(), MAX_PRE_RESTORE);
         assert!(names.contains(&file_name_of(&snapshot)));
+    }
+
+    #[test]
+    fn restoring_an_older_pre_restore_copy_never_prunes_it_first() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        let backups = temp.path().join("backups");
+        let snapshot = backup_database(&conn, &backups, "pre-v7").unwrap();
+        drop(conn);
+        for _ in 0..2 {
+            std::thread::sleep(std::time::Duration::from_millis(3));
+            restore_backup(&snapshot, &backups, &db).unwrap();
+        }
+        let oldest = list_backups_in(&backups).unwrap().into_iter().filter(|b| b.file_name.starts_with("mori-pre-restore-")).last().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(3));
+        restore_backup(Path::new(&oldest.path), &backups, &db).unwrap();
+        assert!(Path::new(&oldest.path).exists(), "the copy just restored is never pruned");
+        let count: i64 = Connection::open(&db).unwrap().query_row("SELECT COUNT(*) FROM note", [], |row| row.get(0)).unwrap();
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn a_stale_rollback_journal_is_not_played_onto_the_restored_file() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        let backups = temp.path().join("backups");
+        let snapshot = backup_database(&conn, &backups, "pre-v7").unwrap();
+        drop(conn);
+        std::fs::write(sidecar(&db, "-journal"), b"stale journal").unwrap();
+        restore_backup(&snapshot, &backups, &db).unwrap();
+        assert!(!sidecar(&db, "-journal").exists());
     }
 
     #[test]
