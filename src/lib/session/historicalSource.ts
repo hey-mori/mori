@@ -1,5 +1,7 @@
 /**
- * Which file is a session's history: one rule for every way into it.
+ * Which file is a session's history: one rule for the reads that pick a
+ * session's file (opening it, its latest reply, project search). Opening a
+ * saved passage or a search hit checks its own anchor instead.
  *
  * Opening a session, its latest reply and project search all read the
  * original transcript at the session's path. When the user kept a copy
@@ -8,10 +10,11 @@
  *
  * - original read, no copy kept, or the copy's fingerprint matches and the
  *   file has not shrunk below the copy: the original;
- * - original read, but a different conversation (other head fingerprint) or
- *   smaller than the copy (so not a continuation of what was kept): the kept
- *   copy, said to stand in for a replaced original; if the copy cannot be
- *   used, a stated failure, never the other file;
+ * - original read, but a different conversation (other head fingerprint, or
+ *   none at all) or smaller than the copy (so not a continuation of what was
+ *   kept; transcripts are append-only): the kept copy, said to stand in for a
+ *   replaced or cut-short original; if the copy cannot be used, a stated
+ *   failure, never the other file;
  * - original gone: the kept copy; if it is missing or damaged, that failure;
  *   with nothing kept, "missing";
  * - original present but unreadable, or any other failure: that failure. A
@@ -41,34 +44,45 @@ export function archiveFailure(kept: KeptArchiveRead): SessionWindowError {
     : { kind: "archiveDamaged", message: "ARCHIVE_DAMAGED" };
 }
 
+/** What the record says about a kept copy: from `keptArchiveIdentity`, or
+ *  passed in by a caller that already looked it up (null: nothing kept). */
+export type KeptIdentity = { sourceId: string; bytes: number } | null;
+
 /** The original was read (`sourceId`, `fileBytes` from that read). */
 export async function historicalSourceAfterRead(
   sessionId: string,
   read: { sourceId?: string | null; fileBytes?: number },
+  known?: KeptIdentity,
 ): Promise<HistoricalSource> {
-  if (!read.sourceId) return { kind: "original" };
-  const kept = await keptArchiveIdentity(sessionId);
+  const kept = known !== undefined ? known : await keptArchiveIdentity(sessionId);
   if (!kept) return { kind: "original" };
-  const replaced = kept.sourceId !== read.sourceId;
+  // A read that cannot say which file it is does not prove it is this one.
+  const replaced = !read.sourceId || kept.sourceId !== read.sourceId;
   const cutShort = !replaced && read.fileBytes !== undefined && read.fileBytes < kept.bytes;
   if (!replaced && !cutShort) return { kind: "original" };
-  return keptInstead(sessionId, true, { kind: "changed", message: "SOURCE_CHANGED" });
+  return keptInstead(sessionId, cutShort ? "cutShort" : "replaced", { kind: "changed", message: "SOURCE_CHANGED" });
 }
 
 /** Reading the original failed with `error`. */
 export async function historicalSourceAfterFailure(sessionId: string, error: unknown): Promise<Exclude<HistoricalSource, { kind: "original" }>> {
   const failure = classifyWindowError(error);
   if (!isSourceGone(error)) return { kind: "failed", error: failure };
-  return keptInstead(sessionId, false, failure);
+  return keptInstead(sessionId, "gone", failure);
 }
 
 async function keptInstead(
   sessionId: string,
-  replacedOriginal: boolean,
+  why: "replaced" | "cutShort" | "gone",
   otherwise: SessionWindowError,
 ): Promise<Exclude<HistoricalSource, { kind: "original" }>> {
   const kept = await keptArchiveRead(sessionId);
   if (!kept) return { kind: "failed", error: otherwise };
   if (!isUsableArchive(kept)) return { kind: "failed", error: archiveFailure(kept) };
-  return { kind: "archive", path: kept.path, archive: replacedOriginal ? { ...kept.archive, replacedOriginal: true } : kept.archive };
+  const archive =
+    why === "replaced"
+      ? { ...kept.archive, replacedOriginal: true }
+      : why === "cutShort"
+        ? { ...kept.archive, replacedOriginal: true, originalCutShort: true }
+        : kept.archive;
+  return { kind: "archive", path: kept.path, archive };
 }

@@ -30,6 +30,7 @@ import {
 } from "../lib/session/projectSearch";
 import { classifyWindowError } from "../lib/session/sessionWindow";
 import { historicalSourceAfterFailure, historicalSourceAfterRead, type HistoricalSource } from "../lib/session/historicalSource";
+import { keptArchiveIdentityLookup } from "../lib/session/sessionArchiveRead";
 import { normalizeQuery } from "../lib/session/sessionSearch";
 import { useSessionStore, type SourceHitOutcome } from "./sessionStore";
 
@@ -68,6 +69,8 @@ function settle(search: ProjectSearchState, status: ProjectSearchState["status"]
 }
 
 export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
+  /** Kept copies by session, looked up once per search start. */
+  let keptLookup: Awaited<ReturnType<typeof keptArchiveIdentityLookup>> = null;
   /** One native step for one source, folded in if still current. */
   async function step(sequence: number, sessionId: string): Promise<void> {
     const search = get().search!;
@@ -87,7 +90,7 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
       // The first step of an original says which file it is: the shared rule
       // decides before any of its hits count for this session.
       if (!source.archive && !source.sourceId) {
-        const choice = await historicalSourceAfterRead(sessionId, batch);
+        const choice = await historicalSourceAfterRead(sessionId, batch, keptLookup ? keptLookup(sessionId) : undefined);
         if (sequence !== searchSequence || !get().search) return;
         if (choice.kind !== "original") return useKeptOrFail(sequence, sessionId, choice);
       }
@@ -182,6 +185,9 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
       const sequence = ++searchSequence;
       openSequence += 1;
       set({ search: startedProjectSearch(inventory, phrase, wholeWords), opening: null, openError: null, openedSessionId: null });
+      // Which sessions keep a copy, read once for the whole search.
+      keptLookup = await keptArchiveIdentityLookup();
+      if (sequence !== searchSequence) return;
       await run(sequence);
     },
     more: async () => {

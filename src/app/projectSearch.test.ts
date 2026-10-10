@@ -47,6 +47,10 @@ vi.mock("../lib/session/sessionArchiveRead", () => ({
     const kept = fake.archives.get(sessionId);
     return kept?.sourceId ? { sourceId: kept.sourceId, bytes: kept.archive.bytes } : null;
   },
+  keptArchiveIdentityLookup: async () => (sessionId: string) => {
+    const kept = fake.archives.get(sessionId);
+    return kept?.sourceId ? { sourceId: kept.sourceId, bytes: kept.archive.bytes } : null;
+  },
 }));
 vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -551,6 +555,15 @@ describe("searching a project's confirmed sessions", () => {
     expect(hitsOf(id)).toEqual(["shrunk-m6", "shrunk-m1"]);
   });
 
+  it("states the failure, never the replacement's hits, when the original was replaced and the copy is damaged", async () => {
+    const id = session("repldmg", lines(8, { 2: "needle in the replacement" }), { contextId: "ctx-infra" });
+    fake.archives.set(id, { path: "/gone", archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 6 * RECORD }, sourceId: "src-other", integrity: "damaged" });
+    await useProjectSearchStore.getState().start(inventory(), "needle");
+    const source = search().sources[id]!;
+    expect(hitsOf(id)).toEqual([]);
+    expect(source.error).toMatchObject({ kind: "archiveDamaged" });
+  });
+
   it("keeps searching the original while it is the same conversation and has grown", async () => {
     const id = session("grown", lines(8, { 6: "needle" }), { contextId: "ctx-infra" });
     fake.archives.set(id, { path: "/unused", archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 4 * RECORD }, sourceId: "src-grown" });
@@ -732,6 +745,24 @@ describe("opening a project search result", () => {
       expect(await useSessionStore.getState().openSessionAtLatestReply({ sessionId: id, sourcePath: path, stillWanted: () => true })).toBe("opened");
       expect(view().focus).toMatchObject({ messageId: "kept-m3" });
       expect(view().archive).toMatchObject({ replacedOriginal: true });
+    });
+
+    it("says it failed when the original was replaced and the copy cannot be read, never calling the original gone", async () => {
+      const id = session("lrcopyfail", lines(6, { 5: "a reply from some other conversation" }), { contextId: "ctx-infra" });
+      const path = "/home/u/.claude/projects/-home-u-dev-infra/lrcopyfail.jsonl";
+      fake.archives.set(id, { path: keptAt("i"), archive: { archivedAt: "2026-10-09T10:00:00.000Z", bytes: 6 * RECORD }, sourceId: "src-the-kept-one" });
+      // The copy was verified once but its file is not there to read now.
+      expect(await useSessionStore.getState().openSessionAtLatestReply({ sessionId: id, sourcePath: path, stillWanted: () => true })).toBe("failed");
+      expect(useSessionStore.getState().sessionWindow).toBeNull();
+    });
+
+    it("says the original was cut short, not replaced, when it is smaller than the copy", async () => {
+      const id = session("lrshort", lines(2), { contextId: "ctx-infra" });
+      const path = "/home/u/.claude/projects/-home-u-dev-infra/lrshort.jsonl";
+      keep(id, keptAt("j"), "src-lrshort", lines(6, { 5: "the copy's last reply" }), "lrshort");
+      expect(await useSessionStore.getState().openSessionAtLatestReply({ sessionId: id, sourcePath: path, stillWanted: () => true })).toBe("opened");
+      expect(view().focus).toMatchObject({ messageId: "lrshort-m5" });
+      expect(view().archive).toMatchObject({ originalCutShort: true });
     });
 
     it("says it failed, rather than showing anything, when the original is gone and the copy is damaged", async () => {

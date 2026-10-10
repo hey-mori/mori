@@ -125,7 +125,7 @@ export type SessionWindowState =
        *  original transcript is gone: when it was kept, and how much. */
       /** Shown from Mori's kept copy; `replacedOriginal` when the original
        *  still exists but is now a different conversation. */
-      archive?: { archivedAt: string; bytes: number; replacedOriginal?: boolean };
+      archive?: { archivedAt: string; bytes: number; replacedOriginal?: boolean; originalCutShort?: boolean };
       pageError: { direction: "earlier" | "newer" | "latest"; error: SessionWindowError } | null;
     };
 

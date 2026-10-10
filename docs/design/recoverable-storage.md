@@ -184,12 +184,14 @@ as every other command.
 ## 8. One rule for which file is a session's history
 
 Opening a session, its latest reply and project search all read the original transcript, and all
-now ask one rule (`historicalSource.ts`) which file stands for the session once a copy is kept:
+now ask one rule (`historicalSource.ts`) which file stands for the session once a copy is kept
+(opening a saved passage or a search hit checks its own anchor instead):
 
 | Original | Kept copy | Read |
 |---|---|---|
 | present, same head fingerprint, not smaller than the copy | any | the original |
-| present, other fingerprint (replaced) or smaller than the copy (cut short) | usable | the copy, marked as standing in for a replaced original |
+| present, other fingerprint or none (replaced) | usable | the copy, said to stand in for a replaced original |
+| present, same fingerprint but smaller than the copy (cut short) | usable | the copy, said to stand in for a cut-short original |
 | replaced or cut short | missing or damaged | nothing: that failure is stated |
 | gone | usable | the copy (보관한 원본 · date) |
 | gone | missing or damaged | nothing: that failure is stated |
@@ -197,9 +199,14 @@ now ask one rule (`historicalSource.ts`) which file stands for the session once 
 | present but unreadable, or another error | any | that failure; a copy is never read in place of a file that may still be there |
 
 The fingerprint proves the same first line, which in every format seen carries the session id; it
-does not prove the same bytes. The size check adds "not cut short below what was kept". A copy's
+does not prove the same bytes. The size check adds "not cut short below what was kept", which
+rests on transcripts being append-only (true of the format seen; a file rewritten smaller would read
+the copy until it grows past it). A copy's
 latest reply is the latest reply the copy holds, as of when it was kept; the view says it is the
 copy, and it is not a statement about what the agent did since. Before this, project search and
 the latest reply read a replaced original as if it were the session, and the latest reply found
-nothing when the original was gone even with a usable copy. Limitation: an original that exists
-but cannot be read is still worded as "missing".
+nothing when the original was gone even with a usable copy. Limitations: an original that exists
+but cannot be read is still worded as "missing"; when two sessions share one file path, project
+search reads it for the newest only, so a session whose copy stands in for that file is searched in
+its copy and the other is counted as the same source; discovery still re-titles a session from the
+file now at its path.

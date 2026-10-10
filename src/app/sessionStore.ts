@@ -42,7 +42,13 @@ import {
 } from "../lib/trace/sources/ai/workSessions";
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
 import { planSourceReopen } from "../lib/import/autoSourceReopen";
-import { historicalSourceAfterFailure, historicalSourceAfterRead } from "../lib/session/historicalSource";
+import {
+  archiveFailure,
+  historicalSourceAfterFailure,
+  historicalSourceAfterRead,
+  isSourceGone,
+  type HistoricalSource,
+} from "../lib/session/historicalSource";
 import { eventIdsCitedOutsideAdoptedRun } from "../lib/import/reopenCitations";
 import { AcceptedMemoryRepository } from "../lib/project-memory/acceptedMemoryRepository";
 import {
@@ -1780,13 +1786,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // that conversation (same head fingerprint, not cut short below the
       // copy) before it is imported under this session; otherwise the copy is
       // shown and nothing is imported.
-      const keepsCopy = meta.importKind === "claude-code" && (await keptArchiveIdentity(sessionId)) !== null;
+      const keptCopy = meta.importKind === "claude-code" ? await keptArchiveIdentity(sessionId) : null;
       if (!current()) return "superseded";
-      if (keepsCopy) {
+      if (keptCopy) {
         const head = await getClaudeCodeSessionWindow(sourcePath).catch(() => null);
         if (!current()) return "superseded";
         if (head) {
-          const choice = await historicalSourceAfterRead(sessionId, head);
+          const choice = await historicalSourceAfterRead(sessionId, head, keptCopy);
           if (!current()) return "superseded";
           if (choice.kind === "archive") return openWindow(choice.path, choice.archive);
           if (choice.kind === "failed") {
@@ -1906,23 +1912,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // The same rule as opening the session: a replaced or cut-short original
     // is not this session; a gone one is read from the kept copy, whose latest
     // reply is the latest the copy holds (the view says it is the copy).
-    let latest: ClaudeCodeSessionWindow;
+    let latest: ClaudeCodeSessionWindow | null = null;
     let archive: LoadedSessionWindow["archive"];
+    let choice: HistoricalSource;
     try {
       latest = await getClaudeCodeSessionWindow(sourcePath);
       if (!current()) return "superseded";
-      const choice = await historicalSourceAfterRead(sessionId, latest);
-      if (!current()) return "superseded";
-      if (choice.kind === "failed") return outcomeOf(choice.error.kind);
-      if (choice.kind === "archive") {
-        latest = await getClaudeCodeSessionWindow(choice.path);
-        archive = choice.archive;
-      }
+      choice = await historicalSourceAfterRead(sessionId, latest);
     } catch (error) {
       if (!current()) return "superseded";
-      const choice = await historicalSourceAfterFailure(sessionId, error);
-      if (!current()) return "superseded";
-      if (choice.kind === "failed") return outcomeOf(choice.error.kind);
+      choice = await historicalSourceAfterFailure(sessionId, error);
+    }
+    if (!current()) return "superseded";
+    if (choice.kind === "failed") return outcomeOf(choice.error.kind);
+    if (choice.kind === "archive") {
+      // The copy's own read: its failure is not the original's.
       try {
         latest = await getClaudeCodeSessionWindow(choice.path);
         archive = choice.archive;
@@ -1930,6 +1934,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         return current() ? "failed" : "superseded";
       }
     }
+    if (!latest) return "failed";
     if (!current()) return "superseded";
     const events = latest.events;
     const reply = [...events].reverse().find((event) => event.role === "assistant" && !event.subkind) ?? events[events.length - 1];
@@ -2931,20 +2936,6 @@ async function citedEventIds(
   return eventIdsCitedOutsideAdoptedRun(sessionId, accepted, repository.loadSessionAnalysisHistory(sessionId)?.history ?? null);
 }
 
-/** Why a kept copy cannot stand in for its gone original. */
-function archiveFailure(kept: KeptArchiveRead): SessionWindowError {
-  return kept.integrity === "missing"
-    ? { kind: "archiveMissing", message: "ARCHIVE_MISSING" }
-    : { kind: "archiveDamaged", message: "ARCHIVE_DAMAGED" };
-}
-
 function withArchive<T extends LoadedSessionWindow>(state: T, archive: LoadedSessionWindow["archive"] | undefined): T {
   return archive ? { ...state, archive } : state;
-}
-
-/** The original transcript is gone (deleted or moved), not merely unreadable
- *  for now: only then is a kept copy read in its place. */
-function isSourceGone(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.startsWith("SOURCE_MISSING") || /No such file|not found|cannot find/i.test(message);
 }

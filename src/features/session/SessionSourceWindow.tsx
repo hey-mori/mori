@@ -297,9 +297,11 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
               <span className="session-window-archive">
                 보관한 원본 · {new Date(state.archive.archivedAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 시점
                 <InfoHint label="보관한 원본 설명">
-                  {state.archive.replacedOriginal
-                    ? "원본 위치의 대화 파일이 다른 대화로 바뀌어, Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다."
-                    : "원본 대화가 없어 Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다."}
+                  {state.archive.originalCutShort
+                    ? "원본 대화 파일이 보관할 때보다 짧아져, Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다."
+                    : state.archive.replacedOriginal
+                      ? "원본 위치의 대화 파일이 다른 대화로 바뀌어, Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다."
+                      : "원본 대화가 없어 Mori가 보관한 사본을 보여줍니다. 보관한 뒤에 이어진 대화는 들어 있지 않습니다."}
                 </InfoHint>
                 {" · "}
               </span>

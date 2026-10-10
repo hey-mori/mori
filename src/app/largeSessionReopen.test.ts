@@ -35,6 +35,7 @@ vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
 vi.mock("../lib/session/sessionArchiveRead", () => ({
   keptArchiveRead: async (id: string) => reader.kept.get(id) ?? null,
   keptArchiveSourceId: async (id: string) => reader.kept.get(id)?.sourceId ?? null,
+  keptArchiveIdentityLookup: async () => null,
   keptArchiveIdentity: async (id: string) => {
     const kept = reader.kept.get(id);
     return kept?.sourceId ? { sourceId: kept.sourceId, bytes: kept.archive.bytes } : null;
