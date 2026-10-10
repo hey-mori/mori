@@ -49,11 +49,17 @@ export const HIDDEN_REQUEST_TITLE = "숨긴 요청";
 
 /**
  * Whether an event's title is the user's own words: a turn the user opened
- * (its title is the prompt, `openedByUser`), or a lone request message.
- * An agent reply, a tool run or a notice has a title of its own.
+ * (its title is the prompt, `openedByUser`), a lone request message, or a
+ * pasted or exported transcript turn that keeps the ask as `requestText`
+ * (its title is the ask). An agent reply, a tool run or a notice has a title
+ * of its own.
  */
-export function isRequestTitledEvent(event: { actor?: EventActor; openedByUser?: boolean }): boolean {
-  return event.openedByUser === true || event.actor === "user";
+export function isRequestTitledEvent(event: {
+  actor?: EventActor;
+  openedByUser?: boolean;
+  requestText?: string;
+}): boolean {
+  return event.openedByUser === true || event.actor === "user" || Boolean(event.requestText?.trim());
 }
 
 /**
@@ -65,7 +71,7 @@ export function isRequestTitledEvent(event: { actor?: EventActor; openedByUser?:
  * the per-request reveal. Display only: never pass the result to a write.
  */
 export function discloseEventForView<
-  T extends { actor?: EventActor; openedByUser?: boolean; title: string; summary: string },
+  T extends { actor?: EventActor; openedByUser?: boolean; requestText?: string; title: string; summary: string },
 >(event: T, level: DisclosureLevel): T {
   if (level !== "hidden" || !isRequestTitledEvent(event)) return event;
   return {

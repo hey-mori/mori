@@ -22,6 +22,9 @@ import { CircleAlert, Hand, History, Radio } from "lucide-react";
 import { readableAgentLabel } from "../../lib/session/agentText";
 import { HIDDEN_REQUEST_TITLE } from "../../lib/disclosure";
 import { useSessionStore } from "../../app/sessionStore";
+import { InfoHint } from "../../components/ui/InfoHint";
+import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
+import { freshnessOf, type ProjectProjection } from "../../lib/live-intake";
 
 /** A live request's text as a row title, or "숨긴 요청" at 숨김 (the request
  *  disclosure level; live requests have no per-request override). */
@@ -29,9 +32,6 @@ function useRequestLabel(): (text: string) => string {
   const hidden = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel === "hidden");
   return (text: string) => (hidden ? HIDDEN_REQUEST_TITLE : readableAgentLabel(text));
 }
-import { InfoHint } from "../../components/ui/InfoHint";
-import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
-import { freshnessOf, type ProjectProjection } from "../../lib/live-intake";
 
 /** Elapsed wall time as calm Korean, coarse on purpose. */
 function formatElapsed(ms: number): string {

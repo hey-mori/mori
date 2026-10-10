@@ -27,6 +27,14 @@ import type { EventActor, FileTouch } from "../../domain/types";
 import { sessionShortLabel, type LiveFeedItem, type LiveFeedRequest } from "./liveFeed";
 import { useObservedSessions } from "./useAmbientObservation";
 import { useObservationStore } from "../../app/observationStore";
+import { useSessionStore } from "../../app/sessionStore";
+import { HIDDEN_REQUEST_TITLE } from "../../lib/disclosure";
+
+/** Whether requests are hidden (숨김). Live requests have no per-request
+ *  override, so only the default level applies here. */
+function useRequestsHidden(): boolean {
+  return useSessionStore((state) => state.analysisSettings.requestDisclosureLevel === "hidden");
+}
 
 /** A finished request folds into the past-work disclosure once it has been quiet
  *  this long, so the live feed stays about the present. */
@@ -466,6 +474,8 @@ function RequestBlockImpl({
   onFocus: (key: string) => void;
 }) {
   const items = request.items;
+  const hidden = useRequestsHidden();
+  const requestTitle = hidden ? HIDDEN_REQUEST_TITLE : request.requestTitle;
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   // Every card can be folded / unfolded. Default: working stays open, everything
   // else folds, so a new request pushes the previous one shut on its own. A
@@ -542,9 +552,9 @@ function RequestBlockImpl({
 
       <p
         className={`lsv-request base-scroll ${expanded ? "is-full" : "is-clamped"}`}
-        title={request.requestTitle}
+        title={requestTitle}
       >
-        {request.requestTitle}
+        {requestTitle}
       </p>
 
       <div className="lsv-body">
@@ -572,7 +582,7 @@ function RequestBlockImpl({
                   );
                 })}
               </div>
-              {selected ? <ItemDetail key={selected.id} item={selected} cursor={showCursor} /> : null}
+              {selected ? <ItemDetail key={selected.id} item={selected} cursor={showCursor} hidden={hidden} /> : null}
             </>
           ) : (
             <p className="lsv-items-pending">
@@ -600,6 +610,7 @@ function PastSection({
   onFocus: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const hidden = useRequestsHidden();
   return (
     <div className="lsv-past">
       <button
@@ -614,13 +625,13 @@ function PastSection({
       {open ? (
         <div className="lsv-past-list">
           {requests.map((request) => (
-            <div key={request.id} className="lsv-past-row" title={request.requestTitle}>
+            <div key={request.id} className="lsv-past-row" title={hidden ? HIDDEN_REQUEST_TITLE : request.requestTitle}>
               <SessionBadge
                 label={request.sessionLabel}
                 sessionKey={request.sessionKey}
                 onFilter={() => onFocus(request.sessionKey)}
               />
-              <span className="lsv-past-title">{request.requestTitle}</span>
+              <span className="lsv-past-title">{hidden ? HIDDEN_REQUEST_TITLE : request.requestTitle}</span>
               <span className="lsv-past-meta">
                 {request.items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
               </span>
@@ -632,7 +643,7 @@ function PastSection({
   );
 }
 
-function ItemDetail({ item, cursor }: { item: LiveFeedItem; cursor: boolean }) {
+function ItemDetail({ item, cursor, hidden }: { item: LiveFeedItem; cursor: boolean; hidden: boolean }) {
   return (
     <div className={`lsv-detail is-${item.actor}`}>
       <span className="lsv-detail-actor">
@@ -641,7 +652,7 @@ function ItemDetail({ item, cursor }: { item: LiveFeedItem; cursor: boolean }) {
         {item.repeatCount > 1 ? <span className="lsv-detail-repeat">{item.repeatCount}회 반복</span> : null}
       </span>
       <p className={`lsv-detail-text base-scroll${item.toolName ? " is-mono" : ""}`}>
-        {item.text}
+        {hidden && item.actor === "user" ? HIDDEN_REQUEST_TITLE : item.text}
         {cursor ? <span className="lsv-cursor" aria-hidden="true" /> : null}
       </p>
       {item.fileTouches.length > 0 ? (

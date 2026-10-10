@@ -1,5 +1,5 @@
-import { discloseEventForView, resolveDisclosureLevel } from "../../lib/disclosure";
 import { useEffect, useMemo, useState } from "react";
+import { discloseEventForView, resolveDisclosureLevel } from "../../lib/disclosure";
 import { readableAgentText } from "../../lib/session/agentText";
 import { ArrowRight, ListPlus, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";

@@ -1,4 +1,3 @@
-import { discloseEventForView, resolveDisclosureLevel } from "../../lib/disclosure";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ClipboardCopy, FileText, PlusCircle, Search } from "lucide-react";
 import {
@@ -7,6 +6,7 @@ import {
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
+import { useDisclosedView } from "../../app/useDisclosedView";
 import { useAppStore } from "../../app/store";
 import {
   buildTimelineRenderModel,
@@ -86,14 +86,7 @@ export function TimelineView({
   // 원본 list, flow cards, inspector heading, search) reads the events as the
   // request disclosure level shows them, so a request hidden at 숨김 cannot
   // leak through one path. Writes look the stored event up by id instead.
-  const disclosureDefault = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
-  const disclosureOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
-  const view = useMemo(() => {
-    const events = storedView.events.map((event) =>
-      discloseEventForView(event, resolveDisclosureLevel(disclosureOverrides[event.id], disclosureDefault)),
-    );
-    return events.some((event, index) => event !== storedView.events[index]) ? { ...storedView, events } : storedView;
-  }, [storedView, disclosureDefault, disclosureOverrides]);
+  const view = useDisclosedView(storedView);
   const storedEvent = useCallback(
     (eventId: string) => storedView.events.find((event) => event.id === eventId),
     [storedView.events],

@@ -455,6 +455,9 @@ function mapConnectorEventToTimelineEvent({
     // Preserve the connector identity so subsequent imports can detect
     // duplicates without re-parsing the original connector event id.
     connectorEventId: getConnectorEventIdentity(event),
+    // A submitted prompt is the user's own words: the request disclosure level
+    // applies to it like any other request.
+    ...(event.kind === "prompt_submitted" ? { actor: "user" as const } : {}),
     ...(fileTouches.length > 0 ? { fileTouches } : {}),
   };
 }

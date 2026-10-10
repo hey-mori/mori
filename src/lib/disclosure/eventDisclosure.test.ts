@@ -85,6 +85,13 @@ describe("discloseEventForView", () => {
     }
   });
 
+  it("hides a pasted transcript turn titled by its ask, keeping the reply", () => {
+    const pasted = { actor: "assistant" as const, requestText: "로그인 고쳐줘", title: "로그인 고쳐줘", summary: "고쳤습니다." };
+    expect(discloseEventForView(pasted, "hidden")).toMatchObject({ title: HIDDEN_REQUEST_TITLE, summary: "고쳤습니다." });
+    const replyOnly = { actor: "assistant" as const, requestText: "  ", title: "고쳤습니다", summary: "고쳤습니다." };
+    expect(discloseEventForView(replyOnly, "hidden")).toBe(replyOnly);
+  });
+
   it("leaves titles the user did not write alone", () => {
     expect(discloseEventForView(reply, "hidden")).toBe(reply);
     expect(discloseEventForView(tool, "hidden")).toBe(tool);

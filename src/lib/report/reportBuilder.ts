@@ -7,11 +7,11 @@ import type {
   Priority,
   TimelineEvent,
 } from "../../domain/types";
-import { discloseEventForView } from "../disclosure/eventDisclosure";
 import { eventDisplayLabel } from "../../domain/constants";
 import { formatDateTime } from "../formatting/time";
 import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
+  discloseEventForView,
   projectEventRequestSummary,
   resolveDisclosureLevel,
   type DisclosureLevel,
@@ -379,7 +379,11 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
     lines.push("");
   }
 
-  if (input.resumePromptOverride && type !== "clientSafe") {
+  // The resume prompt quotes request titles verbatim, so at 숨김 it stays out
+  // of the report, and the report says so.
+  if (input.resumePromptOverride && type !== "clientSafe" && requestDisclosureLevel === "hidden") {
+    warnings.push("요청을 숨김으로 둔 상태라 요청 내용이 담긴 Resume 프롬프트는 넣지 않았습니다.");
+  } else if (input.resumePromptOverride && type !== "clientSafe") {
     lines.push("## Resume 프롬프트");
     lines.push("");
     lines.push("```text");
