@@ -153,3 +153,18 @@ a completed next action, accepted memory citing an answered prompt, a hand-filed
 copy survived reopen, a storage-only restore, a restart and a restore with the original gone; the
 identity graph (ids, references and review states) was identical at every step with no dangling
 reference.
+
+## 7. Snapshots, restore and interruption
+
+A pre-migration snapshot is written under a `.partial` name and renamed when complete, and an
+existing snapshot is reused for a retry only if it opens and passes `quick_check`. Before this, a
+kill during `VACUUM INTO` left a partial file under the snapshot's name that the next launch
+reused, so a migration ran with a file that was not a database as its only restore point
+(reproduced in an isolated release runtime, 2026-10-10). An unreadable snapshot is set aside as
+`.invalid` and is not listed or restored; permanent deletion removes it and any `.partial`.
+
+Restoring a snapshot refuses a file that is not a readable database, keeps the database it
+replaces as `mori-pre-restore-<millis>.sqlite` (listed like the other snapshots), and copies
+through a temporary name. Each migration is applied in its own transaction, so a kill between or
+during migrations leaves the last committed schema and the next launch retries.
+`initialize_sqlite_database` takes the same snapshot-first path as every other command.
