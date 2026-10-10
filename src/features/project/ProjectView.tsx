@@ -59,6 +59,7 @@ import {
 } from "../../lib/project/projectSessionFilter";
 import { useProjectSynthesis } from "./useProjectSynthesis";
 import { spanLabel } from "../../lib/session/workContext";
+import { lookAlikeHints } from "../../lib/sidebar/lookAlike";
 
 /**
  * Project workspace — the unit-of-work page.
@@ -224,6 +225,16 @@ export function ProjectView() {
   const filteredSessionRows = useMemo(
     () => filterProjectSessions(sessionRows, { filter: sessionFilter, now }),
     [sessionRows, sessionFilter, now],
+  );
+  // Same-titled sessions in the list read apart by when they started.
+  const sessionLookAlike = useMemo(
+    () =>
+      lookAlikeHints(
+        // The row's date is its last activity, not its start, so the hint
+        // carries its own date whenever the look-alikes span days.
+        filteredSessionRows.map((row) => ({ id: row.sessionId, title: row.title, startedAt: row.startedAt, at: row.timestamp })),
+      ),
+    [filteredSessionRows],
   );
 
   // Display name + description honour a user override; whether the project is
@@ -411,6 +422,7 @@ export function ProjectView() {
                 <ProjectSessionRowItem
                   row={row}
                   projectLabel={projectSessionLabel}
+                  lookAlikeHint={sessionLookAlike.get(row.sessionId)}
                   onOpen={() => openSessionId(row.sessionId)}
                 />
               )}
@@ -503,10 +515,13 @@ function ProjectConnectionCandidates({
 function ProjectSessionRowItem({
   row,
   projectLabel,
+  lookAlikeHint,
   onOpen,
 }: {
   row: ProjectSessionRow;
   projectLabel: string;
+  /** When it started, if another listed session shares its title. */
+  lookAlikeHint?: string;
   onOpen: () => void;
 }) {
   // No <li> wrapper: VirtualList provides the `.vlist-row` container.
@@ -517,7 +532,7 @@ function ProjectSessionRowItem({
       className="session-list-row"
       meta={
         <BaseMetadataLine
-          items={[projectLabel, spanLabel(row.timestamp, undefined)]}
+          items={[projectLabel, spanLabel(row.timestamp, undefined), lookAlikeHint]}
         />
       }
       onClick={onOpen}

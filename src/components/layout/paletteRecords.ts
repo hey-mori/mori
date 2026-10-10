@@ -19,6 +19,7 @@ import { formatDate } from "../../lib/formatting/time";
 import { matchingPassage, PASSAGE_MATCH_LABEL } from "../../lib/capture/passageSearch";
 import { displayTime, schemaLabel } from "../../features/record-ledger/recordPresentation";
 import { projectLabel, recordProject } from "../../features/record-ledger/projectScope";
+import { lookAlikeHints } from "../../lib/sidebar/lookAlike";
 
 function bodySnippet(body: string): string {
   const clean = body.trim().replace(/\s+/g, " ");
@@ -53,6 +54,24 @@ export function recordToEntry(
         ? { kind: "openAgentSession", sessionId: record.id }
         : { kind: "openRecord", recordId: record.id },
   };
+}
+
+/** Same-titled records among the results read apart by when they started: the
+ *  time joins each look-alike's hint, which already carries its date. */
+export function withLookAlikeHints(entries: CommandEntry[], records: readonly MoriRecord[]): CommandEntry[] {
+  const hints = lookAlikeHints(
+    records.map((record, index) => ({
+      id: entries[index]?.id ?? record.id,
+      title: entries[index]?.label ?? record.title,
+      startedAt: record.occurredStart,
+      at: record.occurredEnd,
+    })),
+    { omitDate: true },
+  );
+  return entries.map((entry) => {
+    const hint = hints.get(entry.id);
+    return hint ? { ...entry, hint: entry.hint ? `${entry.hint} · ${hint}` : hint } : entry;
+  });
 }
 
 /** How many passage-matched records the palette reads before cutting to the

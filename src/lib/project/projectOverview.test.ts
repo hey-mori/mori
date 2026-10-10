@@ -35,6 +35,24 @@ describe("buildProjectOverview", () => {
     expect(overview.groups.flatMap((g) => g.rows).map((r) => r.sessionId)).toEqual(["in"]);
   });
 
+  it("carries a row's start apart from its last activity, so a hint never pairs them wrongly", () => {
+    const overview = buildProjectOverview({
+      projectKey: "C:/dev/mori",
+      sessions: [
+        summary({
+          sessionId: "resumed",
+          sourceLabel: "C:/dev/mori",
+          startedAt: "2026-10-08T14:50:00.000Z",
+          savedAt: "2026-10-09T03:00:00.000Z",
+        }),
+      ],
+      now: NOW,
+    });
+    const [row] = overview.groups.flatMap((g) => g.rows);
+    expect(row.startedAt).toBe("2026-10-08T14:50:00.000Z");
+    expect(row.timestamp).toBe("2026-10-09T03:00:00.000Z");
+  });
+
   it("groups sessions whose sourceLabel is the same project written differently", () => {
     const overview = buildProjectOverview({
       projectKey: "C:/dev/mori",
