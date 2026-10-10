@@ -23,7 +23,7 @@ import type { KernelEntity, KernelRevision, MoriRecord } from "../../lib/record-
 import type { RecordPatch } from "../../lib/record-kernel/recordFactory";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { useRecordProvenance } from "./useRecordProvenance";
-import { ActivityDateEditor, InlineEditable, revertPatch, titlePatch } from "./recordEditing";
+import { ActivityDateEditor, InlineEditable, revertPatch } from "./recordEditing";
 import { displayProperties, originLabel, schemaLabel, sourceKindLabel, statusBadge } from "./recordPresentation";
 import { useRecordTitle } from "../../app/useDisclosedView";
 
@@ -106,7 +106,7 @@ export function RecordInspector({
           value={record.title}
           display={recordTitle(record)}
           ariaLabel="제목 편집"
-          onSave={(next) => onUpdate(titlePatch(record, next))}
+          onSave={(next) => onUpdate({ title: next })}
         />
       }
       onClose={onClose}

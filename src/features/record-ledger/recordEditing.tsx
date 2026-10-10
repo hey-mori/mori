@@ -205,11 +205,3 @@ export function ActivityDateEditor({
     </div>
   );
 }
-
-/** A title edit. A title the user writes is their own, so a session record's
- *  first-request mark goes with the old title. */
-export function titlePatch(record: Pick<MoriRecord, "properties">, title: string): RecordPatch {
-  if (record.properties?.titleFromRequest !== true) return { title };
-  const { titleFromRequest: _fromRequest, ...properties } = record.properties;
-  return { title, properties };
-}

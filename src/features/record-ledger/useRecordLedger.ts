@@ -57,6 +57,7 @@ import type {
   SchemaDefinition,
 } from "../../lib/record-kernel/kernelTypes";
 import type { CaptureRecordOutcome } from "../../lib/capture";
+import { userEditOf } from "../../lib/record-kernel/userEdit";
 
 /** A staged user correction to one reviewed candidate (view-level; becomes a
  *  `RecordPatch` + user revision at commit). */
@@ -599,7 +600,7 @@ export function useRecordLedger(): RecordLedger {
       // Patch the stored record, not this render's copy, so an edit never
       // reverts a field that changed since (see latestRecordFor).
       const base = await latestRecordFor(repo, record);
-      const { record: next, revision } = applyRecordPatch(base, patch, "user", registry);
+      const { record: next, revision } = applyRecordPatch(base, userEditOf(base, patch), "user", registry);
       // One editing burst is one revision, not one per 650ms autosave. Every
       // revision stores a full before+after copy of the record, so appending per
       // burst cost a note 64x its own size. Coalescing reuses the previous

@@ -134,7 +134,6 @@ export function DashboardView() {
     [repository, sessionTitle],
   );
 
-
   const rangedSessions = useMemo(
     () => filterSessionsByDashboardRange(storedSessions, timeRange),
     [storedSessions, timeRange],
@@ -145,7 +144,7 @@ export function DashboardView() {
       buildSessionsBrowserModel({
         active: {
           sessionId: activeSessionId,
-          title: view.session.title,
+          title: sessionTitle(view.session.title, view.session.titleFromRequest),
           status: view.session.status,
           sourceLabel: view.session.sourceLabel?.trim() || null,
           startedAt: view.session.startedAt || null,
@@ -156,7 +155,7 @@ export function DashboardView() {
         storedSessions: rangedSessions,
         filters: { query: "", origin: "all", sort: "recent" },
       }),
-    [activeSessionId, draft, mode, rangedSessions, view],
+    [activeSessionId, draft, mode, rangedSessions, view, sessionTitle],
   );
 
   const projects = useMemo(

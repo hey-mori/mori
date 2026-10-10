@@ -12,7 +12,7 @@ import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordPatch } from "../../lib/record-kernel/recordFactory";
 import type { RecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
-import { ActivityDateEditor, InlineEditable, RecordHistory, titlePatch } from "./recordEditing";
+import { ActivityDateEditor, InlineEditable, RecordHistory } from "./recordEditing";
 import { kindColorClass, originLabel, retypeTargets, schemaLabel, sourceKindLabel } from "./recordPresentation";
 import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
@@ -202,7 +202,7 @@ function RecordDocument({
           type="button"
           className="doc-bar-act is-discard"
           onClick={() => {
-            onDiscarded(record.id, record.title);
+            onDiscarded(record.id, recordTitle(record));
             void ledger.discardRecords([record.id]);
           }}
         >
@@ -228,7 +228,7 @@ function RecordDocument({
             size="sm"
             icon={X}
             onClick={() => {
-              onDiscarded(record.id, record.title);
+              onDiscarded(record.id, recordTitle(record));
               void ledger.setStatus(record, "discarded");
             }}
           >
@@ -243,7 +243,7 @@ function RecordDocument({
             value={record.title}
             display={recordTitle(record)}
             ariaLabel="제목 편집"
-            onSave={(next) => onUpdate(titlePatch(record, next))}
+            onSave={(next) => onUpdate({ title: next })}
           />
         </div>
         <div className="doc-meta">
