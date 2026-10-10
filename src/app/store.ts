@@ -5,8 +5,11 @@ import type { ReviewSelection } from "../lib/review-workspace/reviewWorkspace";
 import type { AgentWorkAgentId } from "../lib/trace/sources/ai/agentRegistry";
 
 /** Active tab on the Review surface. Persisted so the user returns to the same tab. */
-/** The project page a session was opened from (see `sessionReturn`). */
-export type SessionReturn = { sessionId: string; contextId: string; label: string; viaSearch: boolean };
+/** Where a session was opened from (see `sessionReturn`): a project page or
+ *  its search results, or a day on the calendar. */
+export type SessionReturn =
+  | { to: "project"; sessionId: string; contextId: string; label: string; viaSearch: boolean }
+  | { to: "calendar"; sessionId: string; date: string; label: string };
 
 export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";
 
@@ -188,6 +191,11 @@ type AppState = {
    */
   sessionReturn: SessionReturn | null;
   setSessionReturn: (value: SessionReturn | null) => void;
+  /** A day the calendar should open on (the way back from a session opened
+   *  from that day); the calendar reads it once on mount and clears it. */
+  calendarFocusDate: string | null;
+  openCalendarAt: (date: string) => void;
+  clearCalendarFocus: () => void;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -313,6 +321,7 @@ export const useAppStore = create<AppState>((set) => ({
   ledgerFindRequest: false,
   projectContextFocus: null,
   sessionReturn: null,
+  calendarFocusDate: null,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -434,5 +443,7 @@ export const useAppStore = create<AppState>((set) => ({
   openProjectContext: (contextId) => set({ currentView: "contexts", projectContextFocus: contextId }),
   clearProjectContextFocus: () => set({ projectContextFocus: null }),
   setSessionReturn: (value) => set({ sessionReturn: value }),
+  openCalendarAt: (date) => set({ currentView: "calendar", calendarFocusDate: date }),
+  clearCalendarFocus: () => set({ calendarFocusDate: null }),
   clearLedgerProjectScope: () => set({ ledgerProjectScope: null }),
 }));

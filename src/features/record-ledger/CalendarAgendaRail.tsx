@@ -28,7 +28,10 @@ export const CalendarAgendaRail = forwardRef<
     selectedDate: string | null;
     onSelectDate: (date: string) => void;
     onSelectRecord: (recordId: string) => void;
-    onOpenSession: (sessionId: string) => void;
+    /** Opens a session listed under a day, naming the day for the way back. */
+    onOpenSession: (sessionId: string, date: string) => void;
+    /** A day whose sessions start unfolded (the day a session was opened from). */
+    unfoldDate?: string | null;
     contexts: readonly KernelContext[];
     /** The folder a session ran in, for sessions no project was confirmed for. */
     folderOf: (sessionId: string) => string | null;
@@ -46,13 +49,16 @@ export const CalendarAgendaRail = forwardRef<
     onOpenSession,
     contexts,
     folderOf,
+    unfoldDate,
     now,
   },
   ref,
 ) {
   // Days whose sessions are unfolded. A day's sessions start folded so a busy
   // day does not bury what was written that day.
-  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(() => new Set());
+  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(
+    () => new Set(unfoldDate ? [unfoldDate] : []),
+  );
   const toggle = (date: string) =>
     setUnfolded((current) => {
       const next = new Set(current);
@@ -140,7 +146,7 @@ export const CalendarAgendaRail = forwardRef<
                                 key={session.id}
                                 type="button"
                                 className="cal-day-row"
-                                onClick={() => onOpenSession(session.id)}
+                                onClick={() => onOpenSession(session.id, date)}
                               >
                                 <span className="cal-day-time">{clock(sessionTime(session))}</span>
                                 <span className="cal-day-title">

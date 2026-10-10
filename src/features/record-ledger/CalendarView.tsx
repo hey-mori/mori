@@ -24,6 +24,7 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { ledgerVisibleRecords } from "./recordPresentation";
 import { LedgerCalendarView } from "./LedgerCalendarView";
 import { CalendarAgendaRail } from "./CalendarAgendaRail";
+import { calendarDayLabel } from "./calendarDaySessions";
 import { recordsByDate } from "./calendarGrouping";
 import { isDateUndecided } from "./dateResolution";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
@@ -49,15 +50,27 @@ export function CalendarView() {
     return (sessionId: string) => byId.get(sessionId) || null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ledger.records]);
-  const openSessionFromCalendar = (sessionId: string) => {
-    setSessionReturn(null);
+  const openSessionFromCalendar = (sessionId: string, date: string) => {
+    setSessionReturn({ to: "calendar", sessionId, date, label: calendarDayLabel(date, now) });
     void resolveSession(sessionId).then((outcome) => {
       if (outcome === "opened") openSession("flow");
       else if (outcome === "unavailable") navigate("sessions");
     });
   };
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [cursor, setCursor] = useState(() => ({ year: now.getFullYear(), month: now.getMonth() }));
+  // Coming back from a session opened from a day reopens that day, unfolded.
+  const [focusDate] = useState(() => {
+    const date = useAppStore.getState().calendarFocusDate;
+    return date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+  });
+  const clearCalendarFocus = useAppStore((state) => state.clearCalendarFocus);
+  useEffect(() => {
+    clearCalendarFocus();
+  }, [clearCalendarFocus]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(focusDate);
+  const [cursor, setCursor] = useState(() => {
+    const at = focusDate ? new Date(`${focusDate}T00:00:00`) : now;
+    return { year: at.getFullYear(), month: at.getMonth() };
+  });
   const [trayOpen, setTrayOpen] = useState(false);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
@@ -98,6 +111,16 @@ export function CalendarView() {
     const target = railRef.current?.querySelector(`[data-day="${selectedDate}"]`);
     target?.scrollIntoView({ block: "nearest" });
   }, [selectedDate]);
+
+  // Coming back to a day: the rail renders only once the ledger has loaded,
+  // after the selection was set, so scroll there then, with the day's
+  // unfolded sessions at the top.
+  const focusScrolledRef = useRef(false);
+  useEffect(() => {
+    if (!focusDate || ledger.loading || focusScrolledRef.current) return;
+    focusScrolledRef.current = true;
+    railRef.current?.querySelector(`[data-day="${focusDate}"]`)?.scrollIntoView({ block: "start" });
+  }, [focusDate, ledger.loading]);
 
   const selectDate = useCallback(
     (date: string | null) => setSelectedDate((current) => (current === date ? null : date)),
@@ -172,6 +195,7 @@ export function CalendarView() {
         onSelectDate={selectDate}
         onSelectRecord={openRecordInLedger}
         onOpenSession={openSessionFromCalendar}
+        unfoldDate={focusDate}
         contexts={ledger.contexts}
         folderOf={folderOf}
         now={now}

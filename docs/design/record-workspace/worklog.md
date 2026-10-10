@@ -1018,3 +1018,11 @@ focused next step, not rushed:
   project shows as 프로젝트 확인 필요, never re-filed), else the folder they ran in, labelled 폴더.
   A session dated by day only shows no clock.
 - Verified in an isolated release runtime with real transcripts read-only.
+
+## 2026-10-10 · A session opened from a 캘린더 day leads back to it
+
+- A session opened from a calendar day had no way back: the breadcrumb named its project or folder,
+  and returning meant finding the month and unfolding the day again.
+- The session header now shows "← 캘린더 10월 10일" for that session. It reopens the calendar on that
+  day, selected and with its sessions unfolded. The project return is unchanged.
+- A navigation context only, like the project return: it never says the session belongs to the day.

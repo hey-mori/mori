@@ -167,7 +167,7 @@ describe("session breadcrumb", () => {
 });
 
 describe("the way back to the project page a session was opened from", () => {
-  const from = { sessionId: "s1", contextId: "ctx-infra", label: "infra", viaSearch: false };
+  const from = { to: "project" as const, sessionId: "s1", contextId: "ctx-infra", label: "infra", viaSearch: false };
   const member = { kind: "project" as const, contextId: "ctx-infra", label: "infra" };
   const folder = { kind: "source" as const, sourceKey: "/home/u/dev" };
   it("shows for a session the breadcrumb does not lead back from", () => {
@@ -182,5 +182,11 @@ describe("the way back to the project page a session was opened from", () => {
   it("belongs to the session it was set for only", () => {
     expect(sessionReturnLink(from, "s2", folder)).toBeNull();
     expect(sessionReturnLink(null, "s1", folder)).toBeNull();
+  });
+  it("leads back to a calendar day whatever the breadcrumb says", () => {
+    const day = { to: "calendar" as const, sessionId: "s1", date: "2026-10-10", label: "캘린더 10월 10일" };
+    expect(sessionReturnLink(day, "s1", member)).toBe(day);
+    expect(sessionReturnLink(day, "s1", null)).toBe(day);
+    expect(sessionReturnLink(day, "s2", member)).toBeNull();
   });
 });

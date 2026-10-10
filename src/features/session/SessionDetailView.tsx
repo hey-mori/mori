@@ -135,6 +135,8 @@ function SessionTitleInline() {
   const demoSession = useSessionStore(selectSessionView).session;
   const openProject = useAppStore((state) => state.openProject);
   const openProjectContext = useAppStore((state) => state.openProjectContext);
+  const openCalendarAt = useAppStore((state) => state.openCalendarAt);
+  const setSessionReturn = useAppStore((state) => state.setSessionReturn);
   const identity = useSessionProjectIdentity(draft?.session.id ?? null);
   const context = useMemo(
     () =>
@@ -147,19 +149,35 @@ function SessionTitleInline() {
   );
   // The agent's working folder is observed source, not the user's project.
   const { lead, trailingSource } = sessionCrumbs(identity, context.projectLabel ?? null);
-  // The way back to the project page this session was opened from. Shown
-  // unless the breadcrumb already leads there (a confirmed member opened from
-  // its own project's list).
+  // The way back to where this session was opened from: a project page
+  // (unless the breadcrumb already leads there, a confirmed member opened from
+  // its own project's list), its search results, or a calendar day.
   const sessionReturn = useAppStore((state) => state.sessionReturn);
   const back = sessionReturnLink(sessionReturn, draft?.session.id ?? null, lead);
   return (
     <nav className="session-detail-breadcrumb" aria-label="현재 위치">
-      {back ? (
+      {back?.to === "calendar" ? (
+        <button
+          type="button"
+          className="session-detail-back"
+          title="열었던 캘린더 날짜로 돌아갑니다"
+          onClick={() => {
+            setSessionReturn(null);
+            openCalendarAt(back.date);
+          }}
+        >
+          <ArrowLeft size={12} aria-hidden="true" />
+          <span>{back.label}</span>
+        </button>
+      ) : back ? (
         <button
           type="button"
           className="session-detail-back"
           title={back.viaSearch ? "프로젝트 검색 결과로 돌아갑니다" : "열었던 프로젝트로 돌아갑니다"}
-          onClick={() => openProjectContext(back.contextId)}
+          onClick={() => {
+            setSessionReturn(null);
+            openProjectContext(back.contextId);
+          }}
         >
           <ArrowLeft size={12} aria-hidden="true" />
           <span>{back.viaSearch ? `${back.label} 검색 결과` : back.label}</span>
