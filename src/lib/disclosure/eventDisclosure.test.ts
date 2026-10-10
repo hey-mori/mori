@@ -176,4 +176,3 @@ describe("sessionTitleForView", () => {
     expect(recordTitleForView({ title: "노트", properties: {} }, "hidden")).toBe("노트");
   });
 });
-

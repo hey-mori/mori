@@ -62,6 +62,7 @@ import { AttentionDonut } from "./charts/AttentionDonut";
 import { TokenDistribution } from "./charts/TokenDistribution";
 import { useChartTooltip } from "./charts/ChartTooltip";
 import { DashboardInsights, type WorkFlowStage } from "./DashboardInsights";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * Dashboard — the project-axis surface of the four-tab IA.
@@ -121,10 +122,18 @@ export function DashboardView() {
   const tooltip = useChartTooltip();
   const activeSessionId = draft?.session.id ?? view.session.id;
 
+  // Session titles as the request disclosure level shows them, for every
+  // card, list and search on the dashboard.
+  const sessionTitle = useSessionTitle();
   const storedSessions = useMemo(
-    () => mergeDemoSessionSummaries(repository.listStoredSessionsWithMetrics()),
-    [repository],
+    () =>
+      mergeDemoSessionSummaries(repository.listStoredSessionsWithMetrics()).map((summary) => ({
+        ...summary,
+        title: sessionTitle(summary.title, summary.titleFromRequest),
+      })),
+    [repository, sessionTitle],
   );
+
 
   const rangedSessions = useMemo(
     () => filterSessionsByDashboardRange(storedSessions, timeRange),

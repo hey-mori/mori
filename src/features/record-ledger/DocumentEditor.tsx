@@ -12,13 +12,14 @@ import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { RecordPatch } from "../../lib/record-kernel/recordFactory";
 import type { RecordLedger } from "./useRecordLedger";
 import { RecordComposer } from "./composer/RecordComposer";
-import { ActivityDateEditor, InlineEditable, RecordHistory } from "./recordEditing";
+import { ActivityDateEditor, InlineEditable, RecordHistory, titlePatch } from "./recordEditing";
 import { kindColorClass, originLabel, retypeTargets, schemaLabel, sourceKindLabel } from "./recordPresentation";
 import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
 import { SavedPassage, savedPassageOf } from "./SavedPassage";
 import { SessionRecordFacts } from "./SessionRecordFacts";
 import { useSessionStore } from "../../app/sessionStore";
+import { useRecordTitle } from "../../app/useDisclosedView";
 
 export function DocumentEditor({
   record,
@@ -122,6 +123,7 @@ function RecordDocument({
   now: Date;
 }) {
   const { source, link, revisions, relations, loading: provenanceLoading } = useRecordProvenance(record.id, record.updatedAt);
+  const recordTitle = useRecordTitle();
   // A record kept from a conversation shows that passage as its evidence, not
   // behind a 원문 toggle: it is the reason the record exists. Provenance
   // reloads after every edit; the passage already shown stays until the new
@@ -237,7 +239,12 @@ function RecordDocument({
 
       <div className="doc-editor-main">
         <div className="doc-title">
-          <InlineEditable value={record.title} ariaLabel="제목 편집" onSave={(next) => onUpdate({ title: next })} />
+          <InlineEditable
+            value={record.title}
+            display={recordTitle(record)}
+            ariaLabel="제목 편집"
+            onSave={(next) => onUpdate(titlePatch(record, next))}
+          />
         </div>
         <div className="doc-meta">
           <ActivityDateEditor record={record} onUpdate={onUpdate} />

@@ -227,6 +227,7 @@ export function ConnectionsView() {
       importAndOpenAsNewSession({
         candidate,
         title: detail.title,
+        titleFromRequest: detail.titleFromRequest,
         startedAt,
         endedAt,
         projectLabel: detail.projectName || undefined,
@@ -279,15 +280,17 @@ export function ConnectionsView() {
   // Filter sessions by the search query — matches title or decoded project
   // path. Empty query passes everything through, so the input is purely
   // additive and never hides the list by accident.
+  // Matched on the title as shown: nothing is found by words it hides.
+  const listTitle = useSessionTitle();
   const filteredSessions = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return sessions.sessions;
     return sessions.sessions.filter((session) => {
-      const title = session.title.toLowerCase();
+      const title = listTitle(session.title, session.titleFromRequest).toLowerCase();
       const project = session.projectName.toLowerCase();
       return title.includes(needle) || project.includes(needle);
     });
-  }, [query, sessions.sessions]);
+  }, [query, sessions.sessions, listTitle]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, AgentWorkSessionMeta[]>();

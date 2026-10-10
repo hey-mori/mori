@@ -372,6 +372,9 @@ export function StartSessionView() {
         importAndOpenAsNewSession({
           candidate,
           title: sessionTitle.trim() || detail.title,
+          // Still the source's own words only when the user kept them.
+          titleFromRequest:
+            detail.titleFromRequest === true && (!sessionTitle.trim() || sessionTitle.trim() === detail.title.trim()),
           startedAt,
           endedAt,
           projectLabel: resolvedProject,

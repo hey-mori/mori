@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAgentSessionRecordInput,
+  planAgentSessionRediscovery,
   upsertAgentSessionRecords,
 } from "./agentSessionRecordAdapter";
 import { autoImportedSessionId } from "../session/autoImportSessions";
@@ -828,5 +829,37 @@ describe("a record titled by the user's first request", () => {
     const marked = buildAgentSessionRecordInput(meta({ title: "배포 스크립트 고쳐줘", titleFromRequest: true }), []);
     expect(marked.properties?.titleFromRequest).toBe(true);
     expect(buildAgentSessionRecordInput(meta(), []).properties?.titleFromRequest).toBeUndefined();
+  });
+});
+
+describe("the first-request mark beside a title the user wrote", () => {
+  it("is dropped, and never taken, once the user changed the title", () => {
+    const written = {
+      title: "배포 고쳐줘",
+      body: "Claude 세션",
+      time: { occurredStart: "2026-07-16T09:00:00.000Z", occurredEnd: undefined, timeBasis: "source-observed" as const },
+      contextIds: [],
+      agentId: "claude",
+      stepCount: undefined,
+      activityClass: undefined,
+      interaction: undefined,
+      sessionEvidence: undefined,
+      titleFromRequest: true,
+    };
+    const current = {
+      id: "auto-claude-x",
+      schemaId: "agent-session",
+      title: "내가 붙인 이름",
+      body: "Claude 세션",
+      occurredStart: "2026-07-16T09:00:00.000Z",
+      timeBasis: "source-observed",
+      contextIds: [],
+      properties: { agentId: "claude", titleFromRequest: true },
+    } as unknown as Parameters<typeof planAgentSessionRediscovery>[1];
+    const incoming = buildAgentSessionRecordInput(meta({ title: "배포 고쳐줘", titleFromRequest: true }), []);
+    const patch = planAgentSessionRediscovery(written, current, incoming);
+    expect(patch.title).toBeUndefined();
+    expect(patch.properties?.titleFromRequest).toBeUndefined();
+    expect(patch.properties && "titleFromRequest" in patch.properties).toBe(false);
   });
 });

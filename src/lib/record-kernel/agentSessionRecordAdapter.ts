@@ -215,7 +215,15 @@ export function planAgentSessionRediscovery(
 
   const properties = { ...current.properties };
   let propertiesChanged = false;
+  // A title the user wrote is their own: the first-request mark belongs to the
+  // observed title only, so it is neither taken nor kept beside theirs.
+  const userTitled = !same(now.title, written.title);
+  if (userTitled && properties.titleFromRequest !== undefined) {
+    delete properties.titleFromRequest;
+    propertiesChanged = true;
+  }
   for (const key of PROPERTY_KEYS) {
+    if (key === "titleFromRequest" && userTitled) continue;
     if (!takes(key)) continue;
     if (next[key] === undefined) delete properties[key];
     else properties[key] = next[key];

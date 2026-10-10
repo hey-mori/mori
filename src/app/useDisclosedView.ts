@@ -64,4 +64,3 @@ export function useRecordTitle(): (record: { title: string; properties?: Record<
   const level = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
   return useMemo(() => (record: { title: string; properties?: Record<string, unknown> }) => recordTitleForView(record, level), [level]);
 }
-

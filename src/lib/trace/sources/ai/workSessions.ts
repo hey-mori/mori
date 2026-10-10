@@ -440,6 +440,7 @@ function mapCodexMeta(session: CodexSessionMeta): AgentWorkSessionMeta {
     updatedAt: session.updatedAt,
     messageCount: session.messageCount,
     title: session.title,
+    ...(session.titleFromRequest ? { titleFromRequest: true } : {}),
     activityClass: activityClassOf(session.activityClass),
     interaction: codexInteraction(session.source),
     evidence: session.evidence ?? undefined,

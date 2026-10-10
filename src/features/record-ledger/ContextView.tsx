@@ -304,8 +304,9 @@ export function ContextView() {
         const summary = summaryById.get(sessionId);
         return summary ? { title: summary.title, lastActiveAt: sessionLastActiveAt(summary) } : null;
       },
+      titleOf: recordTitle,
     });
-  }, [activeContext, contexts, records, summaries]);
+  }, [activeContext, contexts, records, summaries, recordTitle]);
   const restrictProjectSearch = useProjectSearchStore((state) => state.restrict);
   const stopProjectSearch = useProjectSearchStore((state) => state.stop);
   const closeProjectSearch = useProjectSearchStore((state) => state.close);
@@ -364,9 +365,8 @@ export function ContextView() {
         const steps = record?.properties?.stepCount;
         return {
           id: entry.sessionId,
-          title:
-            summaryById.get(entry.sessionId)?.title ??
-            (record ? recordTitle(record) : sessionTitle(entry.title, undefined)),
+          // The inventory's title is already the shown one.
+          title: summaryById.get(entry.sessionId)?.title ?? (record ? recordTitle(record) : entry.title),
           // The transcript's own first and last activity. A session with no
           // record has no observed end: its Mori save time is not activity.
           start: record?.occurredStart ?? summaryById.get(entry.sessionId)?.startedAt,

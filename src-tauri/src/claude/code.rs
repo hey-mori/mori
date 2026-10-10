@@ -1994,6 +1994,9 @@ mod tests {
         assert_eq!(row.message_count, 2);
         // The decoded project name should be human readable.
         assert!(row.project_name.contains("Users"));
+        let path = project.join("session-aaa.jsonl");
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        assert!(detail.title_from_request);
     }
 
     #[test]
