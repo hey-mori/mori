@@ -131,7 +131,9 @@ pub fn initialize_sqlite_database(state: tauri::State<'_, SqliteState>) -> Resul
         *guard = Some(open_database(&path)?);
     }
     let conn = guard.as_mut().expect("connection initialized above");
-    let outcome = apply_migrations(conn)?;
+    // The same path every command takes: an existing database is snapshotted
+    // before pending migrations run, never migrated without a restore point.
+    ensure_migrated(conn)?;
     let records = applied_migrations(conn)?;
     let applied_versions: Vec<String> = records.iter().map(|record| record.version.clone()).collect();
     let pending_versions: Vec<String> = MIGRATIONS
@@ -139,7 +141,6 @@ pub fn initialize_sqlite_database(state: tauri::State<'_, SqliteState>) -> Resul
         .map(|migration| migration.version.to_string())
         .filter(|version| !applied_versions.contains(version))
         .collect();
-    let _ = outcome;
     Ok(DatabaseStatus {
         path: path_string,
         initialized: !records.is_empty(),
@@ -527,15 +528,22 @@ pub fn clear_all_sqlite_data(
         // Unknown location: the files cannot be confirmed gone.
         Err(_) => result.archives_left = 1,
     }
+    // A restore cut short leaves its copy of a snapshot beside the database.
+    if let Ok(db) = database_path() {
+        let restoring = sidecar_path(&db, crate::db::backup::RESTORING_SUFFIX);
+        if restoring.exists() && std::fs::remove_file(&restoring).is_err() {
+            result.snapshots_left += 1;
+        }
+    }
     // A permanent deletion includes the managed recovery snapshots: they hold
     // the same records and passages. (The recovery reset keeps them.)
     match crate::db::backup::backups_dir() {
         Ok(dir) => {
             let (removed, left) = crate::db::backup::remove_all_backups_in(&dir);
             result.snapshots_deleted = removed as u64;
-            result.snapshots_left = left as u64;
+            result.snapshots_left += left as u64;
         }
-        Err(_) => result.snapshots_left = 1,
+        Err(_) => result.snapshots_left += 1,
     }
     Ok(result)
 }
@@ -635,11 +643,13 @@ pub fn restore_sqlite_backup(
 ) -> Result<(), String> {
     let target = database_path()?;
     let dir = crate::db::backup::backups_dir()?;
-    {
-        let mut guard = state.0.lock().map_err(|error| error.to_string())?;
-        *guard = None;
-    }
-    crate::db::backup::restore_backup(Path::new(&backup_path), &dir, &target)
+    // Held for the whole restore: a command arriving meanwhile would reopen
+    // and cache a connection to the file about to be replaced.
+    let mut guard = state.0.lock().map_err(|error| error.to_string())?;
+    *guard = None;
+    let outcome = crate::db::backup::restore_backup(Path::new(&backup_path), &dir, &target);
+    *guard = None;
+    outcome
 }
 
 fn list_tables(conn: &Connection) -> Result<Vec<String>, String> {
@@ -758,6 +768,9 @@ fn move_sqlite_files(old_db: &Path, new_db: &Path) -> Result<(), String> {
             let _ = std::fs::remove_file(&from);
         }
     }
+    // A restore cut short left a copy of a snapshot here: it is not the
+    // database and does not follow it; it must not stay behind either.
+    let _ = std::fs::remove_file(sidecar_path(old_db, crate::db::backup::RESTORING_SUFFIX));
     Ok(())
 }
 

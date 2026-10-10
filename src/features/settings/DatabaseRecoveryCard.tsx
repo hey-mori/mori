@@ -50,7 +50,7 @@ export function DatabaseRecoveryCard() {
     try {
       await tauriCommands.restoreSqliteBackup(row.path);
       await refresh();
-      setNotice(`${row.takenAtLabel} 백업으로 복원했습니다.`);
+      setNotice(`${row.takenAtLabel} 백업으로 복원했습니다. Mori를 다시 시작하면 복원한 기록을 읽습니다.`);
     } catch (restoreError) {
       setNotice(`복원하지 못했습니다: ${messageOf(restoreError)}`);
     } finally {
@@ -97,8 +97,8 @@ export function DatabaseRecoveryCard() {
           <div>
             <strong>저장소를 열지 못했습니다.</strong>
             <p>
-              마이그레이션이 완료되지 않아 저장과 불러오기가 멈췄습니다. 아래에서 마이그레이션
-              직전 백업으로 복원하거나 다시 시도할 수 있습니다.
+              저장과 불러오기가 멈췄습니다. 아래 자동 백업으로 복원하거나 다시 시도할 수
+              있습니다.
             </p>
             {error ? <code className="db-recovery-detail">{error}</code> : null}
           </div>
@@ -130,6 +130,7 @@ export function DatabaseRecoveryCard() {
                   <span className="db-recovery-item-main">
                     <DatabaseBackup size={14} aria-hidden="true" />
                     <span className="db-recovery-item-when">{row.takenAtLabel}</span>
+                    {row.kind === "beforeRestore" ? <span className="db-recovery-item-size">복원 전 상태</span> : null}
                     <span className="db-recovery-item-size">{row.sizeLabel}</span>
                   </span>
                   <Button
@@ -146,7 +147,7 @@ export function DatabaseRecoveryCard() {
           </div>
         ) : (
           <p className="db-recovery-empty">
-            복원할 자동 백업이 없습니다. 마이그레이션 전에 만들어진 백업만 여기에 표시됩니다.
+            복원할 자동 백업이 없습니다. 마이그레이션 직전과 복원 직전에 만든 백업이 여기에 표시됩니다.
           </p>
         )}
 

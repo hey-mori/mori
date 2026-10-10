@@ -153,3 +153,30 @@ a completed next action, accepted memory citing an answered prompt, a hand-filed
 copy survived reopen, a storage-only restore, a restart and a restore with the original gone; the
 identity graph (ids, references and review states) was identical at every step with no dangling
 reference.
+
+## 7. Snapshots, restore and interruption
+
+A pre-migration snapshot is written under a `.partial` name and renamed when complete, and an
+existing snapshot is reused for a retry only if it opens and passes `quick_check` (remembered per
+file for the process, so a migration that keeps failing does not rescan it on every command). Before
+this, a kill during `VACUUM INTO` left a partial file under the snapshot's name that the next launch
+reused, so a migration ran with a file that was not a database as its only restore point
+(reproduced in an isolated release runtime, 2026-10-10). An unreadable snapshot found for reuse is
+set aside as `.invalid`; any other unreadable snapshot stays listed and restore refuses it. Only
+exact Mori names are reused or set aside, never a user's file under a Mori-like name.
+
+Restoring a snapshot refuses a file that is not a readable database and keeps the database it
+replaces first: a consistent `mori-pre-restore-<millis>.sqlite` (listed as 복원 전 상태) when it
+opens, otherwise, as when it is damaged, its files copied as they are under `.unverified` names that
+are never listed or restored. Only when neither can be written, as on a full disk, is the restore
+refused, before anything is replaced. A database that fails `quick_check` is kept raw rather than
+vacuumed, since a vacuum can drop what it cannot read. Pre-restore copies keep their own cap (two
+consistent copies and the newest raw one), never push pre-migration snapshots out, and are pruned
+only after a restore succeeds, never the copy just restored. A restore takes effect for reads at
+the next launch, and the card says so. The snapshot is copied beside the database as `.restoring` and renamed
+over it, with the connection lock held for the whole restore. Permanent deletion and a storage move
+also cover `.partial`, `.invalid` and `.unverified`, and a stray `.restoring` (a move removes it
+when the database itself moves). Each migration is
+applied in its own transaction, so a kill between or during migrations leaves the last committed
+schema and the next launch retries. `initialize_sqlite_database` takes the same snapshot-first path
+as every other command.
