@@ -15,7 +15,9 @@
  *   bare filter word narrows within the pinned discovery and never widens it.
  *   `vite.config.ts` also pins `include` to `src/` and refuses `--root`.
  * - Workers are capped (`MORI_TEST_MAX_WORKERS`, default 2): passed as
- *   `--maxWorkers` and as `VITEST_MAX_WORKERS`, which outranks both.
+ *   `--maxWorkers` and read by `vite.config.ts`. `VITEST_MAX_WORKERS` is
+ *   removed from the child's environment: Vitest lets it override every
+ *   project's worker count, which would un-serialise the smoke tests.
  * - Each Node process gets a V8 heap cap (`MORI_TEST_HEAP_MB`, default 2048).
  *   That bounds the JavaScript heap of each process, not a process's total
  *   memory and not the run's total. A whole-run memory cap needs a cgroup.
@@ -93,12 +95,12 @@ const ALLOWED_LONG = new Map([
   ["changed", "optional"],
   ["project", "value"],
   ["testNamePattern", "value"],
-  ["reporter", "value"],
+  ["reporter", "reporter"],
   ["outputFile", "path"],
   ["bail", "optional"],
   ["passWithNoTests", "flag"],
   ["silent", "optional"],
-  ["update", "flag"],
+  ["update", "update"],
   ["shard", "value"],
   ["retry", "value"],
   ["allowOnly", "flag"],
@@ -122,7 +124,26 @@ const ALLOWED_SHORT = new Map([
 /** Words Vitest reads as a mode, not a filter. Only `run` is a bounded one. */
 const MODE_WORDS = new Set(["watch", "dev", "related", "bench", "list", "init", "typecheck"]);
 
+/** Reporters built into Vitest; a reporter can otherwise be any module path. */
+const BUILT_IN_REPORTERS = new Set([
+  "default",
+  "basic",
+  "verbose",
+  "dot",
+  "json",
+  "junit",
+  "tap",
+  "tap-flat",
+  "hanging-process",
+  "github-actions",
+  "tree",
+]);
+
 const camel = (name) => name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+const underSrc = (path) => {
+  const rel = relative(REPO, resolve(REPO, path)).split("\\").join("/");
+  return rel === "src" || rel.startsWith("src/");
+};
 
 /**
  * Why these Vitest arguments are refused, or null when they are fine. Pure, so
@@ -139,13 +160,15 @@ export function refuseVitestArgs(args) {
       // A path-like filter must point into src/, where discovery is pinned;
       // anything else finds nothing and invites widening the root.
       const looksLikePath = arg.includes("/") || /\.(test|spec)\./.test(arg);
-      if (looksLikePath && !relative(REPO, resolve(REPO, arg)).startsWith(`src`)) {
+      if (looksLikePath && !underSrc(arg)) {
         return `test path ${arg} is outside src/, where tests are discovered`;
       }
       continue;
     }
-    // Normalise as Vitest's parser does: any number of dashes, `=` values,
-    // and a single-dash cluster of short flags (the value goes to the last).
+    // Normalise as Vitest's parser does: two dashes for a long option, `=`
+    // values, and a single-dash cluster of short flags (the value goes to the
+    // last). Three or more dashes parse as a cluster there; refuse them here.
+    if (arg.startsWith("---")) return `${arg}: use one or two dashes`;
     const doubleDash = arg.startsWith("--");
     const body = arg.replace(/^-+/, "");
     const equals = body.indexOf("=");
@@ -160,19 +183,31 @@ export function refuseVitestArgs(args) {
       if (!long || !kind) return `${arg} is not an allowed option (see docs/test-run-safety.md)`;
       if (!isLast && kind !== "flag") return `${arg}: ${raw} takes a value and cannot sit inside a cluster`;
       if (!isLast || kind === "flag") continue;
+      const next = index + 1 < args.length && !args[index + 1].startsWith("-") ? args[index + 1] : undefined;
+      if (kind === "update") {
+        // Vitest's `--update [type]` takes the next word as its value, which
+        // would turn a test path into an update type and update every snapshot.
+        if (inlineValue === undefined && next !== undefined) return `${arg}: put it after the test paths, not before one`;
+        continue;
+      }
       let value = inlineValue;
-      if (value === undefined && kind !== "optional" && index + 1 < args.length && !args[index + 1].startsWith("-")) {
-        value = args[index + 1];
+      // Like Vitest's parser, an option with a value (required or optional)
+      // takes the next word when none is given inline.
+      if (value === undefined && next !== undefined) {
+        value = next;
         index += 1;
       }
-      if ((kind === "value" || kind === "path" || kind === "config") && value === undefined) {
+      if ((kind === "value" || kind === "path" || kind === "config" || kind === "reporter") && value === undefined) {
         return `${arg} needs a value`;
       }
       if (kind === "path" && (isAbsolute(value) || !insideRepo(value))) {
         return `${arg}: ${value} is outside the repository`;
       }
-      if (kind === "config" && (isAbsolute(value) || !insideRepo(value))) {
-        return `${arg} must name a config inside the repository`;
+      if (kind === "config" && relative(REPO, resolve(REPO, value)) !== "vite.config.ts") {
+        return `${arg}: the only config is vite.config.ts`;
+      }
+      if (kind === "reporter" && !BUILT_IN_REPORTERS.has(value)) {
+        return `${arg}: only Vitest's built-in reporters are allowed`;
       }
     }
   }
@@ -190,25 +225,35 @@ export function refuseVitestArgs(args) {
 export async function acquireLock(name) {
   const path = join(LOCK_BASE, `${name}.lock`);
   if (POSIX && commandExists("flock")) {
+    // Its own group, so a terminal Ctrl-C reaches the run (through this
+    // wrapper), not the lock; it still ends when this wrapper dies, because
+    // its stdin closes.
     const holder = spawn("flock", ["-n", "-E", String(EXIT_LOCKED), path, "-c", "echo locked; read _"], {
       stdio: ["pipe", "pipe", "ignore"],
+      detached: true,
     });
     holder.stdin.on("error", () => {});
-    const acquired = await new Promise((done) => {
+    const outcome = await new Promise((done) => {
       let output = "";
       holder.stdout.on("data", (chunk) => {
         output += chunk;
-        if (output.includes("locked")) done(true);
+        if (output.includes("locked")) done({ acquired: true });
       });
-      holder.on("exit", () => done(false));
-      holder.on("error", () => done(false));
+      holder.on("exit", (code) => done({ acquired: false, code }));
+      holder.on("error", (error) => done({ acquired: false, error }));
     });
-    if (!acquired) return { ok: false, path };
+    if (!outcome.acquired) {
+      if (outcome.code === EXIT_LOCKED) return { ok: false, path };
+      throw new Error(`cannot take the lock ${path}: flock ${outcome.error ? outcome.error.message : `exited ${outcome.code}`}`);
+    }
+    // Not unref'd: release() waits for the holder to exit, and an unref'd
+    // child would let the process end (exit 0) before the result is reported.
     return {
       ok: true,
       path,
       release: () =>
         new Promise((done) => {
+          if (holder.exitCode !== null || holder.signalCode !== null) return done();
           holder.on("exit", () => done());
           holder.stdin.end("\n");
         }),
@@ -345,7 +390,14 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
     const say = (line) => {
       if (!quiet) process.stderr.write(`[run-tests] ${line}\n`);
     };
-    const child = spawn(command, args, { cwd: REPO, env, stdio: quiet ? "ignore" : "inherit", detached: POSIX });
+    // On Windows a .cmd shim (vitest.cmd, npm) needs a shell to start.
+    const child = spawn(command, args, {
+      cwd: REPO,
+      env,
+      stdio: quiet ? "ignore" : "inherit",
+      detached: POSIX,
+      shell: !POSIX,
+    });
     const pgid = child.pid;
     if (pgid === undefined) {
       child.on("error", (error) => {
@@ -368,8 +420,10 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
     const terminate = (reason) => {
       say(`${reason}: sending SIGTERM to the test process group ${pgid}`);
       stopGroup("SIGTERM");
+      // taskkill /F already ends the tree on Windows; only POSIX escalates.
+      if (!POSIX) return;
       killTimer = setTimeout(() => {
-        if (!POSIX || groupAlive(pgid)) {
+        if (groupAlive(pgid)) {
           escalated = true;
           say(`still running ${graceS}s after SIGTERM: sending SIGKILL`);
           stopGroup("SIGKILL");
@@ -440,25 +494,29 @@ function childEnv(heapMb, maxWorkers) {
   const flag = `--max-old-space-size=${heapMb}`;
   const cleaned = (process.env.NODE_OPTIONS ?? "").replace(/--max-old-space-size=\d+/g, "").trim();
   const env = { ...process.env, NODE_OPTIONS: `${cleaned} ${flag}`.trim() };
-  if (maxWorkers !== undefined) {
-    // VITEST_MAX_WORKERS outranks the config and the CLI: pin it to the cap.
-    env.VITEST_MAX_WORKERS = String(maxWorkers);
-    env.MORI_TEST_MAX_WORKERS = String(maxWorkers);
-  }
+  // Vitest applies VITEST_MAX_WORKERS to every project after the config, so
+  // an inherited one would lift the cap and un-serialise the smoke tests.
+  delete env.VITEST_MAX_WORKERS;
+  if (maxWorkers !== undefined) env.MORI_TEST_MAX_WORKERS = String(maxWorkers);
   return env;
 }
 
-async function withLock(fn) {
-  const lock = await acquireLock("mori-test-run");
+async function withLock(fn, name = "mori-test-run") {
+  const lock = await acquireLock(name);
   if (!lock.ok) {
     process.stderr.write(
       `[run-tests] FAILED: another Mori test run holds ${lock.path}; runs never overlap on this machine. Wait for it, do not stop it.\n`,
     );
     return EXIT_LOCKED;
   }
+  let code = 1;
   try {
-    return await fn();
+    code = await fn();
+    return code;
   } finally {
+    // Recorded before anything else is awaited, so no early end of the
+    // process can ever turn the run's result into a success.
+    process.exitCode = code;
     await lock.release();
   }
 }
@@ -508,6 +566,11 @@ async function runStep(args) {
     return EXIT_REFUSED;
   }
   const [command, ...rest] = args.slice(2);
+  // A gate step (the build, cargo), never a way around the test entry point.
+  if ([command, ...rest].some((part) => /vitest/.test(part))) {
+    process.stderr.write("[run-tests] refused: run tests through `node scripts/run-tests.mjs vitest`, not `limited`\n");
+    return EXIT_REFUSED;
+  }
   const { graceS } = limits();
   return runLimited(command, rest, {
     timeoutS: seconds,
@@ -560,6 +623,11 @@ async function selfCheck() {
     ["--execArgv=--max-old-space-size=99999"],
     ["--outputFile=/tmp/out.json"],
     ["--", "--root", "/"],
+    ["---allowOnly"],
+    ["src-tauri/x.test.ts"],
+    ["--config", "src/other.config.ts"],
+    ["--reporter=/tmp/r.mjs"],
+    ["-u", "src/lib/timeline/labelRooms.test.ts"],
   ];
   for (const args of refused) check(`refuses ${args.join(" ")}`, refuseVitestArgs(args) !== null);
   const accepted = [
@@ -572,6 +640,8 @@ async function selfCheck() {
     ["--config", "vite.config.ts"],
     ["-u"],
     ["--reporter=dot"],
+    ["--changed", "origin/main"],
+    ["src/lib/timeline/labelRooms.test.ts", "-u"],
   ];
   for (const args of accepted) check(`accepts ${args.join(" ")}`, refuseVitestArgs(args) === null);
 
@@ -621,6 +691,30 @@ async function selfCheck() {
     orphan.kill("SIGKILL");
     const ended = started && (await until(() => !groupAlive(orphanGroup), 10000));
     check("after the wrapper is SIGKILLed, the watchdog ends the run", ended);
+
+    // Ctrl-C (SIGINT) to a wrapper holding the lock: it must stop the run,
+    // report 130 so a calling script stops too, and free the lock.
+    const drillLock = `mori-test-run.selfcheck-int-${process.pid}`;
+    const interrupted = spawn(process.execPath, [SELF, "self-check-locked", String(base + 5), drillLock], {
+      stdio: ["ignore", "pipe", "ignore"],
+      env: { ...process.env, MORI_TEST_KILL_GRACE_S: "1" },
+    });
+    let lockedGroup = 0;
+    let interruptedCode = null;
+    interrupted.on("exit", (code) => (interruptedCode = code));
+    interrupted.stdout.on("data", (chunk) => {
+      const id = Number(String(chunk).trim().split("\n")[0]);
+      if (id > 0) lockedGroup = id;
+    });
+    const running = await until(() => lockedGroup > 0 && groupAlive(lockedGroup), 15000);
+    interrupted.kill("SIGINT");
+    await until(() => interruptedCode !== null, 10000);
+    check("Ctrl-C to a locked run reports 130", running && interruptedCode === 130, `exit ${interruptedCode}`);
+    check("and leaves nothing running", running && (await until(() => !groupAlive(lockedGroup), 5000)));
+    const relocked = await acquireLock(drillLock);
+    check("and frees the lock", relocked.ok);
+    if (relocked.ok) await relocked.release();
+    rmSync(join(LOCK_BASE, `${drillLock}.lock`), { recursive: true, force: true });
   }
 
   const lockName = `mori-test-run.selfcheck-${process.pid}`;
@@ -647,6 +741,22 @@ async function main() {
     if (mode === "harness") return await runHarness();
     if (mode === "self-check") return await selfCheck();
     if (mode === "limited") return await runStep(args);
+    if (mode === "self-check-locked") {
+      // Only for the self-check: a sleeping run under a lock, to interrupt.
+      const { graceS } = limits();
+      return await withLock(
+        () =>
+          runLimited("bash", ["-c", `sleep ${Number(args[0]) || 3998}`], {
+            timeoutS: 120,
+            graceS,
+            env: process.env,
+            label: "interrupt drill",
+            quiet: true,
+            onStart: (pgid) => process.stdout.write(`${pgid}\n`),
+          }),
+        args[1] || `mori-test-run.selfcheck-int-${process.pid}`,
+      );
+    }
     if (mode === "self-check-orphan") {
       // Only for the self-check: a long sleeping run for it to SIGKILL us under.
       return await runLimited("bash", ["-c", `sleep ${Number(args[0]) || 3999}`], {

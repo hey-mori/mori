@@ -21,7 +21,11 @@ const rootValue = (() => {
     if (!arg.startsWith("-") || arg === "--") continue;
     const body = arg.replace(/^-+/, "");
     const head = body.split("=")[0];
-    const isRoot = arg.startsWith("--") ? head === "root" || head === "r" : head.includes("r");
+    // A single-dash argument is a cluster only if every letter is one of
+    // Vitest's short flags (r, c, u, w, t, h, v); a value like `-renders` is not.
+    const isRoot = arg.startsWith("--")
+      ? head === "root" || head === "r"
+      : /^[rcuwthv]+$/.test(head) && head.includes("r");
     if (isRoot)
       return body.includes("=") ? body.slice(body.indexOf("=") + 1) : (argv[index + 1] ?? "");
   }

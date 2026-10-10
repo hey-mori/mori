@@ -82,8 +82,8 @@ same files and assertions, only bounded.
 | Limit | Default | Override |
 |---|---|---|
 | Discovery | `src/**/*.{test,spec}.*` (pinned in `vite.config.ts`, same 409 files as before) | n/a |
-| Arguments | an allowlist, normalised as Vitest's parser does (any dashes, `=` values, short clusters such as `-ur=/`); anything else refused (exit 2). Test paths must be under `src/`. `vite.config.ts` also refuses every spelling of `--root`. | n/a |
-| Vitest workers | 2, passed as `--maxWorkers` and pinned in `VITEST_MAX_WORKERS` (which outranks the config and the CLI); also the config default for direct calls | `MORI_TEST_MAX_WORKERS` |
+| Arguments | an allowlist, normalised as Vitest's parser does (two dashes, `=` values, short clusters such as `-ur=/`; three or more dashes refused); anything else refused (exit 2). Test paths must be under `src/`; `--config` only `vite.config.ts`; `--reporter` only built-in names; `-u` only after the test paths. `vite.config.ts` also refuses every spelling of `--root`. | n/a |
+| Vitest workers | 2, passed as `--maxWorkers` and read by `vite.config.ts` (also the default for direct calls). An inherited `VITEST_MAX_WORKERS` is removed: Vitest applies it to every project after the config, which would un-serialise the smoke tests. | `MORI_TEST_MAX_WORKERS` |
 | V8 heap per Node process | 2048 MB | `MORI_TEST_HEAP_MB` |
 | Wall clock, tests and harness | 900 s, then SIGTERM to the group | `MORI_TEST_TIMEOUT_S` |
 | Grace before SIGKILL | 15 s | `MORI_TEST_KILL_GRACE_S` |
@@ -114,11 +114,13 @@ How the wrapper bounds a run:
 `npm run test:safety` (and the gate's "test safeguards" step) proves the limits
 without running a single test. It uses sleeps only and takes about 10 s. It
 judges by process group, never by scanning the machine, and uses sleep
-durations unique to the run. Its 40 checks cover:
+durations unique to the run. Its 50 checks cover:
 - the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
 - a wrapper SIGKILLed mid-run, with the watchdog cleaning up;
+- Ctrl-C (SIGINT) to a wrapper holding the lock: exit 130, nothing left
+  running, the lock free again;
 - the run lock.
 
 ## 4. Total concurrency
@@ -159,6 +161,16 @@ been measured yet: see section 7.
   your own shell if you need more.
 - Ctrl-C reaches the run (the wrapper forwards it). Ctrl-Z suspends only the
   wrapper; the run keeps going in its own group.
+- The gate holds its `flock` on an inherited file descriptor, so a
+  long-lived process a gate step leaves behind (a daemon) would keep holding
+  the gate lock. None is known today; `fuser /tmp/mori-gate.lock` shows the
+  holder, read-only.
+- The directory-lock fallback (no `flock`, as on macOS) has a small window in
+  which two runs can both take over a stale lock.
+- Windows: the process-group drills are skipped and a timeout ends the tree
+  with `taskkill`; there is no watchdog there.
+- `limited` is for the gate's own steps and refuses anything mentioning
+  `vitest`; it applies no lock or heap cap.
 - Typecheck, stylelint and the unused-file inventory have no limits of their
   own. A gate's build or Rust pass can overlap another session's test run,
   because the gate and test locks are separate.
@@ -223,8 +235,8 @@ Still to verify before adoption:
 ## 7. Verification status of this change
 
 Verified (2026-10-10, without running the test suite):
-- `npm run test:safety` passed all 40 checks (after the review fixes), and no
-  process or lock was left behind.
+- `npm run test:safety` passed all 50 checks (after two rounds of read-only
+  review fixes), and no process or lock was left behind.
 - `vite.config.ts` evaluates in plain Node: `include` is pinned to `src/`,
   workers default to 2, and `--root /` throws.
 - A static glob shows the pinned `include` selects the same 409 files as
