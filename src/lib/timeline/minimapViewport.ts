@@ -47,7 +47,7 @@ const MAX_DEFAULT_ZOOM = 8;
  */
 export function defaultZoomFor(eventCount: number): number {
   if (!Number.isFinite(eventCount) || eventCount <= EVENTS_PER_SPAN_WIDTH) return MIN_ZOOM;
-  return Math.min(MAX_DEFAULT_ZOOM, Math.round(eventCount / EVENTS_PER_SPAN_WIDTH));
+  return Math.min(MAX_DEFAULT_ZOOM, Math.ceil(eventCount / EVENTS_PER_SPAN_WIDTH));
 }
 
 /** Clamp a raw zoom factor into the supported range. */

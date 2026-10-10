@@ -134,6 +134,10 @@ export function TimelineView({
       }
       setSelectedEventId(id);
       setInspectorCollapsed(false);
+      // Opening the inspector narrows the canvas and rescales the axis; a
+      // reveal noted now is redone on the new scale, so the clicked card
+      // stays on screen. (It scrolls nothing while the card is in view.)
+      canvasRef.current?.revealItem(id);
     },
     [inspectorCollapsed, selectedEventId, setHoveredEventId, setSelectedEventId, setInspectorCollapsed],
   );
@@ -173,8 +177,19 @@ export function TimelineView({
   // snap back to 1 (whole span) on demand; a zoom chosen for one session is
   // not carried to the next.
   const [chosenZoom, setChosenZoom] = useState<{ sessionId: string; zoom: number } | null>(null);
+  // The default is fixed when a session first shows events, so a refresh that
+  // adds turns while it is being read (a reopen replacing the stored copy)
+  // never rescales the axis under the reader.
+  const [openedZoom, setOpenedZoom] = useState<{ sessionId: string; zoom: number } | null>(null);
+  if (view.events.length > 0 && openedZoom?.sessionId !== view.session.id) {
+    setOpenedZoom({ sessionId: view.session.id, zoom: defaultZoomFor(view.events.length) });
+  }
   const zoomFactor =
-    chosenZoom && chosenZoom.sessionId === view.session.id ? chosenZoom.zoom : defaultZoomFor(view.events.length);
+    chosenZoom && chosenZoom.sessionId === view.session.id
+      ? chosenZoom.zoom
+      : openedZoom && openedZoom.sessionId === view.session.id
+        ? openedZoom.zoom
+        : defaultZoomFor(view.events.length);
   const setZoomFactor = useCallback(
     (zoom: number) => setChosenZoom({ sessionId: view.session.id, zoom }),
     [view.session.id],

@@ -139,6 +139,7 @@ describe("defaultZoomFor", () => {
   it("opens a short session whole", () => {
     expect(defaultZoomFor(2)).toBe(1);
     expect(defaultZoomFor(24)).toBe(1);
+    expect(defaultZoomFor(25)).toBe(2);
   });
 
   it("widens with the event count, up to 8x", () => {
