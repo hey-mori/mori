@@ -15,6 +15,7 @@ import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import {
   computeMinimapViewport,
   minimapClickToScrollLeft,
+  revealScrollLeft,
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
 import { TimelineAxis } from "./TimelineAxis";
@@ -42,10 +43,14 @@ export type TimelineCanvasProps = {
   eventMenuItems?: (event: TimelineRenderModel["visibleDisplayItems"][number] & { kind: "event" }) => BaseMenuItemSpec[];
 };
 
-/** Imperative handle so the minimap can pan the canvas. */
+/** Imperative handle so the minimap and the keyboard can pan the canvas. */
 export type TimelineCanvasHandle = {
   /** Scroll so the given 0–1 fraction of the timeline span is centred. */
   scrollToFraction: (fraction: number) => void;
+  /** Scroll an item (an event id, or a bundle holding it) into view when it
+   *  is off screen; with `focus`, also move keyboard focus onto its card so
+   *  focus and selection stay on the same item. */
+  revealItem: (itemId: string, options?: { focus?: boolean }) => void;
 };
 
 const MIN_FRAME_WIDTH = 1100;
@@ -101,8 +106,35 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
         );
         emitViewport();
       },
+      revealItem(itemId: string, options?: { focus?: boolean }) {
+        const element = scrollerRef.current;
+        if (!element) return;
+        const item =
+          model.visibleDisplayItems.find((entry) => entry.id === itemId) ??
+          model.visibleDisplayItems.find((entry) => entry.memberEventIds.includes(itemId));
+        const placed = item ? model.layoutIndex.get(item.id) : undefined;
+        if (!item || !placed) return;
+        // Card coordinates are frame coordinates; the frame is pulled left by
+        // the label gutter (see the scroller below).
+        const next = revealScrollLeft(
+          placed.x - model.layout.contentLeftPx,
+          placed.width + Math.min(placed.labelRoom, 120),
+          element.scrollLeft,
+          element.clientWidth,
+          element.scrollWidth,
+        );
+        if (next !== null) {
+          element.scrollLeft = next;
+          emitViewport();
+        }
+        const card = element.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(item.id)}"]`);
+        if (!card) return;
+        if (options?.focus) card.focus({ preventScroll: true });
+        // Vertical scrolling belongs to the page; bring a lane below the fold up.
+        card.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      },
     }),
-    [emitViewport],
+    [emitViewport, model.visibleDisplayItems, model.layoutIndex, model.layout.contentLeftPx],
   );
 
   useLayoutEffect(() => {

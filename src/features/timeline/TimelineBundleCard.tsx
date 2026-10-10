@@ -64,6 +64,7 @@ export function TimelineBundleCard({
           height: `${layout.height}px`,
         }}
         type="button"
+        data-item-id={bundle.id}
         aria-pressed={focusState === "selected"}
         aria-label={vm.ariaLabel}
         data-preview={`${vm.timeLabel} · ${bundle.count}개 이벤트\n${vm.title}\n${bundle.summary}`}

@@ -104,3 +104,28 @@ export function minimapClickToScrollLeft(
   const centred = clampedFraction * scrollWidth - clientWidth / 2;
   return Math.max(0, Math.min(scrollWidth - clientWidth, centred));
 }
+
+/** Breathing room kept between a revealed item and the scroller's edge. */
+export const REVEAL_MARGIN_PX = 48;
+
+/**
+ * The scrollLeft that brings an item (`left` / `width` in scroller content
+ * pixels) into view, or `null` when it is already fully visible. An item off
+ * either edge is placed a third of the way in, so the lane's next items stay
+ * readable after it. Clamped to the scrollable range.
+ */
+export function revealScrollLeft(
+  left: number,
+  width: number,
+  scrollLeft: number,
+  clientWidth: number,
+  scrollWidth: number,
+): number | null {
+  if (![left, width, scrollLeft, clientWidth, scrollWidth].every(Number.isFinite)) return null;
+  if (clientWidth <= 0 || scrollWidth <= clientWidth) return null;
+  const visibleFrom = scrollLeft + REVEAL_MARGIN_PX;
+  const visibleTo = scrollLeft + clientWidth - REVEAL_MARGIN_PX;
+  if (left >= visibleFrom && left + width <= visibleTo) return null;
+  const target = left - clientWidth / 3;
+  return Math.round(Math.max(0, Math.min(scrollWidth - clientWidth, target)));
+}

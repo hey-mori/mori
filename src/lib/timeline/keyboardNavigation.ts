@@ -34,6 +34,27 @@ function findSelected(
 }
 
 /**
+ * Where navigation starts when nothing is selected: the earliest item, the
+ * upper lane first on a tie.
+ */
+export function firstItem(
+  items: readonly NavItem[],
+  laneOrder: readonly ActivityLaneId[],
+): string | null {
+  let best: NavItem | null = null;
+  for (const item of items) {
+    if (
+      !best ||
+      startMs(item) < startMs(best) ||
+      (startMs(item) === startMs(best) && laneOrder.indexOf(item.laneType) < laneOrder.indexOf(best.laneType))
+    ) {
+      best = item;
+    }
+  }
+  return best ? best.id : null;
+}
+
+/**
  * Previous / next display item in the same lane, ordered by start time.
  * Returns the target item's id, or `null` when there is no neighbour (the
  * selection is at the lane edge).

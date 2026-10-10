@@ -33,8 +33,11 @@ export function formatDateTime(timestamp: string): string {
   }).format(new Date(timestamp));
 }
 
+/** A start-end clock range. With no end the event is a point in time (a
+ *  message, a tool call), so only its start is shown; an absent end is not
+ *  evidence that anything is still running. */
 export function formatTimeRange(start: string, end?: string): string {
-  if (!end) return `${formatTime(start)} - 진행`;
+  if (!end) return formatTime(start);
   return `${formatTime(start)} - ${formatTime(end)}`;
 }
 

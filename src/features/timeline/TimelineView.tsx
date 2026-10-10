@@ -12,7 +12,7 @@ import {
   shouldHideInspector,
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
-import { selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
+import { firstItem, selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
 import {
   getTimelineLaneForEvent,
   resolveTimelineLaneOrder,
@@ -308,7 +308,9 @@ export function TimelineView({
   // ↑ ↓ jump to the nearest item in the adjacent non-empty lane. Defined
   // before the empty-state early return so hook order stays stable. Disabled
   // in Flow Focus, the list / connection views, and while
-  // the user is typing in an input.
+  // the user is typing in an input. The item a key lands on is scrolled into
+  // view and takes keyboard focus once it has rendered as selected (below).
+  const keyRevealRef = useRef<string | null>(null);
   useEffect(() => {
     const swimlaneActive = mode === "timeline" && readingMode === "swimlane";
     if (!swimlaneActive) return;
@@ -325,32 +327,63 @@ export function TimelineView({
       }
       const items = renderModel.visibleDisplayItems;
       if (items.length === 0) return;
-      const current = selectedEventId || null;
+      // A selection this view does not show (filtered out, or made in another
+      // view) counts as none, so the first key starts from the beginning.
+      const current =
+        selectedEventId &&
+        items.some((item) => item.id === selectedEventId || item.memberEventIds.includes(selectedEventId))
+          ? selectedEventId
+          : null;
       let nextId: string | null = null;
       switch (event.key) {
         case "ArrowRight":
-          nextId = selectInLane(items, current, "next");
+          nextId = current ? selectInLane(items, current, "next") : firstItem(items, laneOrder);
           break;
         case "ArrowLeft":
-          nextId = selectInLane(items, current, "prev");
+          nextId = current ? selectInLane(items, current, "prev") : firstItem(items, laneOrder);
           break;
         case "ArrowDown":
-          nextId = selectAcrossLane(items, current, "down", laneOrder);
+          nextId = current ? selectAcrossLane(items, current, "down", laneOrder) : firstItem(items, laneOrder);
           break;
         case "ArrowUp":
-          nextId = selectAcrossLane(items, current, "up", laneOrder);
+          nextId = current ? selectAcrossLane(items, current, "up", laneOrder) : firstItem(items, laneOrder);
           break;
         default:
           return;
       }
+      // At a lane edge the selection stays put; without this the key would
+      // fall through and scroll the canvas out from under the selection.
+      if (current || nextId) event.preventDefault();
       if (nextId) {
-        event.preventDefault();
+        keyRevealRef.current = nextId;
         setSelectedEventId(nextId);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mode, viewportWidth, readingMode, renderModel.visibleDisplayItems, selectedEventId, setSelectedEventId, laneOrder]);
+
+  // After a key moves the selection: bring the newly selected card on screen
+  // and move focus onto it, so the ring, the focus and the inspector agree.
+  useEffect(() => {
+    const id = keyRevealRef.current;
+    if (!id || id !== selectedEventId) return;
+    keyRevealRef.current = null;
+    const frame = requestAnimationFrame(() => canvasRef.current?.revealItem(id, { focus: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [selectedEventId]);
+
+  // Entering the swimlane with an item already selected (from the 원본 list,
+  // a search hit, a deep link) shows that item rather than the span's start.
+  const swimlaneShown = mode === "timeline" && readingMode === "swimlane";
+  const selectedOnEnterRef = useRef(selectedEventId);
+  selectedOnEnterRef.current = selectedEventId;
+  useEffect(() => {
+    if (!swimlaneShown || !selectedOnEnterRef.current) return;
+    const id = selectedOnEnterRef.current;
+    const frame = requestAnimationFrame(() => canvasRef.current?.revealItem(id));
+    return () => cancelAnimationFrame(frame);
+  }, [swimlaneShown]);
 
   const buildEventMenuItems = useCallback(
     (event: TimelineEvent): BaseMenuItemSpec[] => {

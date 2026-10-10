@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ActivityLaneId } from "./activityModel";
-import { selectAcrossLane, selectInLane } from "./keyboardNavigation";
+import { firstItem, selectAcrossLane, selectInLane } from "./keyboardNavigation";
 
 type NavItem = {
   id: string;
@@ -85,5 +85,19 @@ describe("selectAcrossLane", () => {
   it("returns null at the top and bottom lanes", () => {
     expect(selectAcrossLane(ITEMS, "c1", "up", LANE_ORDER)).toBeNull();
     expect(selectAcrossLane(ITEMS, "r1", "down", LANE_ORDER)).toBeNull();
+  });
+});
+
+describe("firstItem", () => {
+  it("starts at the earliest item", () => {
+    expect(firstItem(ITEMS, LANE_ORDER)).toBe("c1");
+  });
+
+  it("prefers the upper lane on a tie", () => {
+    expect(firstItem([item("r0", "review", 0), item("f0", "files", 0)], LANE_ORDER)).toBe("f0");
+  });
+
+  it("is null for an empty view", () => {
+    expect(firstItem([], LANE_ORDER)).toBeNull();
   });
 });
