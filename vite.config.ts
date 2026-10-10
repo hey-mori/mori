@@ -1,7 +1,31 @@
 import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from "rollup-plugin-visualizer";
+
+const REPO = fileURLToPath(new URL(".", import.meta.url));
+
+// Tests are discovered from this repository only. A `--root` elsewhere makes
+// Vitest glob the whole filesystem before any filename filter applies (how a
+// `--root /` run once took a shared machine down). scripts/run-tests.mjs
+// refuses it; this refuses it for anyone who calls Vitest directly with this
+// config.
+const rootIndex = process.argv.findIndex(
+  (arg) => arg === "--root" || arg === "-r" || arg.startsWith("--root="),
+);
+if (rootIndex !== -1) {
+  const flag = process.argv[rootIndex];
+  const value = flag.startsWith("--root=")
+    ? flag.slice("--root=".length)
+    : process.argv[rootIndex + 1];
+  if (!value || resolve(value) !== resolve(REPO)) {
+    throw new Error(
+      `Mori runs from its repository (${REPO}); --root ${value ?? ""} is not allowed.`,
+    );
+  }
+}
 
 export default defineConfig(({ mode }) => ({
   // Honour a PORT override (the preview/verify harness assigns a free port via
@@ -20,6 +44,12 @@ export default defineConfig(({ mode }) => ({
       : null,
   ].filter(Boolean),
   test: {
+    // Every test file lives under src/; discovery is pinned there so a stray
+    // filter never widens it. The worker cap matches scripts/run-tests.mjs,
+    // which passes it explicitly; it is here too so a direct `vitest run` on
+    // this shared machine is bounded the same way.
+    include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+    maxWorkers: Number(process.env.MORI_TEST_MAX_WORKERS) || 2,
     // Two pools, because two kinds of test live here.
     //
     // Almost everything is a pure derivation and parallelises happily. A handful

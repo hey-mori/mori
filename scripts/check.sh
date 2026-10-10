@@ -13,6 +13,16 @@
 #   scripts/check.sh --full   everything above plus the production build,
 #                             the unused-file inventory, and the Rust pass
 #
+# Resource limits (the machine is shared with other sessions and services; see
+# docs/test-run-safety.md). Tests run through scripts/run-tests.mjs, which caps
+# workers, heap and wall-clock time; the build and the Rust pass run under the
+# same group timeout. One gate at a time per machine (a lock in the temp dir).
+#   MORI_TEST_MAX_WORKERS   Vitest workers              (default 2)
+#   MORI_TEST_HEAP_MB       V8 heap per Node process    (default 2048)
+#   MORI_TEST_TIMEOUT_S     test wall-clock limit       (default 900)
+#   MORI_TEST_KILL_GRACE_S  SIGTERM to SIGKILL grace    (default 15)
+#   MORI_CARGO_JOBS         cargo -j and test threads   (default 2)
+#
 # The Rust pass is skipped when `src-tauri/` is untouched, because it is the
 # expensive half. Any change to a dependency lockfile, a build config, or the
 # verification scripts themselves forces the full pass regardless: those files
@@ -20,6 +30,23 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+
+# One gate at a time on this machine, whichever worktree it runs from: two
+# gates double the load on a machine other work shares. A second gate fails at
+# once rather than waiting unseen; a lock left by a gate that was killed is
+# taken over when its pid is gone.
+GATE_LOCK="${TMPDIR:-/tmp}/mori-gate.lock"
+if ! mkdir "$GATE_LOCK" 2>/dev/null; then
+  holder="$(cat "$GATE_LOCK/pid" 2>/dev/null || true)"
+  if [[ -n "$holder" ]] && kill -0 "$holder" 2>/dev/null; then
+    echo "another verification gate is running (pid $holder): gates never overlap on this machine; wait for it, do not stop it" >&2
+    exit 75
+  fi
+  rm -rf "$GATE_LOCK"
+  mkdir "$GATE_LOCK"
+fi
+echo "$$" > "$GATE_LOCK/pid"
+trap 'rm -rf "$GATE_LOCK"' EXIT
 
 FULL=0
 NO_RUST=0
@@ -87,6 +114,11 @@ step() { echo ""; echo "── $1"; }
 step "typecheck"
 npm run check:types
 
+step "test safeguards"
+# Proves the limits below still work (argument refusals, timeout, SIGKILL
+# escalation, the orphan watchdog, the run lock) with sleeps, not tests.
+node scripts/run-tests.mjs self-check
+
 step "tests"
 npm test
 
@@ -132,7 +164,7 @@ echo "commit policy: $( [[ -n "$policy_base" ]] && git rev-list --count "$policy
 
 if [[ "$FULL" -eq 1 ]]; then
   step "production build"
-  npm run build
+  node scripts/run-tests.mjs limited 1800 -- npm run build
 
   step "unused-file inventory (non-blocking)"
   npm run unused || true
@@ -145,7 +177,9 @@ if [[ "$FULL" -eq 1 ]] && touches_rust; then
     # line of output is indistinguishable from one that never existed.
     echo "· left to the macOS job, which is where wry can build"
   else
-    ( cd src-tauri && cargo check --locked && cargo test --locked )
+    jobs="${MORI_CARGO_JOBS:-2}"
+    node scripts/run-tests.mjs limited 3600 -- bash -c \
+      "cd src-tauri && cargo check --locked -j $jobs && cargo test --locked -j $jobs -- --test-threads=$jobs"
   fi
 elif touches_rust; then
   echo ""
