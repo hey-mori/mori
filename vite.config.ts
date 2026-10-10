@@ -52,11 +52,11 @@ export default defineConfig(({ mode }) => ({
       : null,
   ].filter(Boolean),
   test: {
-    // Every test file lives under src/; discovery is pinned there so a stray
-    // filter never widens it. The worker cap matches scripts/run-tests.mjs,
-    // which passes it explicitly; it is here too so a direct `vitest run` on
-    // this shared machine is bounded the same way.
-    include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+    // The worker cap matches scripts/run-tests.mjs, which passes it
+    // explicitly; it is here too so a direct `vitest run` on this shared
+    // machine is bounded the same way. Discovery is pinned to src/ in each
+    // project below, not here: a project that extends this block would
+    // concatenate a root `include` with its own.
     maxWorkers: Number(process.env.MORI_TEST_MAX_WORKERS) || 2,
     // Two pools, because two kinds of test live here.
     //
@@ -76,6 +76,8 @@ export default defineConfig(({ mode }) => ({
         extends: true,
         test: {
           name: "unit",
+          // Every test file lives under src/; a stray filter never widens it.
+          include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
           exclude: ["**/node_modules/**", "**/dist/**", "src/lib/connectors/*Smoke.test.ts"],
         },
       },
