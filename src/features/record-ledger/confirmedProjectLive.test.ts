@@ -134,7 +134,7 @@ const ALL = [waitingGate4, runningInFolder, runningLookalike, childDone, archive
 describe("현재 상황 of a reviewed project", () => {
   it("counts a confirmed worktree session's waiting request under its project", async () => {
     const { scope } = scopeFor("ctx-infra", "infra");
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope, NOW), scope, NOW);
     expect(out.projection?.label).toBe("infra");
     expect(out.projection?.waiting.map((r) => r.title)).toEqual(["Gate 4, waiting on you"]);
     expect(out.projection?.waitingCount).toBe(1);
@@ -144,14 +144,14 @@ describe("현재 상황 of a reviewed project", () => {
     const { scope } = scopeFor("ctx-infra", "infra");
     expect(scope.keys).toContain(SOURCES.child);
     expect(scope.keys).not.toContain(SOURCES.archivedChild);
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope, NOW), scope, NOW);
     expect(out.projection?.runningCount).toBe(0);
     expect(out.projection?.recentRequests.map((r) => r.id).sort()).toEqual(["c1", "g1"]);
   });
 
   it("never counts a session from the folder named like the project, only says it was seen", async () => {
     const { scope } = scopeFor("ctx-infra", "infra");
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope, NOW), scope, NOW);
     expect(out.projection?.runningCount).toBe(0);
     expect(out.projection?.recentRequests.some((r) => r.sessionKey === SOURCES.folder)).toBe(false);
     expect(out.unconfirmedObserved).toBe(1);
@@ -160,7 +160,7 @@ describe("현재 상황 of a reviewed project", () => {
   it("does not call a confirmed session unconfirmed when it also ran in the named folder", async () => {
     const { scope } = scopeFor("ctx-infra", "infra");
     const gate4InFolder = row({ id: "g2", sessionKey: WORKTREE, projectPath: "/home/me/dev/infra", sessionLabel: "infra" });
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore([...ALL, gate4InFolder]), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore([...ALL, gate4InFolder]), scope, NOW), scope, NOW);
     expect(out.unconfirmedObserved).toBe(1);
     expect(out.projection?.recentRequests.map((r) => r.id)).toContain("g2");
   });
@@ -169,26 +169,26 @@ describe("현재 상황 of a reviewed project", () => {
     const { scope } = scopeFor("ctx-infra", "infra");
     expect(scope.keys).not.toContain(SOURCES.lookalike);
     const store = fakeStore(ALL);
-    await readConfirmedLive(store, scope);
+    await readConfirmedLive(store, scope, NOW);
     expect(store.reads).not.toContain(SOURCES.lookalike);
   });
 
   it("keeps another project's sessions on that project", async () => {
     const { scope } = scopeFor("ctx-other", "other");
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope, NOW), scope, NOW);
     expect(out.projection?.waiting.map((r) => r.id)).toEqual(["o1"]);
   });
 
   it("reads only the confirmed sessions, one session at a time", async () => {
     const { scope } = scopeFor("ctx-infra", "infra");
     const store = fakeStore(ALL);
-    await readConfirmedLive(store, scope);
+    await readConfirmedLive(store, scope, NOW);
     expect(store.reads.sort()).toEqual([SOURCES.child, WORKTREE].sort());
   });
 
   it("drops rows a backend returns for a session it was not asked for", async () => {
     const { scope } = scopeFor("ctx-infra", "infra");
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL, { ignoreKey: true }), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL, { ignoreKey: true }), scope, NOW), scope, NOW);
     expect(out.projection?.runningCount).toBe(0);
     expect(out.projection?.recentRequests.map((r) => r.id).sort()).toEqual(["c1", "g1"]);
   });
@@ -196,7 +196,7 @@ describe("현재 상황 of a reviewed project", () => {
   it("shows an old waiting request as last observed, not as waiting now", async () => {
     const { scope } = scopeFor("ctx-infra", "infra");
     const old = { ...waitingGate4, endedAt: ago(60 * 30), observedAt: ago(60 * 30) };
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore([old]), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore([old]), scope, NOW), scope, NOW);
     expect(out.projection?.freshness).toBe("stale");
     expect(out.projection?.waitingCount).toBe(0);
     expect(out.projection?.recentRequests[0]?.status).toBe("unknown");
@@ -205,7 +205,7 @@ describe("현재 상황 of a reviewed project", () => {
   it("does not let a fresh member revive another member's stale waiting request", async () => {
     const { scope } = scopeFor("ctx-infra", "infra");
     const old = { ...waitingGate4, endedAt: ago(60 * 30), observedAt: ago(60 * 30) };
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore([old, childDone]), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore([old, childDone]), scope, NOW), scope, NOW);
     expect(out.projection?.freshness).toBe("live");
     expect(out.projection?.waitingCount).toBe(0);
     expect(out.projection?.waiting).toEqual([]);
@@ -213,7 +213,7 @@ describe("현재 상황 of a reviewed project", () => {
 
   it("shows nothing when no confirmed session was observed", async () => {
     const { scope } = scopeFor("ctx-infra", "infra");
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore([runningInFolder]), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore([runningInFolder]), scope, NOW), scope, NOW);
     expect(out.projection).toBeNull();
     expect(out.unconfirmedObserved).toBe(1);
   });
@@ -221,7 +221,7 @@ describe("현재 상황 of a reviewed project", () => {
   it("shows nothing for a project that cannot be resolved", async () => {
     const { scope } = scopeFor("ctx-missing", "missing");
     expect(scope.keys).toEqual([]);
-    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope), scope, NOW);
+    const out = projectConfirmedLive(await readConfirmedLive(fakeStore(ALL), scope, NOW), scope, NOW);
     expect(out.projection).toBeNull();
   });
 
@@ -234,12 +234,12 @@ describe("races on the project page", () => {
   it("never shows a read that landed for the project the user left", async () => {
     const infraScope = scopeFor("ctx-infra", "infra").scope;
     const otherScope = scopeFor("ctx-other", "other").scope;
-    const lateRead = await readConfirmedLive(fakeStore(ALL), infraScope);
+    const lateRead = await readConfirmedLive(fakeStore(ALL), infraScope, NOW);
     expect(projectConfirmedLive(lateRead, otherScope, NOW).projection).toBeNull();
   });
 
   it("never shows a parent's read on a child selected mid-read", async () => {
-    const parentRead = await readConfirmedLive(fakeStore(ALL), scopeFor("ctx-infra", "infra").scope);
+    const parentRead = await readConfirmedLive(fakeStore(ALL), scopeFor("ctx-infra", "infra").scope, NOW);
     const out = projectConfirmedLive(parentRead, scopeFor("ctx-storage", "storage").scope, NOW);
     expect(out.projection).toBeNull();
     expect(out.unconfirmedObserved).toBe(0);
@@ -247,7 +247,7 @@ describe("races on the project page", () => {
 
   it("drops a session unfiled while its rows were in flight", async () => {
     const before = scopeFor("ctx-infra", "infra").scope;
-    const read = await readConfirmedLive(fakeStore(ALL), before);
+    const read = await readConfirmedLive(fakeStore(ALL), before, NOW);
     const unfiled = records.map((r) => (r.id === "gate4" ? { ...r, contextIds: [] } : r));
     const after = scopeFor("ctx-infra", "infra", unfiled).scope;
     const out = projectConfirmedLive(read, after, NOW);
@@ -257,7 +257,7 @@ describe("races on the project page", () => {
 
   it("drops a session archived while its rows were in flight", async () => {
     const before = scopeFor("ctx-infra", "infra").scope;
-    const read = await readConfirmedLive(fakeStore(ALL), before);
+    const read = await readConfirmedLive(fakeStore(ALL), before, NOW);
     const archived = records.map((r) => (r.id === "gate4" ? { ...r, status: "archived" as MoriRecord["status"] } : r));
     const out = projectConfirmedLive(read, scopeFor("ctx-infra", "infra", archived).scope, NOW);
     expect(out.projection?.waitingCount).toBe(0);
