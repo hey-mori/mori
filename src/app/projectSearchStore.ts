@@ -29,7 +29,8 @@ import {
   type ProjectSearchState,
 } from "../lib/session/projectSearch";
 import { classifyWindowError } from "../lib/session/sessionWindow";
-import { isUsableArchive, keptArchiveRead } from "../lib/session/sessionArchiveRead";
+import { historicalSourceAfterFailure, historicalSourceAfterRead, type HistoricalSource } from "../lib/session/historicalSource";
+import { keptArchiveIdentityLookup } from "../lib/session/sessionArchiveRead";
 import { normalizeQuery } from "../lib/session/sessionSearch";
 import { useSessionStore, type SourceHitOutcome } from "./sessionStore";
 
@@ -68,6 +69,8 @@ function settle(search: ProjectSearchState, status: ProjectSearchState["status"]
 }
 
 export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
+  /** Kept copies by session, looked up once per search start. */
+  let keptLookup: Awaited<ReturnType<typeof keptArchiveIdentityLookup>> = null;
   /** One native step for one source, folded in if still current. */
   async function step(sequence: number, sessionId: string): Promise<void> {
     const search = get().search!;
@@ -84,47 +87,57 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
       );
       const latest = get().search;
       if (sequence !== searchSequence || !latest) return;
-      const next = applySourceBatch(latest, sessionId, batch);
+      // The first step of an original says which file it is: the shared rule
+      // decides before any of its hits count for this session.
+      if (!source.archive && !source.sourceId) {
+        const choice = await historicalSourceAfterRead(sessionId, batch, keptLookup ? keptLookup(sessionId) : undefined);
+        if (sequence !== searchSequence || !get().search) return;
+        if (choice.kind !== "original") return useKeptOrFail(sequence, sessionId, choice);
+      }
+      const now = get().search!;
+      const next = applySourceBatch(now, sessionId, batch);
       set({
         search:
-          next === latest
-            ? applySourceError(latest, sessionId, { kind: "changed", message: "SOURCE_CHANGED: the step does not continue the source." })
+          next === now
+            ? applySourceError(now, sessionId, { kind: "changed", message: "SOURCE_CHANGED: the step does not continue the source." })
             : next,
       });
     } catch (error) {
       const latest = get().search;
       if (sequence !== searchSequence || !latest) return;
-      const failure = classifyWindowError(error);
+      if (source.archive) {
+        set({ search: applySourceError(latest, sessionId, classifyWindowError(error)) });
+        return;
+      }
       // The original is gone: a copy the user kept is searched in its place,
       // from its end, and the coverage says which one was read.
-      const gone = /^SOURCE_MISSING|No such file|not found|cannot find/i.test(failure.message);
-      if (gone && !source.archive) {
-        const kept = await keptArchiveRead(sessionId);
-        const now = get().search;
-        if (sequence !== searchSequence || !now) return;
-        const held = now.sources[sessionId];
-        // A copy that is gone or no longer the file kept is not searched.
-        if (kept && isUsableArchive(kept) && held && held.status === "searching") {
-          set({
-            search: {
-              ...now,
-              sources: {
-                ...now.sources,
-                // The copy is searched from its end afresh: hits from the
-                // original, if any, would otherwise repeat.
-                [sessionId]: { ...held, sourcePath: kept.path, archive: kept.archive, cursor: null, sourceId: null, scanEnd: null, hits: [], steps: 0, unsearchableRecords: 0 },
-              },
-            },
-          });
-          return step(sequence, sessionId);
-        }
-      }
-      // Fresh state: other sources may have folded results in while the
-      // archive was looked up.
-      const current = get().search;
-      if (sequence !== searchSequence || !current) return;
-      set({ search: applySourceError(current, sessionId, failure) });
+      const choice = await historicalSourceAfterFailure(sessionId, error);
+      if (sequence !== searchSequence || !get().search) return;
+      return useKeptOrFail(sequence, sessionId, choice);
     }
+  }
+
+  /** Search the kept copy in the original's place, or record why not. */
+  function useKeptOrFail(sequence: number, sessionId: string, choice: Exclude<HistoricalSource, { kind: "original" }>): Promise<void> | void {
+    // Fresh state: other sources may have folded results in meanwhile.
+    const now = get().search!;
+    const held = now.sources[sessionId];
+    if (choice.kind === "failed" || !held || held.status !== "searching") {
+      if (choice.kind === "failed") set({ search: applySourceError(now, sessionId, choice.error) });
+      return;
+    }
+    set({
+      search: {
+        ...now,
+        sources: {
+          ...now.sources,
+          // The copy is searched from its end afresh: hits from the
+          // original, if any, would otherwise repeat.
+          [sessionId]: { ...held, sourcePath: choice.path, archive: choice.archive, cursor: null, sourceId: null, scanEnd: null, hits: [], steps: 0, unsearchableRecords: 0 },
+        },
+      },
+    });
+    return step(sequence, sessionId);
   }
 
   /** Run steps until the phase budget is spent, nothing is left, or the
@@ -172,6 +185,9 @@ export const useProjectSearchStore = create<ProjectSearchStore>((set, get) => {
       const sequence = ++searchSequence;
       openSequence += 1;
       set({ search: startedProjectSearch(inventory, phrase, wholeWords), opening: null, openError: null, openedSessionId: null });
+      // Which sessions keep a copy, read once for the whole search.
+      keptLookup = await keptArchiveIdentityLookup();
+      if (sequence !== searchSequence) return;
       await run(sequence);
     },
     more: async () => {
