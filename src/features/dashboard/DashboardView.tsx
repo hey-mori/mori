@@ -157,9 +157,11 @@ export function DashboardView() {
         storedSessions: rangedSessions,
         repository,
         userProjects,
-        includeCreatedProjects: timeRange === "all",
+        // A created project with no sessions is a name, not a folder with
+        // usage: it has no row on a folder dashboard.
+        includeCreatedProjects: false,
       }),
-    [browserModel.groups, repository, rangedSessions, timeRange, userProjects],
+    [browserModel.groups, repository, rangedSessions, userProjects],
   );
 
   const totals = useMemo(() => summarizeProjects(projects), [projects]);
@@ -248,7 +250,7 @@ export function DashboardView() {
         <EmptyState
           icon={BarChart3}
           title="아직 대시보드에 보여줄 작업이 없습니다"
-          description="작업 기록을 가져오면 작업 폴더별 상태와 사용량이 이곳에 모입니다."
+          description="작업 기록을 가져오면 폴더별 상태와 사용량이 이곳에 모입니다."
           actions={
             <Button variant="primary" icon={ArrowUpRight} onClick={() => navigate("connections")}>
               연동 열기
@@ -268,7 +270,7 @@ export function DashboardView() {
           <div className="dashboard-charts">
             <ChartCard
               title="토큰 분포"
-              hint="에이전트가 일한 폴더별 누적 토큰(입력+출력)의 비중입니다. 확정한 프로젝트가 아니라 폴더 기준입니다. 상위 8개만 표시하고 나머지는 기타로 묶습니다. 막대에 마우스를 올리면 정확한 값이, 클릭하면 해당 폴더만 추려집니다."
+              hint="세션을 가져온 폴더별 누적 토큰(입력+출력)의 비중입니다. 확정한 프로젝트가 아니라 폴더 기준입니다. 상위 8개만 표시하고 나머지는 기타로 묶습니다. 막대에 마우스를 올리면 정확한 값이, 클릭하면 해당 폴더만 추려집니다."
             >
               <TokenDistribution
                 projects={projects}

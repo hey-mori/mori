@@ -97,7 +97,7 @@ export function GraphView() {
         <EmptyState
           icon={Network}
           title="그래프로 보여줄 작업이 없습니다"
-          description="연동에서 작업을 가져오면 작업 폴더와 세션이 이 지도에 나타납니다."
+          description="연동에서 작업을 가져오면 폴더와 세션이 이 지도에 나타납니다."
           actions={
             <Button variant="primary" icon={ArrowUpRight} onClick={() => navigate("connections")}>
               연동 열기
