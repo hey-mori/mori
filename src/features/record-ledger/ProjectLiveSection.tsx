@@ -19,7 +19,7 @@
  */
 import type { ReactNode } from "react";
 import { CircleAlert, Hand, History, Radio } from "lucide-react";
-import { readableAgentText } from "../../lib/session/agentText";
+import { readableAgentLabel } from "../../lib/session/agentText";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import { freshnessOf, type ProjectProjection } from "../../lib/live-intake";
@@ -161,7 +161,7 @@ export function ProjectLiveSection({
               {projection.waiting.map((request) => (
                 <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
                   <Hand size={12} aria-hidden="true" className="ctx-live-row-icon" />
-                  <span className="ctx-live-row-title">{readableAgentText(request.title)}</span>
+                  <span className="ctx-live-row-title">{readableAgentLabel(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     내 확인 대기{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
                   </span>
@@ -171,7 +171,7 @@ export function ProjectLiveSection({
               {projection.blocked.map((request) => (
                 <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
                   <CircleAlert size={12} aria-hidden="true" className="ctx-live-row-icon" />
-                  <span className="ctx-live-row-title">{readableAgentText(request.title)}</span>
+                  <span className="ctx-live-row-title">{readableAgentLabel(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     막힘{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
                   </span>
@@ -180,7 +180,7 @@ export function ProjectLiveSection({
               {projection.running.map((request) => (
                 <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
                   <Radio size={12} aria-hidden="true" className="ctx-live-row-icon" />
-                  <span className="ctx-live-row-title">{readableAgentText(request.title)}</span>
+                  <span className="ctx-live-row-title">{readableAgentLabel(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     {formatElapsed(request.elapsedMs)} · {request.stepCount}단계
                   </span>
@@ -232,7 +232,7 @@ function ContinuedSessions({
             <RequestRow key={session.sessionKey} sessionKey={session.sessionKey} open={openSession}>
               <History size={12} aria-hidden="true" className="ctx-live-row-icon" />
               <span className="ctx-live-row-title">
-                {sessionTitleOf?.(session.sessionKey) ?? readableAgentText(session.lastTitle)}
+                {sessionTitleOf?.(session.sessionKey) ?? readableAgentLabel(session.lastTitle)}
               </span>
               <span className="ctx-live-row-meta">
                 활동 {formatSidebarRelative(session.activeAt, now)}
@@ -297,7 +297,7 @@ function RecentWork({
         <ul className="ctx-live-list">
           {requests.map((request) => (
             <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
-              <span className="ctx-live-row-title">{readableAgentText(request.title)}</span>
+              <span className="ctx-live-row-title">{readableAgentLabel(request.title)}</span>
               <span className="ctx-live-row-meta">
                 {STATUS_LABEL[request.status] ?? ""}
                 {request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}

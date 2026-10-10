@@ -10,7 +10,7 @@
  * a request here matches an imported session. Each request carries a live status
  * derived from how recently it was touched.
  */
-import { readableAgentText } from "../../lib/session/agentText";
+import { readableAgentLabel, readableAgentText } from "../../lib/session/agentText";
 import { classifyMessage } from "../../lib/claude/conversationStats";
 import { isAgentBoilerplateTitle } from "../../lib/import/sanitizeTitle";
 import type {
@@ -115,7 +115,7 @@ export function buildLiveFeed(
           id: `${meta.filePath}::${message.id}`,
           sessionKey: meta.filePath,
           sessionLabel,
-          requestTitle: readableAgentText(text),
+          requestTitle: readableAgentLabel(text),
           startedAt: message.createdAt,
           updatedAt: message.createdAt,
           status: "done",

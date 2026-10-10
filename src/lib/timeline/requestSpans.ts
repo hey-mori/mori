@@ -15,7 +15,7 @@
  * `openedByUser` marker, so this returns `[]` and the band simply does not
  * render. No React, no mutation, pure derivation, unit-testable.
  */
-import { readableAgentText } from "../session/agentText";
+import { readableAgentLabel } from "../session/agentText";
 import type { TimelineEvent } from "../../domain/types";
 
 export type RequestSpan = {
@@ -84,7 +84,7 @@ export function buildRequestSpans(events: readonly TimelineEvent[]): RequestSpan
       start: new Date(minStart).toISOString(),
       end: new Date(maxEnd).toISOString(),
       eventIds,
-      title: readableAgentText(group.opener.title),
+      title: readableAgentLabel(group.opener.title),
     };
   });
 }

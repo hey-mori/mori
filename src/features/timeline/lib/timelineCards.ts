@@ -313,9 +313,4 @@ export function buildTrustGlyph(level: TrustLevel, confidence: number): Timeline
   return { level, label, tone, tooltip };
 }
 
-/** A label beside a tick: the reader's leading tool glyph (the lane already
- *  names the kind of work) is dropped, with any variation selector or joined
- *  glyphs it carries; the title itself is unchanged. */
-export function labelText(title: string): string {
-  return title.replace(/^\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*\s+/u, "");
-}
+export { labelText } from "../../../lib/session/agentText";

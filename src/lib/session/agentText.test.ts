@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readableAgentText } from "./agentText";
+import { labelText, readableAgentLabel, readableAgentText } from "./agentText";
 
 describe("agent text as a person reads it", () => {
   it("drops the slash-command wrappers and the repeated command message, keeping the arguments", () => {
@@ -28,5 +28,20 @@ describe("agent text as a person reads it", () => {
     readableAgentText(`<command-name>${" ".repeat(50_000)}`);
     readableAgentText(`<command-name>${"\n".repeat(50_000)}x`);
     expect(Date.now() - started).toBeLessThan(500);
+  });
+});
+
+
+describe("agent text as a title", () => {
+  it("is never blank: transport with nothing readable says what it was", () => {
+    expect(readableAgentLabel("<bash-stdout></bash-stdout><bash-stderr></bash-stderr>")).toBe("셸 명령");
+    expect(readableAgentLabel("<command-name>/model</command-name>")).toBe("/model");
+    expect(readableAgentLabel("고쳐줘")).toBe("고쳐줘");
+    expect(readableAgentLabel("")).toBe("");
+  });
+
+  it("drops only a leading tool glyph", () => {
+    expect(labelText("🔧 Bash: ls")).toBe("Bash: ls");
+    expect(labelText("↳ 도구 결과")).toBe("↳ 도구 결과");
   });
 });

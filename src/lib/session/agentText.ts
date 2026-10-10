@@ -49,3 +49,22 @@ export function readableAgentText(text: string): string {
     .replace(/\n{2,}/g, "\n")
     .trim();
 }
+
+/**
+ * A label for agent text shown as a title: the readable text, or, when the
+ * text is only CLI transport with nothing readable left (an empty shell
+ * output, say), what it was, so a title is never blank.
+ */
+export function readableAgentLabel(text: string): string {
+  const readable = readableAgentText(text);
+  if (readable) return readable;
+  if (/^\s*<bash-/.test(text)) return "셸 명령";
+  if (/^\s*<(?:command-|local-command)/.test(text)) return "명령";
+  return text.trim() ? "에이전트 안내" : "";
+}
+
+/** A tool row's text without the reader's leading tool glyph (the row or lane
+ *  already names the kind of work); anything else is unchanged. */
+export function labelText(title: string): string {
+  return title.replace(/^\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*\s+/u, "");
+}
