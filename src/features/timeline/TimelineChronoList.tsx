@@ -1,4 +1,5 @@
 import { ChevronDown, Layers3, Wrench } from "lucide-react";
+import { readableAgentText } from "../../lib/session/agentText";
 import { useEffect, useRef, useState } from "react";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
 import { useSessionStore } from "../../app/sessionStore";
@@ -17,6 +18,8 @@ import {
   buildTimelineEventCardViewModel,
   buildTrustGlyph,
   formatFileActivityDiff,
+  labelText,
+  readableEventSummary,
   type TimelineCardFileActivity,
 } from "./lib/timelineCards";
 import { activityKindIcons } from "./lib/activityIcons";
@@ -149,7 +152,7 @@ function ToolRunRow({ run }: { run: Extract<StreamRow, { kind: "toolRun" }> }) {
         <div className="timeline-chrono-toolrun is-single">
           <span className="timeline-chrono-time">{timeLabel}</span>
           <Wrench size={13} aria-hidden="true" />
-          <span className="timeline-chrono-toolrun-label">{oneLine(first.event.title, 90)}</span>
+          <span className="timeline-chrono-toolrun-label">{oneLine(labelText(first.event.title), 90)}</span>
         </div>
       </li>
     );
@@ -180,7 +183,7 @@ function ToolRunRow({ run }: { run: Extract<StreamRow, { kind: "toolRun" }> }) {
           {run.events.map((toolEvent) => (
             <li key={toolEvent.id}>
               <span className="timeline-chrono-time">{formatTime(toolEvent.event.start)}</span>
-              <span className="timeline-chrono-toolrun-item">{oneLine(toolEvent.event.title, 100)}</span>
+              <span className="timeline-chrono-toolrun-item">{oneLine(labelText(toolEvent.event.title), 100)}</span>
             </li>
           ))}
         </ul>
@@ -212,7 +215,17 @@ function TimelineChronoEventRow({
   // The user's own request text obeys the disclosure level here too, so a
   // withheld request cannot leak through the narrow-width list view.
   const requestProjection = projectEventRequestSummary(event, requestDisclosureLevel);
-  const snippet = oneLine(requestProjection.text);
+  const readable = readableAgentText(requestProjection.text ?? "");
+  // A row says its summary only when it adds to the title (the card view model
+  // already decided that for the unprojected text).
+  const snippet = isRequest || readableEventSummary(event, vm.title) ? oneLine(readable) : "";
+  const shownSnippet = snippet && oneLine(vm.title) !== snippet ? snippet : "";
+  // The quiet default (observed, its own source) is not repeated on every row.
+  const meta = [
+    vm.categoryLabel,
+    event.trustLevel === "observed" ? null : vm.trust.label,
+    event.linkedIssueIds.length + event.linkedDecisionIds.length > 0 || event.sourceRefs.length > 1 ? vm.primaryMeta : null,
+  ].filter(Boolean).join(" · ");
   return (
     <li className={isRequest ? "is-request" : undefined}>
       {isRequest ? <span className="timeline-chrono-request-tag">요청</span> : null}
@@ -230,20 +243,17 @@ function TimelineChronoEventRow({
         </span>
         <span className="timeline-chrono-body">
           <strong>{vm.title}</strong>
-          {snippet ? <span className="timeline-chrono-snippet">{snippet}</span> : null}
+          {shownSnippet ? <span className="timeline-chrono-snippet">{shownSnippet}</span> : null}
           {vm.fileActivity && vm.fileActivity.filesChanged > 0 ? (
             <span className="timeline-chrono-files">{fileActivityLine(vm.fileActivity)}</span>
           ) : null}
-          <small>
-            {vm.categoryLabel} · {vm.trust.label}
-            {vm.primaryMeta ? ` · ${vm.primaryMeta}` : ""}
-          </small>
+          <small>{meta}</small>
         </span>
       </button>
       {selected ? (
         <div className="timeline-chrono-detail" role="region">
           {requestProjection.text ? (
-            <p>{requestProjection.text}</p>
+            <p>{readable}</p>
           ) : (
             <p className="timeline-chrono-withheld">원문이 표시되지 않도록 설정됨</p>
           )}

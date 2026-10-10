@@ -1,4 +1,6 @@
 import { StickyNote } from "lucide-react";
+import { readableAgentText } from "../../lib/session/agentText";
+import { readableEventTitle } from "./lib/timelineCards";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import {
@@ -125,7 +127,7 @@ export function EventInspector({
   const gatedRequestBody = (
     <>
       {requestProjection.text ? (
-        <p>{requestProjection.text}</p>
+        <p>{readableAgentText(requestProjection.text)}</p>
       ) : (
         <p className="ins-withheld">
           원문이 표시되지 않도록 설정되어 있습니다. 데이터는 그대로 저장됩니다.
@@ -179,7 +181,7 @@ export function EventInspector({
           {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
         </>
       }
-      title={selectedEvent.title}
+      title={readableEventTitle(selectedEvent)}
       meta={formatTimeRange(selectedEvent.start, selectedEvent.end)}
     >
       <InspectorSection>
@@ -198,7 +200,7 @@ export function EventInspector({
           </>
         ) : (
           <InspectorCard label="요약" action={isUserRequest ? disclosureControl : undefined}>
-            {isUserRequest ? gatedRequestBody : <p>{selectedEvent.summary}</p>}
+            {isUserRequest ? gatedRequestBody : <p>{readableAgentText(selectedEvent.summary)}</p>}
           </InspectorCard>
         )}
       </InspectorSection>

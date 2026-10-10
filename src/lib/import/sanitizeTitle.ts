@@ -62,3 +62,26 @@ export function firstMeaningfulTitle(titles: readonly string[]): string {
   }
   return "";
 }
+
+/**
+ * What an agent-injected notice is, as a short Korean label for a row whose
+ * text is that notice: a slash command by its name, its output, a caveat, a
+ * system notice, a cancel, a continuation. Only for text that
+ * `isAgentBoilerplateTitle` recognises; anything else returns "".
+ */
+export function boilerplateLabel(text: string, options: { commandName?: boolean } = {}): string {
+  if (!isAgentBoilerplateTitle(text)) return "";
+  const normalized = text.trim().toLowerCase();
+  const command = normalized.startsWith("<command-") ? text.match(/<command-name>([^<\s][^<]{0,80})<\/command-name>/) : null;
+  if (normalized.startsWith("<command-")) {
+    return command && options.commandName !== false ? `${command[1]!.trim()} 명령` : "명령";
+  }
+  if (normalized.startsWith("this session is being continued") || normalized.startsWith("continue from where you left off")) {
+    return "세션 이어가기";
+  }
+  if (normalized.startsWith("<local-command-stdout") || normalized.startsWith("<local-command-stderr")) return "명령 출력";
+  if (normalized.startsWith("<local-command") || normalized.startsWith("caveat:")) return "로컬 명령 안내";
+  if (normalized.startsWith("<task-notification>") || normalized.startsWith("[system notification")) return "작업 알림";
+  if (normalized.startsWith("[request interrupted")) return "요청 중단";
+  return "에이전트 안내";
+}
