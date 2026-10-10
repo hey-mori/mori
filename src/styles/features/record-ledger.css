@@ -2825,9 +2825,34 @@
   font-weight: 500;
 }
 
-/* 최근 · records and sessions in ONE stream, because "무슨 일이 있었나" is one
-   question and two lists make the user interleave them by hand. */
-.ctx-recent {
+/* 흐름 · the project by day: sessions and records in one stream, because
+   "무슨 일이 있었나" is one question. Rows are calm list rows; the date and the
+   quiet-stretch marker are quiet headings, never boxes. */
+.project-chrono-summary {
+  margin: 0 0 6px;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+}
+
+.project-chrono-day + .project-chrono-day {
+  margin-top: 6px;
+}
+
+.project-chrono-date {
+  margin: 6px 0 2px;
+  font-size: var(--base-font-size-xs);
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.project-chrono-quiet {
+  margin: 8px 0 4px;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+  text-align: center;
+}
+
+.project-chrono-items {
   display: grid;
   gap: 1px;
   margin: 0;
@@ -2835,13 +2860,13 @@
   list-style: none;
 }
 
-.ctx-recent-row {
+.project-chrono-row {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
   min-width: 0;
-  padding: 7px 8px;
+  padding: 6px 8px;
   border: 0;
   border-radius: 7px;
   background: none;
@@ -2849,17 +2874,26 @@
   text-align: left;
 }
 
-.ctx-recent-row:hover {
+.project-chrono-row:hover,
+.project-chrono-row:focus-visible {
   background: var(--panel-soft);
 }
 
-.ctx-recent-icon {
+.project-chrono-time {
+  flex-shrink: 0;
+  min-width: 78px;
+  font-size: var(--base-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-2);
+}
+
+.project-chrono-icon {
   display: inline-flex;
   flex-shrink: 0;
   color: var(--muted-2);
 }
 
-.ctx-recent-title {
+.project-chrono-title {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -2869,8 +2903,33 @@
   color: var(--text);
 }
 
-.ctx-recent-time {
+.project-chrono-meta {
   flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+}
+
+.project-chrono-more {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.project-chrono-more:hover {
+  background: var(--panel-soft);
+}
+
+.project-chrono-undated {
+  margin-top: 8px;
   font-size: var(--base-font-size-xs);
   color: var(--muted-2);
 }
