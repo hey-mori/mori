@@ -6,13 +6,14 @@ import {
   type DisclosureLevel,
 } from "../../lib/disclosure";
 import { SettingsSection } from "./SettingsPrimitives";
+import { InfoHint } from "../../components/ui/InfoHint";
 
 /** One-line meaning shown under the selected level. */
 const LEVEL_DESC: Record<DisclosureLevel, string> = {
   raw: "가져온 요청 원문을 그대로 보여줍니다.",
-  summary: "핵심만 요약해 보여주고 원문은 감춥니다.",
+  summary: "요청의 첫 문장만 보여줍니다.",
   abstract: "요청의 종류만 보여주고 구체적인 내용은 감춥니다.",
-  hidden: "활동 기록에 보이는 요청 내용을 가립니다. 원본 보기, 저장된 데이터, 내보낸 파일은 그대로입니다.",
+  hidden: "화면에 보이는 요청 내용을 가립니다.",
 };
 
 /**
@@ -45,7 +46,13 @@ export function RequestDisclosureCard() {
           <span>더 많이 보임</span>
           <span>더 비공개</span>
         </div>
-        <p className="settings-disclosure-desc">{LEVEL_DESC[level]}</p>
+        <p className="settings-disclosure-desc">
+          {LEVEL_DESC[level]}
+          <InfoHint label="이 설정이 바꾸는 것">
+            화면에 보이는 방식만 바꿉니다. 저장된 데이터와 원본 대화 보기는 그대로이고, 암호화하거나 지우지
+            않습니다. 보고서의 활동 기록도 이 설정을 따르지만, .mori 내보내기와 백업에는 원본이 그대로 담깁니다.
+          </InfoHint>
+        </p>
       </div>
     </SettingsSection>
   );

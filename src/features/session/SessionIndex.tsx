@@ -78,7 +78,7 @@ export function SessionIndex({
 
   const bridgeAvailable = isClaudeBridgeAvailable();
   const liveSnapshot = useLiveSessions(bridgeAvailable);
-  const hideRequests = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel === "hidden");
+  const requestLevel = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
   const liveRows = useMemo(() => {
     const now = Date.now();
     return liveSnapshot.sessions
@@ -89,7 +89,7 @@ export function SessionIndex({
         return {
           key: s.meta.filePath,
           sessionId: s.meta.sessionId,
-          title: liveSessionTitle(s, hideRequests),
+          title: liveSessionTitle(s, requestLevel),
           project: sessionShortLabel(s.meta),
           working: sessionIsWorking(s, now),
           lastAt,
@@ -103,7 +103,7 @@ export function SessionIndex({
           Number(b.working) - Number(a.working) ||
           (Date.parse(b.lastAt) || 0) - (Date.parse(a.lastAt) || 0),
       );
-  }, [liveSnapshot.sessions, hideRequests]);
+  }, [liveSnapshot.sessions, requestLevel]);
 
   const [summaries, setSummaries] = useState(() => safeListSessions());
   const [query, setQuery] = useState("");

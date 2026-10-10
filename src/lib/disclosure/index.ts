@@ -20,6 +20,7 @@ export {
 export {
   discloseEventForView,
   HIDDEN_REQUEST_TITLE,
+  requestTitleForView,
   isRequestTitledEvent,
   isUserRequestEvent,
   projectEventRequestSummary,

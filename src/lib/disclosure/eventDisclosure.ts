@@ -1,5 +1,6 @@
 import type { EventActor } from "../../domain/types";
 import { buildRequestAbstraction } from "./requestAbstraction";
+import { boilerplateLabel, isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
   projectDisclosure,
   type DisclosureLevel,
@@ -33,6 +34,11 @@ export function projectEventRequestSummary(
   if (!isUserRequestEvent(event)) {
     return { level: "raw", text: event.summary, isWithheld: false, fallbackUsed: false };
   }
+  // An agent notice imported as a user turn is not a request; below 원문 its
+  // text (which can carry the user's command arguments) is not shown.
+  if (level !== "raw" && isAgentBoilerplateTitle(event.summary)) {
+    return { level, text: "", isWithheld: true, fallbackUsed: false };
+  }
   const abstraction = buildRequestAbstraction(event.summary);
   return projectDisclosure(
     {
@@ -62,13 +68,26 @@ export function isRequestTitledEvent(event: {
   return event.openedByUser === true || event.actor === "user" || Boolean(event.requestText?.trim());
 }
 
+/** The longest title the 요약 level gives a request (its first sentence, cut
+ *  here): shorter than the raw title, so it never shows more than the level. */
+const SUMMARY_TITLE_CHARS = 60;
+
+/** A request's text as one disclosure level shows it, from the validated
+ *  variants (`buildRequestAbstraction`): 요약 its first sentence, 요지 the
+ *  content-free intent line. */
+export function requestTextAtLevel(text: string, level: "summary" | "abstract", maxSummaryChars?: number): string {
+  const abstraction = buildRequestAbstraction(text, maxSummaryChars ? { maxSummaryChars } : {});
+  return projectDisclosure({ raw: text, summary: abstraction.summary, abstract: abstraction.abstract }, level).text;
+}
+
 /**
- * The event as a derived view shows it at a disclosure level. Only 숨김
- * changes anything here: a request-titled event reads "숨긴 요청", and a
- * lone request's own text (its summary) is left out. 요약 and 요지 keep the
- * title for navigation; their body projection is `projectEventRequestSummary`.
- * The retained `requestText` stays: the inspector gates it itself and offers
- * the per-request reveal. Display only: never pass the result to a write.
+ * The event as a derived view shows it at a disclosure level. A
+ * request-titled event's title follows the level: 요약 its first sentence
+ * (shorter than the raw title), 요지 the intent line ("사용자가 수정·디버깅을
+ * 요청함"), 숨김 "숨긴 요청". A lone request's own text (its summary) follows
+ * the same way, and is left out at 숨김. Agent replies stay as they are. The
+ * retained `requestText` stays: the inspector gates it itself and offers the
+ * per-request reveal. Display only: never pass the result to a write.
  */
 export function discloseEventForView<
   T extends {
@@ -80,12 +99,38 @@ export function discloseEventForView<
     summary: string;
   },
 >(event: T, level: DisclosureLevel): T {
-  if (level !== "hidden" || !isRequestTitledEvent(event)) return event;
+  if (level === "raw" || !isRequestTitledEvent(event)) return event;
+  // An agent notice imported as a user turn (a slash-command caveat, an
+  // interruption, a task notification) is not a request to project: below
+  // 숨김 it reads as its label, and its text (which can carry the user's own
+  // command arguments) is left out.
+  const notice =
+    isAgentBoilerplateTitle(event.title) || (event.title === "세션 이어가기" && isAgentBoilerplateTitle(event.summary));
+  if (level !== "hidden" && notice) {
+    // Its fixed label ("요청 중단", "작업 알림", ...), never the command's name.
+    const label = boilerplateLabel(isAgentBoilerplateTitle(event.title) ? event.title : event.summary, { commandName: false });
+    return { ...event, title: label || "세션 이어가기", summary: "" };
+  }
   // An unanswered pasted ask keeps the ask as its summary too.
-  const unanswered = Boolean(event.requestText?.trim()) && !event.responseText?.trim();
+  const summaryIsTheAsk =
+    isUserRequestEvent(event) || (Boolean(event.requestText?.trim()) && !event.responseText?.trim());
+  if (level === "hidden") {
+    return { ...event, title: HIDDEN_REQUEST_TITLE, summary: summaryIsTheAsk ? "" : event.summary };
+  }
+  const ask = event.requestText?.trim() || event.title;
   return {
     ...event,
-    title: HIDDEN_REQUEST_TITLE,
-    summary: isUserRequestEvent(event) || unanswered ? "" : event.summary,
+    title: requestTextAtLevel(ask, level, SUMMARY_TITLE_CHARS) || HIDDEN_REQUEST_TITLE,
+    summary: summaryIsTheAsk ? requestTextAtLevel(event.summary, level) : event.summary,
   };
 }
+
+/** A live request's text as a title at a disclosure level: as written at 원문,
+ *  the level's projection at 요약 / 요지, "숨긴 요청" at 숨김. Live requests
+ *  have no per-request override. */
+export function requestTitleForView(text: string, level: DisclosureLevel): string {
+  if (level === "raw" || !text.trim()) return text;
+  if (level === "hidden") return HIDDEN_REQUEST_TITLE;
+  return requestTextAtLevel(text, level, SUMMARY_TITLE_CHARS) || HIDDEN_REQUEST_TITLE;
+}
+

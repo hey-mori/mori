@@ -28,12 +28,12 @@ import { sessionShortLabel, type LiveFeedItem, type LiveFeedRequest } from "./li
 import { useObservedSessions } from "./useAmbientObservation";
 import { useObservationStore } from "../../app/observationStore";
 import { useSessionStore } from "../../app/sessionStore";
-import { HIDDEN_REQUEST_TITLE } from "../../lib/disclosure";
+import { requestTitleForView, type DisclosureLevel } from "../../lib/disclosure";
 
-/** Whether requests are hidden (숨김). Live requests have no per-request
- *  override, so only the default level applies here. */
-function useRequestsHidden(): boolean {
-  return useSessionStore((state) => state.analysisSettings.requestDisclosureLevel === "hidden");
+/** The request disclosure level. Live requests have no per-request override,
+ *  so only the default level applies here. */
+function useRequestLevel(): DisclosureLevel {
+  return useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
 }
 
 /** A finished request folds into the past-work disclosure once it has been quiet
@@ -474,8 +474,8 @@ function RequestBlockImpl({
   onFocus: (key: string) => void;
 }) {
   const items = request.items;
-  const hidden = useRequestsHidden();
-  const requestTitle = hidden ? HIDDEN_REQUEST_TITLE : request.requestTitle;
+  const level = useRequestLevel();
+  const requestTitle = requestTitleForView(request.requestTitle, level);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   // Every card can be folded / unfolded. Default: working stays open, everything
   // else folds, so a new request pushes the previous one shut on its own. A
@@ -582,7 +582,7 @@ function RequestBlockImpl({
                   );
                 })}
               </div>
-              {selected ? <ItemDetail key={selected.id} item={selected} cursor={showCursor} hidden={hidden} /> : null}
+              {selected ? <ItemDetail key={selected.id} item={selected} cursor={showCursor} level={level} /> : null}
             </>
           ) : (
             <p className="lsv-items-pending">
@@ -610,7 +610,7 @@ function PastSection({
   onFocus: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const hidden = useRequestsHidden();
+  const level = useRequestLevel();
   return (
     <div className="lsv-past">
       <button
@@ -625,13 +625,13 @@ function PastSection({
       {open ? (
         <div className="lsv-past-list">
           {requests.map((request) => (
-            <div key={request.id} className="lsv-past-row" title={hidden ? HIDDEN_REQUEST_TITLE : request.requestTitle}>
+            <div key={request.id} className="lsv-past-row" title={requestTitleForView(request.requestTitle, level)}>
               <SessionBadge
                 label={request.sessionLabel}
                 sessionKey={request.sessionKey}
                 onFilter={() => onFocus(request.sessionKey)}
               />
-              <span className="lsv-past-title">{hidden ? HIDDEN_REQUEST_TITLE : request.requestTitle}</span>
+              <span className="lsv-past-title">{requestTitleForView(request.requestTitle, level)}</span>
               <span className="lsv-past-meta">
                 {request.items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
               </span>
@@ -643,7 +643,7 @@ function PastSection({
   );
 }
 
-function ItemDetail({ item, cursor, hidden }: { item: LiveFeedItem; cursor: boolean; hidden: boolean }) {
+function ItemDetail({ item, cursor, level }: { item: LiveFeedItem; cursor: boolean; level: DisclosureLevel }) {
   return (
     <div className={`lsv-detail is-${item.actor}`}>
       <span className="lsv-detail-actor">
@@ -652,7 +652,7 @@ function ItemDetail({ item, cursor, hidden }: { item: LiveFeedItem; cursor: bool
         {item.repeatCount > 1 ? <span className="lsv-detail-repeat">{item.repeatCount}회 반복</span> : null}
       </span>
       <p className={`lsv-detail-text base-scroll${item.toolName ? " is-mono" : ""}`}>
-        {hidden && item.actor === "user" ? HIDDEN_REQUEST_TITLE : item.text}
+        {item.actor === "user" ? requestTitleForView(item.text, level) : item.text}
         {cursor ? <span className="lsv-cursor" aria-hidden="true" /> : null}
       </p>
       {item.fileTouches.length > 0 ? (
