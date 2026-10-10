@@ -41,4 +41,9 @@ describe("databaseRecovery", () => {
     ]);
     expect(rows.map((r) => r.fileName)).toEqual(["new", "mid", "old"]);
   });
+
+  it("tells a copy kept before a restore from a snapshot taken before a migration", () => {
+    expect(toBackupDisplayRow(backup({ fileName: "mori-pre-restore-1791600000000.sqlite" })).kind).toBe("beforeRestore");
+    expect(toBackupDisplayRow(backup({ fileName: "mori-pre-v12-1791600000000.sqlite" })).kind).toBe("beforeMigration");
+  });
 });

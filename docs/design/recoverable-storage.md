@@ -157,14 +157,22 @@ reference.
 ## 7. Snapshots, restore and interruption
 
 A pre-migration snapshot is written under a `.partial` name and renamed when complete, and an
-existing snapshot is reused for a retry only if it opens and passes `quick_check`. Before this, a
-kill during `VACUUM INTO` left a partial file under the snapshot's name that the next launch
+existing snapshot is reused for a retry only if it opens and passes `quick_check` (remembered per
+file for the process, so a migration that keeps failing does not rescan it on every command). Before
+this, a kill during `VACUUM INTO` left a partial file under the snapshot's name that the next launch
 reused, so a migration ran with a file that was not a database as its only restore point
-(reproduced in an isolated release runtime, 2026-10-10). An unreadable snapshot is set aside as
-`.invalid` and is not listed or restored; permanent deletion removes it and any `.partial`.
+(reproduced in an isolated release runtime, 2026-10-10). An unreadable snapshot found for reuse is
+set aside as `.invalid`; any other unreadable snapshot stays listed and restore refuses it. Only
+exact Mori names are reused or set aside, never a user's file under a Mori-like name.
 
-Restoring a snapshot refuses a file that is not a readable database, keeps the database it
-replaces as `mori-pre-restore-<millis>.sqlite` (listed like the other snapshots), and copies
-through a temporary name. Each migration is applied in its own transaction, so a kill between or
-during migrations leaves the last committed schema and the next launch retries.
-`initialize_sqlite_database` takes the same snapshot-first path as every other command.
+Restoring a snapshot refuses a file that is not a readable database and keeps the database it
+replaces first: a consistent `mori-pre-restore-<millis>.sqlite` (listed as 복원 전 상태) when it
+opens, otherwise, as when it is damaged, its files copied as they are under `.unverified` names that
+are never listed or restored. Only when neither can be written, as on a full disk, is the restore
+refused, before anything is replaced. Pre-restore copies keep their own cap of two and never push
+pre-migration snapshots out. The snapshot is copied beside the database as `.restoring` and renamed
+over it, with the connection lock held for the whole restore. Permanent deletion and a storage move
+also cover `.partial`, `.invalid`, `.unverified` and a stray `.restoring`. Each migration is
+applied in its own transaction, so a kill between or during migrations leaves the last committed
+schema and the next launch retries. `initialize_sqlite_database` takes the same snapshot-first path
+as every other command.

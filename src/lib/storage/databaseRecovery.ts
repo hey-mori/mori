@@ -16,6 +16,8 @@ export type BackupDisplayRow = {
   takenAtLabel: string;
   /** "2.3 MB": human file size. */
   sizeLabel: string;
+  /** What the snapshot is: taken before a migration, or the state a restore replaced. */
+  kind: "beforeMigration" | "beforeRestore";
 };
 
 /** Format one backup for display. `now`-free: all inputs are on the record. */
@@ -25,6 +27,7 @@ export function toBackupDisplayRow(backup: SqliteBackupInfo): BackupDisplayRow {
     fileName: backup.fileName,
     takenAtLabel: formatTakenAt(backup.modifiedMs),
     sizeLabel: formatBytes(backup.sizeBytes),
+    kind: backup.fileName.startsWith("mori-pre-restore-") ? "beforeRestore" : "beforeMigration",
   };
 }
 
