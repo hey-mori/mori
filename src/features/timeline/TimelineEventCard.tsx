@@ -115,6 +115,16 @@ export function TimelineEventCard({
           >
             {labelText(vm.title)}
           </span>
+        ) : layout.width < NARROW_CARD_WIDTH && layout.labelLeftRoom > 0 ? (
+          // No room to the right (the lane's last tick, often where the
+          // session ended): the title reads to the left of the tick instead.
+          <span
+            className="event-card-label is-left"
+            aria-hidden="true"
+            style={{ right: `${layout.width + LABEL_OFFSET_PX}px`, maxWidth: `${layout.labelLeftRoom}px` }}
+          >
+            {labelText(vm.title)}
+          </span>
         ) : null}
         <span className="event-card-row">
           <span
