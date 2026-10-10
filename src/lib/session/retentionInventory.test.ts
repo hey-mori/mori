@@ -113,6 +113,16 @@ describe("what helps decide whether to keep a source", () => {
     expect(partial.messageCount).toBeUndefined();
     expect(partial.prCount).toBeUndefined();
   });
+
+  it("carry the request mark only on a title that is the request's own text", () => {
+    const input = (metas: AgentWorkSessionMeta[]) =>
+      retentionSources({ metas, sources: [], links: [], records: [], importedSessionIds: new Set() });
+    const [flagged] = input([meta("a", { title: "배포 스크립트 고쳐줘", titleFromRequest: true })]);
+    expect(flagged.titleFromRequest).toBe(true);
+    const [fallback] = input([meta("b", { title: "", titleFromRequest: true })]);
+    expect(fallback).toMatchObject({ title: "p", titleFromRequest: undefined });
+    expect(input([meta("c")])[0].titleFromRequest).toBeUndefined();
+  });
 });
 
 describe("sessions whose reopen descriptor must outlive the original", () => {

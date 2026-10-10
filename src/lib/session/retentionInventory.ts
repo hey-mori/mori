@@ -82,6 +82,7 @@ export function retentionSources(inputs: RetentionInventoryInputs): RetentionSou
       return {
         sessionId,
         title: meta.title || meta.projectName || "제목 없는 대화",
+        titleFromRequest: meta.title && meta.titleFromRequest ? true : undefined,
         // Metas stored before the file time was kept: the last activity is
         // the closest stand-in (never later than the file's own change).
         modifiedAt: meta.modifiedAt ?? meta.updatedAt,

@@ -23,6 +23,7 @@ import { totalBytes } from "../../lib/session/keepEach";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { keepSessionArchive } from "./sessionArchiveActions";
 import { loadRetentionView, type RetentionView } from "./retentionActions";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 export function RetentionStatus({
   onOpen,
@@ -104,6 +105,8 @@ function RetentionDialog({
   onOpen: (sessionId: string) => void;
   onKept: () => void;
 }) {
+  const shownTitle = useSessionTitle();
+  const titleOf = (a: RetentionAssessment) => shownTitle(a.title, a.titleFromRequest);
   const [keeping, setKeeping] = useState<RetentionAssessment | null>(null);
   // Conversations the user picked to keep together; only those with a found
   // original can be picked.
@@ -188,11 +191,11 @@ function RetentionDialog({
                       className="retention-row-pick"
                       checked={picked.has(a.sessionId)}
                       onChange={() => togglePick(a.sessionId)}
-                      aria-label={`${a.title} 보관할 대화로 고르기`}
+                      aria-label={`${titleOf(a)} 보관할 대화로 고르기`}
                     />
                   ) : null}
                   <div className="retention-row-text">
-                    <strong>{a.title}</strong>
+                    <strong>{titleOf(a)}</strong>
                     <span>
                       {cleanupPhrase(a.cleanup)} · {keptPhrase(a)}
                       {a.bytes ? ` · ${formatArchiveBytes(a.bytes)}` : ""}
@@ -231,7 +234,7 @@ function RetentionDialog({
                 {lost.map((a) => (
                   <li key={a.sessionId} className="retention-row">
                     <div className="retention-row-text">
-                      <strong>{a.title}</strong>
+                      <strong>{titleOf(a)}</strong>
                       <span>{keptPhrase(a)}</span>
                     </div>
                   </li>
@@ -243,7 +246,7 @@ function RetentionDialog({
       </div>
       {keepingMany ? (
         <KeepManyDialog
-          items={pickedItems.map((item) => ({ sessionId: item.sessionId, title: item.title, sizeBytes: item.bytes }))}
+          items={pickedItems.map((item) => ({ sessionId: item.sessionId, title: titleOf(item), sizeBytes: item.bytes }))}
           onClose={() => {
             setKeepingMany(false);
             setPicked(new Set());
@@ -258,7 +261,7 @@ function RetentionDialog({
       ) : null}
       {keeping ? (
         <KeepDialog
-          title={keeping.title}
+          title={titleOf(keeping)}
           sizeBytes={keeping.bytes}
           onClose={() => {
             setKeeping(null);

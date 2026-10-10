@@ -31,6 +31,8 @@ export type CleanupPolicyInput = {
 export type RetentionSourceInput = {
   sessionId: string;
   title: string;
+  /** The title is the first request's text, shown by the disclosure rule. */
+  titleFromRequest?: boolean;
   /** The original transcript's last change (file time) when discovered. */
   modifiedAt?: string;
   bytes?: number;
