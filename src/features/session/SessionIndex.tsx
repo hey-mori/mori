@@ -307,7 +307,11 @@ export function SessionIndex({
           ))
         )}
         {visibleLost.length > 0 ? (
-          <details className="session-index-lost" onToggle={(event) => setLostOpen(event.currentTarget.open)}>
+          <details
+            className="session-index-lost"
+            open={lostOpen}
+            onToggle={(event) => setLostOpen(event.currentTarget.open)}
+          >
             <summary className="session-index-label">
               원본을 찾지 못한 세션 {visibleLost.length}
               <InfoHint label="원본을 찾지 못한 세션">

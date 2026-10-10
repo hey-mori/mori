@@ -19,6 +19,11 @@ describe("session records whose original is gone", () => {
     expect(lostSessionRecords([codex], new Set(), discovered)).toEqual([]);
   });
 
+  it("leaves out records that were not auto-imported sessions", () => {
+    const manual = session("pipeline-run-1", { properties: { agentId: "claude" } });
+    expect(lostSessionRecords([manual], new Set(), discovered)).toEqual([]);
+  });
+
   it("leaves out other records and discarded or archived sessions", () => {
     const note = { ...session("note-1"), schemaId: "note" } as MoriRecord;
     const records = [note, session("auto-claude-x", { status: "discarded" }), session("auto-claude-y", { status: "archived" })];

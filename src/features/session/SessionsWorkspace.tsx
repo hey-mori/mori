@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Radio, TriangleAlert } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
@@ -31,9 +31,15 @@ export function SessionsWorkspace() {
   const [mode, setMode] = useState<"live" | "review">("live");
   const [selectedPastId, setSelectedPastId] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<"ready" | "loading" | "error">("ready");
+  // The lost row the user is still waiting on. Choosing anything else, or
+  // leaving this screen, clears it, so a slow lookup never moves them to 기록
+  // after they have gone elsewhere.
+  const pendingLost = useRef<string | null>(null);
+  useEffect(() => () => void (pendingLost.current = null), []);
 
   const handleSelectPast = useCallback(
     (sessionId: string) => {
+      pendingLost.current = null;
       setSelectedPastId(sessionId);
       setMode("review");
       // An auto-registered session reads its transcript on demand: show a
@@ -55,11 +61,13 @@ export function SessionsWorkspace() {
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const handleSelectLost = useCallback(
     (sessionId: string) => {
+      pendingLost.current = sessionId;
       setSelectedPastId(sessionId);
       setMode("review");
       setLoadState(sessionId !== activeSessionId ? "loading" : "ready");
       void resolveSession(sessionId).then((outcome) => {
-        if (outcome === "superseded") return;
+        if (outcome === "superseded" || pendingLost.current !== sessionId) return;
+        pendingLost.current = null;
         if (outcome === "unavailable") {
           setLoadState("ready");
           setSelectedPastId(null);
@@ -73,6 +81,7 @@ export function SessionsWorkspace() {
   );
 
   const handleSelectLive = useCallback(() => {
+    pendingLost.current = null;
     setMode("live");
     setSelectedPastId(null);
     setLoadState("ready");
