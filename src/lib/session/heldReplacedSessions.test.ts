@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import { autoImportedSessionId } from "./autoImportSessions";
-import { fingerprintChanged, holdReplacedSessions } from "./heldReplacedSessions";
+import { fingerprintChanged, holdReplacedSessions, movedSessions } from "./heldReplacedSessions";
 
 const meta = (title: string, sourceId?: string, extra: Partial<AgentWorkSessionMeta> = {}): AgentWorkSessionMeta =>
   ({ agentId: "claude", agentName: "Claude", importKind: "claude-code", id: "s1", sessionId: "s1", projectPath: "/p", projectName: "p", filePath: "/x/s1.jsonl", sourceFilePath: "/x/s1.jsonl", startedAt: "2026-10-10T00:00:00Z", updatedAt: "2026-10-10T01:00:00Z", messageCount: 4, title, fileBytes: 900, ...(sourceId ? { sourceId } : {}), ...extra }) as AgentWorkSessionMeta;
@@ -15,6 +15,12 @@ describe("discovery of a kept session", () => {
   it("keeps its own descriptor when the file at its path is another conversation", () => {
     const out = holdReplacedSessions([meta("garden planning for spring", "src-other")], storedAs(own), () => keptCopy);
     expect(out.map((m) => m.title)).toEqual(["payments ledger import design"]);
+  });
+
+  it("takes where the file lives now from the listing, so a restored home can still be read", () => {
+    const restored = meta("payments ledger import design", "src-kept", { filePath: "/old-home/x/s1.jsonl", sourceFilePath: "/old-home/x/s1.jsonl" });
+    const out = holdReplacedSessions([meta("garden planning for spring", "src-other", { filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl" })], storedAs(restored), () => keptCopy);
+    expect(out[0]).toMatchObject({ title: "payments ledger import design", filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl" });
   });
 
   it("keeps its own descriptor when the file was cut short below the copy", () => {
@@ -56,5 +62,29 @@ describe("a changed fingerprint", () => {
     expect(fingerprintChanged([meta("t", "src-other")], storedAs(meta("t", "src-kept")))).toBe(true);
     expect(fingerprintChanged([meta("t", "src-kept")], storedAs(meta("t", "src-kept")))).toBe(false);
     expect(fingerprintChanged([meta("t", "src-other")], storedAs(meta("t")))).toBe(false);
+  });
+});
+
+describe("a session whose file moved", () => {
+  it("follows its file and keeps what describes it", () => {
+    const was = meta("payments ledger import design", "src-kept", { filePath: "/old-home/x/s1.jsonl", sourceFilePath: "/old-home/x/s1.jsonl" });
+    const now = meta("payments ledger import design", "src-kept", { filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl", messageCount: 9 });
+    const [moved] = movedSessions([now], storedAs(was));
+    expect(moved).toMatchObject({ filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl", messageCount: 4 });
+  });
+
+  it("never moves a session id listed twice, nor changes its project", () => {
+    const was = meta("payments ledger import design", "src-kept", { filePath: "/p/a/s1.jsonl", sourceFilePath: "/p/a/s1.jsonl", projectPath: "/home/u/dev/a" });
+    const a = meta("payments ledger import design", "src-kept", { filePath: "/p/a/s1.jsonl", sourceFilePath: "/p/a/s1.jsonl", projectPath: "/home/u/dev/a" });
+    const b = meta("a copy elsewhere", "src-kept", { filePath: "/p/b/s1.jsonl", sourceFilePath: "/p/b/s1.jsonl", projectPath: "/home/u/dev/b" });
+    expect(movedSessions([a, b], storedAs(was))).toEqual([]);
+    const [moved] = movedSessions([{ ...b, projectPath: "/home/u/dev/b" }], storedAs(was));
+    expect(moved).toMatchObject({ filePath: "/p/b/s1.jsonl", projectPath: "/home/u/dev/a" });
+  });
+
+  it("is nothing when the file is where it was or nothing is stored", () => {
+    const here = meta("t", "src-kept");
+    expect(movedSessions([here], storedAs(here))).toEqual([]);
+    expect(movedSessions([here], new Map())).toEqual([]);
   });
 });

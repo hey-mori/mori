@@ -213,3 +213,9 @@ kept copy from a file that is not that conversation by the same rule (other fing
 than the copy): its stored descriptor stays, or nothing is written when none describes the kept
 conversation. Not covered: a descriptor an older build already rewrote, a session with saved passages
 but no kept copy, and the other conversation at that path, which is not registered while held.
+
+Descriptors store absolute paths. When a listed session's file is somewhere else than its descriptor
+says (a restore into another home, a moved projects folder), the descriptor follows the file quietly;
+before this, every restored session kept the old home's path, so a transcript present at the new path
+read as missing and the kept copy, or nothing, was shown instead (found in the isolated release run,
+2026-10-10).
