@@ -1050,4 +1050,6 @@ focused next step, not rushed:
   includes a session continuing there.
 - "Last activity" is now the conversation's own last move where Claude Code records it (the last
   user or assistant record), not idle-time bookkeeping, so a session is not placed on a day nobody
-  worked. The project chronology reads the same field and follows.
+  worked. The project chronology reads the same field and follows. Known limit: a record takes
+  the new end only when its session next changes; records of sessions that ended earlier keep
+  their older end until then (correcting them all at once would be a data backfill, not done).

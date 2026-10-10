@@ -61,6 +61,19 @@ describe("buildAgentSessionRecordInput", () => {
       [],
     );
     expect(quiet.occurredEnd).toBe("2026-07-16T10:30:00.000Z");
+    // A last message before the start falls back to the source's last activity.
+    const early = buildAgentSessionRecordInput(
+      meta({ updatedAt: "2026-07-16T10:30:00.000Z", lastMessageAt: "2026-07-16T08:00:00.000Z" }),
+      [],
+    );
+    expect(early.occurredEnd).toBe("2026-07-16T10:30:00.000Z");
+    // In order as instants but not as text (mixed offsets): no end rather than
+    // one the record factory would reject.
+    const mixed = buildAgentSessionRecordInput(
+      meta({ startedAt: "2026-11-01T01:50:00-07:00", updatedAt: "2026-11-01T01:10:00-08:00" }),
+      [],
+    );
+    expect(mixed.occurredEnd).toBeUndefined();
     expect(input.properties).toEqual({ agentId: "claude", stepCount: 12 });
     expect(input.body).toContain("메시지 12개");
   });
