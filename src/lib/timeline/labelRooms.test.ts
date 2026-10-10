@@ -54,6 +54,21 @@ describe("a title on the left when the right has no room", () => {
     expect(labelSides([{ x: 900, width: 95 }, { x: 990, width: 6 }], 0, 1000).left[1]).toBe(0);
   });
 
+  it("lets only items that print a label claim or share room", () => {
+    // A wide card crowded by its successor never takes half of a real label.
+    const crowded = labelSides(
+      [{ x: 300, width: 6 }, { x: 420, width: 180, printsLabel: false }, { x: 605, width: 6 }],
+      0,
+      1000,
+    );
+    expect(crowded.right[0]).toBe(420 - 306 - 5 - 6);
+    expect(crowded.left[1]).toBe(0);
+    // A wide predecessor's unused right room does not block the last tick.
+    const wide = labelSides([{ x: 700, width: 200, printsLabel: false }, { x: 990, width: 6 }], 0, 1000);
+    expect(wide.right[0]).toBe(0);
+    expect(wide.left[1]).toBe(990 - 900 - 6 - 5);
+  });
+
   it("leaves an item with room on its right alone", () => {
     expect(labelSides([{ x: 100, width: 6 }, { x: 200, width: 6 }], 0, 1000).left).toEqual([0, 0]);
   });

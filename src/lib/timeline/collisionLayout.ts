@@ -144,7 +144,15 @@ export function computeTimelineLayout(
     const hasItems = placements.length > 0;
     const rowCount = hasItems ? 1 : 0;
     const thisLaneHeight = baseLaneHeight;
-    const rooms = labelSides(placements, contentLeftPx, contentLeftPx + contentWidthPx);
+    const rooms = labelSides(
+      placements.map((placement) => ({
+        x: placement.x,
+        width: placement.width,
+        printsLabel: placement.item.kind === "event" && placement.width < NARROW_CARD_WIDTH,
+      })),
+      contentLeftPx,
+      contentLeftPx + contentWidthPx,
+    );
     for (const [index, placement] of placements.entries()) {
       const y = laneTop + LANE_VERTICAL_PADDING;
       placed.push({
@@ -264,6 +272,10 @@ export function labelRooms(placements: readonly { x: number; width: number }[], 
   return rooms;
 }
 
+/** Below this width a card has no room for its icon and title, so it draws as
+ *  a tick and prints its title beside it (see `labelSides`). */
+export const NARROW_CARD_WIDTH = 30;
+
 /**
  * Label rooms on both sides. An item with no room to its right (the last one
  * before the content edge, typically where the session ended) prints its
@@ -272,11 +284,14 @@ export function labelRooms(placements: readonly { x: number; width: number }[], 
  * both titles stay readable. Items never move.
  */
 export function labelSides(
-  placements: readonly { x: number; width: number }[],
+  placements: readonly { x: number; width: number; printsLabel?: boolean }[],
   contentLeftPx: number,
   contentRightPx: number,
 ): { right: number[]; left: number[] } {
-  const right = labelRooms(placements, contentRightPx);
+  // Only an item that prints its title beside it (a narrow event card) owns
+  // label room; a wide card or a bundle never claims or shares any.
+  const prints = (index: number) => placements[index]!.printsLabel !== false;
+  const right = labelRooms(placements, contentRightPx).map((room, index) => (prints(index) ? room : 0));
   const left = new Array<number>(placements.length).fill(0);
   const order = placements.map((_, index) => index).sort((a, b) => placements[a]!.x - placements[b]!.x);
   let coveredTo = contentLeftPx;
@@ -285,7 +300,7 @@ export function labelSides(
     const item = placements[index]!;
     const coveredBefore = coveredTo;
     coveredTo = Math.max(coveredTo, item.x + item.width);
-    if (right[index]! > 0 || coveredBefore > item.x) continue;
+    if (!prints(index) || right[index]! > 0 || coveredBefore > item.x) continue;
     const prevIndex = k > 0 ? order[k - 1]! : null;
     const prevRight = prevIndex === null ? 0 : right[prevIndex]!;
     // Where the free space starts: after every earlier item, and after the

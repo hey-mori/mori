@@ -121,9 +121,10 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
         if (!item || !placed) return;
         // Card coordinates are frame coordinates; the frame is pulled left by
         // the label gutter (see the scroller below).
+        const leftLabel = Math.min(placed.labelLeftRoom, 120);
         const next = revealScrollLeft(
-          placed.x - model.layout.contentLeftPx,
-          placed.width + Math.min(placed.labelRoom, 120),
+          placed.x - model.layout.contentLeftPx - leftLabel,
+          leftLabel + placed.width + Math.min(placed.labelRoom, 120),
           element.scrollLeft,
           element.clientWidth,
           element.scrollWidth,
