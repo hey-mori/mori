@@ -208,5 +208,5 @@ the latest reply read a replaced original as if it were the session, and the lat
 nothing when the original was gone even with a usable copy. Limitations: an original that exists
 but cannot be read is still worded as "missing"; when two sessions share one file path, project
 search reads it for the newest only, so a session whose copy stands in for that file is searched in
-its copy and the other is counted as the same source; discovery still re-titles a session from the
-file now at its path.
+its copy and the other is counted as the same source. Discovery keeps a kept session's own title and
+activity when the file at its path has another fingerprint.
