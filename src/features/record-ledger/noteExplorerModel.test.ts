@@ -154,6 +154,12 @@ describe("recordSnippet · row preview", () => {
     expect(recordSnippet(r)).toBe("");
   });
 
+  it("reads a saved passage that quotes a markdown heading as prose", () => {
+    const r = { ...record("a", "2026-10-10", "최종 결정") };
+    r.body = "> ## 최종 결정\n> 기준 저장소는 SQLite로 둡니다.";
+    expect(recordSnippet(r)).toBe("기준 저장소는 SQLite로 둡니다.");
+  });
+
   it("clips long lines", () => {
     const r = { ...record("a", "2026-07-16", "제목") };
     r.body = "가".repeat(140);

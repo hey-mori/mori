@@ -20,8 +20,10 @@ import { proposeRecords } from "../../lib/capture";
  *  `**` / `#` / `` ` `` tokens into lists and records. */
 export function stripInlineMarkdown(text: string): string {
   return text
+    // Quote markers first, so a heading inside a quote ("> ## 결정", as a
+    // saved passage quotes a markdown reply) loses its "##" too.
+    .replace(/^(?:>\s?)+/gm, "")
     .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^>\s?/gm, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/__([^_]+)__/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
