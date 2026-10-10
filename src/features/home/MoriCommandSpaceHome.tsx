@@ -1,4 +1,3 @@
-import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import type {
   CSSProperties,
   FocusEvent,
@@ -19,6 +18,7 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
+import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import { useAppStore, type SessionTab } from "../../app/store";
 import {
   loadStoredSessionSummaries,

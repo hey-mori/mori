@@ -1031,7 +1031,8 @@ focused next step, not rushed:
 
 - Opening a session whose transcript is gone (nothing imported or kept) from the 캘린더, a project
   page or Home dropped the user on the 세션 live feed with no word. The palette and 기록 already fell
-  back to the session's record; every surface now does.
+  back to the session's record; the calendar, the project page and Home now do too, for a
+  discovered session (anything else has no record and still goes to 세션).
 - That record says 원본 대화를 열 수 없습니다 and shows what was recorded while the transcript was
   there: the period and the PRs it mentioned, by repository. It claims nothing about the work now.
 - Found with a real case: a transcript past Claude Code's 30-day cleanup disappeared between 10/9

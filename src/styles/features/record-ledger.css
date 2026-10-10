@@ -4256,14 +4256,14 @@
   align-items: center;
   gap: var(--base-space-2);
   margin: 0;
-  color: var(--color-text-secondary, #3a4256);
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .session-record-facts-row {
   margin: 0;
   color: var(--base-text-muted);
-  font-size: 13px;
+  font-size: var(--base-font-size-sm);
 }
 
 .note-foot-label {

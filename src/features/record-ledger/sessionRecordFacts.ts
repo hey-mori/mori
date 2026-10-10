@@ -10,6 +10,8 @@ import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 export type SessionRecordFacts = {
   /** "9월 2일 – 9월 9일", or a single day, or null when undated. */
   period: string | null;
+  /** Whether the transcript was read only in part, so PRs may be missing. */
+  partial: boolean;
   /** PR numbers by repository, each in the order first seen. */
   prs: { repository: string; numbers: number[] }[];
 };
@@ -32,5 +34,5 @@ export function sessionRecordFacts(record: MoriRecord): SessionRecordFacts {
     if (!group) prs.push((group = { repository: pr.repository, numbers: [] }));
     if (!group.numbers.includes(pr.number)) group.numbers.push(pr.number);
   }
-  return { period, prs };
+  return { period, prs, partial: evidence?.coverage === "partial" };
 }

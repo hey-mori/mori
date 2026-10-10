@@ -572,6 +572,14 @@ export type SessionState = {
    */
   sessionWindow: SessionWindowState | null;
   /**
+   * Sessions an open attempt this run found nothing to show for (no import,
+   * no kept copy, no transcript). Set and cleared by the shared resolver, so
+   * a record shown in their place can say so truthfully; a session that was
+   * never tried is not in it. Transient: never persisted.
+   */
+  unopenableSessionIds: ReadonlySet<string>;
+  noteSessionOpenable: (sessionId: string, openable: boolean) => void;
+  /**
    * The session whose transcript, read on its last open, no longer continues
    * what Mori imported (replaced or rewritten at the same path): the import
    * is kept as stored and the view must not imply the file backs it.
@@ -846,6 +854,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   initialized: false,
   draft: null,
   sessionWindow: null,
+  unopenableSessionIds: new Set<string>(),
+  noteSessionOpenable: (sessionId, openable) => {
+    const current = get().unopenableSessionIds;
+    if (current.has(sessionId) === !openable) return;
+    const next = new Set(current);
+    if (openable) next.delete(sessionId);
+    else next.add(sessionId);
+    set({ unopenableSessionIds: next });
+  },
   divergedSourceSessionId: null,
   sessionSearch: null,
   demoSessionId: null,

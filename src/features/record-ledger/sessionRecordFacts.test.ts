@@ -6,7 +6,7 @@ const record = (extra: Partial<MoriRecord>): MoriRecord => ({ id: "auto-claude-x
 
 describe("what a session record still says", () => {
   it("names the period from its observed start and end", () => {
-    const facts = sessionRecordFacts(record({ occurredStart: "2026-09-02T08:52:34Z", occurredEnd: "2026-09-09T01:38:58Z" }));
+    const facts = sessionRecordFacts(record({ occurredStart: "2026-09-02T08:52:34", occurredEnd: "2026-09-09T13:38:58" }));
     expect(facts.period).toBe("9월 2일 – 9월 9일");
   });
 

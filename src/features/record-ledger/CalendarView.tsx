@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNow } from "../../lib/time/useNow";
+import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import { useAppStore } from "../../app/store";
 import { useRecordLedger } from "./useRecordLedger";
 import { useSessionResolver } from "../session/useSessionResolver";
@@ -35,6 +36,7 @@ function pad(value: number): string {
 
 export function CalendarView() {
   const ledger = useRecordLedger();
+  const navigate = useAppStore((state) => state.navigate);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const now = useNow();
   const openSession = useAppStore((state) => state.openSession);
@@ -53,10 +55,14 @@ export function CalendarView() {
     setSessionReturn({ to: "calendar", sessionId, date, label: calendarDayLabel(date, now) });
     void resolveSession(sessionId).then((outcome) => {
       if (outcome === "opened") openSession("flow");
-      // No transcript, import or kept copy to open (its source is gone):
-      // show the session's record, what Mori still knows, as the palette
-      // does, rather than dropping the user on the live feed.
-      else if (outcome === "unavailable") openRecordInLedger(sessionId);
+      // No transcript, import or kept copy to open: show the session's
+      // record, what Mori still knows, as the palette does, rather than
+      // dropping the user on the live feed. Only a discovered session has one.
+      else if (outcome === "unavailable") {
+        setSessionReturn(null);
+        if (isAutoImportedSessionId(sessionId)) openRecordInLedger(sessionId);
+        else navigate("sessions");
+      }
     });
   };
   // Coming back from a session opened from a day reopens that day, unfolded.

@@ -18,15 +18,7 @@ import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
 import { SavedPassage, savedPassageOf } from "./SavedPassage";
 import { SessionRecordFacts } from "./SessionRecordFacts";
-import { loadAutoImportMetas } from "../../lib/session/autoImportMetaStore";
-import { autoImportedSessionId } from "../../lib/session/autoImportSessions";
-
-/** Whether discovery still describes this agent session's transcript. A
- *  session record without that is one the user can no longer open, so its
- *  record says so (`SessionRecordFacts`). */
-function isDiscoverable(sessionId: string): boolean {
-  return loadAutoImportMetas().some((meta) => autoImportedSessionId(meta) === sessionId);
-}
+import { useSessionStore } from "../../app/sessionStore";
 
 export function DocumentEditor({
   record,
@@ -140,6 +132,9 @@ function RecordDocument({
     heldPassage.current = { recordId: record.id, value: provenanceLoading ? null : loadedPassage };
   }
   const passage = provenanceLoading ? heldPassage.current.value : loadedPassage;
+  // Shown only when an open of this session was tried this run and found
+  // nothing (the shared resolver records that), never on a guess.
+  const unopenable = useSessionStore((state) => state.unopenableSessionIds.has(record.id));
 
   // The note this record was kept out of. `confirmExtraction` has always stored
   // the derived-from relation and nothing ever rendered it, so a record reached
@@ -263,7 +258,7 @@ function RecordDocument({
 
         {passage ? <SavedPassage source={passage.source} locator={passage.locator} /> : null}
 
-        {record.schemaId === "agent-session" && !isDiscoverable(record.id) ? <SessionRecordFacts record={record} /> : null}
+        {record.schemaId === "agent-session" && unopenable ? <SessionRecordFacts record={record} /> : null}
 
         {showRaw && source?.rawBody && !passage ? (
           <section className="doc-disclosure">
