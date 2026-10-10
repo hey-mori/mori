@@ -68,7 +68,7 @@ describe("buildIntakeSignalNotification", () => {
 
   it("withholds the request's text at 숨김, since the message can reach an OS banner", () => {
     const shown = buildIntakeSignalNotification(signal("sessionCompleted"), row());
-    const hidden = buildIntakeSignalNotification(signal("sessionCompleted"), row(), true);
+    const hidden = buildIntakeSignalNotification(signal("sessionCompleted"), row(), "hidden");
     expect(hidden?.message.startsWith("숨긴 요청")).toBe(true);
     expect(hidden?.message).not.toContain(row().title);
     expect(shown?.message).toContain(row().title);

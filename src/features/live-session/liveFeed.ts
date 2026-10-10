@@ -20,6 +20,7 @@ import type {
 } from "../../lib/claude/types";
 import type { AgentStoreFollowState } from "../../lib/live-follow";
 import type { EventActor, FileTouch } from "../../domain/types";
+import { requestTitleForView, type DisclosureLevel } from "../../lib/disclosure";
 
 export type FollowedSession = {
   meta: ClaudeCodeSessionMeta;
@@ -330,13 +331,13 @@ export function sessionShortLabel(meta: ClaudeCodeSessionMeta): string {
  * path. Falls back to the first request, then the project label. One line,
  * trimmed to a readable length.
  */
-export function liveSessionTitle(session: FollowedSession, hideRequests = false): string {
+export function liveSessionTitle(session: FollowedSession, level: DisclosureLevel = "raw"): string {
   // At 숨김 the request text names nothing; the folder still tells sessions apart.
-  if (hideRequests) return sessionShortLabel(session.meta);
+  if (level === "hidden") return sessionShortLabel(session.meta);
   const openers = session.follow.messages.filter(isRequestOpener);
   const opener = openers[openers.length - 1] ?? openers[0];
   const text = opener ? readableAgentText(opener.content) : "";
-  if (text) return oneLine(text, 80);
+  if (text) return requestTitleForView(oneLine(text, 80), level);
   return sessionShortLabel(session.meta);
 }
 

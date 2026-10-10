@@ -54,6 +54,8 @@ const INTENT_PATTERNS: Array<{ intent: RequestIntent; pattern: RegExp }> = [
 
 const DEFAULT_MAX_SUMMARY_CHARS = 120;
 
+const ABSTRACT_LINES = new Set(Object.values(INTENT_ABSTRACTS));
+
 /** Classify the request's intent from its raw text. */
 export function classifyRequestIntent(rawText: string): RequestIntent {
   const text = rawText.trim();
@@ -76,6 +78,9 @@ export function buildRequestAbstraction(
 ): RequestAbstraction {
   const normalized = rawText.replace(/\s+/g, " ").trim();
   if (!normalized) return { summary: "", abstract: "" };
+  // Already an intent line (a view that disclosed it once): projecting it
+  // again keeps it, so two surfaces never name one request differently.
+  if (ABSTRACT_LINES.has(normalized)) return { summary: normalized, abstract: normalized };
 
   const maxChars = opts.maxSummaryChars ?? DEFAULT_MAX_SUMMARY_CHARS;
   return {

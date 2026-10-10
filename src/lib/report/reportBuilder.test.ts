@@ -180,6 +180,15 @@ describe("buildReportMarkdown", () => {
     expect(payload.markdown).not.toContain("## Resume 프롬프트");
     expect(payload.markdown).not.toContain("배포 스크립트 고쳐줘");
     expect(payload.markdown).toContain("Resume 프롬프트는 넣지 않았습니다");
+    const summaryLevel = buildReportMarkdown({
+      view: mockSession,
+      type: "personalRetrospective",
+      sections: DEFAULT_SECTIONS,
+      privacy: privacy(),
+      resumePromptOverride: "09:10 배포 스크립트 고쳐줘: 경로 수정",
+      requestDisclosureLevel: "summary",
+    });
+    expect(summaryLevel.markdown).not.toContain("배포 스크립트 고쳐줘: 경로 수정");
   });
 
   it("client-safe mode strips event summaries, decision rationale, issue bodies, and source titles", () => {

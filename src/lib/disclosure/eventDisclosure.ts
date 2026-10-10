@@ -1,5 +1,6 @@
 import type { EventActor } from "../../domain/types";
 import { buildRequestAbstraction } from "./requestAbstraction";
+import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
   projectDisclosure,
   type DisclosureLevel,
@@ -69,7 +70,7 @@ const SUMMARY_TITLE_CHARS = 60;
 /** A request's text as one disclosure level shows it, from the validated
  *  variants (`buildRequestAbstraction`): 요약 its first sentence, 요지 the
  *  content-free intent line. */
-function requestTextAtLevel(text: string, level: "summary" | "abstract", maxSummaryChars?: number): string {
+export function requestTextAtLevel(text: string, level: "summary" | "abstract", maxSummaryChars?: number): string {
   const abstraction = buildRequestAbstraction(text, maxSummaryChars ? { maxSummaryChars } : {});
   return projectDisclosure({ raw: text, summary: abstraction.summary, abstract: abstraction.abstract }, level).text;
 }
@@ -94,6 +95,10 @@ export function discloseEventForView<
   },
 >(event: T, level: DisclosureLevel): T {
   if (level === "raw" || !isRequestTitledEvent(event)) return event;
+  // An agent notice imported as a user turn (a slash-command caveat, an
+  // interruption, a task notification) is not the user's request: below 숨김
+  // it keeps its own label, which the timeline reads as such.
+  if (level !== "hidden" && (event.title === "세션 이어가기" || isAgentBoilerplateTitle(event.title))) return event;
   // An unanswered pasted ask keeps the ask as its summary too.
   const summaryIsTheAsk =
     isUserRequestEvent(event) || (Boolean(event.requestText?.trim()) && !event.responseText?.trim());
@@ -107,3 +112,13 @@ export function discloseEventForView<
     summary: summaryIsTheAsk ? requestTextAtLevel(event.summary, level) : event.summary,
   };
 }
+
+/** A live request's text as a title at a disclosure level: as written at 원문,
+ *  the level's projection at 요약 / 요지, "숨긴 요청" at 숨김. Live requests
+ *  have no per-request override. */
+export function requestTitleForView(text: string, level: DisclosureLevel): string {
+  if (level === "raw" || !text.trim()) return text;
+  if (level === "hidden") return HIDDEN_REQUEST_TITLE;
+  return requestTextAtLevel(text, level, SUMMARY_TITLE_CHARS) || text;
+}
+

@@ -97,8 +97,8 @@ export async function persistObservedRows(
       )) {
         if (signal.delivery !== "inApp" && signal.delivery !== "system") continue;
         const row = sessionRows.find((candidate) => signal.id.endsWith(candidate.id));
-        const hideRequest = useSessionStore.getState().analysisSettings.requestDisclosureLevel === "hidden";
-        const notification = row ? buildIntakeSignalNotification(signal, row, hideRequest) : null;
+        const level = useSessionStore.getState().analysisSettings.requestDisclosureLevel;
+        const notification = row ? buildIntakeSignalNotification(signal, row, level) : null;
         if (notification) notifications.push(notification);
       }
 
