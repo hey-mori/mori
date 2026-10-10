@@ -21,6 +21,18 @@ vi.mock("../lib/trace/sources/ai/workSessions", async (importOriginal) => ({
   getAgentWorkSession: (meta: unknown) => reader.detail(meta),
   listAllAgentWorkSessions: async () => [],
 }));
+/** Accepted project memory as its own store holds it. On desktop that is
+ *  SQLite, never the app-storage repository these tests run over. */
+const acceptedStore = vi.hoisted(() => ({ list: null as null | (() => Promise<unknown>) }));
+vi.mock("../lib/project-memory/acceptedMemoryRepository", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/project-memory/acceptedMemoryRepository")>();
+  class StoreBacked extends actual.AcceptedMemoryRepository {
+    override async listAllAcceptedProjectMemories() {
+      return acceptedStore.list ? ((await acceptedStore.list()) as never) : super.listAllAcceptedProjectMemories();
+    }
+  }
+  return { ...actual, AcceptedMemoryRepository: StoreBacked };
+});
 vi.mock("../lib/session/autoImportMetaStore", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   loadAutoImportMeta: (id: string) => reader.meta.get(id) ?? null,
@@ -120,6 +132,7 @@ beforeEach(() => {
   restart();
   reader.detail.mockReset();
   reader.meta.clear();
+  acceptedStore.list = null;
   sources.clear();
   // Each read is a different capture time, as in the app.
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -447,6 +460,45 @@ describe("release review · what an answered prompt must keep", () => {
     });
     expect(events.some((event) => event.id === prompt.id)).toBe(true);
     expect(events).toHaveLength(3);
+  });
+
+  it("a prompt cited by accepted memory held only in SQLite keeps its id (desktop)", async () => {
+    // Desktop writes accepted memory to SQLite alone; app storage has none.
+    const { prompt, events } = await openAnsweredLater((sessionId, promptId) => {
+      acceptedStore.list = async () => ({
+        data: [{ id: "mem-1", projectId: "p", evidenceRefs: [{ kind: "event", sessionId, eventId: promptId }] }],
+        source: "desktop-sqlite",
+        fellBack: false,
+      });
+    });
+    expect(repository.listAllAcceptedProjectMemories()).toHaveLength(0);
+    expect(events.some((event) => event.id === prompt.id)).toBe(true);
+    expect(events).toHaveLength(3);
+  });
+
+  it("when accepted memory cannot be read from its store, nothing is renamed", async () => {
+    const { prompt, events } = await openAnsweredLater(() => {
+      acceptedStore.list = async () => ({ data: [], source: "browser-local-storage", fellBack: true });
+    });
+    expect(events[1]!.id).toBe(prompt.id);
+    expect(events).toHaveLength(3);
+  });
+
+  it("a prompt cited by an analysis run that is not adopted keeps its id", async () => {
+    const { prompt, events, a } = await openAnsweredLater((sessionId, promptId) => {
+      repository.saveSessionAnalysis(sessionId, analysisCiting(sessionId, promptId));
+      repository.saveSessionAnalysis(sessionId, { ...(analysisCiting(sessionId, "evt-other") as object), runId: "run-2" } as never);
+    });
+    const history = repository.loadSessionAnalysisHistory(a)!.history;
+    expect(history.currentRunId).toBe("run-2");
+    expect(events.some((event) => event.id === prompt.id)).toBe(true);
+  });
+
+  it("an uncited answered prompt still takes its new id", async () => {
+    const { prompt, events } = await openAnsweredLater(() => {
+      acceptedStore.list = async () => ({ data: [], source: "desktop-sqlite", fellBack: false });
+    });
+    expect(events[1]!.id).not.toBe(prompt.id);
   });
 
   it("a failed analysis write puts the import back, so nothing half-applied stays", async () => {
