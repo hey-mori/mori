@@ -49,14 +49,20 @@ heavy_busy() {
   exit 75
 }
 HEAVY_LOCK="/tmp/mori-heavy.lock"
-if command -v flock >/dev/null 2>&1; then
+# The same lookup as scripts/run-tests.mjs (absolute system paths only), so
+# the gate and the wrappers always agree on flock versus the directory lock.
+FLOCK=""
+for dir in /usr/bin /bin /usr/local/bin; do
+  if [[ -x "$dir/flock" ]]; then FLOCK="$dir/flock"; break; fi
+done
+if [[ -n "$FLOCK" ]]; then
   # Opening can fail if another user created the file (protected_regular).
   if ! { : 9>>"$HEAVY_LOCK"; } 2>/dev/null; then
     echo "cannot open $HEAVY_LOCK (owned by another user?): no gate can run until that is fixed" >&2
     exit 75
   fi
   exec 9>>"$HEAVY_LOCK"
-  flock -n 9 || heavy_busy "$HEAVY_LOCK"
+  "$FLOCK" -n 9 || heavy_busy "$HEAVY_LOCK"
   export MORI_HEAVY_LOCK_FD=9
   unset MORI_HEAVY_LOCK_OWNER
 else
@@ -144,7 +150,8 @@ npm run check:types 9>&-
 step "test safeguards"
 # Proves the limits below still work (argument refusals, timeout, SIGKILL
 # escalation, the orphan watchdog, the heavy-job lock) with sleeps, not tests.
-node scripts/run-tests.mjs self-check
+# Its drills use private lock files only, never the gate's descriptor.
+env -u MORI_HEAVY_LOCK_FD node scripts/run-tests.mjs self-check 9>&-
 
 step "tests"
 npm test

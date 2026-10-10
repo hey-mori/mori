@@ -117,7 +117,8 @@ without running a single test. It uses sleeps and one 64 MiB allocation, and
 is expected to take about 10-20 s (not yet measured). It judges by process
 group, never by scanning the machine,
 uses sleep durations unique to the run, and uses private lock files, never
-the real heavy lock. Its 61 checks (on Linux with flock) cover:
+the real heavy lock (the gate runs it with fd 9 closed). Its 61 checks (on
+Linux with flock; 53 without) cover:
 - the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
@@ -127,8 +128,9 @@ the real heavy lock. Its 61 checks (on Linux with flock) cover:
 - Ctrl-C (SIGINT) to a wrapper holding a lock: exit 130, nothing left
   running, the lock free again;
 - the gate-lock verification: a genuine inherited descriptor is used and the
-  gate's lock is still held after the probe; the descriptor survives an npm
-  hop; two jobs inside one gate do not overlap (inner lock); a wrong
+  gate's lock is still held after the probe; the descriptor survives a shell
+  command started by npm (`npm exec --offline -c`, the closest offline
+  stand-in for `npm test`); two jobs inside one gate do not overlap (inner lock); a wrong
   descriptor and a forged descriptor to a lock held elsewhere are refused; a
   second job gets 75; the lock is free after release.
 
@@ -142,8 +144,12 @@ One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
   wrapper dies instead (its pipe closes), the holder keeps the lock until that
   group is gone (at most grace + 30 s), so a new job never overlaps a run that
   is still being ended. The kernel releases the lock when the holder ends.
+  The holder's script always runs under bash by absolute path, whatever
+  `$SHELL` is.
 - **The gate** (`scripts/check.sh`) locks the file on fd 9 for its whole life
-  and exports `MORI_HEAVY_LOCK_FD=9`.
+  and exports `MORI_HEAVY_LOCK_FD=9`. It finds flock the same way the
+  wrappers do (absolute system paths only), so both always agree on flock
+  versus the directory lock.
 - **Inside the gate**, a wrapper first tries to take the lock afresh, which
   fails because the gate holds it. Only then does it consider the gate's
   descriptor, and it does not trust the variable. It checks that fd 9 is this
@@ -155,20 +161,28 @@ One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
   so two jobs inside the same gate do not overlap each other either. A stray
   or forged variable cannot let a job outside the gate overlap it. In a tiny
   window, where the holder lets go between the two steps, the probe could take
-  the free lock on the inherited description: exclusion still holds, the lock
-  is just kept by that description's owner.
+  the free lock on the inherited description. Exclusion still holds, but the
+  lock then stays with whoever owns that description. Inside a gate that is
+  the gate. Outside one it takes a deliberate forgery (a shell that opens the
+  lock file on fd 9 and sets the variable), and that shell then keeps the lock
+  until it exits, so every later job fails with 75 until then.
 - **Lifetime.** The lock lives as long as the job: the gate's ends when the
-  gate, and the wrappers it started, have exited. Nothing else holds fd 9:
-  the gate runs its other steps with `9>&-`, and the wrappers start their runs,
-  holder and watchdog with that descriptor closed. If something still ends up
-  holding it, later jobs fail with 75 rather than overlapping it. That is safe,
-  but someone has to look: `fuser /tmp/mori-heavy.lock` shows the holder,
-  read-only.
+  gate, the wrappers it started and their inner-lock holders have exited. The
+  gate runs its other steps, and the self-check, with `9>&-`, and the wrappers
+  start their runs, watchdogs and holder scripts with that descriptor closed.
+  The one exception is deliberate: an inner holder's `flock` process keeps the
+  gate's descriptor while it holds the inner lock, so if the gate ends (for
+  example because a wrapper inside it was killed) while a run is still being
+  ended, the gate's lock lasts until that holder lets go. If something else
+  still ends up holding it, later jobs fail with 75 rather than overlapping it.
+  That is safe, but someone has to look: `fuser /tmp/mori-heavy.lock` shows
+  the holder, read-only.
 - **Without flock** (macOS), a directory lock `/tmp/mori-heavy.lock.d` is
   used, and a wrapper inside the gate checks that the lock's recorded owner is
   one of its ancestors. A wrapper never takes over a gate's directory lock. A
-  small takeover race between two wrappers remains; it is not needed on the
-  NUC, which has flock.
+  small takeover race between two wrappers remains, and a stale lock is judged
+  by its owner's pid alone, so a recycled pid can keep it busy. None of this
+  applies on the NUC, which has flock.
 - **Native Windows** has no machine-wide lock (no flock, no reliable process
   ancestry): runs there are bounded but not mutually excluded.
 - **Transitional.** Exclusion holds only among runs of this code. Worktrees on
@@ -191,11 +205,15 @@ each run it prints:
   leftovers had to be ended;
 - the group's peak RSS sum, the largest single process, and the most
   processes at once;
-- the number of samples and failed samples.
+- the number of samples and failed samples;
+- zombies (exited, not yet reaped) left in the group, which are listed
+  separately and never counted as leftovers.
 
-`MORI_TEST_REPORT_FILE` writes the same report as JSON; it must be a plain
-file directly in `/tmp` (never a symlink, never in the repository). `npm test`
-writes both of its runs (Vitest, then the harness) to it.
+`MORI_TEST_REPORT_FILE` writes the same report as JSON. It must be a regular
+file directly in `/tmp`: it is opened without following symlinks and without
+blocking, and refused if it is a FIFO, a device or has other hard links. It
+is never written in the repository. `npm test` writes both of its runs
+(Vitest, then the harness) to it.
 
 What those numbers are not:
 - **An RSS sum is not memory use.** Pages shared between processes
@@ -269,7 +287,17 @@ been measured yet: see section 7.
   default, which makes watch mode slower; raise `MORI_TEST_MAX_WORKERS` in
   your own shell if you need more.
 - Ctrl-C reaches the run (the wrapper forwards it). Ctrl-Z suspends only the
-  wrapper; the run keeps going in its own group.
+  wrapper; the run keeps going in its own group, and the lock stays held for
+  as long as the wrapper stays suspended.
+- If the lock's holder process dies while the wrapper lives, the lock is lost
+  without notice for the rest of that run. If the wrapper and its watchdog die
+  together, the holder lets go after grace + 30 s even if the run continues.
+  Both need a kill from outside; only a cgroup would close them.
+- Between a group emptying and the next signal to it, its pgid could in
+  theory be reused by an unrelated process. That needs the pid counter to wrap
+  around within seconds; it is not handled.
+- `npm run check:release` runs `npm test` under the lock but its
+  `npm run build` without it (the gate's build is locked).
 - The directory-lock fallback (no `flock`, as on macOS) has a small window in
   which two runs can both take over a stale lock.
 - Windows: the process-group drills are skipped and a timeout ends the tree
@@ -330,7 +358,7 @@ What each part does:
 - **TasksMax** bounds process counts.
 - **Cleanup on timeout.** `systemctl --user stop mori-test-…scope`, or writing
   to its `cgroup.kill`, ends every process in the cgroup, including ones that
-  `setsid`. The run lock and the wrapper's timeouts stay as they are.
+  `setsid`. The heavy-job lock and the wrapper's timeouts stay as they are.
 - **Scope of effect.** The scope is transient (`--collect`), needs no root,
   changes no system or WSL settings, and affects nothing outside its own
   processes.

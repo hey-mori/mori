@@ -57,9 +57,13 @@
 import { spawn, spawnSync } from "node:child_process";
 import { constants as osConstants, tmpdir } from "node:os";
 import {
+  closeSync,
+  constants as fsConstants,
   fstatSync,
+  ftruncateSync,
   lstatSync,
   mkdirSync,
+  openSync,
   realpathSync,
   readdirSync,
   readFileSync,
@@ -67,6 +71,7 @@ import {
   rmSync,
   statSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -249,6 +254,9 @@ function sysBin(name) {
   return null;
 }
 const FLOCK = POSIX ? sysBin("flock") : null;
+// The holder and watchdog scripts need bash ($SECONDS, `read -t`), whatever
+// $SHELL is: flock's `-c` form would run them under $SHELL or /bin/sh.
+const BASH = POSIX ? sysBin("bash") : null;
 
 /** An array that hands the child process `fd` at the same number, nothing else. */
 function stdioSharing(fd) {
@@ -263,7 +271,8 @@ export function inheritedLockFd(path, env = process.env) {
   const raw = env.MORI_HEAVY_LOCK_FD;
   if (!raw || !/^\d+$/.test(raw)) return null;
   const fd = Number(raw);
-  if (fd < 3 || fd > 255) return null;
+  // 3-9 only: a POSIX sh closes a single-digit descriptor (`exec 9>&-`).
+  if (fd < 3 || fd > 9) return null;
   try {
     const held = fstatSync(fd);
     const file = statSync(path);
@@ -338,7 +347,7 @@ function isAncestor(pid) {
  */
 export async function acquireHeavyLock(path = HEAVY_LOCK, env = process.env, holdS = 60) {
   if (!POSIX) {
-    return { ok: true, path, covered: "no machine-wide lock on Windows", adopt: () => {}, release: async () => {} };
+    return { ok: true, path, unlocked: "no machine-wide lock on Windows", adopt: () => {}, release: async () => {} };
   }
   const own = await acquireLockAt(path, holdS);
   if (own.ok) return own;
@@ -375,7 +384,11 @@ export async function acquireLockAt(path, holdS = 60) {
       `fi`,
       `exit 0`,
     ].join("\n");
-    const holder = spawn(FLOCK, ["-n", "-E", String(EXIT_LOCKED), path, "-c", script], {
+    if (!BASH) throw new Error(`cannot take the lock ${path}: no bash in /usr/bin, /bin or /usr/local/bin`);
+    // flock(1) itself keeps any inherited gate descriptor open while it holds
+    // the lock. That is intended: if the gate ends while a run inside it is
+    // still being ended, the gate's lock lasts until this holder lets go.
+    const holder = spawn(FLOCK, ["-n", "-E", String(EXIT_LOCKED), path, BASH, "-c", script], {
       stdio: ["pipe", "pipe", "ignore"],
       detached: true,
     });
@@ -606,7 +619,7 @@ function spawnWatchdog(pgid, hardS, graceS, say) {
     `kill -0 -- "-$g" 2>/dev/null && kill -KILL -- "-$g" 2>/dev/null`,
     `exit 0`,
   ].join("\n");
-  const watchdog = spawn("bash", ["-c", script], { detached: true, stdio: ["pipe", "ignore", "ignore"] });
+  const watchdog = spawn(BASH ?? "bash", ["-c", script], { detached: true, stdio: ["pipe", "ignore", "ignore"] });
   watchdog.on("error", (error) => say(`warning: no watchdog (${error.message}); the run is still bounded by this wrapper`));
   watchdog.stdin.on("error", () => {});
   watchdog.unref();
@@ -655,6 +668,7 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
       timedOut: false,
       killed: false,
       leftovers: 0,
+      zombies: 0,
       observed: null,
       exitCode: 1,
       durationMs: 0,
@@ -720,6 +734,8 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
           /* fall back to the kernel's answer below */
         }
         const stillLive = group ? group.live.length : groupLive(pgid) ? 1 : 0;
+        // Exited but not yet reaped: no memory, never counted as leftovers.
+        report.zombies = group ? group.zombies : 0;
         if (stillLive > 0) {
           // Only members of the run's own process group (it was created for
           // this run), so nothing unrelated is ever targeted.
@@ -784,7 +800,8 @@ function printReport(report) {
   process.stderr.write(
     `[run-tests] ${report.label}: exit ${report.exitCode} in ${(report.durationMs / 1000).toFixed(1)}s` +
       `${report.timedOut ? " · timed out" : ""}${report.killed ? " · SIGKILL needed" : ""}` +
-      `${report.leftovers ? ` · ${report.leftovers} leftover(s) ended` : " · nothing left behind"}\n` +
+      `${report.leftovers ? ` · ${report.leftovers} leftover(s) ended` : " · nothing left behind"}` +
+      `${report.zombies ? ` · ${report.zombies} zombie(s), not counted` : ""}\n` +
       `[run-tests] observed: ${seen}. Sampled, not exact: shared pages are counted per process, peaks between samples are missed, processes that left the group are not seen, and this is not a cgroup memory.peak.\n`,
   );
   const file = process.env.MORI_TEST_REPORT_FILE;
@@ -792,21 +809,27 @@ function printReport(report) {
 }
 
 /**
- * The JSON report goes only to a plain file directly in /tmp (never through a
- * symlink, never into the repository), so it cannot overwrite tracked files.
+ * The JSON report goes only to a regular file directly in /tmp (never through
+ * a symlink, never a FIFO or device, never a file with other hard links, never
+ * into the repository), so it cannot overwrite tracked files or block the run
+ * while it holds the lock. Opened without following links and without
+ * blocking, then checked on the open descriptor.
  */
+function openReport(target, flags) {
+  const fd = openSync(target, flags | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK, 0o600);
+  const stat = fstatSync(fd);
+  if (!stat.isFile() || stat.nlink !== 1) {
+    closeSync(fd);
+    throw new Error("not a plain file");
+  }
+  return fd;
+}
+
 function writeReportFile(file, report) {
   const target = resolve(file);
   let allowed = POSIX && dirname(target) === "/tmp";
   try {
     if (allowed) allowed = realpathSync(dirname(target)) === "/tmp";
-    if (allowed) {
-      try {
-        if (lstatSync(target).isSymbolicLink()) allowed = false;
-      } catch {
-        /* does not exist yet: fine */
-      }
-    }
   } catch {
     allowed = false;
   }
@@ -816,16 +839,29 @@ function writeReportFile(file, report) {
   }
   try {
     const runs = [];
-    try {
-      const previous = JSON.parse(readFileSync(target, "utf8"));
-      if (Array.isArray(previous.runs) && process.env.MORI_TEST_REPORT_APPEND === "1") runs.push(...previous.runs);
-    } catch {
-      /* new file */
+    if (process.env.MORI_TEST_REPORT_APPEND === "1") {
+      let fd = null;
+      try {
+        fd = openReport(target, fsConstants.O_RDONLY);
+        const previous = JSON.parse(readFileSync(fd, "utf8"));
+        if (Array.isArray(previous.runs)) runs.push(...previous.runs);
+      } catch (error) {
+        if (error.message === "not a plain file") throw error;
+        /* new file, or not a report yet */
+      } finally {
+        if (fd !== null) closeSync(fd);
+      }
     }
     runs.push(report);
-    writeFileSync(target, `${JSON.stringify({ runs }, null, 2)}\n`);
+    const fd = openReport(target, fsConstants.O_WRONLY | fsConstants.O_CREAT);
+    try {
+      ftruncateSync(fd, 0);
+      writeSync(fd, `${JSON.stringify({ runs }, null, 2)}\n`, 0);
+    } finally {
+      closeSync(fd);
+    }
   } catch (error) {
-    process.stderr.write(`[run-tests] could not write the report: ${error.message}\n`);
+    process.stderr.write(`[run-tests] could not write the report to ${file}: ${error.message}\n`);
   }
 }
 
@@ -857,6 +893,7 @@ async function underHeavyLock(fn, lockPath = HEAVY_LOCK, holdS = 60) {
     return EXIT_LOCKED;
   }
   if (lock.covered) process.stderr.write(`[run-tests] inside the gate's lock (${lock.covered})\n`);
+  if (lock.unlocked) process.stderr.write(`[run-tests] warning: ${lock.unlocked}; runs are bounded but not kept apart\n`);
   let code = 1;
   try {
     code = await fn(lock);
@@ -956,18 +993,22 @@ async function runStep(args) {
     return EXIT_REFUSED;
   }
   const { graceS, sampleMs } = limits();
-  return underHeavyLock(async (lock) => {
-    const { code, report } = await runLimited(command, rest, {
-      timeoutS: seconds,
+  return underHeavyLock(
+    async (lock) => {
+      const { code, report } = await runLimited(command, rest, {
+        timeoutS: seconds,
       graceS,
       sampleMs,
-      onStart: (pgid) => lock.adopt(pgid),
-      env: process.env,
-      label: process.env.MORI_STEP_LABEL || basename(command),
-    });
-    printReport(report);
-    return code;
-  });
+        onStart: (pgid) => lock.adopt(pgid),
+        env: process.env,
+        label: process.env.MORI_STEP_LABEL || basename(command),
+      });
+      printReport(report);
+      return code;
+    },
+    HEAVY_LOCK,
+    holdFor(),
+  );
 }
 
 // ── Self-check ──────────────────────────────────────────────────────────────
@@ -1137,13 +1178,17 @@ async function selfCheck() {
           cwd: REPO,
           env: { ...process.env, LOCK: gateLock, FLOCK },
           encoding: "utf8",
+          timeout: 60_000,
+          killSignal: "SIGKILL",
         });
       const lines = (result) => (result.stdout ?? "").trim().split("\n");
 
       const genuine = asGate(`MORI_HEAVY_LOCK_FD=9 ${node} self-check-covered "$LOCK"; "$FLOCK" -n "$LOCK" true; echo "still=$?"`);
       check("a wrapper inside the gate uses the gate's lock (verified fd)", lines(genuine)[0] === "covered", lines(genuine).join(" "));
       check("the probe leaves the gate's lock held", lines(genuine)[1] === "still=1", lines(genuine).join(" "));
-      const throughNpm = asGate(`MORI_HEAVY_LOCK_FD=9 npm exec --no -- node "${SELF}" self-check-covered "$LOCK"`);
+      // A shell command started by npm (npm exec -c, offline: no package
+      // lookup), the way `npm test` starts the wrapper from the gate.
+      const throughNpm = asGate(`MORI_HEAVY_LOCK_FD=9 npm exec --offline -c '${node} self-check-covered "$LOCK"'`);
       check("the gate's descriptor survives an npm hop", lines(throughNpm).at(-1) === "covered", lines(throughNpm).join(" "));
       const wrongFd = asGate(`MORI_HEAVY_LOCK_FD=8 ${node} self-check-covered "$LOCK"`);
       check("a wrong descriptor is not trusted", lines(wrongFd)[0] === "not covered", lines(wrongFd).join(" "));
@@ -1159,6 +1204,8 @@ async function selfCheck() {
       const forged = spawnSync(bash, ["-c", `exec 9>>"$LOCK"; MORI_HEAVY_LOCK_FD=9 ${node} self-check-covered "$LOCK"`], {
         env: { ...process.env, LOCK: gateLock },
         encoding: "utf8",
+        timeout: 60_000,
+        killSignal: "SIGKILL",
       });
       check("a forged descriptor to a lock held elsewhere is refused", lines(forged)[0] === "not covered", lines(forged).join(" "));
       const contender = await acquireHeavyLock(gateLock, { MORI_HEAVY_LOCK_FD: "" });
