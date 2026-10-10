@@ -3,25 +3,56 @@
  *
  * Each poll re-reads every transcript's metadata (title, activity time,
  * counts) from the file at the session's path. When the user kept a copy of
- * the session (보관한 원본) and the file there now has another head
- * fingerprint, it is a different conversation (see `historicalSource.ts`):
- * the session keeps the descriptor it had, so its title and activity stay its
- * own. A session with no copy kept, or a file whose fingerprint is unknown,
- * is described from the file as before.
+ * the session (보관한 원본) and the file there is no longer that conversation
+ * by the same rule as `historicalSource.ts` (another head fingerprint, or
+ * smaller than the copy), the listing does not describe the session:
+ *
+ * - the stored descriptor still describes the kept conversation (its
+ *   fingerprint is the copy's, or it predates fingerprints): it stays;
+ * - otherwise (none, or it already describes the other file): the entry is
+ *   left out of this pass, so nothing new is written under the session.
+ *
+ * A session with no copy kept, or a listed file whose fingerprint is unknown,
+ * is described from the file as before. A descriptor an older build already
+ * rewrote from another file is not repaired here.
  */
 import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import { autoImportedSessionId } from "./autoImportSessions";
 
+export type KeptFingerprint = { sourceId: string; bytes: number };
+
 export function holdReplacedSessions(
   discovered: readonly AgentWorkSessionMeta[],
   stored: ReadonlyMap<string, AgentWorkSessionMeta>,
-  keptFingerprintOf: (sessionId: string) => string | null,
+  keptOf: (sessionId: string) => KeptFingerprint | null,
 ): AgentWorkSessionMeta[] {
-  return discovered.map((meta) => {
-    if (!meta.sourceId) return meta;
+  const out: AgentWorkSessionMeta[] = [];
+  for (const meta of discovered) {
+    if (!meta.sourceId) {
+      out.push(meta);
+      continue;
+    }
     const id = autoImportedSessionId(meta);
-    const kept = keptFingerprintOf(id);
-    if (!kept || kept === meta.sourceId) return meta;
-    return stored.get(id) ?? meta;
+    const kept = keptOf(id);
+    const other = kept && (kept.sourceId !== meta.sourceId || (meta.fileBytes !== undefined && meta.fileBytes < kept.bytes));
+    if (!kept || !other) {
+      out.push(meta);
+      continue;
+    }
+    const held = stored.get(id);
+    if (held && (!held.sourceId || held.sourceId === kept.sourceId)) out.push(held);
+  }
+  return out;
+}
+
+/** Whether a listed file's fingerprint differs from the one its stored
+ *  descriptor recorded: the cue to refresh what is kept before trusting it. */
+export function fingerprintChanged(
+  discovered: readonly AgentWorkSessionMeta[],
+  stored: ReadonlyMap<string, AgentWorkSessionMeta>,
+): boolean {
+  return discovered.some((meta) => {
+    const was = stored.get(autoImportedSessionId(meta))?.sourceId;
+    return Boolean(meta.sourceId && was && was !== meta.sourceId);
   });
 }
