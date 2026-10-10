@@ -172,6 +172,30 @@
   color: var(--muted-2);
 }
 
+/* 원본 없는 세션 · records whose transcript is gone, folded under 과거 so they
+   stay reachable without competing with sessions that open normally. */
+.session-index-lost {
+  margin-top: var(--base-space-4);
+}
+
+.session-index-lost > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.session-index-lost > summary::-webkit-details-marker {
+  display: none;
+}
+
+.session-index-lost > summary::before {
+  content: "▸";
+  font-size: 9px;
+}
+
+.session-index-lost[open] > summary::before {
+  content: "▾";
+}
+
 /* 라이브 피드 · a clickable header row that always returns the main pane to the
    live feed. Reads as a destination, not a group label. */
 .session-index-live-head {

@@ -173,6 +173,13 @@ export function useAutoImportSessions(): void {
         const kept = keptRef.current;
         const discovered = kept ? holdReplacedSessions(listed, stored, (id) => kept.fingerprints.get(id) ?? null) : listed;
         if (!cancelled) {
+          // What is on disk this pass, so a session record whose transcript is
+          // gone can say so in the session list (see lostSessionRecords).
+          const discoveredIds = new Set([...listed, ...discovered].map((meta) => autoImportedSessionId(meta)));
+          useSessionStore.getState().setDiscoveredSessions({
+            ids: discoveredIds,
+            agents: new Set(listed.map((meta) => meta.agentId)),
+          });
           // Bound to the most-recent window so the draft + seen sets stay small.
           // A partial rescan does not erase a checkout a fuller read found.
           const recent = [

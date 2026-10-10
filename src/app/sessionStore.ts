@@ -572,6 +572,14 @@ export type SessionState = {
    */
   sessionWindow: SessionWindowState | null;
   /**
+   * What the last discovery pass found on disk: every listed session id, and
+   * the agents whose listing returned anything (a failed listing returns
+   * nothing, so only those agents' absences mean "not on this machine").
+   * Null until a pass completes. Transient: never persisted.
+   */
+  discoveredSessions: { ids: ReadonlySet<string>; agents: ReadonlySet<string> } | null;
+  setDiscoveredSessions: (value: { ids: ReadonlySet<string>; agents: ReadonlySet<string> }) => void;
+  /**
    * Sessions an open attempt this run found nothing to show for (no import,
    * no kept copy, no transcript). Set and cleared by the shared resolver, so
    * a record shown in their place can say so truthfully; a session that was
@@ -854,6 +862,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   initialized: false,
   draft: null,
   sessionWindow: null,
+  discoveredSessions: null,
+  setDiscoveredSessions: (value) => set({ discoveredSessions: value }),
   unopenableSessionIds: new Set<string>(),
   noteSessionOpenable: (sessionId, openable) => {
     const current = get().unopenableSessionIds;

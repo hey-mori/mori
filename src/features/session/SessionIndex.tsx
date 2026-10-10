@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarClock, FolderGit2, Plus } from "lucide-react";
+import { InfoHint } from "../../components/ui/InfoHint";
+import { getKernelRepository } from "../../lib/record-kernel/kernelRepository";
+import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { lostSessionRecords } from "../../lib/session/lostSessions";
+import { useSessionResolver } from "./useSessionResolver";
 import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
@@ -110,6 +115,43 @@ export function SessionIndex({
     setSummaries(safeListSessions());
   }, [activeSessionId, dataResetNonce, sessionListNonce]);
 
+  // Sessions Mori still has a record of whose original is gone from this
+  // machine (not stored, not found by the last discovery pass). Without this
+  // they vanish from the list while the calendar and 기록 still name them.
+  const discovered = useSessionStore((state) => state.discoveredSessions);
+  const [sessionRecords, setSessionRecords] = useState<MoriRecord[]>([]);
+  useEffect(() => {
+    let live = true;
+    void getKernelRepository()
+      .listRecords()
+      .then((result) => {
+        if (live && !result.fellBack) setSessionRecords(result.data.filter((record) => record.schemaId === "agent-session"));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [dataResetNonce, sessionListNonce]);
+  const lostRows = useMemo(() => {
+    const stored = new Set(summaries.map((summary) => summary.sessionId));
+    return lostSessionRecords(sessionRecords, stored, discovered).sort((a, b) =>
+      (b.occurredEnd ?? b.occurredStart ?? "").localeCompare(a.occurredEnd ?? a.occurredStart ?? ""),
+    );
+  }, [sessionRecords, summaries, discovered]);
+  const resolveSession = useSessionResolver();
+  const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
+  const openLost = useCallback(
+    (sessionId: string) => {
+      // Tried through the shared resolver (a kept copy still opens, and the
+      // outcome is noted for the record's own notice); otherwise its record.
+      void resolveSession(sessionId).then((outcome) => {
+        if (outcome === "opened") onSelectPast(sessionId);
+        else if (outcome === "unavailable") openRecordInLedger(sessionId);
+      });
+    },
+    [resolveSession, onSelectPast, openRecordInLedger],
+  );
+
   const pastRows = useMemo<SidebarSessionRow[]>(
     () => mergeDemoSessionSummaries(summaries).map(toSidebarRow),
     [summaries],
@@ -142,6 +184,7 @@ export function SessionIndex({
   );
 
   const isProjectMode = groupMode === "project";
+  const visibleLost = term ? lostRows.filter((record) => record.title.toLowerCase().includes(term)) : lostRows;
   const workingCount = visibleLive.filter((row) => row.working).length;
 
   return (
@@ -268,6 +311,34 @@ export function SessionIndex({
             </section>
           ))
         )}
+        {visibleLost.length > 0 ? (
+          <details className="session-index-lost">
+            <summary className="session-index-label">
+              원본 없는 세션 {visibleLost.length}
+              <InfoHint label="원본 없는 세션">
+                대화 파일이 이 기기에서 사라진 세션입니다(에이전트가 정리했거나 옮겨졌을 수 있습니다). 열면
+                Mori가 기록해 둔 내용을 보여 줍니다.
+              </InfoHint>
+            </summary>
+            <ul>
+              {visibleLost.map((record) => (
+                <li key={record.id}>
+                  <button type="button" className="session-index-row" onClick={() => openLost(record.id)}>
+                    <span className="session-index-row-title">
+                      <span className="session-index-row-name">{record.title || "제목 없음"}</span>
+                    </span>
+                    <span className="session-index-row-meta">
+                      원본 없음
+                      {record.occurredEnd || record.occurredStart
+                        ? ` · ${formatClaudeRelativeKo(record.occurredEnd ?? record.occurredStart ?? "")}`
+                        : ""}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
       </div>
     </aside>
   );
