@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Radio, TriangleAlert } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
 import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { LiveSessionView } from "../live-session/LiveSessionView";
@@ -30,9 +31,15 @@ export function SessionsWorkspace() {
   const [mode, setMode] = useState<"live" | "review">("live");
   const [selectedPastId, setSelectedPastId] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<"ready" | "loading" | "error">("ready");
+  // The lost row the user is still waiting on. Choosing anything else, or
+  // leaving this screen, clears it, so a slow lookup never moves them to 기록
+  // after they have gone elsewhere.
+  const pendingLost = useRef<string | null>(null);
+  useEffect(() => () => void (pendingLost.current = null), []);
 
   const handleSelectPast = useCallback(
     (sessionId: string) => {
+      pendingLost.current = null;
       setSelectedPastId(sessionId);
       setMode("review");
       // An auto-registered session reads its transcript on demand: show a
@@ -47,7 +54,34 @@ export function SessionsWorkspace() {
     [activeSessionId, resolveSession],
   );
 
+  // A session whose original the last discovery did not find: tried once
+  // through the resolver (a kept copy or a file that is there after all still
+  // opens, with the loading state meanwhile); if nothing opens, its record in
+  // 기록 is the fallback.
+  const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
+  const handleSelectLost = useCallback(
+    (sessionId: string) => {
+      pendingLost.current = sessionId;
+      setSelectedPastId(sessionId);
+      setMode("review");
+      setLoadState(sessionId !== activeSessionId ? "loading" : "ready");
+      void resolveSession(sessionId).then((outcome) => {
+        if (outcome === "superseded" || pendingLost.current !== sessionId) return;
+        pendingLost.current = null;
+        if (outcome === "unavailable") {
+          setLoadState("ready");
+          setSelectedPastId(null);
+          openRecordInLedger(sessionId);
+          return;
+        }
+        setLoadState("ready");
+      });
+    },
+    [activeSessionId, resolveSession, openRecordInLedger],
+  );
+
   const handleSelectLive = useCallback(() => {
+    pendingLost.current = null;
     setMode("live");
     setSelectedPastId(null);
     setLoadState("ready");
@@ -60,6 +94,7 @@ export function SessionsWorkspace() {
         selectedPastId={selectedPastId}
         onSelectLive={handleSelectLive}
         onSelectPast={handleSelectPast}
+        onSelectLost={handleSelectLost}
       />
       <div className="sessions-main">
         {mode === "live" ? (
