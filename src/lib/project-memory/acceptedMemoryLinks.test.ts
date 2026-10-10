@@ -4,6 +4,7 @@ import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 import {
   buildAcceptedMemoryLinkTargets,
   countUnlinkableEvidenceRefs,
+  countUnresolvedEventRefs,
 } from "./acceptedMemoryLinks";
 
 function makeEvent(overrides: Partial<TimelineEvent> = {}): TimelineEvent {
@@ -203,5 +204,27 @@ describe("countUnlinkableEvidenceRefs", () => {
       evidenceRefs: [{ kind: "event", sessionId: "s", eventId: "e1" }],
     });
     expect(countUnlinkableEvidenceRefs(memory)).toBe(0);
+  });
+});
+
+describe("countUnresolvedEventRefs", () => {
+  it("counts a ref into the open session whose event is gone, never one into another session", () => {
+    const memory = makeMemory({
+      evidenceRefs: [
+        { kind: "event", sessionId: "sess-1", eventId: "evt-1" },
+        { kind: "event", sessionId: "sess-1", eventId: "evt-renamed" },
+        { kind: "event", sessionId: "sess-other", eventId: "evt-x" },
+      ] as never,
+    });
+    const view = { events: [makeEvent({ id: "evt-1" })], issues: [], decisions: [] };
+    expect(countUnresolvedEventRefs(memory, view)).toBe(1);
+    // And the memory itself is left as it was.
+    expect(memory.evidenceRefs).toHaveLength(3);
+  });
+
+  it("is zero when every ref resolves or nothing of the session is open", () => {
+    const memory = makeMemory({ evidenceRefs: [{ kind: "event", sessionId: "sess-1", eventId: "evt-1" }] as never });
+    expect(countUnresolvedEventRefs(memory, { events: [makeEvent({ id: "evt-1" })], issues: [], decisions: [] })).toBe(0);
+    expect(countUnresolvedEventRefs(memory, { events: [], issues: [], decisions: [] })).toBe(0);
   });
 });

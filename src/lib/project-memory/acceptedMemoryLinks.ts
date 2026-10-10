@@ -117,3 +117,22 @@ export function countUnlinkableEvidenceRefs(
   }
   return count;
 }
+
+/**
+ * Event refs into a session the view holds whose event is no longer there.
+ * A ref into another session cannot be checked from this view and is not
+ * counted. The memory is never changed: the count only says what does not
+ * resolve, so the drawer can say so instead of quietly showing less.
+ */
+export function countUnresolvedEventRefs(
+  memory: StoredAcceptedProjectMemory,
+  view: AcceptedMemoryLinkViewSlice,
+): number {
+  const sessions = new Set(view.events.map((event) => event.sessionId));
+  const events = new Set(view.events.map((event) => event.id));
+  const missing = new Set<string>();
+  for (const ref of memory.evidenceRefs) {
+    if (ref.kind === "event" && sessions.has(ref.sessionId) && !events.has(ref.eventId)) missing.add(ref.eventId);
+  }
+  return missing.size;
+}
