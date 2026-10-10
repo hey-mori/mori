@@ -13,6 +13,17 @@
 #   scripts/check.sh --full   everything above plus the production build,
 #                             the unused-file inventory, and the Rust pass
 #
+# Resource limits (the machine is shared with other sessions and services; see
+# docs/test-run-safety.md). Tests run through scripts/run-tests.mjs, which caps
+# workers, heap and wall-clock time; the build and the Rust pass run under the
+# same group timeout. One heavy Mori job at a time per machine (see below).
+#   MORI_TEST_MAX_WORKERS   Vitest workers              (default 2)
+#   MORI_TEST_HEAP_MB       V8 heap per Node process    (default 2048)
+#   MORI_TEST_TIMEOUT_S     test wall-clock limit       (default 900)
+#   MORI_TEST_KILL_GRACE_S  SIGTERM to SIGKILL grace    (default 15)
+#   MORI_CARGO_JOBS         cargo -j and test threads   (default 2)
+#   MORI_TEST_SAMPLE_MS     process-group sampling      (default 500)
+#
 # The Rust pass is skipped when `src-tauri/` is untouched, because it is the
 # expensive half. Any change to a dependency lockfile, a build config, or the
 # verification scripts themselves forces the full pass regardless: those files
@@ -20,6 +31,46 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+
+# One heavy Mori job at a time on this machine, whichever worktree it runs
+# from: this gate, a standalone test run, the harness and a standalone limited
+# step all take /tmp/mori-heavy.lock (a fixed path, not $TMPDIR). A second job
+# fails at once (exit 75) rather than waiting unseen.
+#
+# The gate locks the file on fd 9 for its whole life; the kernel releases it
+# when the gate and everything holding fd 9 have ended. The test wrappers this
+# gate starts directly with `node` inherit fd 9 (Node passes it no further,
+# so never through npm), and MORI_HEAVY_LOCK_FD names it as a hint only:
+# scripts/run-tests.mjs verifies the descriptor is this lock file and that
+# flock succeeds on that very descriptor before running under it, so a stray
+# or forged variable can never let two jobs overlap. Without flock (stock
+# macOS) there is no machine-wide lock; such a machine is not shared.
+heavy_busy() {
+  echo "another heavy Mori job holds $1: jobs never overlap on this machine; wait for it, do not stop it" >&2
+  exit 75
+}
+HEAVY_LOCK="/tmp/mori-heavy.lock"
+# The same lookup as scripts/run-tests.mjs (absolute system paths only), so
+# the gate and the wrappers always agree on whether there is a lock at all.
+FLOCK=""
+for dir in /usr/bin /bin /usr/local/bin; do
+  if [[ -x "$dir/flock" ]]; then FLOCK="$dir/flock"; break; fi
+done
+if [[ -n "$FLOCK" ]]; then
+  # Opening can fail if another user created the file (protected_regular).
+  if ! { : 9>>"$HEAVY_LOCK"; } 2>/dev/null; then
+    echo "cannot open $HEAVY_LOCK (owned by another user?): no gate can run until that is fixed" >&2
+    exit 75
+  fi
+  exec 9>>"$HEAVY_LOCK"
+  "$FLOCK" -n 9 || heavy_busy "$HEAVY_LOCK"
+  export MORI_HEAVY_LOCK_FD=9
+else
+  # Stock macOS has no flock. Such a machine is not shared, so the gate runs
+  # bounded but without a machine-wide lock, and says so.
+  echo "· no flock on this machine: no machine-wide heavy-job lock" >&2
+  unset MORI_HEAVY_LOCK_FD
+fi
 
 FULL=0
 NO_RUST=0
@@ -85,16 +136,26 @@ fi
 step() { echo ""; echo "── $1"; }
 
 step "typecheck"
-npm run check:types
+# Steps that are not run-tests.mjs wrappers do not need the gate's lock
+# descriptor; 9>&- keeps a stray child of theirs from holding the lock.
+npm run check:types 9>&-
+
+step "test safeguards"
+# Proves the limits below still work (argument refusals, timeout, SIGKILL
+# escalation, the orphan watchdog, the heavy-job lock) with sleeps, not tests.
+# Its drills use private lock files only, never the gate's descriptor.
+env -u MORI_HEAVY_LOCK_FD node scripts/run-tests.mjs self-check 9>&-
 
 step "tests"
-npm test
+# The same command as `npm test`, called directly: the wrapper must inherit
+# fd 9 from this shell, and npm (Node) passes no extra descriptors on.
+node scripts/run-tests.mjs suite
 
 step "stylelint"
-npm run style:check
+npm run style:check 9>&-
 
 step "prose"
-npm run check:prose
+npm run check:prose 9>&-
 
 step "commit guards"
 # Git ignores a hook without the executable bit, silently, and a script without
@@ -107,7 +168,7 @@ if [[ -n "$not_executable" ]]; then
   echo "$not_executable" >&2
   exit 1
 fi
-bash scripts/tests/commit-guards.test.sh
+bash scripts/tests/commit-guards.test.sh 9>&-
 # The branch's own commits, against docs/commit-format.md. Older history is not
 # re-judged: published commits are never rewritten here.
 policy_base=""
@@ -132,10 +193,10 @@ echo "commit policy: $( [[ -n "$policy_base" ]] && git rev-list --count "$policy
 
 if [[ "$FULL" -eq 1 ]]; then
   step "production build"
-  npm run build
+  node scripts/run-tests.mjs limited 1800 -- npm run build
 
   step "unused-file inventory (non-blocking)"
-  npm run unused || true
+  npm run unused 9>&- || true
 fi
 
 if [[ "$FULL" -eq 1 ]] && touches_rust; then
@@ -145,7 +206,13 @@ if [[ "$FULL" -eq 1 ]] && touches_rust; then
     # line of output is indistinguishable from one that never existed.
     echo "· left to the macOS job, which is where wry can build"
   else
-    ( cd src-tauri && cargo check --locked && cargo test --locked )
+    jobs="${MORI_CARGO_JOBS:-2}"
+    if ! [[ "$jobs" =~ ^[0-9]+$ ]] || (( jobs < 1 || jobs > 16 )); then
+      echo "MORI_CARGO_JOBS=$jobs is not an integer between 1 and 16" >&2
+      exit 2
+    fi
+    MORI_STEP_LABEL="the Rust pass" node scripts/run-tests.mjs limited 3600 -- bash -c \
+      "cd src-tauri && cargo check --locked -j $jobs && cargo test --locked -j $jobs -- --test-threads=$jobs"
   fi
 elif touches_rust; then
   echo ""

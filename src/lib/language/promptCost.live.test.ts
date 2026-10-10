@@ -6,7 +6,7 @@
  * a prompt nobody runs.
  *
  * Skipped unless `MORI_LIVE_OLLAMA=1`.
- * Run: `MORI_LIVE_OLLAMA=1 npx vitest run src/lib/language/promptCost.live.test.ts`
+ * Run: `MORI_LIVE_OLLAMA=1 node scripts/run-tests.mjs vitest src/lib/language/promptCost.live.test.ts`
  */
 import { describe, expect, it } from "vitest";
 import { OllamaStreamParser } from "../ask-mori/streamParsers";

@@ -112,6 +112,39 @@ The script includes the Rust pass when `src-tauri/` changed. Record which
 checks actually ran; a manual-only remote workflow is not a substitute for
 the local result.
 
+## Test runs on a shared machine · non-negotiable
+
+The development machine is shared with other Claude sessions and operational
+services. A test run must never threaten their availability. These rules bind
+every session and every subagent; the reasons and limits are in
+[`docs/test-run-safety.md`](docs/test-run-safety.md).
+
+- Run tests only through the repository's entry points: `npm test`,
+  `npm run test:unit`, `npm run test:changed`, `scripts/check.sh`, or
+  `node scripts/run-tests.mjs vitest <repo path or filter>`. They cap workers,
+  heap and wall-clock time. Never call `vitest` or `npx vitest` directly.
+- Never pass `--root` or `--dir`, and never point Vitest at a file outside the
+  repository (`/tmp` or elsewhere). A filename filter does not bound discovery.
+- Put a scratch regression test inside an isolated worktree of this
+  repository, under `src/` and named `*.test.ts`, run it by its repository
+  path, and delete it afterwards.
+- Review agents work read-only by default. They do not build, run the full
+  suite or start heavy processes without the parent agent's approval. Say
+  this in every review prompt.
+- Only one heavy Mori job (a test run, the harness, the gate or one of its
+  steps) runs at a time on the machine. A second one fails with exit 75:
+  wait, never stop the other one.
+- On the shared NUC, run the full suite and the gate inside a transient
+  scope: `scripts/scoped.sh npm test`, `scripts/scoped.sh scripts/check.sh
+  --full`. It refuses to start the command unless the memory, swap, CPU and
+  task ceilings are in force. Start them only with at least 4 GiB available
+  and no memory pressure; never raise the ceilings to get a run through.
+- When a test fails or an agent stalls, check read-only (`ps`) for processes
+  it left behind. Never stop a process you did not start; report a stuck one
+  to the operator.
+- If verification did not run, report the work as unverified, naming what did
+  not run.
+
 ## Writing style · non-negotiable
 
 - Never use the em dash `—` anywhere: not in UI strings, not in code

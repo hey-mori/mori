@@ -229,7 +229,7 @@ docs-and-product mismatch:
 
 1. Re-run the canonical fixture test:
    ```bash
-   npx vitest run src/lib/connectors/connectorSampleFixture.test.ts
+   node scripts/run-tests.mjs vitest src/lib/connectors/connectorSampleFixture.test.ts
    ```
    This validates parse → preview → normalize → duplicate-detection
    for the same fixture this walkthrough uses.
