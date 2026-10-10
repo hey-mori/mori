@@ -311,15 +311,13 @@ config's own comment puts them at about 230 s on a loaded machine.
   `npm run build` without it (the gate's build is locked).
 - `limited` exists for the gate's own build and Rust steps. It checks the
   command's shape (`npm run build`, or `bash -c "cd src-tauri && cargo ..."`),
-  not everything after `cargo`; it bounds a step, it is not a sandbox.
+  not everything after `cargo`; it bounds a step (heavy-job lock, wall clock,
+  process group), applies no heap cap, and is not a sandbox.
 - Ceilings are per scope, not shared. Two scopes could together exceed what
   the machine has; the heavy-job lock and `scoped.sh`'s free-memory check are
   what keep that from happening.
 - Windows: the process-group drills are skipped and a timeout ends the tree
   with `taskkill`; there is no watchdog there.
-- `limited` runs only the gate's own steps (`npm run build` and the Rust pass's
-  `cd src-tauri && cargo ...`) under the heavy-job lock; it applies no heap
-  cap.
 - On Windows the shell joins arguments unquoted, so a test name with spaces
   breaks there.
 - Typecheck, stylelint and the unused-file inventory have no time or memory

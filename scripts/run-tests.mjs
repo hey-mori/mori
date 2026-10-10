@@ -203,6 +203,8 @@ export function refuseVitestArgs(args) {
       if (!long || !kind) return `${arg} is not an allowed option (see docs/test-run-safety.md)`;
       // `--no-x` is a plain off switch: never with an option that takes a value.
       if (negated && kind !== "flag" && kind !== "optional") return `${arg}: only a flag can be negated`;
+      // Vitest never takes a value after `--no-x`; neither does this check.
+      if (negated) continue;
       if (!isLast && kind !== "flag") return `${arg}: ${raw} takes a value and cannot sit inside a cluster`;
       if (!isLast || kind === "flag") continue;
       const next = index + 1 < args.length && !args[index + 1].startsWith("-") ? args[index + 1] : undefined;

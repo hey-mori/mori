@@ -98,8 +98,8 @@ if [[ ! -s "$marker" ]]; then
   exit 3
 fi
 
-if (( code >= 128 )) && ! grep -q summary "$marker"; then
-  echo "[scoped] $unit: the command and the scope's own shell ended by signal $(( code - 128 )) before the summary; with OOMPolicy=kill this can be an out-of-memory kill of the whole scope" >&2
+if (( code == 137 )) && ! grep -q summary "$marker"; then
+  echo "[scoped] $unit: the command and the scope's own shell were SIGKILLed before the summary; with OOMPolicy=kill this can be an out-of-memory kill of the whole scope" >&2
 fi
 
 # Anything still in this scope outlived the command. Only this exact scope is
