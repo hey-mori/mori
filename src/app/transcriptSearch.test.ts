@@ -37,6 +37,7 @@ vi.mock("../lib/trace/sources/ai/workSessions", async (importOriginal) => ({
     throw new Error("Claude Code session is too large (140509184 bytes > 8388608 byte cap).");
   },
   listAllAgentWorkSessions: async () => [],
+  listAllAgentWorkSessionsReport: async () => ({ sessions: [], vouchingAgents: new Set<string>() }),
 }));
 vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
   ...(await importOriginal<object>()),

@@ -20,6 +20,7 @@ vi.mock("../lib/trace/sources/ai/workSessions", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getAgentWorkSession: (meta: unknown) => reader.detail(meta),
   listAllAgentWorkSessions: async () => [],
+  listAllAgentWorkSessionsReport: async () => ({ sessions: [], vouchingAgents: new Set<string>() }),
 }));
 /** Accepted project memory as its own store holds it. On desktop that is
  *  SQLite, never the app-storage repository these tests run over. */

@@ -314,10 +314,10 @@ export function SessionIndex({
         {visibleLost.length > 0 ? (
           <details className="session-index-lost">
             <summary className="session-index-label">
-              원본 없는 세션 {visibleLost.length}
-              <InfoHint label="원본 없는 세션">
-                대화 파일이 이 기기에서 사라진 세션입니다(에이전트가 정리했거나 옮겨졌을 수 있습니다). 열면
-                Mori가 기록해 둔 내용을 보여 줍니다.
+              원본을 찾지 못한 세션 {visibleLost.length}
+              <InfoHint label="원본을 찾지 못한 세션">
+                최근 탐색에서 대화 파일을 찾지 못한 세션입니다. 에이전트가 정리했거나 옮겨졌을 수 있습니다. 열면
+                원본을 다시 찾아보고, 없으면 Mori가 기록해 둔 내용을 보여 줍니다.
               </InfoHint>
             </summary>
             <ul>
@@ -328,7 +328,7 @@ export function SessionIndex({
                       <span className="session-index-row-name">{record.title || "제목 없음"}</span>
                     </span>
                     <span className="session-index-row-meta">
-                      원본 없음
+                      원본 못 찾음
                       {record.occurredEnd || record.occurredStart
                         ? ` · ${formatClaudeRelativeKo(record.occurredEnd ?? record.occurredStart ?? "")}`
                         : ""}

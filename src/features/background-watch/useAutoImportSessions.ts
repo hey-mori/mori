@@ -20,7 +20,7 @@ import { keptIdentitiesOf } from "../../lib/session/sessionArchiveRead";
 import { loadStoredSessionSummaries, useSessionStore } from "../../app/sessionStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
 import { isClaudeBridgeAvailable } from "../../lib/claude/claudeTauri";
-import { listAllAgentWorkSessions } from "../../lib/trace/sources/ai/workSessions";
+import { listAllAgentWorkSessionsReport } from "../../lib/trace/sources/ai/workSessions";
 import {
   agentSessionFingerprint,
   agentSessionToStoredDraft,
@@ -157,7 +157,7 @@ export function useAutoImportSessions(): void {
           // Without the kernel's answer the cap must not drop durable copies.
           { complete: keptRef.current !== null },
         );
-        const listed = await listAllAgentWorkSessions();
+        const { sessions: listed, vouchingAgents } = await listAllAgentWorkSessionsReport();
         const stored = new Map(loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), meta]));
         // What is kept, and the kept copies' fingerprints, come from the same
         // kernel listing as the kept set: refreshed when stale, or at once
@@ -176,10 +176,7 @@ export function useAutoImportSessions(): void {
           // What is on disk this pass, so a session record whose transcript is
           // gone can say so in the session list (see lostSessionRecords).
           const discoveredIds = new Set([...listed, ...discovered].map((meta) => autoImportedSessionId(meta)));
-          useSessionStore.getState().setDiscoveredSessions({
-            ids: discoveredIds,
-            agents: new Set(listed.map((meta) => meta.agentId)),
-          });
+          useSessionStore.getState().setDiscoveredSessions({ ids: discoveredIds, agents: vouchingAgents });
           // Bound to the most-recent window so the draft + seen sets stay small.
           // A partial rescan does not erase a checkout a fuller read found.
           const recent = [

@@ -158,73 +158,89 @@ function connectorConfigFor(agentId: AgentWorkAgentId): AgentConnectorConfig {
 export async function listAgentWorkSessions(
   agentId: AgentWorkAgentId,
 ): Promise<AgentWorkSessionMeta[]> {
+  return (await listAgentWorkSessionsReport(agentId)).sessions;
+}
+
+/**
+ * One agent's sessions, and whether every listing behind them succeeded. A
+ * listing that throws still contributes nothing (as before), but marks the
+ * agent incomplete: only a complete listing can vouch that a session it does
+ * not name is not on this machine.
+ */
+async function listAgentWorkSessionsReport(
+  agentId: AgentWorkAgentId,
+): Promise<{ sessions: AgentWorkSessionMeta[]; complete: boolean }> {
   if (!getAgentDescriptor(agentId).detect) {
-    return [];
+    return { sessions: [], complete: false };
   }
+  let complete = true;
+  const tracked = <T>(listing: Promise<T[]>): Promise<T[]> =>
+    listing.catch(() => {
+      complete = false;
+      return [] as T[];
+    });
+  const connector = (id: AgentWorkAgentId) =>
+    tracked(listConnectorBackedSessions(connectorConfigFor(id), () => (complete = false)));
+  const sorted = (sessions: AgentWorkSessionMeta[]) => ({
+    sessions: sessions.sort((a, b) => time(b.startedAt) - time(a.startedAt)),
+    complete,
+  });
   if (agentId === "claude") {
     const [code, desktop] = await Promise.all([
-      discoverClaudeCodeSessions().catch(() => [] as ClaudeCodeSessionMeta[]),
-      listClaudeDesktopConversations().catch(() => [] as ClaudeConversationMeta[]),
+      tracked(discoverClaudeCodeSessions()),
+      tracked(listClaudeDesktopConversations()),
     ]);
-    return [...code.map(mapClaudeMeta), ...desktop.map(mapClaudeDesktopMeta)].sort(
-      (a, b) => time(b.startedAt) - time(a.startedAt),
-    );
+    return sorted([...code.map(mapClaudeMeta), ...desktop.map(mapClaudeDesktopMeta)]);
   }
   if (agentId === "codex") {
-    const [direct, connector] = await Promise.all([
-      discoverCodexSessions().catch(() => [] as CodexSessionMeta[]),
-      listConnectorBackedSessions(connectorConfigFor("codex")),
-    ]);
-    return [...direct.map(mapCodexMeta), ...connector].sort(
-      (a, b) => time(b.startedAt) - time(a.startedAt),
-    );
+    const [direct, viaConnector] = await Promise.all([tracked(discoverCodexSessions()), connector("codex")]);
+    return sorted([...direct.map(mapCodexMeta), ...viaConnector]);
   }
   if (agentId === "antigravity") {
-    const direct = await discoverAntigravitySessions().catch(
-      () => [] as AntigravitySessionMeta[],
-    );
-    return direct
-      .map(mapAntigravityMeta)
-      .sort((a, b) => time(b.startedAt) - time(a.startedAt));
+    return sorted((await tracked(discoverAntigravitySessions())).map(mapAntigravityMeta));
   }
   if (agentId === "continue") {
-    const direct = await discoverContinueSessions().catch(
-      () => [] as ContinueSessionMeta[],
-    );
-    return direct
-      .map(mapContinueMeta)
-      .sort((a, b) => time(b.startedAt) - time(a.startedAt));
+    return sorted((await tracked(discoverContinueSessions())).map(mapContinueMeta));
   }
   if (agentId === "cline") {
-    const direct = await discoverClineSessions().catch(
-      () => [] as ClineSessionMeta[],
-    );
-    return direct
-      .map(mapClineMeta)
-      .sort((a, b) => time(b.startedAt) - time(a.startedAt));
+    return sorted((await tracked(discoverClineSessions())).map(mapClineMeta));
   }
   if (agentId === "cursor") {
-    const direct = await discoverCursorSessions().catch(
-      () => [] as CursorSessionMeta[],
-    );
-    return direct
-      .map(mapCursorMeta)
-      .sort((a, b) => time(b.startedAt) - time(a.startedAt));
+    return sorted((await tracked(discoverCursorSessions())).map(mapCursorMeta));
   }
   const [openCodeDirect, openCodeConnector] = await Promise.all([
-    discoverOpenCodeSessions().catch(() => [] as OpenCodeSessionMeta[]),
-    listConnectorBackedSessions(connectorConfigFor("opencode")),
+    tracked(discoverOpenCodeSessions()),
+    connector("opencode"),
   ]);
-  return [...openCodeDirect.map(mapOpenCodeMeta), ...openCodeConnector].sort(
-    (a, b) => time(b.startedAt) - time(a.startedAt),
-  );
+  return sorted([...openCodeDirect.map(mapOpenCodeMeta), ...openCodeConnector]);
 }
 
 export async function listAllAgentWorkSessions(): Promise<AgentWorkSessionMeta[]> {
+  return (await listAllAgentWorkSessionsReport()).sessions;
+}
+
+/**
+ * Every agent's sessions, plus the agents whose listings all succeeded and
+ * found at least one session: the only agents whose silence about a session
+ * is evidence that its file is gone. Even then it is evidence, not proof: an
+ * unreadable folder inside a listing is skipped without an error.
+ */
+export async function listAllAgentWorkSessionsReport(): Promise<{
+  sessions: AgentWorkSessionMeta[];
+  vouchingAgents: Set<string>;
+}> {
   // Registry-driven: a new anchor agent appears in the cross-agent list as
   // soon as it is added to AGENT_REGISTRY, with no edit here.
-  const lists = await Promise.all(listAgentIds().map((id) => listAgentWorkSessions(id)));
-  return lists.flat().sort((a, b) => time(b.startedAt) - time(a.startedAt));
+  const ids = listAgentIds();
+  const reports = await Promise.all(ids.map((id) => listAgentWorkSessionsReport(id)));
+  const vouchingAgents = new Set<string>();
+  reports.forEach((report, index) => {
+    if (report.complete && report.sessions.length > 0) vouchingAgents.add(ids[index]);
+  });
+  return {
+    sessions: reports.flatMap((report) => report.sessions).sort((a, b) => time(b.startedAt) - time(a.startedAt)),
+    vouchingAgents,
+  };
 }
 
 export async function getAgentWorkSession(
@@ -490,6 +506,7 @@ function mapCursorMeta(session: CursorSessionMeta): AgentWorkSessionMeta {
 
 async function listConnectorBackedSessions(
   config: AgentConnectorConfig,
+  onFileFailed: () => void = () => {},
 ): Promise<AgentWorkSessionMeta[]> {
   const inbox = await listConnectorJsonlInbox();
   if (!inbox.rootExists) return [];
@@ -504,6 +521,7 @@ async function listConnectorBackedSessions(
         const outcome = parseConnectorJsonl(loaded.text);
         return { file, events: outcome.events };
       } catch {
+        onFileFailed();
         return { file, events: [] as ConnectorEvent[] };
       }
     }),

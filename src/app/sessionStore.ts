@@ -573,8 +573,8 @@ export type SessionState = {
   sessionWindow: SessionWindowState | null;
   /**
    * What the last discovery pass found on disk: every listed session id, and
-   * the agents whose listing returned anything (a failed listing returns
-   * nothing, so only those agents' absences mean "not on this machine").
+   * the agents whose listings all succeeded and found something (only those
+   * agents' silence about a session is evidence its file is gone).
    * Null until a pass completes. Transient: never persisted.
    */
   discoveredSessions: { ids: ReadonlySet<string>; agents: ReadonlySet<string> } | null;
