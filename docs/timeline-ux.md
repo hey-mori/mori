@@ -121,18 +121,11 @@ Behavior:
 
 ## Category controls
 
-- The Timeline toolbar is a single row with `Day / Week / Session`,
-  zoom controls, an `Active lanes only` toggle, a `Filter` button that
-  opens the category popover, and a `넓게 / 보통 / 조밀` density toggle.
-- The time-range and density toggles both render through the shared
-  `SegmentedControl` component (`src/components/ui/SegmentedControl.tsx`)
-  rather than hand-rolled `<div className="segmented">` markup, so the
-  Timeline toolbar and the Evidence Quick Pass provider switch stay one
-  consistent control.
-- Density stays a **three-tier** choice (`comfortable` / `compact` /
-  `dense`) on purpose: each tier is a genuinely distinct card geometry
-  tuned for a different scan distance, so it is a discrete segmented
-  choice, not a continuous slider that would imply fake granularity.
+- The Timeline toolbar is deliberately spare: a reading-mode switch
+  (타임라인 · 원본), one search field, the category filter, and on the
+  타임라인 a zoom stepper (− · percent · +). The old session/day/week range
+  control and the density switch were removed: the range is always the whole
+  session and the density is fixed (`TimelineHeader.tsx`).
 - The canonical lane set is eight always-visible lanes: 대화, 명령, 코드·파일,
   리서치, 이슈, 검토, 핸드오프, 노트. Git diff / commit activity folds into the
   코드·파일 lane (there is no separate Git lane); diff vs commit stays a card
@@ -146,13 +139,42 @@ Behavior:
   and selectable, so the swimlane structure never collapses when a category
   is toggled. Only the search query narrows the rendered set, so a "no
   results" state can come from search alone, never from the category filter.
-- `Day / Week / Zoom in / Zoom out` ship disabled today with explanatory
-  tooltips from `timelineControls.ts`. The disabled time-range segments
-  stay visible (not hidden) so the control honestly shows what is planned.
-  The toolbar carries a single dashed honesty line confirming that
-  Session is the only working scope.
+- Zoom is real: the stepper scales by 1.5x, the minimap brush sets it, and a
+  session opens at `defaultZoomFor(eventCount)` (about 24 events per screen,
+  1x to 8x), fixed when it first shows events so a refresh never rescales it
+  under the reader. At 1x the whole span fits the visible pane.
 - Active filters are visible on the toolbar via a `Filter · N` count
   badge. The popover's `Clear` button resets them.
+
+## Reading a dense session (2026-10-10)
+
+What makes a few hundred real events legible, and the rules each keeps.
+
+- **Ticks print their titles.** A card too short for its icon and title draws
+  as a tick at its honest position and prints the title beside it, in the
+  free space up to the next item of its lane (`labelRooms`, 44 to 220 px). It
+  never prints over a wider earlier card. A tick with no room to its right
+  (the lane's last, often where the session ended) prints to its left in
+  space no earlier item or label uses, sharing a gap with the previous title
+  when needed (`labelSides`). Only narrow event cards claim label room. The
+  text is part of the card's button, `aria-hidden` (the button carries the
+  label).
+- **Text is cleaned for display, never for storage.** Command tags, stdout
+  wrappers, paste markers and system reminders are removed or named
+  (`readableAgentText`, `boilerplateLabel`): 명령, 명령 출력, 세션 이어가기,
+  요청 중단. A summary that only repeats the title is not shown twice.
+- **A request body follows its disclosure level** in the inspector, the 원본
+  list and the hover preview. Titles are not gated (see the renaissance
+  roadmap, D1).
+- **Keyboard.** ← → walk a lane, ↑ ↓ jump to the nearest item in the next
+  lane. The selected card is scrolled into view and takes focus; a lane edge
+  does not scroll the canvas; arrows act only from the page or inside the
+  timeline, never inside a menu, list box or dialog.
+- **Opening the inspector keeps the selection in view.** It narrows the
+  canvas and rescales the axis; a reveal noted at selection is redone on the
+  new scale.
+- **An event with no end is a point in time.** Its time reads "HH:MM", never
+  "HH:MM - 진행".
 
 ## View model
 

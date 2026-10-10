@@ -4,7 +4,16 @@ A buildable spec for the planned project-level timeline: every session in a
 project read on one surface, so a user sees a whole project's work over time
 rather than one session at a time. This is the largest item in the improvement
 program; the spec exists to settle the hard parts (the time axis, loading,
-honesty, where it lives) before any code. Design spec, not yet implemented.
+honesty, where it lives) before any code. Design spec, not yet implemented as
+a canvas.
+
+**Status (2026-10-10).** The project page's 흐름 now reads a project's whole
+work over time as a day-by-day chronology of confirmed members (#239,
+`buildProjectChronology`): each session on the day of its last activity with
+its start day noted, quiet stretches marked, date-only records without a
+clock. That answers this spec's first question (what happened in this project,
+when) without a shared time axis. The aggregate swimlane canvas below remains
+planned.
 
 Parent: [`timeline-flow-improvement-plan.md`](timeline-flow-improvement-plan.md)
 (§6), [`product-improvement-plan.md`](product-improvement-plan.md).
