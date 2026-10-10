@@ -71,12 +71,21 @@ export function isRequestTitledEvent(event: {
  * the per-request reveal. Display only: never pass the result to a write.
  */
 export function discloseEventForView<
-  T extends { actor?: EventActor; openedByUser?: boolean; requestText?: string; title: string; summary: string },
+  T extends {
+    actor?: EventActor;
+    openedByUser?: boolean;
+    requestText?: string;
+    responseText?: string;
+    title: string;
+    summary: string;
+  },
 >(event: T, level: DisclosureLevel): T {
   if (level !== "hidden" || !isRequestTitledEvent(event)) return event;
+  // An unanswered pasted ask keeps the ask as its summary too.
+  const unanswered = Boolean(event.requestText?.trim()) && !event.responseText?.trim();
   return {
     ...event,
     title: HIDDEN_REQUEST_TITLE,
-    summary: isUserRequestEvent(event) ? "" : event.summary,
+    summary: isUserRequestEvent(event) || unanswered ? "" : event.summary,
   };
 }
