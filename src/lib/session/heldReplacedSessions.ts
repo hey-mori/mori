@@ -63,3 +63,23 @@ export function fingerprintChanged(
     return Boolean(meta.sourceId && was && was !== meta.sourceId);
   });
 }
+
+/**
+ * Listed sessions whose file is no longer where their stored descriptor says,
+ * as the descriptor to store: the stored one with the listed location (or the
+ * listed meta when nothing is stored). Paths are where a file is, not what
+ * the session is, so this never changes a title or what is counted as new.
+ */
+export function movedSessions(
+  discovered: readonly AgentWorkSessionMeta[],
+  stored: ReadonlyMap<string, AgentWorkSessionMeta>,
+): AgentWorkSessionMeta[] {
+  const out: AgentWorkSessionMeta[] = [];
+  for (const meta of discovered) {
+    const was = stored.get(autoImportedSessionId(meta));
+    if (!was) continue;
+    if (was.filePath === meta.filePath && was.sourceFilePath === meta.sourceFilePath) continue;
+    out.push({ ...was, filePath: meta.filePath, sourceFilePath: meta.sourceFilePath, projectPath: meta.projectPath });
+  }
+  return out;
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentWorkSessionMeta } from "../trace/sources/ai/workSessions";
 import { autoImportedSessionId } from "./autoImportSessions";
-import { fingerprintChanged, holdReplacedSessions } from "./heldReplacedSessions";
+import { fingerprintChanged, holdReplacedSessions, movedSessions } from "./heldReplacedSessions";
 
 const meta = (title: string, sourceId?: string, extra: Partial<AgentWorkSessionMeta> = {}): AgentWorkSessionMeta =>
   ({ agentId: "claude", agentName: "Claude", importKind: "claude-code", id: "s1", sessionId: "s1", projectPath: "/p", projectName: "p", filePath: "/x/s1.jsonl", sourceFilePath: "/x/s1.jsonl", startedAt: "2026-10-10T00:00:00Z", updatedAt: "2026-10-10T01:00:00Z", messageCount: 4, title, fileBytes: 900, ...(sourceId ? { sourceId } : {}), ...extra }) as AgentWorkSessionMeta;
@@ -62,5 +62,20 @@ describe("a changed fingerprint", () => {
     expect(fingerprintChanged([meta("t", "src-other")], storedAs(meta("t", "src-kept")))).toBe(true);
     expect(fingerprintChanged([meta("t", "src-kept")], storedAs(meta("t", "src-kept")))).toBe(false);
     expect(fingerprintChanged([meta("t", "src-other")], storedAs(meta("t")))).toBe(false);
+  });
+});
+
+describe("a session whose file moved", () => {
+  it("follows its file and keeps what describes it", () => {
+    const was = meta("payments ledger import design", "src-kept", { filePath: "/old-home/x/s1.jsonl", sourceFilePath: "/old-home/x/s1.jsonl" });
+    const now = meta("payments ledger import design", "src-kept", { filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl", messageCount: 9 });
+    const [moved] = movedSessions([now], storedAs(was));
+    expect(moved).toMatchObject({ filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl", messageCount: 4 });
+  });
+
+  it("is nothing when the file is where it was or nothing is stored", () => {
+    const here = meta("t", "src-kept");
+    expect(movedSessions([here], storedAs(here))).toEqual([]);
+    expect(movedSessions([here], new Map())).toEqual([]);
   });
 });

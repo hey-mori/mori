@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { fingerprintChanged, holdReplacedSessions, type KeptFingerprint } from "../../lib/session/heldReplacedSessions";
+import { fingerprintChanged, holdReplacedSessions, movedSessions, type KeptFingerprint } from "../../lib/session/heldReplacedSessions";
 import { keptIdentitiesOf } from "../../lib/session/sessionArchiveRead";
 import { loadStoredSessionSummaries, useSessionStore } from "../../app/sessionStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
@@ -180,6 +180,13 @@ export function useAutoImportSessions(): void {
           ]
             .sort((a, b) => activityMs(b) - activityMs(a))
             .slice(0, REGISTER_CAP);
+
+          // A file that now lives elsewhere (a restore into another home, a
+          // moved projects folder) is the same session: its descriptor follows
+          // the file quietly, so it is read where it is. The change fingerprint
+          // does not cover paths, so this is not counted as an update.
+          const moved = movedSessions(recent, stored);
+          if (moved.length > 0) upsertAutoImportMetas(moved);
 
           const diff = diffDiscoveredSessions(recent, seenRef.current);
           // Empty sources are never registered, so they stay out of `seen` and
