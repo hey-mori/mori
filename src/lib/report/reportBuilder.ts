@@ -7,6 +7,7 @@ import type {
   Priority,
   TimelineEvent,
 } from "../../domain/types";
+import { discloseEventForView } from "../disclosure/eventDisclosure";
 import { eventDisplayLabel } from "../../domain/constants";
 import { formatDateTime } from "../formatting/time";
 import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
@@ -420,7 +421,9 @@ function renderTimelineLine(
   // Sessions imported before the boilerplate-aware titler stored the agent's
   // "continued from a previous conversation" preamble as the title; clean it at
   // render so an already-imported session reads right without a re-import.
-  const title = isAgentBoilerplateTitle(event.title) ? "세션 이어가기" : event.title;
+  // At 숨김 a request's own title is withheld from the report too.
+  const shownTitle = discloseEventForView(event, requestDisclosureLevel).title;
+  const title = isAgentBoilerplateTitle(shownTitle) ? "세션 이어가기" : shownTitle;
   if (privacy.clientSafe) {
     return `- \`${time}\` **${title}** _(${typeLabel})_`;
   }

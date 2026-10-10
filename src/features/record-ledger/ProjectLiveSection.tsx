@@ -20,6 +20,15 @@
 import type { ReactNode } from "react";
 import { CircleAlert, Hand, History, Radio } from "lucide-react";
 import { readableAgentLabel } from "../../lib/session/agentText";
+import { HIDDEN_REQUEST_TITLE } from "../../lib/disclosure";
+import { useSessionStore } from "../../app/sessionStore";
+
+/** A live request's text as a row title, or "숨긴 요청" at 숨김 (the request
+ *  disclosure level; live requests have no per-request override). */
+function useRequestLabel(): (text: string) => string {
+  const hidden = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel === "hidden");
+  return (text: string) => (hidden ? HIDDEN_REQUEST_TITLE : readableAgentLabel(text));
+}
 import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import { freshnessOf, type ProjectProjection } from "../../lib/live-intake";
@@ -83,6 +92,7 @@ export function ProjectLiveSection({
   /** A session's own title by its source file, for sessions listed by session. */
   sessionTitleOf?: (sessionKey: string) => string | undefined;
 }) {
+  const requestLabel = useRequestLabel();
   const aside = unconfirmedObserved > 0 ? <UnconfirmedAside count={unconfirmedObserved} /> : null;
   const asideOnly = aside ? (
     <section className="ctx-section ctx-live">
@@ -161,7 +171,7 @@ export function ProjectLiveSection({
               {projection.waiting.map((request) => (
                 <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
                   <Hand size={12} aria-hidden="true" className="ctx-live-row-icon" />
-                  <span className="ctx-live-row-title">{readableAgentLabel(request.title)}</span>
+                  <span className="ctx-live-row-title">{requestLabel(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     내 확인 대기{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
                   </span>
@@ -171,7 +181,7 @@ export function ProjectLiveSection({
               {projection.blocked.map((request) => (
                 <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
                   <CircleAlert size={12} aria-hidden="true" className="ctx-live-row-icon" />
-                  <span className="ctx-live-row-title">{readableAgentLabel(request.title)}</span>
+                  <span className="ctx-live-row-title">{requestLabel(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     막힘{request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}
                   </span>
@@ -180,7 +190,7 @@ export function ProjectLiveSection({
               {projection.running.map((request) => (
                 <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
                   <Radio size={12} aria-hidden="true" className="ctx-live-row-icon" />
-                  <span className="ctx-live-row-title">{readableAgentLabel(request.title)}</span>
+                  <span className="ctx-live-row-title">{requestLabel(request.title)}</span>
                   <span className="ctx-live-row-meta">
                     {formatElapsed(request.elapsedMs)} · {request.stepCount}단계
                   </span>
@@ -215,6 +225,7 @@ function ContinuedSessions({
   openSession: OpenRequestSession;
   sessionTitleOf?: (sessionKey: string) => string | undefined;
 }) {
+  const requestLabel = useRequestLabel();
   if (projection.continued.length === 0) return null;
   return (
     <div className="ctx-live-continued">
@@ -232,7 +243,7 @@ function ContinuedSessions({
             <RequestRow key={session.sessionKey} sessionKey={session.sessionKey} open={openSession}>
               <History size={12} aria-hidden="true" className="ctx-live-row-icon" />
               <span className="ctx-live-row-title">
-                {sessionTitleOf?.(session.sessionKey) ?? readableAgentLabel(session.lastTitle)}
+                {sessionTitleOf?.(session.sessionKey) ?? requestLabel(session.lastTitle)}
               </span>
               <span className="ctx-live-row-meta">
                 활동 {formatSidebarRelative(session.activeAt, now)}
@@ -282,6 +293,7 @@ function RecentWork({
   now: number;
   openSession: OpenRequestSession;
 }) {
+  const requestLabel = useRequestLabel();
   const requests = projection.recentRequests;
   const files = projection.topFiles;
   if (requests.length === 0 && files.length === 0) return null;
@@ -297,7 +309,7 @@ function RecentWork({
         <ul className="ctx-live-list">
           {requests.map((request) => (
             <RequestRow key={request.id} sessionKey={request.sessionKey} open={openSession}>
-              <span className="ctx-live-row-title">{readableAgentLabel(request.title)}</span>
+              <span className="ctx-live-row-title">{requestLabel(request.title)}</span>
               <span className="ctx-live-row-meta">
                 {STATUS_LABEL[request.status] ?? ""}
                 {request.endedAt ? ` · ${formatSidebarRelative(request.endedAt, now)}` : ""}

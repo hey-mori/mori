@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  discloseEventForView,
+  HIDDEN_REQUEST_TITLE,
   isUserRequestEvent,
   projectEventRequestSummary,
 } from "./eventDisclosure";
@@ -66,5 +68,25 @@ describe("projectEventRequestSummary", () => {
       { abstract: "   " },
     );
     expect(projection.text).toBe("사용자가 수정·디버깅을 요청함");
+  });
+});
+
+describe("discloseEventForView", () => {
+  const ask = { actor: "user" as const, openedByUser: true, title: "배포 스크립트 고쳐줘", summary: "배포 스크립트 고쳐줘, 토큰 abc123" };
+  const paired = { actor: "assistant" as const, openedByUser: true, title: "배포 스크립트 고쳐줘", summary: "경로를 고쳤습니다." };
+  const reply = { actor: "assistant" as const, title: "경로를 고쳤습니다", summary: "경로를 고쳤습니다." };
+  const tool = { actor: "tool" as const, title: "Bash: npm test", summary: "ok" };
+
+  it("hides a request's title, and a lone request's text, only at 숨김", () => {
+    expect(discloseEventForView(ask, "hidden")).toMatchObject({ title: HIDDEN_REQUEST_TITLE, summary: "" });
+    expect(discloseEventForView(paired, "hidden")).toMatchObject({ title: HIDDEN_REQUEST_TITLE, summary: "경로를 고쳤습니다." });
+    for (const level of ["raw", "summary", "abstract"] as const) {
+      expect(discloseEventForView(ask, level)).toBe(ask);
+    }
+  });
+
+  it("leaves titles the user did not write alone", () => {
+    expect(discloseEventForView(reply, "hidden")).toBe(reply);
+    expect(discloseEventForView(tool, "hidden")).toBe(tool);
   });
 });

@@ -330,7 +330,9 @@ export function sessionShortLabel(meta: ClaudeCodeSessionMeta): string {
  * path. Falls back to the first request, then the project label. One line,
  * trimmed to a readable length.
  */
-export function liveSessionTitle(session: FollowedSession): string {
+export function liveSessionTitle(session: FollowedSession, hideRequests = false): string {
+  // At 숨김 the request text names nothing; the folder still tells sessions apart.
+  if (hideRequests) return sessionShortLabel(session.meta);
   const openers = session.follow.messages.filter(isRequestOpener);
   const opener = openers[openers.length - 1] ?? openers[0];
   const text = opener ? readableAgentText(opener.content) : "";

@@ -18,6 +18,9 @@ export {
   type RequestIntent,
 } from "./requestAbstraction";
 export {
+  discloseEventForView,
+  HIDDEN_REQUEST_TITLE,
+  isRequestTitledEvent,
   isUserRequestEvent,
   projectEventRequestSummary,
 } from "./eventDisclosure";

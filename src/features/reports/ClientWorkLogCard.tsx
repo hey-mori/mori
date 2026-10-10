@@ -10,20 +10,28 @@
 import { useMemo } from "react";
 import type { MockSession } from "../../domain/types";
 import { buildClientWorkLog } from "../../lib/report/clientWorkLog";
+import { useSessionStore } from "../../app/sessionStore";
+import { discloseEventForView, resolveDisclosureLevel } from "../../lib/disclosure";
 
 export function ClientWorkLogCard({
   view,
 }: {
   view: Pick<MockSession, "events" | "decisions" | "issues">;
 }) {
+  // The log's scope line is the opening request's title: it follows the
+  // request disclosure level like every other surface.
+  const disclosureDefault = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
+  const disclosureOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
   const log = useMemo(
     () =>
       buildClientWorkLog({
-        events: view.events,
+        events: view.events.map((event) =>
+          discloseEventForView(event, resolveDisclosureLevel(disclosureOverrides[event.id], disclosureDefault)),
+        ),
         decisions: view.decisions,
         issues: view.issues,
       }),
-    [view.events, view.decisions, view.issues],
+    [view.events, view.decisions, view.issues, disclosureDefault, disclosureOverrides],
   );
 
   if (log.entries.length === 0) return null;
