@@ -67,6 +67,20 @@ export async function keptArchiveSourceId(sessionId: string): Promise<string | n
   }
 }
 
+/**
+ * What the record says about the original the kept copy was taken from: its
+ * fingerprint and how many bytes it had then. No file is read or hashed.
+ */
+export async function keptArchiveIdentity(sessionId: string): Promise<{ sourceId: string; bytes: number } | null> {
+  try {
+    const sources = await getKernelRepository().listSources();
+    const kept = keptArchiveOf(sources.data, sessionId);
+    return kept?.locator.sourceId ? { sourceId: kept.locator.sourceId, bytes: kept.locator.bytes } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Whether a kept copy may stand in for its original. */
 export function isUsableArchive(kept: KeptArchiveRead): boolean {
   return kept.integrity === "ok" || kept.integrity === "unknown";

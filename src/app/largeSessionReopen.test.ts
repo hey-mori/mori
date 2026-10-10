@@ -35,6 +35,10 @@ vi.mock("../lib/claude/claudeTauri", async (importOriginal) => ({
 vi.mock("../lib/session/sessionArchiveRead", () => ({
   keptArchiveRead: async (id: string) => reader.kept.get(id) ?? null,
   keptArchiveSourceId: async (id: string) => reader.kept.get(id)?.sourceId ?? null,
+  keptArchiveIdentity: async (id: string) => {
+    const kept = reader.kept.get(id);
+    return kept?.sourceId ? { sourceId: kept.sourceId, bytes: kept.archive.bytes } : null;
+  },
   isUsableArchive: (kept: { integrity: string }) => kept.integrity === "ok" || kept.integrity === "unknown",
 }));
 vi.mock("../lib/session/autoImportMetaStore", async (importOriginal) => ({
@@ -244,6 +248,20 @@ describe("reopening a session too long to import", () => {
 
 describe("a kept copy and a changed original", () => {
   const archivePath = "/home/u/Mori/Records/archives/claude-code/aa.jsonl";
+
+  it("opens the kept copy when the original was cut short below what was kept", async () => {
+    const id = register(meta("long", "Long"));
+    reader.detail.mockRejectedValue(new Error(TOO_LARGE));
+    reader.kept.set(id, { path: archivePath, archive: { archivedAt: "2026-10-09T10:00:00Z", bytes: 900 }, integrity: "ok", sourceId: "src-original" });
+    reader.window.mockImplementation(async (path: string) =>
+      path === archivePath
+        ? window(0, 900, [message("k1", "kept words")], { sourceId: "src-original", fileBytes: 900 })
+        : window(0, 100, [message("x1", "what is left")], { sourceId: "src-original", fileBytes: 100 }),
+    );
+    expect(await resolver()(id)).toBe("opened");
+    expect(detailMarkup()).toContain("kept words");
+    expect(detailMarkup()).not.toContain("what is left");
+  });
 
   it("opens the kept copy when the file at the path is now another conversation", async () => {
     const id = register(meta("long", "Long"));

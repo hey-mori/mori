@@ -180,3 +180,26 @@ when the database itself moves). Each migration is
 applied in its own transaction, so a kill between or during migrations leaves the last committed
 schema and the next launch retries. `initialize_sqlite_database` takes the same snapshot-first path
 as every other command.
+
+## 8. One rule for which file is a session's history
+
+Opening a session, its latest reply and project search all read the original transcript, and all
+now ask one rule (`historicalSource.ts`) which file stands for the session once a copy is kept:
+
+| Original | Kept copy | Read |
+|---|---|---|
+| present, same head fingerprint, not smaller than the copy | any | the original |
+| present, other fingerprint (replaced) or smaller than the copy (cut short) | usable | the copy, marked as standing in for a replaced original |
+| replaced or cut short | missing or damaged | nothing: that failure is stated |
+| gone | usable | the copy (보관한 원본 · date) |
+| gone | missing or damaged | nothing: that failure is stated |
+| gone | none | "missing" |
+| present but unreadable, or another error | any | that failure; a copy is never read in place of a file that may still be there |
+
+The fingerprint proves the same first line, which in every format seen carries the session id; it
+does not prove the same bytes. The size check adds "not cut short below what was kept". A copy's
+latest reply is the latest reply the copy holds, as of when it was kept; the view says it is the
+copy, and it is not a statement about what the agent did since. Before this, project search and
+the latest reply read a replaced original as if it were the session, and the latest reply found
+nothing when the original was gone even with a usable copy. Limitation: an original that exists
+but cannot be read is still worded as "missing".

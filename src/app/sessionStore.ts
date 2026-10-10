@@ -21,6 +21,7 @@ import { sha256Hex, type PassageLocatorV1 } from "../lib/capture/passageCapture"
 import {
   isUsableArchive,
   keptArchiveRead,
+  keptArchiveIdentity,
   keptArchiveSourceId,
   type KeptArchiveRead,
 } from "../lib/session/sessionArchiveRead";
@@ -41,6 +42,7 @@ import {
 } from "../lib/trace/sources/ai/workSessions";
 import { buildPrimaryImportCandidateFromAgentWorkSession } from "../lib/import/agentWorkSessionImport";
 import { planSourceReopen } from "../lib/import/autoSourceReopen";
+import { historicalSourceAfterFailure, historicalSourceAfterRead } from "../lib/session/historicalSource";
 import { eventIdsCitedOutsideAdoptedRun } from "../lib/import/reopenCitations";
 import { AcceptedMemoryRepository } from "../lib/project-memory/acceptedMemoryRepository";
 import {
@@ -1743,17 +1745,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           );
         }
         if (!current()) return "superseded";
-        // Read from the original: if the user kept a copy and the file at the
-        // path is now a different conversation (its head fingerprint differs),
-        // the copy is what this session was. Show it, and say why.
+        // Read from the original: the shared rule decides whether that file
+        // is still this session's history or the kept copy stands in for it.
         if (!archive) {
-          const keptId = await keptArchiveSourceId(sessionId);
+          const choice = await historicalSourceAfterRead(sessionId, state);
           if (!current()) return "superseded";
-          if (keptId && state.sourceId && keptId !== state.sourceId) {
-            const kept = await keptArchiveRead(sessionId);
-            if (!current()) return "superseded";
-            if (kept && isUsableArchive(kept)) return openWindow(kept.path, { ...kept.archive, replacedOriginal: true });
-            set({ sessionWindow: { sessionId, status: "error", error: kept ? archiveFailure(kept) : { kind: "changed", message: "SOURCE_CHANGED" } } });
+          if (choice.kind === "archive") return openWindow(choice.path, choice.archive);
+          if (choice.kind === "failed") {
+            set({ sessionWindow: { sessionId, status: "error", error: choice.error } });
             return "failed";
           }
         }
@@ -1761,17 +1760,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         return "opened";
       } catch (error) {
         if (!current()) return "superseded";
-        const failure = classifyWindowError(error);
-        if (!archive && isSourceGone(error)) {
-          const kept = await keptArchiveRead(sessionId);
+        if (!archive) {
+          const choice = await historicalSourceAfterFailure(sessionId, error);
           if (!current()) return "superseded";
-          if (kept && !isUsableArchive(kept)) {
-            set({ sessionWindow: { sessionId, status: "error", error: archiveFailure(kept) } });
-            return "failed";
-          }
-          if (kept) return openWindow(kept.path, kept.archive);
+          if (choice.kind === "archive") return openWindow(choice.path, choice.archive);
+          set({ sessionWindow: { sessionId, status: "error", error: choice.error } });
+          return "failed";
         }
-        set({ sessionWindow: { sessionId, status: "error", error: failure } });
+        set({ sessionWindow: { sessionId, status: "error", error: classifyWindowError(error) } });
         return "failed";
       }
     };
@@ -1781,19 +1777,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       // into whichever session is active now.
       if (!current()) return "superseded";
       // A session the user kept a copy of: the file at its path must still be
-      // that conversation (same head fingerprint) before it is imported under
-      // this session; otherwise the copy is shown and nothing is imported.
-      if (meta.importKind === "claude-code") {
-        const keptId = await keptArchiveSourceId(sessionId);
+      // that conversation (same head fingerprint, not cut short below the
+      // copy) before it is imported under this session; otherwise the copy is
+      // shown and nothing is imported.
+      const keepsCopy = meta.importKind === "claude-code" && (await keptArchiveIdentity(sessionId)) !== null;
+      if (!current()) return "superseded";
+      if (keepsCopy) {
+        const head = await getClaudeCodeSessionWindow(sourcePath).catch(() => null);
         if (!current()) return "superseded";
-        if (keptId) {
-          const head = await getClaudeCodeSessionWindow(sourcePath).catch(() => null);
+        if (head) {
+          const choice = await historicalSourceAfterRead(sessionId, head);
           if (!current()) return "superseded";
-          if (head && head.sourceId !== keptId) {
-            const kept = await keptArchiveRead(sessionId);
-            if (!current()) return "superseded";
-            if (kept && isUsableArchive(kept)) return openWindow(kept.path, { ...kept.archive, replacedOriginal: true });
-            set({ sessionWindow: { sessionId, status: "error", error: kept ? archiveFailure(kept) : { kind: "changed", message: "SOURCE_CHANGED" } } });
+          if (choice.kind === "archive") return openWindow(choice.path, choice.archive);
+          if (choice.kind === "failed") {
+            set({ sessionWindow: { sessionId, status: "error", error: choice.error } });
             return "failed";
           }
         }
@@ -1904,13 +1901,34 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     searchSequence += 1;
     jumpSequence += 1;
     const current = () => token === discoveredOpenSequence && stillWanted();
+    const outcomeOf = (kind: SessionWindowError["kind"]) =>
+      kind === "missing" ? ("missing" as const) : kind === "changed" ? ("changed" as const) : ("failed" as const);
+    // The same rule as opening the session: a replaced or cut-short original
+    // is not this session; a gone one is read from the kept copy, whose latest
+    // reply is the latest the copy holds (the view says it is the copy).
     let latest: ClaudeCodeSessionWindow;
+    let archive: LoadedSessionWindow["archive"];
     try {
       latest = await getClaudeCodeSessionWindow(sourcePath);
+      if (!current()) return "superseded";
+      const choice = await historicalSourceAfterRead(sessionId, latest);
+      if (!current()) return "superseded";
+      if (choice.kind === "failed") return outcomeOf(choice.error.kind);
+      if (choice.kind === "archive") {
+        latest = await getClaudeCodeSessionWindow(choice.path);
+        archive = choice.archive;
+      }
     } catch (error) {
       if (!current()) return "superseded";
-      const kind = classifyWindowError(error).kind;
-      return kind === "missing" ? "missing" : kind === "changed" ? "changed" : "failed";
+      const choice = await historicalSourceAfterFailure(sessionId, error);
+      if (!current()) return "superseded";
+      if (choice.kind === "failed") return outcomeOf(choice.error.kind);
+      try {
+        latest = await getClaudeCodeSessionWindow(choice.path);
+        archive = choice.archive;
+      } catch {
+        return current() ? "failed" : "superseded";
+      }
     }
     if (!current()) return "superseded";
     const events = latest.events;
@@ -1924,7 +1942,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const focusSeq = ++jumpSequence;
     set({
       sessionWindow: {
-        ...windowStateFrom(sessionId, latest, token),
+        ...withArchive(windowStateFrom(sessionId, latest, token), archive),
         focus: { messageId: reply.id, query: "", wholeWords: true, seq: focusSeq },
       },
       sessionSearch: null,
