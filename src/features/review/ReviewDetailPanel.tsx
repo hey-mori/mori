@@ -41,6 +41,7 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { InlineEditForm } from "./InlineEditForm";
+import { useDisclosedView } from "../../app/useDisclosedView";
 import type {
   DecisionEditFields,
   IssueEditFields,
@@ -51,7 +52,7 @@ const PRIORITY_ORDER: Priority[] = ["high", "medium", "low"];
 
 export function ReviewDetailPanel({
   selection,
-  view,
+  view: storedView,
   onClose,
   onShowTimeline,
   onOpenEvidenceSource,
@@ -81,6 +82,9 @@ export function ReviewDetailPanel({
   /** False in demo mode — Review writes cannot be persisted there. */
   canEditReview: boolean;
 }) {
+  // Linked events read as the request disclosure level shows them. The
+  // issue's own title is stored text and is not gated here yet.
+  const view = useDisclosedView(storedView);
   if (selection.kind === "none") {
     return (
       <BaseInspectorPanel

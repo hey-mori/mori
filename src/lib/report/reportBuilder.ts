@@ -11,6 +11,7 @@ import { eventDisplayLabel } from "../../domain/constants";
 import { formatDateTime } from "../formatting/time";
 import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
+  discloseEventForView,
   projectEventRequestSummary,
   resolveDisclosureLevel,
   type DisclosureLevel,
@@ -378,7 +379,11 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
     lines.push("");
   }
 
-  if (input.resumePromptOverride && type !== "clientSafe") {
+  // The resume prompt quotes request titles verbatim, so at 숨김 it stays out
+  // of the report, and the report says so.
+  if (input.resumePromptOverride && type !== "clientSafe" && requestDisclosureLevel === "hidden") {
+    warnings.push("요청을 숨김으로 둔 상태라 요청 내용이 담긴 Resume 프롬프트는 넣지 않았습니다.");
+  } else if (input.resumePromptOverride && type !== "clientSafe") {
     lines.push("## Resume 프롬프트");
     lines.push("");
     lines.push("```text");
@@ -420,7 +425,9 @@ function renderTimelineLine(
   // Sessions imported before the boilerplate-aware titler stored the agent's
   // "continued from a previous conversation" preamble as the title; clean it at
   // render so an already-imported session reads right without a re-import.
-  const title = isAgentBoilerplateTitle(event.title) ? "세션 이어가기" : event.title;
+  // At 숨김 a request's own title is withheld from the report too.
+  const shownTitle = discloseEventForView(event, requestDisclosureLevel).title;
+  const title = isAgentBoilerplateTitle(shownTitle) ? "세션 이어가기" : shownTitle;
   if (privacy.clientSafe) {
     return `- \`${time}\` **${title}** _(${typeLabel})_`;
   }

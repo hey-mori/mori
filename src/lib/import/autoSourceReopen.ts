@@ -72,6 +72,40 @@ function onlyToolResultRendering(stored: TimelineEvent, fresh: TimelineEvent): b
 /** The text field a reader-rendering refresh takes from the read. */
 const RENDERED_FIELDS = ["summary"] as const;
 
+/**
+ * Whether a connector turn differs from its stored copy only in naming its
+ * actor: a submitted prompt imported before prompts were marked as the user's
+ * own (`actor: "user"`). Nothing it says changed, so the actor is filled in
+ * rather than taken as a rewrite, and the request disclosure level then
+ * applies to it too.
+ */
+function onlyActorBackfill(stored: TimelineEvent, fresh: TimelineEvent): boolean {
+  if (stored.actor !== undefined || fresh.actor !== "user" || !stored.connectorEventId) return false;
+  return CONTENT_FIELDS.every((field) => field === "actor" || same(stored[field], fresh[field]));
+}
+
+/**
+ * A stored turn against its fresh read of the same turn: the event to keep,
+ * with what the read may refresh taken from it, or null when what the turn
+ * says changed (a rewrite). The user's own edits always stand.
+ */
+function reconcileTurn(stored: TimelineEvent, fresh: TimelineEvent): { event: TimelineEvent; refreshed: boolean } | null {
+  const contentChanged = CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]));
+  const rerendered = !stored.userModified && contentChanged && onlyToolResultRendering(stored, fresh);
+  const actorNamed = !stored.userModified && contentChanged && onlyActorBackfill(stored, fresh);
+  if (!stored.userModified && contentChanged && !rerendered && !actorNamed) return null;
+  const enriched = ENRICHMENT_FIELDS.some((field) => !same(stored[field], fresh[field]));
+  const fields: EventField[] = [
+    ...(enriched ? ENRICHMENT_FIELDS : []),
+    ...(rerendered ? RENDERED_FIELDS : []),
+    ...(actorNamed ? (["actor"] as const) : []),
+  ];
+  return {
+    event: fields.length > 0 ? withFields(stored, fresh, fields) : stored,
+    refreshed: enriched || rerendered || actorNamed,
+  };
+}
+
 /** `stored` with `fields` taken from `fresh`. Every other field (notes, links,
  *  relationships, artifacts, extra source references, edits) stays. */
 function withFields(stored: TimelineEvent, fresh: TimelineEvent, fields: readonly EventField[]): TimelineEvent {
@@ -144,17 +178,10 @@ export function planSourceReopen(
     const fresh = candidate.events[index]!;
     if (stored.id === fresh.id) {
       // Same turn. Its text must not have changed unless the user changed it.
-      const rerendered =
-        !stored.userModified &&
-        CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field])) &&
-        onlyToolResultRendering(stored, fresh);
-      if (!stored.userModified && !rerendered && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
-        return { kind: "keep", reason: "diverged", importIds: [existing.id] };
-      }
-      const enriched = ENRICHMENT_FIELDS.some((field) => !same(stored[field], fresh[field]));
-      if (enriched || rerendered) refreshed += 1;
-      const fields: EventField[] = [...(enriched ? ENRICHMENT_FIELDS : []), ...(rerendered ? RENDERED_FIELDS : [])];
-      kept.push(fields.length > 0 ? withFields(stored, fresh, fields) : stored);
+      const turn = reconcileTurn(stored, fresh);
+      if (!turn) return { kind: "keep", reason: "diverged", importIds: [existing.id] };
+      if (turn.refreshed) refreshed += 1;
+      kept.push(turn.event);
       continue;
     }
     // The same turn under a pinned id: answered at an earlier reopen while a
@@ -170,17 +197,10 @@ export function planSourceReopen(
     // id and never gets here.)
     const waiting = stored.actor === "user" || (stored.actor === "tool" && !stored.toolName);
     if (sameTurnKey && stored.start === fresh.start) {
-      const rerendered =
-        !stored.userModified &&
-        CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field])) &&
-        onlyToolResultRendering(stored, fresh);
-      if (!stored.userModified && !rerendered && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
-        return { kind: "keep", reason: "diverged", importIds: [existing.id] };
-      }
-      const enriched = ENRICHMENT_FIELDS.some((field) => !same(stored[field], fresh[field]));
-      if (enriched || rerendered) refreshed += 1;
-      const fields: EventField[] = [...(enriched ? ENRICHMENT_FIELDS : []), ...(rerendered ? RENDERED_FIELDS : [])];
-      kept.push(fields.length > 0 ? withFields(stored, fresh, fields) : stored);
+      const turn = reconcileTurn(stored, fresh);
+      if (!turn) return { kind: "keep", reason: "diverged", importIds: [existing.id] };
+      if (turn.refreshed) refreshed += 1;
+      kept.push(turn.event);
       continue;
     }
     // Otherwise only a turn that was waiting for its reply and has it now may
