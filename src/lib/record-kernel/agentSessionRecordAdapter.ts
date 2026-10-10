@@ -52,9 +52,17 @@ export function buildAgentSessionRecordInput(
   contexts: readonly KernelContext[],
 ): CreateRecordInput {
   const occurredStart = meta.startedAt || undefined;
-  const updatedAt = meta.updatedAt || undefined;
-  const occurredEnd =
-    occurredStart && updatedAt && updatedAt >= occurredStart ? updatedAt : undefined;
+  // When the conversation itself last moved (Claude Code: the last user or
+  // assistant record), else the source's last activity. Bookkeeping written
+  // while nobody talks must not stretch a session onto a day nobody worked.
+  // An end is kept only when it is not before the start both as an instant
+  // and as text: the record factory compares the text, and an end it rejects
+  // would cost the session its record.
+  const notBefore = (end: string, start: string) =>
+    end >= start && !Number.isNaN(Date.parse(end)) && Date.parse(end) >= Date.parse(start);
+  const occurredEnd = occurredStart
+    ? [meta.lastMessageAt, meta.updatedAt].find((end): end is string => Boolean(end) && notBefore(end!, occurredStart))
+    : undefined;
 
   const agentLabel = (meta.agentName || meta.agentId || "에이전트").trim();
   // A count read from only the head of a long transcript is a lower bound, so it

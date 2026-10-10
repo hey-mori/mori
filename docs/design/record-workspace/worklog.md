@@ -1037,3 +1037,19 @@ focused next step, not rushed:
   there: the period and the PRs it mentioned, by repository. It claims nothing about the work now.
 - Found with a real case: a transcript past Claude Code's 30-day cleanup disappeared between 10/9
   and 10/10.
+
+## 2026-10-11 · A session active across days shows on its last day too (#260)
+
+- A session that ran over several days sat only on the day it started, so the day the work ended
+  looked empty in the 캘린더 while the project chronology already put it there.
+- Owner decision D4: such a session now also sits on its last-activity day, ordered and timed there
+  by that activity and marked "M월 D일 시작", as the chronology writes it. Days in between show
+  nothing: listing every active day would invent work on quiet days.
+- Only agent sessions with source-observed times; a one-day session, a start the user set and every
+  other record are unchanged. The month total counts records, not placements; a day's "세션 N건"
+  includes a session continuing there.
+- "Last activity" is now the conversation's own last move where Claude Code records it (the last
+  user or assistant record), not idle-time bookkeeping, so a session is not placed on a day nobody
+  worked. The project chronology reads the same field and follows. Known limit: a record takes
+  the new end only when its session next changes; records of sessions that ended earlier keep
+  their older end until then (correcting them all at once would be a data backfill, not done).

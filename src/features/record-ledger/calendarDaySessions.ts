@@ -26,6 +26,9 @@ export function groupDaySessions(
   sessions: readonly MoriRecord[],
   contexts: readonly KernelContext[],
   folderOf: (sessionId: string) => string | null = () => null,
+  /** When each session happened on this day (a multi-day session's later day
+   *  orders by its last activity). */
+  timeOf: (session: MoriRecord) => string = sessionTime,
 ): DaySessionGroup[] {
   const groups = new Map<string, DaySessionGroup>();
   for (const session of sessions) {
@@ -44,7 +47,7 @@ export function groupDaySessions(
     groups.set(group.key, held);
   }
   for (const group of groups.values()) {
-    group.sessions.sort((a, b) => sessionTime(b).localeCompare(sessionTime(a)));
+    group.sessions.sort((a, b) => timeOf(b).localeCompare(timeOf(a)));
   }
   const rank = { project: 0, invalid: 1, folder: 2, none: 3 } as const;
   return [...groups.values()].sort(

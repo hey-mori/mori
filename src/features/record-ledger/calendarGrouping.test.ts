@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import {
   activityDay,
+  continuesFrom,
   dayLabel,
   groupByActivityDay,
+  lastActivityDay,
   recordCountByDate,
   recordsByDate,
+  timeOnDay,
 } from "./calendarGrouping";
 
 /** An instant expressed as "this local wall-clock time", so these assertions
@@ -145,3 +148,49 @@ describe("dayLabel", () => {
     expect(dayLabel("2026-07-08", now)).toBe("2026년 7월 8일");
   });
 });
+
+describe("a session active across days (D4)", () => {
+  const session = (id: string, start: string, end?: string): MoriRecord => ({
+    ...record(id, start),
+    schemaId: "agent-session",
+    timeBasis: "source-observed",
+    occurredEnd: end,
+  });
+  const day = (iso: string) => activityDay(iso);
+
+  it("sits on its start day and its last-activity day, and nowhere between", () => {
+    const start = atLocal(2026, 10, 7, 22);
+    const end = atLocal(2026, 10, 9, 10);
+    const byDate = recordsByDate([session("s", start, end)]);
+    expect([...byDate.keys()].sort()).toEqual([day(start), day(end)]);
+    expect(lastActivityDay(session("s", start, end))).toBe(day(end));
+    expect(recordCountByDate([session("s", start, end)]).get(day(end))).toBe(1);
+  });
+
+  it("is ordered and timed by its last activity on the later day, and says where it started", () => {
+    const multi = session("multi", atLocal(2026, 10, 8, 9), atLocal(2026, 10, 9, 8));
+    const morning = session("morning", atLocal(2026, 10, 9, 7), atLocal(2026, 10, 9, 7));
+    const later = day(multi.occurredEnd!);
+    expect(recordsByDate([multi, morning]).get(later)?.map((r) => r.id)).toEqual(["multi", "morning"]);
+    expect(timeOnDay(multi, later)).toBe(multi.occurredEnd);
+    expect(continuesFrom(multi, later)).toBe(day(multi.occurredStart!));
+    expect(continuesFrom(multi, day(multi.occurredStart!))).toBeNull();
+  });
+
+  it("takes a bare last day as it is, and never pairs an observed end with a start the user set", () => {
+    const bare = session("bare", atLocal(2026, 10, 7, 9), "2026-10-09");
+    expect(lastActivityDay(bare)).toBe("2026-10-09");
+    const userSet = { ...session("user", "2026-10-01", atLocal(2026, 10, 9, 10)), timeBasis: "user-provided" as const };
+    expect(lastActivityDay(userSet)).toBeNull();
+    expect([...recordsByDate([userSet]).keys()]).toEqual(["2026-10-01"]);
+  });
+
+  it("leaves a one-day session and every other kind of record alone", () => {
+    const sameDay = session("same", atLocal(2026, 10, 9, 9), atLocal(2026, 10, 9, 18));
+    expect([...recordsByDate([sameDay]).keys()]).toEqual([day(sameDay.occurredStart!)]);
+    const note = { ...record("note", atLocal(2026, 10, 8, 9)), occurredEnd: atLocal(2026, 10, 9, 9) };
+    expect([...recordsByDate([note]).keys()]).toEqual([day(note.occurredStart!)]);
+    expect(lastActivityDay(note)).toBeNull();
+  });
+});
+
