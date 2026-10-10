@@ -735,7 +735,8 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
           /* fall back to the kernel's answer below */
         }
         const stillLive = group ? group.live.length : groupLive(pgid) ? 1 : 0;
-        // Exited but not yet reaped: no memory, never counted as leftovers.
+        // Exited but not yet reaped: no memory, never counted as leftovers
+        // (on Linux; without /proc the kernel fallback cannot tell them apart).
         report.zombies = group ? group.zombies : 0;
         if (stillLive > 0) {
           // Only members of the run's own process group (it was created for
@@ -858,7 +859,11 @@ function writeReportFile(file, report) {
     try {
       ftruncateSync(fd, 0);
       const bytes = Buffer.from(`${JSON.stringify({ runs }, null, 2)}\n`);
-      for (let at = 0; at < bytes.length; ) at += writeSync(fd, bytes, at, bytes.length - at, at);
+      for (let at = 0; at < bytes.length; ) {
+        const written = writeSync(fd, bytes, at, bytes.length - at, at);
+        if (written <= 0) throw new Error("short write");
+        at += written;
+      }
     } finally {
       closeSync(fd);
     }

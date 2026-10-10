@@ -294,8 +294,9 @@ been measured yet: see section 7.
   as long as the wrapper stays suspended.
 - If the holder's bash script is killed while the wrapper lives, the lock is
   lost without notice for the rest of that run. (Killing only its `flock`
-  parent does not release it: the bash child keeps the lock descriptor.) If the wrapper and its watchdog die
-  together, the holder lets go after grace + 30 s even if the run continues.
+  parent does not release it: the bash child keeps the lock descriptor.) If
+  the wrapper and its watchdog die together, the holder lets go after
+  grace + 30 s even if the run continues.
   Both need a kill from outside; only a cgroup would close them.
 - Between a group emptying and the next signal to it, its pgid could in
   theory be reused by an unrelated process. That needs the pid counter to wrap
