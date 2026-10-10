@@ -60,6 +60,32 @@ export function groupByActivityDay(records: MoriRecord[]): CalendarDayGroup[] {
   return dated;
 }
 
+/**
+ * The later day a multi-day agent session also sits on: its last-activity day,
+ * when that is a later local day than its start (owner decision D4). A session
+ * shows on its start day and this day only: every active day in between would
+ * invent activity on quiet days. Null for anything else.
+ */
+export function lastActivityDay(record: MoriRecord): string | null {
+  if (record.schemaId !== "agent-session" || !record.occurredStart || !record.occurredEnd) return null;
+  if (isDateUndecided(record)) return null;
+  const start = activityDay(record.occurredStart);
+  const end = activityDay(record.occurredEnd);
+  return end > start ? end : null;
+}
+
+/** The start day a record continues from when it sits on `day` as a multi-day
+ *  session's last-activity day, else null. */
+export function continuesFrom(record: MoriRecord, day: string): string | null {
+  return record.occurredStart && lastActivityDay(record) === day ? activityDay(record.occurredStart) : null;
+}
+
+/** When a record happened on `day`, for ordering and the clock: a multi-day
+ *  session's last activity on its later day, else its display time. */
+export function timeOnDay(record: MoriRecord, day: string): string {
+  return continuesFrom(record, day) && record.occurredEnd ? record.occurredEnd : displayTime(record).iso;
+}
+
 /** ISO-date (YYYY-MM-DD) → number of records whose activity day is that date.
  *  Powers the month-calendar's per-day markers. Unknown-date records are
  *  excluded (they have no day to sit on). */
@@ -69,6 +95,8 @@ export function recordCountByDate(records: MoriRecord[]): Map<string, number> {
     if (!record.occurredStart) continue;
     const day = activityDay(record.occurredStart);
     counts.set(day, (counts.get(day) ?? 0) + 1);
+    const later = lastActivityDay(record);
+    if (later) counts.set(later, (counts.get(later) ?? 0) + 1);
   }
   return counts;
 }
@@ -80,18 +108,24 @@ export function recordCountByDate(records: MoriRecord[]): Map<string, number> {
  *  occurredStart looked equivalent but silently dropped every note: a note is
  *  written with timeBasis capture-fallback and NO occurredStart, which is a
  *  decided day (the day it was written), so the calendar showed agent sessions
- *  and nothing the user had actually typed. */
+ *  and nothing the user had actually typed.
+ *
+ *  A multi-day agent session also sits on its last-activity day (see
+ *  `lastActivityDay`), ordered there by that activity. */
 export function recordsByDate(records: MoriRecord[]): Map<string, MoriRecord[]> {
   const byDay = new Map<string, MoriRecord[]>();
   for (const record of records) {
     if (isDateUndecided(record)) continue;
-    const day = activityDay(displayTime(record).iso);
-    const bucket = byDay.get(day);
-    if (bucket) bucket.push(record);
-    else byDay.set(day, [record]);
+    const days = [activityDay(displayTime(record).iso), lastActivityDay(record)];
+    for (const day of days) {
+      if (!day) continue;
+      const bucket = byDay.get(day);
+      if (bucket) bucket.push(record);
+      else byDay.set(day, [record]);
+    }
   }
-  for (const bucket of byDay.values()) {
-    bucket.sort((a, b) => displayTime(b).iso.localeCompare(displayTime(a).iso));
+  for (const [day, bucket] of byDay) {
+    bucket.sort((a, b) => timeOnDay(b, day).localeCompare(timeOnDay(a, day)));
   }
   return byDay;
 }

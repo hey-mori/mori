@@ -13,9 +13,9 @@ import { forwardRef, useState } from "react";
 import { ChevronDown, ChevronRight, Radio } from "lucide-react";
 import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import { readableAgentText } from "../../lib/session/agentText";
-import { groupDaySessions, sessionTime } from "./calendarDaySessions";
+import { groupDaySessions } from "./calendarDaySessions";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
-import { dayLabel } from "./calendarGrouping";
+import { continuesFrom, dayLabel, timeOnDay } from "./calendarGrouping";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
 
 export const CalendarAgendaRail = forwardRef<
@@ -135,7 +135,7 @@ export const CalendarAgendaRail = forwardRef<
                       </span>
                     </button>
                     {unfolded.has(date)
-                      ? groupDaySessions(sessions, contexts, folderOf).map((group) => (
+                      ? groupDaySessions(sessions, contexts, folderOf, (session) => timeOnDay(session, date)).map((group) => (
                           <div key={group.key || "none"} className="cal-day-sessions">
                             <p className="cal-day-group">
                               {group.label}
@@ -148,10 +148,13 @@ export const CalendarAgendaRail = forwardRef<
                                 className="cal-day-row"
                                 onClick={() => onOpenSession(session.id, date)}
                               >
-                                <span className="cal-day-time">{clock(sessionTime(session))}</span>
+                                <span className="cal-day-time">{clock(timeOnDay(session, date))}</span>
                                 <span className="cal-day-title">
                                   {readableAgentText(session.title) || "제목 없음"}
                                 </span>
+                                {continuesFrom(session, date) ? (
+                                  <span className="cal-day-kind">{startedLabel(continuesFrom(session, date)!)}</span>
+                                ) : null}
                               </button>
                             ))}
                           </div>
@@ -167,6 +170,13 @@ export const CalendarAgendaRail = forwardRef<
     </aside>
   );
 });
+
+/** "10월 8일 시작", for a multi-day session on its last-activity day, as the
+ *  project chronology writes it. Read from the YYYY-MM-DD key itself. */
+function startedLabel(day: string): string {
+  const [, month, date] = day.split("-").map(Number);
+  return `${month}월 ${date}일 시작`;
+}
 
 function clock(iso: string | undefined): string {
   // A bare day claims no time of day.
