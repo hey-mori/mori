@@ -1093,7 +1093,12 @@ fn untitled_fallback(command_name: &str, project_label: &str) -> String {
 fn classify_subkind(role: &str, content: &str) -> String {
     let trimmed = content.trim_start();
     if role == "human" {
-        if trimmed.starts_with("↳ 도구 결과") || trimmed.starts_with("↳ 도구 오류") {
+        // "↳ (도구 결과 없음)" too: an empty result is still a tool response,
+        // never the user's turn (the TypeScript `classifyMessage` agrees).
+        if trimmed.starts_with("↳ 도구 결과")
+            || trimmed.starts_with("↳ 도구 오류")
+            || trimmed.starts_with("↳ (도구 결과")
+        {
             return "tool_result".to_string();
         }
         return String::new();
@@ -1468,6 +1473,9 @@ fn render_content_block(item: &Value) -> Option<String> {
     // Tool result — the response coming back to the assistant. Surface a
     // short preview so the user can see what the tool produced.
     if block_type == "tool_result" {
+        // An image result (a screenshot the agent read) has no text, but it is
+        // a result: count it so it never reads as "no result".
+        let mut images = 0usize;
         let body = item
             .get("content")
             .map(|c| match c {
@@ -1475,7 +1483,9 @@ fn render_content_block(item: &Value) -> Option<String> {
                 Value::Array(items) => {
                     let mut out = String::new();
                     for sub in items {
-                        if let Some(text) = sub.get("text").and_then(Value::as_str) {
+                        if sub.get("type").and_then(Value::as_str) == Some("image") {
+                            images += 1;
+                        } else if let Some(text) = sub.get("text").and_then(Value::as_str) {
                             if !out.is_empty() {
                                 out.push('\n');
                             }
@@ -1492,11 +1502,14 @@ fn render_content_block(item: &Value) -> Option<String> {
                 _ => String::new(),
             })
             .unwrap_or_default();
-        if body.trim().is_empty() {
-            return Some("↳ (도구 결과 없음)".to_string());
-        }
         let is_error = item.get("is_error").and_then(Value::as_bool).unwrap_or(false);
         let prefix = if is_error { "↳ 도구 오류" } else { "↳ 도구 결과" };
+        if body.trim().is_empty() {
+            if images > 0 {
+                return Some(format!("{prefix}: (이미지 {images}개)"));
+            }
+            return Some("↳ (도구 결과 없음)".to_string());
+        }
         // Keep a generous, newline-preserving slice so a live surface can show
         // what the tool actually produced, not just a one-line snippet.
         return Some(format!("{prefix}: {}", cap_text(&body, 1500)));
@@ -2429,6 +2442,26 @@ mod tests {
         });
         let rendered = render_content_block(&tool_result).unwrap();
         assert!(rendered.contains("wrapped result"), "got: {rendered}");
+    }
+
+    #[test]
+    fn renders_an_image_only_tool_result_as_a_result() {
+        let tool_result = serde_json::json!({
+            "type": "tool_result",
+            "content": [{"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "AAAA"}}]
+        });
+        let rendered = render_content_block(&tool_result).unwrap();
+        assert_eq!(rendered, "↳ 도구 결과: (이미지 1개)");
+        assert_eq!(classify_subkind("human", &rendered), "tool_result");
+    }
+
+    #[test]
+    fn renders_an_empty_tool_result_as_a_tool_response() {
+        let tool_result = serde_json::json!({ "type": "tool_result", "content": [] });
+        let rendered = render_content_block(&tool_result).unwrap();
+        assert_eq!(rendered, "↳ (도구 결과 없음)");
+        assert_eq!(classify_subkind("human", &rendered), "tool_result");
+        assert!(!is_titleable_user_text(&rendered));
     }
 
     #[test]
