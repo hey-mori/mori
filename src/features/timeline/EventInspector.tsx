@@ -136,7 +136,7 @@ export function EventInspector({
       {requestProjection.isWithheld && requestProjection.text ? (
         <span className="ins-subnote">원문 비공개 · 데이터는 그대로 저장됩니다</span>
       ) : null}
-      {effectiveDisclosureLevel !== "raw" && provider === "ollama" ? (
+      {effectiveDisclosureLevel !== "raw" && effectiveDisclosureLevel !== "hidden" && provider === "ollama" ? (
         <div className="ins-inline-row">
           <button
             type="button"

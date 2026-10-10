@@ -66,6 +66,14 @@ describe("buildIntakeSignalNotification", () => {
     expect(buildIntakeSignalNotification(signal("needsUserDecision"), row())).toBeNull();
   });
 
+  it("withholds the request's text at 숨김, since the message can reach an OS banner", () => {
+    const shown = buildIntakeSignalNotification(signal("sessionCompleted"), row());
+    const hidden = buildIntakeSignalNotification(signal("sessionCompleted"), row(), true);
+    expect(hidden?.message.startsWith("숨긴 요청")).toBe(true);
+    expect(hidden?.message).not.toContain(row().title);
+    expect(shown?.message).toContain(row().title);
+  });
+
   it("takes its id from the signal, so a repeat collapses instead of stacking", () => {
     const s = signal("sessionCompleted");
     expect(buildIntakeSignalNotification(s, row())?.id).toBe(s.id);

@@ -6,6 +6,7 @@ import {
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
+import { useDisclosedView } from "../../app/useDisclosedView";
 import { useAppStore } from "../../app/store";
 import {
   buildTimelineRenderModel,
@@ -80,7 +81,16 @@ export function TimelineView({
 }) {
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
-  const view = useSessionStore(selectSessionView);
+  const storedView = useSessionStore(selectSessionView);
+  // Every derived surface of this view (cards, hover, minimap, request band,
+  // 원본 list, flow cards, inspector heading, search) reads the events as the
+  // request disclosure level shows them, so a request hidden at 숨김 cannot
+  // leak through one path. Writes look the stored event up by id instead.
+  const view = useDisclosedView(storedView);
+  const storedEvent = useCallback(
+    (eventId: string) => storedView.events.find((event) => event.id === eventId),
+    [storedView.events],
+  );
   const sessionMode = useSessionStore(selectSessionMode);
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
   const imports = useSessionStore((state) => state.imports);
@@ -472,7 +482,8 @@ export function TimelineView({
             label: "이슈로 만들기",
             icon: PlusCircle,
             onSelect: () => {
-              if (createIssueFromEvent(event)) {
+              const stored = storedEvent(event.id);
+              if (stored && createIssueFromEvent(stored)) {
                 openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) });
               }
             },
@@ -483,6 +494,7 @@ export function TimelineView({
     },
     [
       analysis,
+      storedEvent,
       createIssueFromEvent,
       hasAnalysis,
       openReviewItem,
@@ -681,8 +693,8 @@ export function TimelineView({
               : false
           }
           onCreateIssue={() => {
-            const event = selectedItem.event;
-            if (createIssueFromEvent(event)) {
+            const event = storedEvent(selectedItem.event.id);
+            if (event && createIssueFromEvent(event)) {
               // openReviewItem routes to the Insights surface (the session
               // 인사이트 tab when embedded) — no separate navigation needed.
               openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) });

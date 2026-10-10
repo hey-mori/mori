@@ -143,3 +143,38 @@ describe("a reader upgrade that renders a tool result differently", () => {
     });
   });
 });
+
+describe("a connector prompt imported before prompts named their actor", () => {
+  const SRC = "src-connector-claude-code-hook-aaa";
+  const prompt = (id: string, extra: Partial<TimelineEvent> = {}) =>
+    event(id, { connectorEventId: `claudeCodeHook:s:${id}`, title: "배포 고쳐줘", summary: "배포 고쳐줘", ...extra });
+  const read = (events: TimelineEvent[]) =>
+    ({ ...candidate(`${SRC}-20261009000000`, events.map((e) => e.id), "Connector", "claudeTranscript"), events }) as NormalizedImportCandidate;
+  const asStored = (events: TimelineEvent[]) =>
+    stored({ ...candidate(`${SRC}-20261008000000`, events.map((e) => e.id), "Connector", "claudeTranscript"), events } as NormalizedImportCandidate);
+
+  it("fills in the actor, keeps appending, and is not called diverged", () => {
+    const before = asStored([prompt("p1"), event("r1", { connectorEventId: "claudeCodeHook:s:r1" })]);
+    const plan = planSourceReopen(
+      [before],
+      read([prompt("p1", { actor: "user" }), event("r1", { connectorEventId: "claudeCodeHook:s:r1" }), event("r2")]),
+    );
+    expect(plan).toMatchObject({ kind: "update", added: 1, refreshed: 1 });
+    if (plan.kind !== "update") return;
+    expect(plan.next.events.map((e) => e.actor)).toEqual(["user", undefined, undefined]);
+  });
+
+  it("still treats a changed prompt, or a non-connector turn gaining an actor, as a rewrite", () => {
+    const before = asStored([prompt("p1")]);
+    expect(planSourceReopen([before], read([prompt("p1", { actor: "user", summary: "다른 말" }), event("r2")]))).toMatchObject({
+      kind: "keep",
+      reason: "diverged",
+    });
+    const plain = asStored([event("e1")]);
+    expect(planSourceReopen([plain], read([event("e1", { actor: "user" }), event("e2")]))).toMatchObject({
+      kind: "keep",
+      reason: "diverged",
+    });
+  });
+});
+

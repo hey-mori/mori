@@ -29,6 +29,7 @@ import {
 import type { CompanionNotification } from "../../lib/notifications/notification";
 import { promoteNotificationSignals } from "../../lib/notifications/signalPolicy";
 import { isStorageQuotaError } from "../../lib/storage/storageQuota";
+import { useSessionStore } from "../../app/sessionStore";
 import type { FollowedSession, LiveFeedRequest } from "./liveFeed";
 
 export type IntakeWriteResult = {
@@ -96,7 +97,8 @@ export async function persistObservedRows(
       )) {
         if (signal.delivery !== "inApp" && signal.delivery !== "system") continue;
         const row = sessionRows.find((candidate) => signal.id.endsWith(candidate.id));
-        const notification = row ? buildIntakeSignalNotification(signal, row) : null;
+        const hideRequest = useSessionStore.getState().analysisSettings.requestDisclosureLevel === "hidden";
+        const notification = row ? buildIntakeSignalNotification(signal, row, hideRequest) : null;
         if (notification) notifications.push(notification);
       }
 

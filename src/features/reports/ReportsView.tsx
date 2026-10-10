@@ -44,6 +44,7 @@ export function ReportsView() {
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
   const view = useSessionStore(selectSessionView);
+  const requestsHidden = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel === "hidden");
   const mode = useSessionStore(selectSessionMode);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysis = useSessionStore((state) => state.analysis);
@@ -136,9 +137,15 @@ export function ReportsView() {
             {/* 이어가기 sits with the package: both are handoff outputs you carry
                 to a *new* session, so the resume prompt reads as part of the
                 packaging step rather than leading the report. */}
+            {/* The prompt quotes request titles verbatim: at 숨김 it is not
+                shown or copied here, as in the report itself. */}
             <ResumePromptCard
-              prompt={resumePromptText}
-              emptyHint="분석 탭에서 분석을 실행하면 이어가기 프롬프트가 만들어집니다."
+              prompt={requestsHidden ? "" : resumePromptText}
+              emptyHint={
+                requestsHidden
+                  ? "요청을 숨김으로 둔 상태라 요청 내용이 담긴 이어가기 프롬프트는 보여 주지 않습니다."
+                  : "분석 탭에서 분석을 실행하면 이어가기 프롬프트가 만들어집니다."
+              }
             />
 
             <MoriPackageStrip
