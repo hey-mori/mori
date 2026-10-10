@@ -89,8 +89,9 @@ same files and assertions, only bounded.
 | Grace before SIGKILL | 15 s | `MORI_TEST_KILL_GRACE_S` |
 | Production build | 1800 s, same group timeout | n/a |
 | Rust pass | `cargo -j 2`, `--test-threads=2`, 3600 s | `MORI_CARGO_JOBS` |
-| Concurrent test runs | one per machine: `flock` on `/tmp/mori-test-run.lock` (a fixed path, not `$TMPDIR`; released by the kernel if the holder dies), exit 75 | n/a |
-| Concurrent gates | one per machine: `flock` on `/tmp/mori-gate.lock`, exit 75 (a directory lock where `flock` is missing, as on macOS) | n/a |
+| Concurrent heavy jobs | one per machine: a test run, the harness, the gate, the gate's build and Rust pass, and a standalone `limited` step all take `flock` on `/tmp/mori-heavy.lock` (a fixed path, not `$TMPDIR`); a second job gets exit 75 | n/a |
+| Leftover processes | a run that exits 0 but leaves live processes in its group fails with exit 70 (the processes are ended) | n/a |
+| Process-group observation | every 500 ms, from /proc, by the run's own process group | `MORI_TEST_SAMPLE_MS` (100 to 5000) |
 
 How the wrapper bounds a run:
 - **Its own process group.** The run starts detached, in its own process
@@ -112,16 +113,96 @@ How the wrapper bounds a run:
 - **Smoke tests.** Their 180 s budgets are unchanged.
 
 `npm run test:safety` (and the gate's "test safeguards" step) proves the limits
-without running a single test. It uses sleeps only and takes about 10 s. It
-judges by process group, never by scanning the machine, and uses sleep
-durations unique to the run. Its 52 checks cover:
+without running a single test. It uses sleeps and one 64 MiB allocation, and
+takes about 15 s. It judges by process group, never by scanning the machine,
+uses sleep durations unique to the run, and uses private lock files, never
+the real heavy lock. Its 58 checks cover:
 - the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
+- a run that exits 0 but leaves a live process behind (exit 70);
+- the observation seeing the run's own memory;
 - a wrapper SIGKILLed mid-run, with the watchdog cleaning up;
-- Ctrl-C (SIGINT) to a wrapper holding the lock: exit 130, nothing left
+- Ctrl-C (SIGINT) to a wrapper holding a lock: exit 130, nothing left
   running, the lock free again;
-- the run lock.
+- the gate-lock verification: a genuine inherited descriptor is used, a wrong
+  descriptor and a forged descriptor to a lock held elsewhere are refused, a
+  second job gets 75, and the lock is free after release.
+
+### The heavy-job lock: ownership and lifetime
+
+One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
+
+- **Outside a gate**, the wrapper takes the lock itself. A `flock` holder
+  process keeps it, in its own process group, and lets go when the run ends
+  or when the wrapper dies (its stdin closes). The kernel releases the lock
+  when the holder ends.
+- **The gate** (`scripts/check.sh`) locks the file on fd 9 for its whole life
+  and exports `MORI_HEAVY_LOCK_FD=9`.
+- **Inside the gate**, the wrappers do not take the lock again, because that
+  would deadlock. They also do not trust the variable. They check that fd 9
+  is this lock file (same device and inode), and that a non-blocking `flock`
+  on that very inherited descriptor succeeds. flock locks belong to the open
+  file description, so this succeeds only if the gate's description holds the
+  lock. If any other process holds it, it fails, and the wrapper falls back to
+  taking the lock itself, which then fails with exit 75. A stray or forged
+  variable can therefore never let two jobs overlap.
+- **Lifetime.** The lock lives as long as the job: the gate's ends when the
+  gate and every process still holding fd 9 have exited. A process a gate
+  step leaves behind keeps holding it, so later jobs fail with 75 instead of
+  overlapping it. That is safe, but someone has to look:
+  `fuser /tmp/mori-heavy.lock` shows the holder, read-only.
+- **Without flock** (macOS), a directory lock `/tmp/mori-heavy.lock.d` is
+  used, and a wrapper inside the gate checks that the lock's recorded owner is
+  one of its ancestors. A small takeover race remains there; it is not needed
+  on the NUC, which has flock.
+- **What is not locked.** Nobody resolves a conflict by deleting the lock
+  file or stopping another job. A second job waits for nothing: it fails at
+  once with exit 75.
+
+### Observing a run
+
+The wrapper reads its run's process group from `/proc` every
+`MORI_TEST_SAMPLE_MS` (default 500 ms). It identifies the group by the pid it
+spawned, never by matching command lines. Each sample costs one listing of
+`/proc` and one small read per process; there is no filesystem walk. After
+each run it prints:
+- the exit code and duration;
+- whether the run timed out, whether SIGKILL was needed, and whether
+  leftovers had to be ended;
+- the group's peak RSS sum, the largest single process, and the most
+  processes at once;
+- the number of samples and failed samples.
+
+`MORI_TEST_REPORT_FILE` writes the same report as JSON, inside the repository
+or the temp directory.
+
+What those numbers are not:
+- **An RSS sum is not memory use.** Pages shared between processes
+  (libraries, copy-on-write) are counted once per process.
+- **A sampled peak is a lower bound.** A spike between two samples is missed.
+- **Processes that left the group are invisible.** Anything started with
+  `setsid` or as a daemon is not seen.
+- **This is not a cgroup's `memory.peak`.** That counts page cache and is
+  exact; only a cgroup gives a real whole-run figure.
+
+A failed sample is counted and never changes the run's result.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| as reported by the run | the run finished on its own |
+| 124 | timed out and ended by SIGTERM |
+| 137 | timed out and needed SIGKILL |
+| 130 / 143 / 129 | stopped by SIGINT / SIGTERM / SIGHUP sent to the wrapper |
+| 70 | exited 0 but left live processes in its group (ended, then failed) |
+| 75 | another heavy job holds the lock |
+| 2 | arguments refused |
+
+Zombie processes (exited, not yet reaped) hold no memory and are not counted
+as leftovers. Only live members of the run's own process group are ever
+signalled, so nothing unrelated can be targeted.
 
 ## 4. Total concurrency
 
@@ -141,8 +222,11 @@ The Rust pass runs alone, with `cargo -j 2` (each rustc can use 1–2 GB) and
 
 **The heap cap is not a memory cap.** `--max-old-space-size` bounds each
 process's JavaScript heap. Native memory (buffers, the compiler, child
-processes) comes on top, and there are about 1 + workers Node processes. A
-whole-run memory ceiling needs a cgroup (section 6).
+processes) comes on top, and there are about 1 + workers Node processes. The
+2048 MB default is a guard against one runaway process, not a figure anyone
+has shown to be safe for the machine. Whole-run memory protection belongs to
+the cgroup proposal (section 6): `MemoryMax`, measured against a real run's
+observed figures, is where a safe total can be set and enforced.
 
 **The defaults are candidates, not measurements.** 2 workers and 900 s were
 chosen for safety. The last full run took 17 s at the old default of 8 workers,
@@ -161,10 +245,6 @@ been measured yet: see section 7.
   your own shell if you need more.
 - Ctrl-C reaches the run (the wrapper forwards it). Ctrl-Z suspends only the
   wrapper; the run keeps going in its own group.
-- The gate holds its `flock` on an inherited file descriptor, so a
-  long-lived process a gate step leaves behind (a daemon) would keep holding
-  the gate lock. None is known today; `fuser /tmp/mori-gate.lock` shows the
-  holder, read-only.
 - The directory-lock fallback (no `flock`, as on macOS) has a small window in
   which two runs can both take over a stale lock.
 - Windows: the process-group drills are skipped and a timeout ends the tree
@@ -198,8 +278,12 @@ Read-only findings on the NUC (2026-10-10):
 - `systemd-oomd` is inactive. `user@1000.service` has no limits
   (`memory.max`, `pids.max` = max) and was using about 4.9 GiB for every user
   process together.
-- Swap (4 GiB) was fully used at the time of the reading, and memory pressure
-  showed recent stalls (`some avg300` 2.2 %).
+- Swap (4 GiB) was nearly full at every reading on 2026-10-10 (4051-4052 MiB
+  used). At the same readings, available RAM was 5.2-5.5 GiB and memory
+  pressure was 0.00 (`some` avg10, avg60 and avg300), apart from one earlier
+  reading right after the incident (`some avg300` 2.2 %). A full swap alone
+  does not mean memory is short now; it does mean there is no swap headroom
+  left if a spike comes.
 - Sessions run in per-tmux scopes under
   `user@1000.service/app.slice`. Services outside the user slice are
   untouched by anything done in a user scope.
@@ -237,16 +321,28 @@ Still to verify before adoption:
 ## 7. Verification status of this change
 
 Verified (2026-10-10, without running the test suite):
-- `npm run test:safety` passed all 52 checks (after two rounds of read-only
-  review fixes), and no process or lock was left behind.
+- An earlier version of `npm run test:safety` passed all 52 of its checks
+  (after three rounds of read-only review), and no process or lock was left
+  behind. **The current version, with the heavy-job lock, the observation and
+  the leftover rule, has only been checked statically** (`node --check`,
+  `bash -n`, `git diff --check`, review). Its 58 checks have not been run.
+- One approved real Vitest run (stage 2, before the heavy-job lock): one file,
+  9 tests passed, exit 0, 0.8 s, no leftover processes, lock released. Worker
+  count and whole-tree memory were not measured (a sampling mistake, since
+  replaced by the wrapper's own observation).
 - `vite.config.ts` evaluates in plain Node: `include` is pinned to `src/`,
   workers default to 2, and `--root /` throws.
 - A static glob shows the pinned `include` selects the same 409 files as
   Vitest's default.
 
-Not yet verified (needs operator approval, stage 2):
-- a real Vitest run under the wrapper (duration at 2 workers, peak memory, the
-  smoke tests under the group timeout);
+Not yet verified (each needs operator approval):
+- the self-check of the current version;
+- the heavy-job lock under contention and inside a gate, with small idle
+  processes;
+- the observation on a real run, and the worker cap with several small test
+  files;
+- a full `npm test` (duration at 2 workers, observed memory, the smoke tests
+  under the group timeout);
 - the full gate with the new limits;
 - the Rust pass at `-j 2`;
 - the cgroup proposal.
