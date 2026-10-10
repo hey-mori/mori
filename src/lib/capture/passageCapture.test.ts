@@ -7,6 +7,8 @@ import {
   buildPassageDraft,
   findExistingPassageRecord,
   formatPassageLocator,
+  keptPassagesByMessage,
+  messagePlace,
   parsePassageLocator,
   passageSourceKey,
   planPassageCommit,
@@ -232,6 +234,41 @@ describe("saving the same passage twice", () => {
     expect(findExistingPassageRecord(changed, store.sources, store.links, store.records)).toBeNull();
     const elsewhere = { ...draft, locator: { ...draft.locator, sessionId: "auto-claude-other" } };
     expect(findExistingPassageRecord(elsewhere, store.sources, store.links, store.records)).toBeNull();
+  });
+});
+
+describe("what was already kept from a session", () => {
+  it("marks the message a live record was kept from, newest first", async () => {
+    const whole = planPassageCommit(await draftOf(), { schemaId: "note", title: "전체", body: "", contextId: null, redact: false }, registry, NOW);
+    const part = planPassageCommit(
+      await draftOf({}, "Rejected: NFS."),
+      { schemaId: "decision", title: "부분", body: "", contextId: null, redact: false },
+      registry,
+      () => new Date("2026-10-09T10:00:00.000Z"),
+    );
+    const kept = keptPassagesByMessage(
+      "auto-claude-abc",
+      [whole.source, part.source],
+      [whole.link, part.link],
+      [whole.created.record, part.created.record],
+    );
+    expect([...kept.keys()]).toEqual([messagePlace(message().record!)]);
+    expect(kept.get(messagePlace(message().record!))?.map((entry) => entry.title)).toEqual(["부분", "전체"]);
+  });
+
+  it("leaves out discarded or archived records, other sessions and malformed locators", async () => {
+    const plan = planPassageCommit(await draftOf(), { schemaId: "note", title: "t", body: "", contextId: null, redact: false }, registry, NOW);
+    expect(keptPassagesByMessage("auto-claude-other", [plan.source], [plan.link], [plan.created.record]).size).toBe(0);
+    // A session id that is a prefix of another never picks up its passages.
+    expect(keptPassagesByMessage("auto-claude-ab", [plan.source], [plan.link], [plan.created.record]).size).toBe(0);
+    expect(
+      keptPassagesByMessage("auto-claude-abc", [plan.source], [plan.link], [{ ...plan.created.record, status: "archived" }]).size,
+    ).toBe(0);
+    const malformed = { ...plan.source, locator: "mori:session/auto-claude-abc#nothing" };
+    expect(keptPassagesByMessage("auto-claude-abc", [malformed], [plan.link], [plan.created.record]).size).toBe(0);
+    expect(
+      keptPassagesByMessage("auto-claude-abc", [plan.source], [plan.link], [{ ...plan.created.record, status: "discarded" }]).size,
+    ).toBe(0);
   });
 });
 

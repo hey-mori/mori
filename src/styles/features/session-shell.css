@@ -873,6 +873,35 @@
   color: var(--accent);
 }
 
+/* A message something was already kept from: a quiet link to that record,
+   at full strength (the capture action beside it stays dim until hovered). */
+.session-window-kept {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 0 var(--base-space-2);
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.session-window-kept:hover {
+  text-decoration: underline;
+}
+
+.session-window-kept:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 1px;
+}
+
+.session-window-capture.is-after-kept {
+  margin-left: 0;
+}
+
 .session-window-capture-refusal {
   display: flex;
   align-items: center;

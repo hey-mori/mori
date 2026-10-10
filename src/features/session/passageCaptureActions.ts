@@ -8,6 +8,8 @@ import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTy
 import { membershipState } from "../../lib/record-kernel/projectMembership";
 import {
   findExistingPassageRecord,
+  keptPassagesByMessage,
+  type KeptPassage,
   passageSourceKey,
   type PassageCommitPlan,
   type PassageDraft,
@@ -47,6 +49,23 @@ export async function loadPassageCaptureContext(draft: PassageDraft): Promise<Pa
     defaultProjectId: membership?.kind === "member" ? membership.context.id : null,
     existing: findExistingPassageRecord(draft, sources.data, links.data, candidates),
   };
+}
+
+/** What the reader has already kept from this session, by message place. */
+export async function loadKeptPassages(sessionId: string): Promise<Map<string, KeptPassage[]>> {
+  const repo = getKernelRepository();
+  const [sources, links] = await Promise.all([repo.listSources(), repo.listSourceLinks()]);
+  const prefix = `mori:session/${sessionId}#`;
+  const sourceIds = new Set(
+    sources.data.filter((source) => source.locator?.startsWith(prefix)).map((source) => source.id),
+  );
+  if (sourceIds.size === 0) return new Map();
+  // Only the records linked to this session's passages are read.
+  const recordIds = new Set(links.data.filter((link) => sourceIds.has(link.sourceId)).map((link) => link.recordId));
+  const records = (await Promise.all([...recordIds].map((id) => repo.getRecord(id))))
+    .map((result) => result.data)
+    .filter((record): record is MoriRecord => record !== null);
+  return keptPassagesByMessage(sessionId, sources.data, links.data, records);
 }
 
 /**
