@@ -67,6 +67,7 @@ import {
   realpathSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   renameSync,
   rmSync,
   statSync,
@@ -137,15 +138,11 @@ const ALLOWED_LONG = new Map([
   ["testTimeout", "value"],
   ["hookTimeout", "value"],
   ["config", "config"],
-  ["help", "flag"],
-  ["version", "flag"],
 ]);
 /** Short options let through (Vitest's own aliases for the above). */
 const ALLOWED_SHORT = new Map([
   ["t", "testNamePattern"],
   ["u", "update"],
-  ["h", "help"],
-  ["v", "version"],
   ["c", "config"],
 ]);
 /** Words Vitest reads as a mode, not a filter. Only `run` is a bounded one. */
@@ -259,9 +256,9 @@ const FLOCK = POSIX ? sysBin("flock") : null;
 // $SHELL is: flock's `-c` form would run them under $SHELL or /bin/sh.
 const BASH = POSIX ? sysBin("bash") : null;
 
-/** An array that hands the child process `fd` at the same number, nothing else. */
-function stdioSharing(fd) {
-  const stdio = ["ignore", "ignore", "ignore"];
+/** A stdio array that also hands the child process `fd` at the same number. */
+function stdioSharing(fd, base = ["ignore", "ignore", "ignore"]) {
+  const stdio = [...base];
   while (stdio.length < fd) stdio.push("ignore");
   stdio[fd] = fd;
   return stdio;
@@ -272,7 +269,7 @@ export function inheritedLockFd(path, env = process.env) {
   const raw = env.MORI_HEAVY_LOCK_FD;
   if (!raw || !/^\d+$/.test(raw)) return null;
   const fd = Number(raw);
-  // 3-9 only: a POSIX sh closes a single-digit descriptor (`exec 9>&-`).
+  // 3-9 only: the gate uses 9.
   if (fd < 3 || fd > 9) return null;
   try {
     const held = fstatSync(fd);
@@ -283,19 +280,14 @@ export function inheritedLockFd(path, env = process.env) {
   }
 }
 
-/** A shell prefix that closes the inherited lock descriptor in a child, so
- *  only the gate and this wrapper hold the gate's lock, never their children. */
-function closingPrefix() {
-  const fd = POSIX ? inheritedLockFd(HEAVY_LOCK) : null;
-  return fd === null ? "" : `exec ${fd}>&-; `;
-}
-
 /**
  * Whether this process runs inside a gate that holds `path`, verified rather
  * than taken on trust. Asked only after taking the lock afresh failed, that
  * is while someone holds it. The gate (scripts/check.sh) locks the file on a
  * descriptor its children inherit and names it in MORI_HEAVY_LOCK_FD, which
- * is only a hint. Two checks decide:
+ * is only a hint. Only a process the gate's shell starts directly has that
+ * descriptor: Node passes no extra descriptors to its children, so npm (and
+ * this wrapper's own runs) never do, and the gate calls `node` directly. Two checks decide:
  * - the descriptor must be the lock file itself (same device and inode);
  * - a non-blocking `flock` on that inherited descriptor must succeed. flock
  *   locks belong to the open file description, and the lock is held, so this
@@ -311,7 +303,7 @@ export function coveredByGate(path, env = process.env) {
     // description and exits; the lock stays with the description.
     const probe = spawnSync(FLOCK, ["-n", String(fd)], { stdio: stdioSharing(fd) });
     if (probe.status !== 0) return { ok: false, reason: `${path} is held by another process` };
-    return { ok: true, how: `descriptor ${fd} verified` };
+    return { ok: true, fd, how: `descriptor ${fd} verified` };
   }
   // Without flock (macOS): the gate's directory lock must be an ancestor's.
   const owner = Number(env.MORI_HEAVY_LOCK_OWNER);
@@ -354,7 +346,10 @@ export async function acquireHeavyLock(path = HEAVY_LOCK, env = process.env, hol
   if (own.ok) return own;
   const covered = coveredByGate(path, env);
   if (!covered.ok) return own;
-  const inner = await acquireLockAt(`${path}.inner`, holdS);
+  // The inner holder is handed the gate's descriptor too, so if the gate and
+  // this wrapper end while the run is still being ended, the gate's lock
+  // lasts until the holder lets go.
+  const inner = await acquireLockAt(`${path}.inner`, holdS, covered.fd ?? null);
   if (!inner.ok) return { ok: false, path: `${path}.inner` };
   return { ...inner, covered: covered.how };
 }
@@ -368,10 +363,10 @@ export async function acquireHeavyLock(path = HEAVY_LOCK, env = process.env, hol
  * so a new job never overlaps a run that is still being ended. Without flock
  * (macOS), a directory lock records the owner's pid and start time.
  */
-export async function acquireLockAt(path, holdS = 60) {
+export async function acquireLockAt(path, holdS = 60, keepFd = null) {
   if (FLOCK) {
     const script = [
-      `${closingPrefix()}echo locked`,
+      `echo locked`,
       `g=`,
       `while IFS= read -r line; do`,
       `  case "$line" in`,
@@ -386,11 +381,9 @@ export async function acquireLockAt(path, holdS = 60) {
       `exit 0`,
     ].join("\n");
     if (!BASH) throw new Error(`cannot take the lock ${path}: no bash in /usr/bin, /bin or /usr/local/bin`);
-    // flock(1) itself keeps any inherited gate descriptor open while it holds
-    // the lock. That is intended: if the gate ends while a run inside it is
-    // still being ended, the gate's lock lasts until this holder lets go.
+    const stdio = keepFd === null ? ["pipe", "pipe", "ignore"] : stdioSharing(keepFd, ["pipe", "pipe", "ignore"]);
     const holder = spawn(FLOCK, ["-n", "-E", String(EXIT_LOCKED), path, BASH, "-c", script], {
-      stdio: ["pipe", "pipe", "ignore"],
+      stdio,
       detached: true,
     });
     holder.stdin.on("error", () => {});
@@ -412,6 +405,7 @@ export async function acquireLockAt(path, holdS = 60) {
     return {
       ok: true,
       path,
+      holderPid: holder.pid,
       adopt: (pgid) => {
         try {
           holder.stdin.write(`pgid ${pgid}\n`);
@@ -612,7 +606,7 @@ function signalGroup(pgid, signal) {
  */
 function spawnWatchdog(pgid, hardS, graceS, say) {
   const script = [
-    `${closingPrefix()}g=${pgid}`,
+    `g=${pgid}`,
     `if IFS= read -r -t ${hardS} line && [ "$line" = done ]; then exit 0; fi`,
     `kill -0 -- "-$g" 2>/dev/null || exit 0`,
     `kill -TERM -- "-$g" 2>/dev/null`,
@@ -648,13 +642,11 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
       if (!quiet) process.stderr.write(`[run-tests] ${line}\n`);
     };
     const startedAt = Date.now();
-    // Inside the gate the run must not inherit the gate's lock descriptor
-    // (a leftover would hold the lock for every job on the machine): a tiny
-    // shell closes it and then becomes the command, keeping the same pid.
-    const prefix = closingPrefix();
-    const [file, argv] = prefix ? ["/bin/sh", ["-c", `${prefix}exec "$0" "$@"`, command, ...args]] : [command, args];
+    // Node hands a child only the descriptors in `stdio`, so the run never
+    // inherits the gate's lock descriptor (the self-check proves it): a
+    // leftover cannot hold the lock for every job on the machine.
     // On Windows a .cmd shim (vitest.cmd, npm) needs a shell to start.
-    const child = spawn(file, argv, {
+    const child = spawn(command, args, {
       cwd: REPO,
       env,
       stdio: quiet ? "ignore" : "inherit",
@@ -1071,6 +1063,9 @@ async function selfCheck() {
     ["-u", "src/lib/timeline/labelRooms.test.ts"],
     ["--update=src/lib/timeline/labelRooms.test.ts"],
     ["--reporter=basic"],
+    // Under `vitest run` these do not print and exit: they run every test.
+    ["--version"],
+    ["-v"],
   ];
   for (const args of refused) check(`refuses ${args.join(" ")}`, refuseVitestArgs(args) !== null);
   const accepted = [
@@ -1193,10 +1188,16 @@ async function selfCheck() {
       const genuine = asGate(`MORI_HEAVY_LOCK_FD=9 ${node} self-check-covered "$LOCK"; "$FLOCK" -n "$LOCK" true; echo "still=$?"`);
       check("a wrapper inside the gate uses the gate's lock (verified fd)", lines(genuine)[0] === "covered", lines(genuine).join(" "));
       check("the probe leaves the gate's lock held", lines(genuine)[1] === "still=1", lines(genuine).join(" "));
-      // A shell command started by npm (npm exec -c, offline: no package
-      // lookup), the way `npm test` starts the wrapper from the gate.
+      // npm is Node, and Node passes no extra descriptors to its children:
+      // a wrapper reached through npm is not covered and fails closed (75).
+      // That is why the gate calls `node scripts/run-tests.mjs` directly.
       const throughNpm = asGate(`MORI_HEAVY_LOCK_FD=9 npm exec --offline -c '${node} self-check-covered "$LOCK"'`);
-      check("the gate's descriptor survives an npm hop", lines(throughNpm).at(-1) === "covered", lines(throughNpm).join(" "));
+      check("a wrapper reached through npm is not covered (fails closed)", lines(throughNpm).at(-1) === "not covered", lines(throughNpm).join(" "));
+      // What the wrapper starts never holds the gate's descriptor, and the
+      // inner holder does, on purpose.
+      const children = asGate(`MORI_HEAVY_LOCK_FD=9 ${node} self-check-descriptors "$LOCK"`);
+      check("a run started inside the gate does not inherit the gate's descriptor", lines(children).includes("run clean"), lines(children).join(" "));
+      check("the inner holder keeps the gate's descriptor", lines(children).includes("holder kept"), lines(children).join(" "));
       const wrongFd = asGate(`MORI_HEAVY_LOCK_FD=8 ${node} self-check-covered "$LOCK"`);
       check("a wrong descriptor is not trusted", lines(wrongFd)[0] === "not covered", lines(wrongFd).join(" "));
       // Two jobs inside the same gate: the inner lock keeps them apart.
@@ -1276,6 +1277,23 @@ async function main() {
         await new Promise((r) => setTimeout(r, (Number(args[1]) || 0) * 1000));
         await lock.release();
       }
+      return 0;
+    }
+    if (mode === "self-check-descriptors") {
+      // Inside a stand-in gate: does a spawned run see the gate's lock file
+      // on fd 9, and does the inner holder?
+      const target = (pid) => {
+        try {
+          return readlinkSync(`/proc/${pid}/fd/9`);
+        } catch {
+          return "";
+        }
+      };
+      const run = spawnSync("/bin/sh", ["-c", 'readlink /proc/self/fd/9 || true'], { encoding: "utf8" });
+      process.stdout.write((run.stdout ?? "").trim() === resolve(args[0]) ? "run inherited\n" : "run clean\n");
+      const lock = await acquireHeavyLock(args[0], process.env, 5);
+      process.stdout.write(lock.covered && lock.holderPid && target(lock.holderPid) === resolve(args[0]) ? "holder kept\n" : "holder without it\n");
+      if (lock.ok) await lock.release();
       return 0;
     }
     if (mode === "self-check-covered") {

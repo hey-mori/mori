@@ -39,7 +39,8 @@ cd "$(dirname "$0")/.."
 #
 # The gate locks the file on fd 9 for its whole life; the kernel releases it
 # when the gate and everything holding fd 9 have ended. The test wrappers this
-# gate starts inherit fd 9, and MORI_HEAVY_LOCK_FD names it as a hint only:
+# gate starts directly with `node` inherit fd 9 (Node passes it no further,
+# so never through npm), and MORI_HEAVY_LOCK_FD names it as a hint only:
 # scripts/run-tests.mjs verifies the descriptor is this lock file and that
 # flock succeeds on that very descriptor before running under it, so a stray
 # or forged variable can never let two jobs overlap. Without flock (macOS) a
@@ -154,7 +155,9 @@ step "test safeguards"
 env -u MORI_HEAVY_LOCK_FD node scripts/run-tests.mjs self-check 9>&-
 
 step "tests"
-npm test
+# The same command as `npm test`, called directly: the wrapper must inherit
+# fd 9 from this shell, and npm (Node) passes no extra descriptors on.
+node scripts/run-tests.mjs suite
 
 step "stylelint"
 npm run style:check 9>&-
