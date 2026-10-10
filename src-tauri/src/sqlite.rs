@@ -131,7 +131,9 @@ pub fn initialize_sqlite_database(state: tauri::State<'_, SqliteState>) -> Resul
         *guard = Some(open_database(&path)?);
     }
     let conn = guard.as_mut().expect("connection initialized above");
-    let outcome = apply_migrations(conn)?;
+    // The same path every command takes: an existing database is snapshotted
+    // before pending migrations run, never migrated without a restore point.
+    ensure_migrated(conn)?;
     let records = applied_migrations(conn)?;
     let applied_versions: Vec<String> = records.iter().map(|record| record.version.clone()).collect();
     let pending_versions: Vec<String> = MIGRATIONS
@@ -139,7 +141,6 @@ pub fn initialize_sqlite_database(state: tauri::State<'_, SqliteState>) -> Resul
         .map(|migration| migration.version.to_string())
         .filter(|version| !applied_versions.contains(version))
         .collect();
-    let _ = outcome;
     Ok(DatabaseStatus {
         path: path_string,
         initialized: !records.is_empty(),
