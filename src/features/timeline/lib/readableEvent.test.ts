@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inspectorEventSummary, readableEventSummary, readableEventTitle, sameText } from "./timelineCards";
+import { hoverEventSummary, inspectorEventSummary, readableEventSummary, readableEventTitle, sameText } from "./timelineCards";
 
 const ev = (title: string, summary: string) => ({ title, summary }) as never;
 
@@ -34,5 +34,25 @@ describe("the inspector's summary", () => {
   it("keeps the full text behind a heading cut short, which the hover may drop", () => {
     expect(readableEventSummary(ev(title, full), title)).toBe("");
     expect(inspectorEventSummary(ev(title, full), title)).toBe(full);
+  });
+});
+
+describe("the hover preview of a user's request", () => {
+  const ask = { title: "배포 스크립트 고쳐줘", summary: "배포 스크립트 고쳐줘. 비밀 토큰은 abc123 이고 서버는 prod-7 입니다.", actor: "user" } as never;
+  const reply = { title: "고쳤습니다", summary: "배포 스크립트의 경로를 고쳤습니다.", actor: "assistant" } as never;
+
+  it("shows the original only at 원문", () => {
+    expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘", "raw")).toContain("abc123");
+  });
+
+  it("never shows the original when the level withholds it", () => {
+    for (const level of ["summary", "abstract", "hidden"] as const) {
+      expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘", level)).not.toContain("abc123");
+    }
+    expect(hoverEventSummary(ask, "배포 스크립트 고쳐줘", "hidden")).toBe("");
+  });
+
+  it("leaves other events as read", () => {
+    expect(hoverEventSummary(reply, "고쳤습니다", "hidden")).toBe("배포 스크립트의 경로를 고쳤습니다.");
   });
 });
