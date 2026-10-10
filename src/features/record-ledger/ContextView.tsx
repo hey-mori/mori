@@ -13,6 +13,9 @@
  * row management behind a hover `⋯` / right-click. Right: the selected
  * project's page (v8 §5), ordered by what a returning user asks first.
  */
+import { ProjectChronologySection } from "./ProjectChronologySection";
+import { buildProjectChronology } from "../../lib/project/projectChronology";
+import { readSessionEvidence } from "../../lib/record-kernel/agentSessionEvidence";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArchiveRestore,
@@ -41,7 +44,7 @@ import { buildProjectSearchInventory } from "../../lib/session/projectSearch";
 import { useProjectSearchStore } from "../../app/projectSearchStore";
 import { ProjectTranscriptSearch } from "./ProjectTranscriptSearch";
 import { loadConnectedProjects } from "../../lib/projects/projectConnection";
-import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
+import { ledgerVisibleRecords } from "./recordPresentation";
 import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
 import { ProjectCreateModal } from "./ProjectCreateModal";
@@ -326,18 +329,43 @@ export function ContextView() {
     return contextPath(activeContext.parentId, contexts);
   }, [activeContext, contexts]);
 
-  // 최근 earns its place only when it INTERLEAVES two streams. A project with
-  // only sessions (or only records) would see the same list twice, once here and
-  // once in its kind section, which is duplication wearing a different heading.
-  const recent = useMemo(() => {
-    if (!activeGroup) return [];
-    if (activeGroup.records.length === 0 || activeGroup.sessions.length === 0) return [];
-    return buildRecent(activeGroup);
-  }, [activeGroup]);
   const recordSections = useMemo(
     () => (activeGroup ? groupRecordsBySection(activeGroup.records) : []),
     [activeGroup],
   );
+  // 흐름: a project's confirmed sessions (its descendants' included, the same
+  // set project search reads) and its records. Not shown for a folder group:
+  // there it would only repeat the 세션 list.
+  const chronologyInput = useMemo(() => {
+    if (!activeGroup || !activeContext || searchInventory?.kind !== "ok") return null;
+    const visible = new Map(ledgerVisibleRecords(records).map((record) => [record.id, record]));
+    const summaryById = new Map(summaries.map((summary) => [summary.sessionId, summary]));
+    const chronology = buildProjectChronology({
+      sessions: searchInventory.entries.map((entry) => {
+        const record = visible.get(entry.sessionId);
+        const evidence = readSessionEvidence(record?.properties?.sessionEvidence);
+        const steps = record?.properties?.stepCount;
+        return {
+          id: entry.sessionId,
+          title: summaryById.get(entry.sessionId)?.title ?? entry.title,
+          // The transcript's own first and last activity. A session with no
+          // record has no observed end: its Mori save time is not activity.
+          start: record?.occurredStart ?? summaryById.get(entry.sessionId)?.startedAt,
+          end: record?.occurredEnd,
+          messages: typeof steps === "number" ? steps : undefined,
+          prs: evidence?.prs,
+          continuesIn: evidence?.continuesIn,
+        };
+      }),
+      records: activeGroup.records.map((record) => ({
+        id: record.id,
+        title: record.title,
+        schemaId: record.schemaId,
+        at: record.occurredStart ?? record.capturedAt,
+      })),
+    });
+    return { chronology };
+  }, [activeGroup, activeContext, searchInventory, records, summaries]);
 
   // 이어가기 reads the page's own session list, so what the page shows and what
   // the pack can cite never disagree. Records come in at EVERY status (the page
@@ -714,41 +742,15 @@ export function ContextView() {
                 </section>
               ) : null}
 
-              {recent.length > 0 ? (
-                <section className="ctx-section">
-                  <p className="ctx-section-label">최근</p>
-                  {/* Records and sessions merged: "이 프로젝트에서 무슨 일이
-                      있었나" is ONE question, and two lists make the user do the
-                      interleaving themselves. */}
-                  <ul className="ctx-recent">
-                    {recent.map((item) => (
-                      <li key={item.key}>
-                        <button
-                          type="button"
-                          className="ctx-recent-row"
-                          onClick={() =>
-                            item.kind === "session"
-                              ? openSessionById(item.id)
-                              : openRecordInLedger(item.id)
-                          }
-                        >
-                          {item.kind === "session" ? (
-                            <span className="ctx-recent-icon" aria-hidden="true">
-                              <Radio size={11} />
-                            </span>
-                          ) : (
-                            <span
-                              className={`note-item-dot ${item.dotClass}`}
-                              aria-hidden="true"
-                            />
-                          )}
-                          <span className="ctx-recent-title">{item.title}</span>
-                          <span className="ctx-recent-time">{item.when}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+              {chronologyInput ? (
+                <ProjectChronologySection
+                  key={activeGroup?.id ?? ""}
+                  chronology={chronologyInput.chronology}
+                  leftOut={unconfirmedInGroup}
+                  kindLabel={(schemaId) => registry.get(schemaId)?.name ?? "기록"}
+                  onOpenSession={openSessionById}
+                  onOpenRecord={openRecordInLedger}
+                />
               ) : null}
 
               {activeGroup && activeGroup.sessions.length > 0 ? (
@@ -839,41 +841,6 @@ export function ContextView() {
       ) : null}
     </div>
   );
-}
-
-type RecentItem = {
-  key: string;
-  kind: "record" | "session";
-  id: string;
-  title: string;
-  when: string;
-  dotClass: string;
-};
-
-/** The project's last ~10 happenings, records and sessions in one stream. */
-function buildRecent(group: ProjectGroup | null): RecentItem[] {
-  if (!group) return [];
-  const fromRecords: Array<RecentItem & { at: string }> = group.records.map((record) => ({
-    key: `r-${record.id}`,
-    kind: "record" as const,
-    id: record.id,
-    title: record.title,
-    at: record.occurredStart ?? record.capturedAt,
-    when: formatClaudeRelativeKo(record.occurredStart ?? record.capturedAt),
-    dotClass: kindColorClass(record.schemaId),
-  }));
-  const fromSessions: Array<RecentItem & { at: string }> = group.sessions.map((session) => ({
-    key: `s-${session.sessionId}`,
-    kind: "session" as const,
-    id: session.sessionId,
-    title: session.title,
-    at: sessionLastActiveAt(session),
-    when: formatClaudeRelativeKo(sessionLastActiveAt(session)),
-    dotClass: "",
-  }));
-  return [...fromRecords, ...fromSessions]
-    .sort((a, b) => b.at.localeCompare(a.at))
-    .slice(0, 10);
 }
 
 /** Each discovered session's source descriptor by session id, read once. */
