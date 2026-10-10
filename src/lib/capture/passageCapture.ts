@@ -291,6 +291,59 @@ export function planPassageCommit(
   return { source, created, link };
 }
 
+/** A record kept from a session message, as the reader names it. */
+export type KeptPassage = { recordId: string; title: string };
+
+/**
+ * The live records kept from each message of one session, keyed by the
+ * message's place in the transcript (`start:anchor`, as a window message's
+ * `record` carries it), newest first. Read from the passage sources' own
+ * locators, so it needs no transcript read and no path.
+ */
+export function keptPassagesByMessage(
+  sessionId: string,
+  sources: readonly KernelSource[],
+  links: readonly SourceLink[],
+  records: readonly MoriRecord[],
+): Map<string, KeptPassage[]> {
+  const prefix = `mori:session/${sessionId}#`;
+  const placeOfSource = new Map<string, string>();
+  for (const source of sources) {
+    if (source.kind !== "agent-session" || !source.locator?.startsWith(prefix)) continue;
+    const rest = source.locator.slice(prefix.length);
+    const rangeAt = rest.lastIndexOf(":");
+    if (rangeAt <= 0) continue;
+    placeOfSource.set(source.id, rest.slice(0, rangeAt));
+  }
+  const live = new Map(
+    records
+      .filter((record) => record.status !== "discarded" && record.status !== "archived")
+      .map((record) => [record.id, record]),
+  );
+  const byPlace = new Map<string, MoriRecord[]>();
+  for (const link of links) {
+    const place = placeOfSource.get(link.sourceId);
+    const record = live.get(link.recordId);
+    if (!place || !record) continue;
+    const kept = byPlace.get(place) ?? [];
+    if (!kept.includes(record)) kept.push(record);
+    byPlace.set(place, kept);
+  }
+  return new Map(
+    [...byPlace].map(([place, kept]) => [
+      place,
+      kept
+        .sort((a, b) => b.capturedAt.localeCompare(a.capturedAt))
+        .map((record) => ({ recordId: record.id, title: record.title })),
+    ]),
+  );
+}
+
+/** The place key of a window message, matching `keptPassagesByMessage`. */
+export function messagePlace(record: { start: number; anchor: string }): string {
+  return `${record.start}:${record.anchor}`;
+}
+
 /**
  * A record already made from this exact passage, if any is still live: saving
  * the same passage twice offers that record instead of a duplicate.

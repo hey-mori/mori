@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { labelText } from "../../lib/session/agentText";
-import { BookmarkPlus, ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
+import { BookmarkCheck, BookmarkPlus, ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -24,7 +25,14 @@ import {
 } from "../../lib/session/sessionWindow";
 import { useSessionResolver } from "./useSessionResolver";
 import { PassageCaptureModal } from "./PassageCaptureModal";
-import { buildPassageDraft, type PassageDraft, type PassageDraftRefusal } from "../../lib/capture/passageCapture";
+import {
+  buildPassageDraft,
+  messagePlace,
+  type KeptPassage,
+  type PassageDraft,
+  type PassageDraftRefusal,
+} from "../../lib/capture/passageCapture";
+import { loadKeptPassages } from "./passageCaptureActions";
 
 /** Why a message could not be kept, in the words the viewer shows. */
 const CAPTURE_REFUSAL: Record<PassageDraftRefusal, string> = {
@@ -236,6 +244,24 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
   // 기록으로 남기기: a preview for one message, or why it cannot be kept.
   const sessionTitle = useSessionStore((store) => store.draft?.session.title ?? "");
   const [captureDraft, setCaptureDraft] = useState<PassageDraft | null>(null);
+  // What was already kept from this session, so a message read again says so
+  // and leads to its record. Read again after each capture preview closes.
+  const [kept, setKept] = useState<Map<string, KeptPassage[]>>(() => new Map());
+  const [keptRevision, setKeptRevision] = useState(0);
+  useEffect(() => {
+    let live = true;
+    void loadKeptPassages(state.sessionId)
+      .then((next) => {
+        if (live) setKept(next);
+      })
+      .catch(() => {
+        // A failed read only leaves the marks off; capture still works.
+      });
+    return () => {
+      live = false;
+    };
+  }, [state.sessionId, keptRevision]);
+  const openRecordInLedger = useAppStore((store) => store.openRecordInLedger);
   const [captureRefusal, setCaptureRefusal] = useState<string | null>(null);
   const capturePassage = (message: ClaudeMessage, selection: MessageSelection) => {
     setCaptureRefusal(null);
@@ -281,7 +307,14 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
   return (
     <section className="session-window" aria-label="원본 대화" ref={sectionRef}>
       {captureDraft ? (
-        <PassageCaptureModal draft={captureDraft} sessionTitle={sessionTitle} onClose={() => setCaptureDraft(null)} />
+        <PassageCaptureModal
+          draft={captureDraft}
+          sessionTitle={sessionTitle}
+          onClose={() => {
+            setCaptureDraft(null);
+            setKeptRevision((value) => value + 1);
+          }}
+        />
       ) : null}
       {captureRefusal ? (
         <p className="session-window-capture-refusal" role="alert">
@@ -359,6 +392,8 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
               message={message}
               focus={index === focusIndex ? focus : null}
               onCapture={capturePassage}
+              kept={message.record ? kept.get(messagePlace(message.record)) : undefined}
+              onOpenKept={openRecordInLedger}
             />
           ))}
         </ol>
@@ -446,11 +481,16 @@ function WindowMessage({
   message,
   focus,
   onCapture,
+  kept,
+  onOpenKept,
 }: {
   message: ClaudeMessage;
   focus: { query: string; wholeWords: boolean; seq: number; range?: { from: number; to: number } } | null;
   /** Opens 기록으로 남기기 for this message, with the text selected in it. */
   onCapture?: (message: ClaudeMessage, selection: MessageSelection) => void;
+  /** Records already kept from this message, newest first. */
+  kept?: readonly KeptPassage[];
+  onOpenKept?: (recordId: string) => void;
 }) {
   const textRef = useRef<HTMLParagraphElement>(null);
   // A selection wholly inside this message's text narrows the excerpt, and its
@@ -494,10 +534,21 @@ function WindowMessage({
       <div className="session-window-message-head">
         <span className="session-window-role">{ROLE_LABEL[kind]}</span>
         {message.createdAt ? <time dateTime={message.createdAt}>{clockLabel(message.createdAt)}</time> : null}
+        {kept && kept.length > 0 && onOpenKept ? (
+          <button
+            type="button"
+            className="session-window-kept"
+            title={`남긴 기록 열기: ${kept.map((entry) => entry.title || "제목 없음").join(", ")}`}
+            onClick={() => onOpenKept(kept[0]!.recordId)}
+          >
+            <BookmarkCheck size={12} aria-hidden="true" />
+            {kept.length > 1 ? `남긴 기록 ${kept.length}` : "남긴 기록"}
+          </button>
+        ) : null}
         {capturable ? (
           <button
             type="button"
-            className="session-window-capture"
+            className={`session-window-capture${kept && kept.length > 0 ? " is-after-kept" : ""}`}
             title="이 메시지를 기록으로 남깁니다. 일부를 선택하면 그 부분만 남깁니다."
             // Pressing must not clear the reader's selection: it is the excerpt.
             onMouseDown={(event) => event.preventDefault()}
