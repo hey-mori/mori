@@ -13,6 +13,8 @@
  * (transparency), and a registration is reversible. It pauses while the tab is
  * hidden and backs off on error; foreground-only, never a daemon.
  */
+import { holdReplacedSessions } from "../../lib/session/heldReplacedSessions";
+import { keptArchiveIdentityLookup } from "../../lib/session/sessionArchiveRead";
 import { useEffect, useRef, useState } from "react";
 import { loadStoredSessionSummaries, useSessionStore } from "../../app/sessionStore";
 import { useStorageHealthStore } from "../../app/storageHealthStore";
@@ -149,11 +151,19 @@ export function useAutoImportSessions(): void {
           // Without the kernel's answer the cap must not drop durable copies.
           { complete: keptRef.current !== null },
         );
-        const discovered = await listAllAgentWorkSessions();
+        const listed = await listAllAgentWorkSessions();
+        const stored = new Map(loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), meta]));
+        // A kept session whose file is now another conversation keeps its own
+        // descriptor. The kernel is asked only when such a session is listed.
+        const keptIds = keptRef.current?.ids;
+        const keptListed = listed.some((meta) => meta.sourceId && keptIds?.has(autoImportedSessionId(meta)));
+        const keptLookup = keptListed ? await keptArchiveIdentityLookup() : null;
+        const discovered = keptLookup
+          ? holdReplacedSessions(listed, stored, (id) => keptLookup(id)?.sourceId ?? null)
+          : listed;
         if (!cancelled) {
           // Bound to the most-recent window so the draft + seen sets stay small.
           // A partial rescan does not erase a checkout a fuller read found.
-          const stored = new Map(loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), meta]));
           const recent = [
             ...discovered.map((meta) => carryForwardRepository(meta, stored.get(autoImportedSessionId(meta)))),
           ]

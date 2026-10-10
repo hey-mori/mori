@@ -101,6 +101,9 @@ export type AgentWorkSessionMeta = {
   /** False when `messageCount` covers only part of the source (a reader that
    *  previews a long session's head). Absent means complete. */
   messageCountComplete?: boolean;
+  /** Head fingerprint of the transcript file (Claude Code), when known: a
+   *  kept session whose file now has another one is another conversation. */
+  sourceId?: string;
   title: string;
   tokenUsage?: ClaudeTokenUsage;
   connectorId?: string;
@@ -319,6 +322,7 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     modifiedAt: session.modifiedAt || undefined,
     messageCount: session.messageCount,
     messageCountComplete: session.messageCountComplete,
+    ...(session.sourceId ? { sourceId: session.sourceId } : {}),
     title: session.title,
     tokenUsage: session.tokenUsage,
     activityClass: activityClassOf(session.activityClass),

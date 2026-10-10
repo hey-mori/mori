@@ -128,6 +128,8 @@ export type ClaudeCodeSessionMeta = {
    *  `messageCount` is a lower bound for the file's head, not the total.
    *  Absent on older reads. */
   messageCountComplete?: boolean;
+  /** The file's head fingerprint, "" when it could not be read. */
+  sourceId?: string;
   /** Best-effort title — the first user message, truncated. */
   title: string;
   /** Token usage aggregated from the session's assistant messages. */
