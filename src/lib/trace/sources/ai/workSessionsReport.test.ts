@@ -12,13 +12,12 @@ vi.mock("../../../claude/claudeTauri", () => ({
   getClaudeCodeSession: vi.fn(),
   getClaudeDesktopConversation: vi.fn(),
 }));
-const empty = async () => [];
-vi.mock("../../../codex/codexTauri", () => ({ discoverCodexSessions: empty, getCodexSession: vi.fn() }));
-vi.mock("../../../antigravity/antigravityTauri", () => ({ discoverAntigravitySessions: empty, getAntigravitySession: vi.fn() }));
-vi.mock("../../../opencode/opencodeTauri", () => ({ discoverOpenCodeSessions: empty, getOpenCodeSession: vi.fn() }));
-vi.mock("../../../continueAgent/continueTauri", () => ({ discoverContinueSessions: empty, getContinueSession: vi.fn() }));
-vi.mock("../../../cline/clineTauri", () => ({ discoverClineSessions: empty, getClineSession: vi.fn() }));
-vi.mock("../../../cursor/cursorTauri", () => ({ discoverCursorSessions: empty, getCursorSession: vi.fn() }));
+vi.mock("../../../codex/codexTauri", () => ({ discoverCodexSessions: async () => [], getCodexSession: vi.fn() }));
+vi.mock("../../../antigravity/antigravityTauri", () => ({ discoverAntigravitySessions: async () => [], getAntigravitySession: vi.fn() }));
+vi.mock("../../../opencode/opencodeTauri", () => ({ discoverOpenCodeSessions: async () => [], getOpenCodeSession: vi.fn() }));
+vi.mock("../../../continueAgent/continueTauri", () => ({ discoverContinueSessions: async () => [], getContinueSession: vi.fn() }));
+vi.mock("../../../cline/clineTauri", () => ({ discoverClineSessions: async () => [], getClineSession: vi.fn() }));
+vi.mock("../../../cursor/cursorTauri", () => ({ discoverCursorSessions: async () => [], getCursorSession: vi.fn() }));
 vi.mock("../../../desktop/connectorInbox", () => ({
   listConnectorJsonlInbox: async () => ({ rootExists: false, files: [] }),
   readConnectorJsonlFile: vi.fn(),
