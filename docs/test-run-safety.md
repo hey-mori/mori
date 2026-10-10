@@ -64,9 +64,10 @@ These rules are also in `CLAUDE.md`.
    run it by its repository path, and delete it afterwards.
 4. Review agents are read-only by default. They do not build, run the full
    suite or start heavy processes. The parent agent decides what runs.
-5. Only one gate runs at a time on this machine. The gate takes a lock, so a
-   second gate fails at once with exit 75: wait for the first one, do not
-   stop it.
+5. Only one heavy Mori job runs at a time on this machine: a test run, the
+   harness, the gate, or one of the gate's steps. A second one fails at once
+   with exit 75 (a standalone `npm test` while a gate runs, too): wait for the
+   first one, do not stop it.
 6. When a test fails or a review agent stalls, check read-only (`ps`) for
    processes it left behind. Never stop a process you did not start. On the
    NUC, report a stuck process to the operator.
@@ -98,25 +99,25 @@ How the wrapper bounds a run:
   group. On timeout, or when the wrapper receives SIGINT, SIGTERM or SIGHUP,
   the whole group gets SIGTERM, then SIGKILL after the grace. That group
   includes Vitest's workers and the smoke tests' bash, python3 and git.
-- **Leftovers.** Processes still in the group 2 s after the run ends (time for
-  exiting workers to go) are listed and ended. The run's exit code is
-  unchanged in that case: the leftovers are reported, not failed.
+- **Leftovers.** Live processes still in the group once the run has ended
+  (after up to the grace, at most 10 s, for exiting workers to go) are listed
+  and ended, and a run that exited 0 then fails with exit 70: a test that
+  leaves processes behind is a leak, not a clean pass. Zombies do not count.
 - **A watchdog outside the group.** A small shell process holds a pipe from
   the wrapper. If the wrapper itself is SIGKILLed (which it cannot catch), the
   pipe closes and the watchdog ends the group. It does the same if a hard
   deadline (limit + grace + 10 s) passes. Before sending SIGKILL it checks
   again that the group still exists.
-- **Clear failures.** Exit 124 means a timeout; 137 means the run had to be
-  killed after the grace; 75 means another run holds the lock; 2 means the
-  arguments were refused. Each prints a `[run-tests] FAILED` or `refused`
-  line.
+- **Clear failures.** See the exit-code table below. Each failure prints a
+  `[run-tests] FAILED` or `refused` line.
 - **Smoke tests.** Their 180 s budgets are unchanged.
 
 `npm run test:safety` (and the gate's "test safeguards" step) proves the limits
 without running a single test. It uses sleeps and one 64 MiB allocation, and
-takes about 15 s. It judges by process group, never by scanning the machine,
+is expected to take about 10-20 s (not yet measured). It judges by process
+group, never by scanning the machine,
 uses sleep durations unique to the run, and uses private lock files, never
-the real heavy lock. Its 58 checks cover:
+the real heavy lock. Its 61 checks (on Linux with flock) cover:
 - the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
@@ -125,37 +126,54 @@ the real heavy lock. Its 58 checks cover:
 - a wrapper SIGKILLed mid-run, with the watchdog cleaning up;
 - Ctrl-C (SIGINT) to a wrapper holding a lock: exit 130, nothing left
   running, the lock free again;
-- the gate-lock verification: a genuine inherited descriptor is used, a wrong
-  descriptor and a forged descriptor to a lock held elsewhere are refused, a
-  second job gets 75, and the lock is free after release.
+- the gate-lock verification: a genuine inherited descriptor is used and the
+  gate's lock is still held after the probe; the descriptor survives an npm
+  hop; two jobs inside one gate do not overlap (inner lock); a wrong
+  descriptor and a forged descriptor to a lock held elsewhere are refused; a
+  second job gets 75; the lock is free after release.
 
 ### The heavy-job lock: ownership and lifetime
 
 One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
 
-- **Outside a gate**, the wrapper takes the lock itself. A `flock` holder
-  process keeps it, in its own process group, and lets go when the run ends
-  or when the wrapper dies (its stdin closes). The kernel releases the lock
-  when the holder ends.
+- **Outside a gate**, the wrapper takes the lock itself, first and afresh. A
+  `flock` holder process keeps it, in its own process group. The wrapper tells
+  it the run's process group and says "done" when the run has ended. If the
+  wrapper dies instead (its pipe closes), the holder keeps the lock until that
+  group is gone (at most grace + 30 s), so a new job never overlaps a run that
+  is still being ended. The kernel releases the lock when the holder ends.
 - **The gate** (`scripts/check.sh`) locks the file on fd 9 for its whole life
   and exports `MORI_HEAVY_LOCK_FD=9`.
-- **Inside the gate**, the wrappers do not take the lock again, because that
-  would deadlock. They also do not trust the variable. They check that fd 9
-  is this lock file (same device and inode), and that a non-blocking `flock`
-  on that very inherited descriptor succeeds. flock locks belong to the open
-  file description, so this succeeds only if the gate's description holds the
-  lock. If any other process holds it, it fails, and the wrapper falls back to
-  taking the lock itself, which then fails with exit 75. A stray or forged
-  variable can therefore never let two jobs overlap.
+- **Inside the gate**, a wrapper first tries to take the lock afresh, which
+  fails because the gate holds it. Only then does it consider the gate's
+  descriptor, and it does not trust the variable. It checks that fd 9 is this
+  lock file (same device and inode), and that a non-blocking `flock` on that
+  very inherited descriptor succeeds. flock locks belong to the open file
+  description, and the lock is held, so this succeeds only if the gate's
+  description is the holder. Otherwise the wrapper fails with exit 75.
+  Covered jobs then take a private inner lock (`/tmp/mori-heavy.lock.inner`),
+  so two jobs inside the same gate do not overlap each other either. A stray
+  or forged variable cannot let a job outside the gate overlap it. In a tiny
+  window, where the holder lets go between the two steps, the probe could take
+  the free lock on the inherited description: exclusion still holds, the lock
+  is just kept by that description's owner.
 - **Lifetime.** The lock lives as long as the job: the gate's ends when the
-  gate and every process still holding fd 9 have exited. A process a gate
-  step leaves behind keeps holding it, so later jobs fail with 75 instead of
-  overlapping it. That is safe, but someone has to look:
-  `fuser /tmp/mori-heavy.lock` shows the holder, read-only.
+  gate, and the wrappers it started, have exited. Nothing else holds fd 9:
+  the gate runs its other steps with `9>&-`, and the wrappers start their runs,
+  holder and watchdog with that descriptor closed. If something still ends up
+  holding it, later jobs fail with 75 rather than overlapping it. That is safe,
+  but someone has to look: `fuser /tmp/mori-heavy.lock` shows the holder,
+  read-only.
 - **Without flock** (macOS), a directory lock `/tmp/mori-heavy.lock.d` is
   used, and a wrapper inside the gate checks that the lock's recorded owner is
-  one of its ancestors. A small takeover race remains there; it is not needed
-  on the NUC, which has flock.
+  one of its ancestors. A wrapper never takes over a gate's directory lock. A
+  small takeover race between two wrappers remains; it is not needed on the
+  NUC, which has flock.
+- **Native Windows** has no machine-wide lock (no flock, no reliable process
+  ancestry): runs there are bounded but not mutually excluded.
+- **Transitional.** Exclusion holds only among runs of this code. Worktrees on
+  older branches use no lock or older lock names, which do not exclude this
+  one.
 - **What is not locked.** Nobody resolves a conflict by deleting the lock
   file or stopping another job. A second job waits for nothing: it fails at
   once with exit 75.
@@ -165,7 +183,8 @@ One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
 The wrapper reads its run's process group from `/proc` every
 `MORI_TEST_SAMPLE_MS` (default 500 ms). It identifies the group by the pid it
 spawned, never by matching command lines. Each sample costs one listing of
-`/proc` and one small read per process; there is no filesystem walk. After
+`/proc` and one small read for every process on the machine (about 100 on
+the NUC); there is no filesystem walk. After
 each run it prints:
 - the exit code and duration;
 - whether the run timed out, whether SIGKILL was needed, and whether
@@ -174,13 +193,17 @@ each run it prints:
   processes at once;
 - the number of samples and failed samples.
 
-`MORI_TEST_REPORT_FILE` writes the same report as JSON, inside the repository
-or the temp directory.
+`MORI_TEST_REPORT_FILE` writes the same report as JSON; it must be a plain
+file directly in `/tmp` (never a symlink, never in the repository). `npm test`
+writes both of its runs (Vitest, then the harness) to it.
 
 What those numbers are not:
 - **An RSS sum is not memory use.** Pages shared between processes
-  (libraries, copy-on-write) are counted once per process.
-- **A sampled peak is a lower bound.** A spike between two samples is missed.
+  (libraries, copy-on-write) are counted once per process, and pages swapped
+  out are not counted at all (which matters while swap is full).
+- **A sampled peak can miss spikes** between two samples. With the double
+  counting and the swapped pages above, the figure is neither an upper nor a
+  lower bound of real use.
 - **Processes that left the group are invisible.** Anything started with
   `setsid` or as a daemon is not seen.
 - **This is not a cgroup's `memory.peak`.** That counts page cache and is
@@ -193,6 +216,8 @@ A failed sample is counted and never changes the run's result.
 | Code | Meaning |
 |---|---|
 | as reported by the run | the run finished on its own |
+| 128 + n | the run itself was killed by signal n (an out-of-memory kill gives 137, like a timeout kill: the report's "timed out" field tells them apart) |
+| 1 | the wrapper failed, or could not start the command |
 | 124 | timed out and ended by SIGTERM |
 | 137 | timed out and needed SIGKILL |
 | 130 / 143 / 129 | stopped by SIGINT / SIGTERM / SIGHUP sent to the wrapper |
@@ -250,12 +275,12 @@ been measured yet: see section 7.
 - Windows: the process-group drills are skipped and a timeout ends the tree
   with `taskkill`; there is no watchdog there.
 - `limited` runs only the gate's own steps (`npm run build` and the Rust pass's
-  `cd src-tauri && cargo ...`); it applies no lock or heap cap.
+  `cd src-tauri && cargo ...`) under the heavy-job lock; it applies no heap
+  cap.
 - On Windows the shell joins arguments unquoted, so a test name with spaces
   breaks there.
-- Typecheck, stylelint and the unused-file inventory have no limits of their
-  own. A gate's build or Rust pass can overlap another session's test run,
-  because the gate and test locks are separate.
+- Typecheck, stylelint and the unused-file inventory have no time or memory
+  limits of their own (they run inside the gate's lock).
 - Anything outside these scripts: a direct `npx vitest ... --root /` without
   this config is refused only by the rules, because Vitest never loads this
   repository's config in that case.
@@ -323,9 +348,10 @@ Still to verify before adoption:
 Verified (2026-10-10, without running the test suite):
 - An earlier version of `npm run test:safety` passed all 52 of its checks
   (after three rounds of read-only review), and no process or lock was left
-  behind. **The current version, with the heavy-job lock, the observation and
-  the leftover rule, has only been checked statically** (`node --check`,
-  `bash -n`, `git diff --check`, review). Its 58 checks have not been run.
+  behind. **The current version, with the heavy-job lock (fresh-first, inner
+  lock, closed fd 9 in children), the observation and the leftover rule, has
+  only been checked statically** (`node --check`, `bash -n`,
+  `git diff --check`, read-only review). Its 61 checks have not been run.
 - One approved real Vitest run (stage 2, before the heavy-job lock): one file,
   9 tests passed, exit 0, 0.8 s, no leftover processes, lock released. Worker
   count and whole-tree memory were not measured (a sampling mistake, since
@@ -338,7 +364,7 @@ Verified (2026-10-10, without running the test suite):
 Not yet verified (each needs operator approval):
 - the self-check of the current version;
 - the heavy-job lock under contention and inside a gate, with small idle
-  processes;
+  processes, including fd 9 reaching the wrappers through `npm` and `sh`;
 - the observation on a real run, and the worker cap with several small test
   files;
 - a full `npm test` (duration at 2 workers, observed memory, the smoke tests

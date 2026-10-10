@@ -131,8 +131,9 @@ every session and every subagent; the reasons and limits are in
 - Review agents work read-only by default. They do not build, run the full
   suite or start heavy processes without the parent agent's approval. Say
   this in every review prompt.
-- Only one gate runs at a time on the machine. A second gate fails with exit
-  75: wait, never stop the other one.
+- Only one heavy Mori job (a test run, the harness, the gate or one of its
+  steps) runs at a time on the machine. A second one fails with exit 75:
+  wait, never stop the other one.
 - When a test fails or an agent stalls, check read-only (`ps`) for processes
   it left behind. Never stop a process you did not start; report a stuck one
   to the operator.

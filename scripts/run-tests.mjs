@@ -44,6 +44,8 @@
  *   observations with stated limits, not a memory peak (see observeGroup).
  *
  * Usage:
+ *   node scripts/run-tests.mjs suite                       npm test: Vitest, then
+ *                                                          the harness, one job
  *   node scripts/run-tests.mjs vitest [args]               the Vitest suite
  *   node scripts/run-tests.mjs harness                     the node:test harness
  *   node scripts/run-tests.mjs self-check                  proves the limits,
@@ -56,7 +58,9 @@ import { spawn, spawnSync } from "node:child_process";
 import { constants as osConstants, tmpdir } from "node:os";
 import {
   fstatSync,
+  lstatSync,
   mkdirSync,
+  realpathSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -231,6 +235,21 @@ export function refuseVitestArgs(args) {
 
 // ── The heavy-job lock ──────────────────────────────────────────────────────
 
+/** A system tool by absolute path, so nothing earlier on PATH (npm puts
+ *  node_modules/.bin first) can stand in for it. */
+function sysBin(name) {
+  for (const dir of ["/usr/bin", "/bin", "/usr/local/bin"]) {
+    try {
+      statSync(join(dir, name));
+      return join(dir, name);
+    } catch {
+      /* try the next */
+    }
+  }
+  return null;
+}
+const FLOCK = POSIX ? sysBin("flock") : null;
+
 /** An array that hands the child process `fd` at the same number, nothing else. */
 function stdioSharing(fd) {
   const stdio = ["ignore", "ignore", "ignore"];
@@ -239,42 +258,52 @@ function stdioSharing(fd) {
   return stdio;
 }
 
+/** The inherited descriptor MORI_HEAVY_LOCK_FD names, if it is `path` itself. */
+export function inheritedLockFd(path, env = process.env) {
+  const raw = env.MORI_HEAVY_LOCK_FD;
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  const fd = Number(raw);
+  if (fd < 3 || fd > 255) return null;
+  try {
+    const held = fstatSync(fd);
+    const file = statSync(path);
+    return held.dev === file.dev && held.ino === file.ino ? fd : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A shell prefix that closes the inherited lock descriptor in a child, so
+ *  only the gate and this wrapper hold the gate's lock, never their children. */
+function closingPrefix() {
+  const fd = POSIX ? inheritedLockFd(HEAVY_LOCK) : null;
+  return fd === null ? "" : `exec ${fd}>&-; `;
+}
+
 /**
  * Whether this process runs inside a gate that holds `path`, verified rather
- * than taken on trust. The gate (scripts/check.sh) locks the file on an open
- * descriptor its children inherit and names that descriptor in
- * MORI_HEAVY_LOCK_FD. The name is only a hint. Two checks decide:
+ * than taken on trust. Asked only after taking the lock afresh failed, that
+ * is while someone holds it. The gate (scripts/check.sh) locks the file on a
+ * descriptor its children inherit and names it in MORI_HEAVY_LOCK_FD, which
+ * is only a hint. Two checks decide:
  * - the descriptor must be the lock file itself (same device and inode);
  * - a non-blocking `flock` on that inherited descriptor must succeed. flock
- *   locks belong to the open file description, so this succeeds only if this
- *   very description holds the lock (or the lock is free, in which case it now
- *   holds it); if any other process holds it, it fails.
- * Either way exclusivity is the kernel's: a wrong or forged variable can never
- * let two jobs overlap. Without flock (macOS) the gate's directory lock must
- * be owned by one of this process's ancestors.
+ *   locks belong to the open file description, and the lock is held, so this
+ *   succeeds only if this very description is the holder.
+ * Exclusivity stays the kernel's: a wrong or forged variable cannot let a job
+ * outside the gate overlap it.
  */
 export function coveredByGate(path, env = process.env) {
-  if (!POSIX) return { ok: false, reason: "no gate lock on this platform" };
-  if (commandExists("flock")) {
-    const raw = env.MORI_HEAVY_LOCK_FD;
-    if (!raw || !/^\d+$/.test(raw)) return { ok: false, reason: "no inherited lock descriptor" };
-    const fd = Number(raw);
-    if (fd < 3 || fd > 255) return { ok: false, reason: `descriptor ${raw} is out of range` };
-    let held;
-    let file;
-    try {
-      held = fstatSync(fd);
-      file = statSync(path);
-    } catch {
-      return { ok: false, reason: `descriptor ${fd} is not open or ${path} is missing` };
-    }
-    if (held.dev !== file.dev || held.ino !== file.ino) return { ok: false, reason: `descriptor ${fd} is not ${path}` };
+  if (FLOCK) {
+    const fd = inheritedLockFd(path, env);
+    if (fd === null) return { ok: false, reason: "no inherited descriptor of the lock file" };
     // The descriptor form (`flock -n <fd>`, no command): it locks the shared
-    // description and exits, so nothing new comes to hold the lock.
-    const probe = spawnSync("flock", ["-n", String(fd)], { stdio: stdioSharing(fd) });
+    // description and exits; the lock stays with the description.
+    const probe = spawnSync(FLOCK, ["-n", String(fd)], { stdio: stdioSharing(fd) });
     if (probe.status !== 0) return { ok: false, reason: `${path} is held by another process` };
     return { ok: true, how: `descriptor ${fd} verified` };
   }
+  // Without flock (macOS): the gate's directory lock must be an ancestor's.
   const owner = Number(env.MORI_HEAVY_LOCK_OWNER);
   let recorded = NaN;
   try {
@@ -289,33 +318,64 @@ export function coveredByGate(path, env = process.env) {
 }
 
 function isAncestor(pid) {
+  const ps = sysBin("ps") ?? "ps";
   let current = process.ppid;
   for (let hops = 0; hops < 64 && current > 1; hops += 1) {
     if (current === pid) return true;
-    const out = spawnSync("ps", ["-o", "ppid=", "-p", String(current)], { encoding: "utf8" });
+    const out = spawnSync(ps, ["-o", "ppid=", "-p", String(current)], { encoding: "utf8" });
     current = Number((out.stdout ?? "").trim());
     if (!Number.isInteger(current)) return false;
   }
   return false;
 }
 
-/** The heavy-job lock: the gate's, verified, or our own. */
-export async function acquireHeavyLock(path = HEAVY_LOCK, env = process.env) {
+/**
+ * The heavy-job lock. Taken afresh when free. When it is held, a job inside
+ * the gate that holds it (verified, see coveredByGate) runs under the gate's
+ * lock instead, and takes a private inner lock so two such jobs never
+ * overlap each other either. Anything else fails: exit 75. Native Windows has
+ * no machine-wide lock (no flock, no reliable process ancestry).
+ */
+export async function acquireHeavyLock(path = HEAVY_LOCK, env = process.env, holdS = 60) {
+  if (!POSIX) {
+    return { ok: true, path, covered: "no machine-wide lock on Windows", adopt: () => {}, release: async () => {} };
+  }
+  const own = await acquireLockAt(path, holdS);
+  if (own.ok) return own;
   const covered = coveredByGate(path, env);
-  if (covered.ok) return { ok: true, path, covered: covered.how, release: async () => {} };
-  return acquireLockAt(path);
+  if (!covered.ok) return own;
+  const inner = await acquireLockAt(`${path}.inner`, holdS);
+  if (!inner.ok) return { ok: false, path: `${path}.inner` };
+  return { ...inner, covered: covered.how };
 }
 
 /**
- * Hold a lock file for the life of this process. With `flock` a holder
- * process keeps it, in its own process group (a terminal Ctrl-C reaches the
- * run through this wrapper, not the lock); the kernel releases it when the
- * holder ends, which it does when this wrapper releases it or dies (its stdin
- * closes). Without flock (macOS), a directory lock records pid and start time.
+ * Hold a lock file for a job. With flock a holder process keeps it, in its
+ * own process group (a terminal Ctrl-C reaches the run through this wrapper,
+ * not the lock). The wrapper tells it the run's process group (adopt) and
+ * says "done" at the end. If the wrapper dies instead (its pipe closes), the
+ * holder keeps the lock until that group is gone, at most `holdS` seconds,
+ * so a new job never overlaps a run that is still being ended. Without flock
+ * (macOS), a directory lock records the owner's pid and start time.
  */
-export async function acquireLockAt(path) {
-  if (POSIX && commandExists("flock")) {
-    const holder = spawn("flock", ["-n", "-E", String(EXIT_LOCKED), path, "-c", "echo locked; read _"], {
+export async function acquireLockAt(path, holdS = 60) {
+  if (FLOCK) {
+    const script = [
+      `${closingPrefix()}echo locked`,
+      `g=`,
+      `while IFS= read -r line; do`,
+      `  case "$line" in`,
+      `    "pgid "*) g=\${line#pgid } ;;`,
+      `    done) exit 0 ;;`,
+      `  esac`,
+      `done`,
+      `if [ -n "$g" ]; then`,
+      `  end=$((SECONDS + ${holdS}))`,
+      `  while kill -0 -- "-$g" 2>/dev/null && [ "$SECONDS" -lt "$end" ]; do sleep 0.5; done`,
+      `fi`,
+      `exit 0`,
+    ].join("\n");
+    const holder = spawn(FLOCK, ["-n", "-E", String(EXIT_LOCKED), path, "-c", script], {
       stdio: ["pipe", "pipe", "ignore"],
       detached: true,
     });
@@ -338,11 +398,18 @@ export async function acquireLockAt(path) {
     return {
       ok: true,
       path,
+      adopt: (pgid) => {
+        try {
+          holder.stdin.write(`pgid ${pgid}\n`);
+        } catch {
+          /* holder gone */
+        }
+      },
       release: () =>
         new Promise((done) => {
           if (holder.exitCode !== null || holder.signalCode !== null) return done();
           holder.on("exit", () => done());
-          holder.stdin.end("\n");
+          holder.stdin.end("done\n");
         }),
     };
   }
@@ -354,18 +421,22 @@ function directoryLock(path) {
     try {
       mkdirSync(path);
       writeFileSync(join(path, "pid"), String(process.pid));
-      writeFileSync(join(path, "started"), startTime(process.pid));
-      return { ok: true, path, release: async () => rmSync(path, { recursive: true, force: true }) };
+      writeFileSync(join(path, "started"), startTime(process.pid) || "unknown");
+      return { ok: true, path, adopt: () => {}, release: async () => rmSync(path, { recursive: true, force: true }) };
     } catch (error) {
       if (error.code !== "EEXIST") throw new Error(`cannot create the lock ${path}: ${error.message}`);
     }
     let pid = "";
-    let started = "";
+    let started = null;
     try {
       pid = readFileSync(join(path, "pid"), "utf8").trim();
-      started = readFileSync(join(path, "started"), "utf8").trim();
     } catch {
       /* being written right now */
+    }
+    try {
+      started = readFileSync(join(path, "started"), "utf8").trim();
+    } catch {
+      /* a gate's lock has no start time */
     }
     let young = false;
     try {
@@ -373,8 +444,12 @@ function directoryLock(path) {
     } catch {
       /* removed meanwhile */
     }
-    // An owner still writing, or alive with the same start time, holds it.
-    if ((pid === "" && young) || (pid && pidAlive(Number(pid)) && startTime(Number(pid)) === started)) {
+    // Never taken over: a lock being written, a gate's lock (no start time
+    // recorded; the gate removes it on exit), or an owner alive with the same
+    // start time. Only a wrapper's lock whose owner is provably gone is stale.
+    if (pid === "" && young) return { ok: false, path };
+    if (started === null) return { ok: false, path };
+    if (pid && pidAlive(Number(pid)) && (started === "unknown" || startTime(Number(pid)) === started)) {
       return { ok: false, path };
     }
     // Stale: move it aside atomically; only one contender wins the rename.
@@ -398,10 +473,6 @@ function startTime(pid) {
   }
 }
 
-function commandExists(command) {
-  return spawnSync("sh", ["-c", `command -v ${command}`], { stdio: "ignore" }).status === 0;
-}
-
 function pidAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
@@ -417,7 +488,7 @@ function pidAlive(pid) {
 let pageSize = 0;
 function pageBytes() {
   if (!pageSize) {
-    const out = spawnSync("getconf", ["PAGESIZE"], { encoding: "utf8" });
+    const out = spawnSync(sysBin("getconf") ?? "getconf", ["PAGESIZE"], { encoding: "utf8" });
     pageSize = Number((out.stdout ?? "").trim()) || 4096;
   }
   return pageSize;
@@ -455,7 +526,12 @@ export function readGroup(pgid) {
 
 /** Whether the group still has a live (non-zombie) member. */
 export function groupLive(pgid) {
-  const group = readGroup(pgid);
+  let group = null;
+  try {
+    group = readGroup(pgid);
+  } catch {
+    /* /proc unreadable this instant: ask the kernel instead */
+  }
   if (group) return group.live.length > 0;
   try {
     process.kill(-pgid, 0);
@@ -522,7 +598,7 @@ function signalGroup(pgid, signal) {
  */
 function spawnWatchdog(pgid, hardS, graceS, say) {
   const script = [
-    `g=${pgid}`,
+    `${closingPrefix()}g=${pgid}`,
     `if IFS= read -r -t ${hardS} line && [ "$line" = done ]; then exit 0; fi`,
     `kill -0 -- "-$g" 2>/dev/null || exit 0`,
     `kill -TERM -- "-$g" 2>/dev/null`,
@@ -558,8 +634,13 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
       if (!quiet) process.stderr.write(`[run-tests] ${line}\n`);
     };
     const startedAt = Date.now();
+    // Inside the gate the run must not inherit the gate's lock descriptor
+    // (a leftover would hold the lock for every job on the machine): a tiny
+    // shell closes it and then becomes the command, keeping the same pid.
+    const prefix = closingPrefix();
+    const [file, argv] = prefix ? ["/bin/sh", ["-c", `${prefix}exec "$0" "$@"`, command, ...args]] : [command, args];
     // On Windows a .cmd shim (vitest.cmd, npm) needs a shell to start.
-    const child = spawn(command, args, {
+    const child = spawn(file, argv, {
       cwd: REPO,
       env,
       stdio: quiet ? "ignore" : "inherit",
@@ -567,10 +648,21 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
       shell: !POSIX,
     });
     const pgid = child.pid;
-    const report = { label, pid: pgid, pgid: POSIX ? pgid : null, timedOut: false, killed: false, leftovers: 0, observed: null };
+    const report = {
+      label,
+      pid: pgid ?? null,
+      pgid: POSIX ? (pgid ?? null) : null,
+      timedOut: false,
+      killed: false,
+      leftovers: 0,
+      observed: null,
+      exitCode: 1,
+      durationMs: 0,
+    };
     if (pgid === undefined) {
       child.on("error", (error) => {
         say(`FAILED: could not start ${command}: ${error.message}`);
+        report.durationMs = Date.now() - startedAt;
         resolveRun({ code: 1, report });
       });
       return;
@@ -617,10 +709,16 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
     child.on("exit", async (code, signal) => {
       clearTimeout(deadline);
       if (POSIX) {
-        // Give exiting workers a moment before calling anything a leftover.
-        const settle = Date.now() + 2000;
+        // Give exiting workers time before calling anything a leftover: up
+        // to the grace (at most 10 s), returning as soon as the group is empty.
+        const settle = Date.now() + Math.min(graceS, 10) * 1000;
         while (groupLive(pgid) && Date.now() < settle) await new Promise((r) => setTimeout(r, 100));
-        const group = readGroup(pgid);
+        let group = null;
+        try {
+          group = readGroup(pgid);
+        } catch {
+          /* fall back to the kernel's answer below */
+        }
         const stillLive = group ? group.live.length : groupLive(pgid) ? 1 : 0;
         if (stillLive > 0) {
           // Only members of the run's own process group (it was created for
@@ -665,7 +763,11 @@ export function runLimited(command, args, { timeoutS, graceS, env, label, quiet 
     });
     child.on("error", (error) => {
       clearTimeout(deadline);
+      if (killTimer) clearTimeout(killTimer);
       watchdog?.done();
+      for (const [name, handler] of handlers) process.off(name, handler);
+      report.durationMs = Date.now() - startedAt;
+      report.observed = observer ? observer.stop() : null;
       say(`FAILED: could not start ${command}: ${error.message}`);
       resolveRun({ code: 1, report });
     });
@@ -686,16 +788,44 @@ function printReport(report) {
       `[run-tests] observed: ${seen}. Sampled, not exact: shared pages are counted per process, peaks between samples are missed, processes that left the group are not seen, and this is not a cgroup memory.peak.\n`,
   );
   const file = process.env.MORI_TEST_REPORT_FILE;
-  if (file) {
-    // Only inside the repository or the system temp directory.
-    const target = resolve(REPO, file);
-    if (insideRepo(target) || target.startsWith(`${tmpdir()}/`)) {
+  if (file) writeReportFile(file, report);
+}
+
+/**
+ * The JSON report goes only to a plain file directly in /tmp (never through a
+ * symlink, never into the repository), so it cannot overwrite tracked files.
+ */
+function writeReportFile(file, report) {
+  const target = resolve(file);
+  let allowed = POSIX && dirname(target) === "/tmp";
+  try {
+    if (allowed) allowed = realpathSync(dirname(target)) === "/tmp";
+    if (allowed) {
       try {
-        writeFileSync(target, `${JSON.stringify(report, null, 2)}\n`);
-      } catch (error) {
-        process.stderr.write(`[run-tests] could not write the report: ${error.message}\n`);
+        if (lstatSync(target).isSymbolicLink()) allowed = false;
+      } catch {
+        /* does not exist yet: fine */
       }
     }
+  } catch {
+    allowed = false;
+  }
+  if (!allowed) {
+    process.stderr.write(`[run-tests] report not written: ${file} must be a plain file directly in /tmp\n`);
+    return;
+  }
+  try {
+    const runs = [];
+    try {
+      const previous = JSON.parse(readFileSync(target, "utf8"));
+      if (Array.isArray(previous.runs) && process.env.MORI_TEST_REPORT_APPEND === "1") runs.push(...previous.runs);
+    } catch {
+      /* new file */
+    }
+    runs.push(report);
+    writeFileSync(target, `${JSON.stringify({ runs }, null, 2)}\n`);
+  } catch (error) {
+    process.stderr.write(`[run-tests] could not write the report: ${error.message}\n`);
   }
 }
 
@@ -717,8 +847,8 @@ function childEnv(heapMb, maxWorkers) {
  * process.exitCode before the lock is released, so no early end of the
  * process can turn a failure into a success.
  */
-async function underHeavyLock(fn, lockPath = HEAVY_LOCK) {
-  const lock = await acquireHeavyLock(lockPath);
+async function underHeavyLock(fn, lockPath = HEAVY_LOCK, holdS = 60) {
+  const lock = await acquireHeavyLock(lockPath, process.env, holdS);
   if (!lock.ok) {
     process.stderr.write(
       `[run-tests] FAILED: another heavy Mori job holds ${lock.path}; jobs never overlap on this machine. Wait for it, do not stop it.\n`,
@@ -729,7 +859,7 @@ async function underHeavyLock(fn, lockPath = HEAVY_LOCK) {
   if (lock.covered) process.stderr.write(`[run-tests] inside the gate's lock (${lock.covered})\n`);
   let code = 1;
   try {
-    code = await fn();
+    code = await fn(lock);
     return code;
   } finally {
     process.exitCode = code;
@@ -737,47 +867,76 @@ async function underHeavyLock(fn, lockPath = HEAVY_LOCK) {
   }
 }
 
-async function runVitest(args) {
-  const refused = refuseVitestArgs(args);
-  if (refused) {
-    process.stderr.write(`[run-tests] refused: ${refused}\n`);
-    return EXIT_REFUSED;
-  }
+/** The Vitest run itself, under a lock the caller already holds. */
+async function vitestJob(args, lock) {
   const { maxWorkers, heapMb, timeoutS, graceS, sampleMs } = limits();
   const rest = args[0] === "run" ? args.slice(1) : args;
   const bin = join(REPO, "node_modules", ".bin", POSIX ? "vitest" : "vitest.cmd");
   process.stderr.write(
     `[run-tests] vitest run · workers ${maxWorkers} · heap ${heapMb} MB per Node process (not a total) · limit ${timeoutS}s (+${graceS}s grace)\n`,
   );
-  return underHeavyLock(async () => {
-    const { code, report } = await runLimited(bin, ["run", `--maxWorkers=${maxWorkers}`, ...rest], {
-      timeoutS,
-      graceS,
-      sampleMs,
-      env: childEnv(heapMb, maxWorkers),
-      label: "the Vitest run",
-    });
-    printReport(report);
-    return code;
+  const { code, report } = await runLimited(bin, ["run", `--maxWorkers=${maxWorkers}`, ...rest], {
+    timeoutS,
+    graceS,
+    sampleMs,
+    onStart: (pgid) => lock.adopt(pgid),
+    env: childEnv(heapMb, maxWorkers),
+    label: "the Vitest run",
   });
+  printReport(report);
+  return code;
 }
 
-async function runHarness() {
+/** The node:test harness, under a lock the caller already holds. */
+async function harnessJob(lock) {
   const { heapMb, timeoutS, graceS, sampleMs } = limits();
   const files = readdirSync(join(REPO, "scripts", "lib"))
     .filter((name) => name.endsWith(".node.mjs"))
     .map((name) => join("scripts", "lib", name));
-  return underHeavyLock(async () => {
-    const { code, report } = await runLimited(process.execPath, ["--test", ...files], {
-      timeoutS,
-      graceS,
-      sampleMs,
-      env: childEnv(heapMb),
-      label: "the node:test harness",
-    });
-    printReport(report);
-    return code;
+  const { code, report } = await runLimited(process.execPath, ["--test", ...files], {
+    timeoutS,
+    graceS,
+    sampleMs,
+    onStart: (pgid) => lock.adopt(pgid),
+    env: childEnv(heapMb),
+    label: "the node:test harness",
   });
+  printReport(report);
+  return code;
+}
+
+const holdFor = () => limits().graceS + 30;
+
+async function runVitest(args) {
+  const refused = refuseVitestArgs(args);
+  if (refused) {
+    process.stderr.write(`[run-tests] refused: ${refused}\n`);
+    return EXIT_REFUSED;
+  }
+  return underHeavyLock((lock) => vitestJob(args, lock), HEAVY_LOCK, holdFor());
+}
+
+async function runHarness() {
+  return underHeavyLock((lock) => harnessJob(lock), HEAVY_LOCK, holdFor());
+}
+
+/** `npm test`: the Vitest suite then the harness, as one job under one lock,
+ *  so nothing else can start between them. */
+async function runSuite(args) {
+  if (args.length > 0) {
+    process.stderr.write("[run-tests] refused: the suite takes no arguments; use the vitest mode to narrow\n");
+    return EXIT_REFUSED;
+  }
+  return underHeavyLock(
+    async (lock) => {
+      const vitest = await vitestJob([], lock);
+      if (vitest !== 0) return vitest;
+      process.env.MORI_TEST_REPORT_APPEND = "1";
+      return harnessJob(lock);
+    },
+    HEAVY_LOCK,
+    holdFor(),
+  );
 }
 
 async function runStep(args) {
@@ -797,11 +956,12 @@ async function runStep(args) {
     return EXIT_REFUSED;
   }
   const { graceS, sampleMs } = limits();
-  return underHeavyLock(async () => {
+  return underHeavyLock(async (lock) => {
     const { code, report } = await runLimited(command, rest, {
       timeoutS: seconds,
       graceS,
       sampleMs,
+      onStart: (pgid) => lock.adopt(pgid),
       env: process.env,
       label: process.env.MORI_STEP_LABEL || basename(command),
     });
@@ -967,31 +1127,40 @@ async function selfCheck() {
     cleanLock(intLock);
 
     // The gate-lock verification, with a private lock file.
-    if (commandExists("flock")) {
+    if (FLOCK) {
       const gateLock = privateLock("gate");
-      // A stand-in gate: holds the lock on fd 9 and runs a child that checks it.
-      const asGate = (childEnvExtra) =>
-        spawnSync(
-          "bash",
-          [
-            "-c",
-            `exec 9>>"$LOCK"; flock -n 9 || exit 75; ${childEnvExtra} "${process.execPath}" "${SELF}" self-check-covered "$LOCK"`,
-          ],
-          { env: { ...process.env, LOCK: gateLock }, encoding: "utf8" },
-        );
-      const genuine = asGate("MORI_HEAVY_LOCK_FD=9");
-      check("a wrapper inside the gate uses the gate's lock (verified fd)", genuine.stdout.trim() === "covered", genuine.stdout.trim());
-      const wrongFd = asGate("MORI_HEAVY_LOCK_FD=8");
-      check("a wrong descriptor is not trusted", wrongFd.stdout.trim() === "not covered", wrongFd.stdout.trim());
+      const bash = sysBin("bash") ?? "bash";
+      const node = `"${process.execPath}" "${SELF}"`;
+      // A stand-in gate: holds the lock on fd 9, as scripts/check.sh does.
+      const asGate = (body) =>
+        spawnSync(bash, ["-c", `exec 9>>"$LOCK"; "$FLOCK" -n 9 || exit 75; ${body}`], {
+          cwd: REPO,
+          env: { ...process.env, LOCK: gateLock, FLOCK },
+          encoding: "utf8",
+        });
+      const lines = (result) => (result.stdout ?? "").trim().split("\n");
+
+      const genuine = asGate(`MORI_HEAVY_LOCK_FD=9 ${node} self-check-covered "$LOCK"; "$FLOCK" -n "$LOCK" true; echo "still=$?"`);
+      check("a wrapper inside the gate uses the gate's lock (verified fd)", lines(genuine)[0] === "covered", lines(genuine).join(" "));
+      check("the probe leaves the gate's lock held", lines(genuine)[1] === "still=1", lines(genuine).join(" "));
+      const throughNpm = asGate(`MORI_HEAVY_LOCK_FD=9 npm exec --no -- node "${SELF}" self-check-covered "$LOCK"`);
+      check("the gate's descriptor survives an npm hop", lines(throughNpm).at(-1) === "covered", lines(throughNpm).join(" "));
+      const wrongFd = asGate(`MORI_HEAVY_LOCK_FD=8 ${node} self-check-covered "$LOCK"`);
+      check("a wrong descriptor is not trusted", lines(wrongFd)[0] === "not covered", lines(wrongFd).join(" "));
+      // Two jobs inside the same gate: the inner lock keeps them apart.
+      const twoInside = asGate(
+        `export MORI_HEAVY_LOCK_FD=9; ${node} self-check-hold "$LOCK" 3 & sleep 1.5; ${node} self-check-hold "$LOCK" 0; wait`,
+      );
+      const outcomes = lines(twoInside).sort().join(" ");
+      check("two jobs inside one gate never overlap (inner lock)", outcomes === "acquired refused", outcomes);
 
       // Someone else holds the lock: a forged descriptor to the same file must not pass.
       const holder = await acquireLockAt(gateLock);
-      const forged = spawnSync(
-        "bash",
-        ["-c", `exec 9>>"$LOCK"; MORI_HEAVY_LOCK_FD=9 "${process.execPath}" "${SELF}" self-check-covered "$LOCK"`],
-        { env: { ...process.env, LOCK: gateLock }, encoding: "utf8" },
-      );
-      check("a forged descriptor to a lock held elsewhere is refused", forged.stdout.trim() === "not covered", forged.stdout.trim());
+      const forged = spawnSync(bash, ["-c", `exec 9>>"$LOCK"; MORI_HEAVY_LOCK_FD=9 ${node} self-check-covered "$LOCK"`], {
+        env: { ...process.env, LOCK: gateLock },
+        encoding: "utf8",
+      });
+      check("a forged descriptor to a lock held elsewhere is refused", lines(forged)[0] === "not covered", lines(forged).join(" "));
       const contender = await acquireHeavyLock(gateLock, { MORI_HEAVY_LOCK_FD: "" });
       check("a second job while one holds the lock is refused (75)", holder.ok && !contender.ok);
       if (holder.ok) await holder.release();
@@ -999,6 +1168,7 @@ async function selfCheck() {
       check("the lock is free again once released", after.ok);
       if (after.ok) await after.release();
       cleanLock(gateLock);
+      cleanLock(`${gateLock}.inner`);
     }
   }
 
@@ -1014,6 +1184,7 @@ async function main() {
   try {
     if (mode === "vitest") return await runVitest(args);
     if (mode === "harness") return await runHarness();
+    if (mode === "suite") return await runSuite(args);
     if (mode === "self-check") return await selfCheck();
     if (mode === "limited") return await runStep(args);
     // The modes below exist only for the self-check's drills.
@@ -1042,6 +1213,17 @@ async function main() {
       });
       return code;
     }
+    if (mode === "self-check-hold") {
+      // Takes the heavy lock at args[0] (inside a stand-in gate), says whether
+      // it got it, holds it args[1] seconds.
+      const lock = await acquireHeavyLock(args[0], process.env, 5);
+      process.stdout.write(lock.ok ? "acquired\n" : "refused\n");
+      if (lock.ok) {
+        await new Promise((r) => setTimeout(r, (Number(args[1]) || 0) * 1000));
+        await lock.release();
+      }
+      return 0;
+    }
     if (mode === "self-check-covered") {
       process.stdout.write(coveredByGate(args[0]).ok ? "covered\n" : "not covered\n");
       return 0;
@@ -1050,7 +1232,7 @@ async function main() {
     process.stderr.write(`[run-tests] FAILED: ${error.message}\n`);
     return 1;
   }
-  process.stderr.write(`[run-tests] unknown mode ${mode}: use vitest, harness, self-check or limited\n`);
+  process.stderr.write(`[run-tests] unknown mode ${mode}: use suite, vitest, harness, self-check or limited\n`);
   return EXIT_REFUSED;
 }
 

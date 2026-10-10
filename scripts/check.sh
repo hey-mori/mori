@@ -16,7 +16,7 @@
 # Resource limits (the machine is shared with other sessions and services; see
 # docs/test-run-safety.md). Tests run through scripts/run-tests.mjs, which caps
 # workers, heap and wall-clock time; the build and the Rust pass run under the
-# same group timeout. One gate at a time per machine (a lock in the temp dir).
+# same group timeout. One heavy Mori job at a time per machine (see below).
 #   MORI_TEST_MAX_WORKERS   Vitest workers              (default 2)
 #   MORI_TEST_HEAP_MB       V8 heap per Node process    (default 2048)
 #   MORI_TEST_TIMEOUT_S     test wall-clock limit       (default 900)
@@ -50,6 +50,11 @@ heavy_busy() {
 }
 HEAVY_LOCK="/tmp/mori-heavy.lock"
 if command -v flock >/dev/null 2>&1; then
+  # Opening can fail if another user created the file (protected_regular).
+  if ! { : 9>>"$HEAVY_LOCK"; } 2>/dev/null; then
+    echo "cannot open $HEAVY_LOCK (owned by another user?): no gate can run until that is fixed" >&2
+    exit 75
+  fi
   exec 9>>"$HEAVY_LOCK"
   flock -n 9 || heavy_busy "$HEAVY_LOCK"
   export MORI_HEAVY_LOCK_FD=9
@@ -132,21 +137,23 @@ fi
 step() { echo ""; echo "── $1"; }
 
 step "typecheck"
-npm run check:types
+# Steps that are not run-tests.mjs wrappers do not need the gate's lock
+# descriptor; 9>&- keeps a stray child of theirs from holding the lock.
+npm run check:types 9>&-
 
 step "test safeguards"
 # Proves the limits below still work (argument refusals, timeout, SIGKILL
-# escalation, the orphan watchdog, the run lock) with sleeps, not tests.
+# escalation, the orphan watchdog, the heavy-job lock) with sleeps, not tests.
 node scripts/run-tests.mjs self-check
 
 step "tests"
 npm test
 
 step "stylelint"
-npm run style:check
+npm run style:check 9>&-
 
 step "prose"
-npm run check:prose
+npm run check:prose 9>&-
 
 step "commit guards"
 # Git ignores a hook without the executable bit, silently, and a script without
@@ -159,7 +166,7 @@ if [[ -n "$not_executable" ]]; then
   echo "$not_executable" >&2
   exit 1
 fi
-bash scripts/tests/commit-guards.test.sh
+bash scripts/tests/commit-guards.test.sh 9>&-
 # The branch's own commits, against docs/commit-format.md. Older history is not
 # re-judged: published commits are never rewritten here.
 policy_base=""
@@ -187,7 +194,7 @@ if [[ "$FULL" -eq 1 ]]; then
   node scripts/run-tests.mjs limited 1800 -- npm run build
 
   step "unused-file inventory (non-blocking)"
-  npm run unused || true
+  npm run unused 9>&- || true
 fi
 
 if [[ "$FULL" -eq 1 ]] && touches_rust; then

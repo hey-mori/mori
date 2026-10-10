@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "check:types": "tsc --noEmit",
-    "test": "node scripts/run-tests.mjs vitest && node scripts/run-tests.mjs harness",
+    "test": "node scripts/run-tests.mjs suite",
     "test:unit": "node scripts/run-tests.mjs vitest",
     "test:harness": "node scripts/run-tests.mjs harness",
     "test:watch": "vitest",
