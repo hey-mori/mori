@@ -420,12 +420,11 @@ refuses to run.
 Measured on the NUC on 2026-10-10 (Node 24.20, Vitest 4.1.6, cargo 1.98.1).
 Logs are kept outside the repository with the operator's evidence.
 
-- **Self-check:** 65 of 65 checks passed, inside a scope (scope
-  `memory.peak` 133 MiB, 41 tasks at most). Its first run on the previous
-  version failed one check (60 of 61), and that failure found a real defect:
-  Node passes no extra descriptors to its children, so the gate's `npm test`
-  step could never have used the gate's lock and would have failed with 75.
-  The gate now calls the wrapper directly (section 3).
+- **Self-check:** 66 of 66 checks passed, inside a scope. Its first run on
+  an earlier version failed one check (60 of 61), and that failure found a
+  real defect: Node passes no extra descriptors to its children, so the
+  gate's `npm test` step could never have used the gate's lock and would have
+  failed with 75. The gate now calls the wrapper directly (section 3).
 - **The heavy-job lock, real lock file, harmless processes:** with an idle
   holder on `/tmp/mori-heavy.lock`, a standalone wrapper failed with 75 in
   139 ms, the gate in 6 ms and `npm test` in 174 ms, and none of them started
@@ -440,22 +439,25 @@ Logs are kept outside the repository with the operator's evidence.
   while the scope's exact `memory.peak` was 210 MiB: the sum over-counts, as
   section 3 says.
 - **Worker cap:** at most 2 workers at once over those 30 files.
-- **Full `npm test`, in a scope:** 807 test files passed and 7 skipped, 8105
-  tests passed and 11 skipped (the skips are environment-gated live and smoke
-  tests), the harness passed. Vitest took 74 s; scope `memory.peak` 532 MiB,
-  65 tasks at most, no OOM kill, no swap.
-- **Full gate (`scripts/check.sh --full`), in a scope:** every pass ran and
-  passed: typecheck, the self-check, the tests, stylelint, prose, commit
-  guards, the production build, the unused-file inventory, and the Rust pass
-  (`cargo check` and `cargo test` at `-j 2`: 389 and 4 tests passed, 5
-  ignored). The Rust pass ran on a warm build cache. The scope's
-  `memory.peak` reached its 3 GiB ceiling with no OOM kill and no swap: that
-  figure counts page cache, which the kernel reclaims at the limit, so a warm
-  cargo build reading its target directory fills it. `scripts/scoped.sh` now
-  also reports how often the limit was reached.
+- **Full gate (`scripts/check.sh --full --no-rust`), in a scope, at the
+  last code commit:** every pass ran and passed: typecheck, the self-check, the
+  tests (405 files passed and 4 skipped, 4056 tests passed and 7 skipped; the
+  skips are the environment-gated live and smoke tests; Vitest 31 s), the
+  harness, stylelint, prose, commit guards, the production build and the
+  unused-file inventory. Scope `memory.peak` 1023 MiB, the limit never
+  reached, 55 tasks at most, no OOM kill, no swap.
+- **The Rust pass** ran inside the earlier full gate (one commit set before
+  the last review fixes, which do not touch it): `cargo check` and
+  `cargo test` at `-j 2`, 389 and 4 tests passed and 5 ignored, on a warm
+  build cache. That gate's scope reached its 3 GiB ceiling (page cache: a warm
+  cargo build reads its large target directory) with no OOM kill and no swap.
+- **The review found the suite running twice:** a root `include` was
+  concatenated into the smoke project, so every unit file also ran there
+  (814 files where 409 exist, 8105 tests where 4056 exist). Fixed; the
+  numbers above are after the fix.
 - **Mistakes during verification, recorded:** `--version` was let through and
   under `vitest run` it ran the whole suite once, bounded by the wrapper but
-  outside a scope (8105 tests, 70 s, RSS sum peak 576 MiB). It is now refused.
+  outside a scope (70 s, RSS sum peak 576 MiB). It is now refused.
 
 Not verified:
 - a cold Rust build inside the 3 GiB scope;
