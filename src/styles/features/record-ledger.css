@@ -4245,6 +4245,27 @@
   border-top: 1px solid var(--line);
 }
 
+/* An agent session shown as its record because it can no longer be opened. */
+.session-record-facts {
+  display: grid;
+  gap: var(--base-space-2);
+}
+
+.session-record-facts-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-2);
+  margin: 0;
+  color: var(--color-text-secondary, #3a4256);
+  font-weight: 600;
+}
+
+.session-record-facts-row {
+  margin: 0;
+  color: var(--base-text-muted);
+  font-size: 13px;
+}
+
 .note-foot-label {
   margin: 0 0 4px;
   font-size: var(--base-font-size-xs);

@@ -35,7 +35,6 @@ function pad(value: number): string {
 
 export function CalendarView() {
   const ledger = useRecordLedger();
-  const navigate = useAppStore((state) => state.navigate);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const now = useNow();
   const openSession = useAppStore((state) => state.openSession);
@@ -54,7 +53,10 @@ export function CalendarView() {
     setSessionReturn({ to: "calendar", sessionId, date, label: calendarDayLabel(date, now) });
     void resolveSession(sessionId).then((outcome) => {
       if (outcome === "opened") openSession("flow");
-      else if (outcome === "unavailable") navigate("sessions");
+      // No transcript, import or kept copy to open (its source is gone):
+      // show the session's record, what Mori still knows, as the palette
+      // does, rather than dropping the user on the live feed.
+      else if (outcome === "unavailable") openRecordInLedger(sessionId);
     });
   };
   // Coming back from a session opened from a day reopens that day, unfolded.

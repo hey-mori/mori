@@ -17,6 +17,16 @@ import { kindColorClass, originLabel, retypeTargets, schemaLabel, sourceKindLabe
 import { recordSnippet, timeOfDayLabel } from "./noteExplorerModel";
 import { useRecordProvenance } from "./useRecordProvenance";
 import { SavedPassage, savedPassageOf } from "./SavedPassage";
+import { SessionRecordFacts } from "./SessionRecordFacts";
+import { loadAutoImportMetas } from "../../lib/session/autoImportMetaStore";
+import { autoImportedSessionId } from "../../lib/session/autoImportSessions";
+
+/** Whether discovery still describes this agent session's transcript. A
+ *  session record without that is one the user can no longer open, so its
+ *  record says so (`SessionRecordFacts`). */
+function isDiscoverable(sessionId: string): boolean {
+  return loadAutoImportMetas().some((meta) => autoImportedSessionId(meta) === sessionId);
+}
 
 export function DocumentEditor({
   record,
@@ -252,6 +262,8 @@ function RecordDocument({
         </div>
 
         {passage ? <SavedPassage source={passage.source} locator={passage.locator} /> : null}
+
+        {record.schemaId === "agent-session" && !isDiscoverable(record.id) ? <SessionRecordFacts record={record} /> : null}
 
         {showRaw && source?.rawBody && !passage ? (
           <section className="doc-disclosure">

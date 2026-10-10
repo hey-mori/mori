@@ -77,7 +77,6 @@ export function ContextView() {
     archiveContext,
     reviewSessionProject,
   } = useRecordLedger();
-  const navigate = useAppStore((state) => state.navigate);
   // The door 캘린더 and the command palette already use. 프로젝트 was the only
   // surface that did not, so one note opened as a real document from the
   // calendar and as a 340px textarea from here.
@@ -112,7 +111,10 @@ export function ContextView() {
     );
     void resolveSession(sessionId).then((outcome) => {
       if (outcome === "opened") openSession("flow");
-      else if (outcome === "unavailable") navigate("sessions");
+      // No transcript, import or kept copy to open (its source is gone):
+      // show the session's record, what Mori still knows, as the palette
+      // does, rather than dropping the user on the live feed.
+      else if (outcome === "unavailable") openRecordInLedger(sessionId);
     });
   };
 

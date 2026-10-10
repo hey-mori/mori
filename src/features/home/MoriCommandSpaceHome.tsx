@@ -1,3 +1,4 @@
+import { isAutoImportedSessionId } from "../../lib/session/autoImportSessions";
 import type {
   CSSProperties,
   FocusEvent,
@@ -132,6 +133,7 @@ export function MoriCommandSpaceHome() {
   const rowRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const navigate = useAppStore((state) => state.navigate);
+  const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const openCommandPalette = useAppStore((state) => state.openCommandPalette);
   const openProject = useAppStore((state) => state.openProject);
   const openSession = useAppStore((state) => state.openSession);
@@ -213,7 +215,12 @@ export function MoriCommandSpaceHome() {
   function openSessionById(sessionId: string, tab: SessionTab = "flow"): void {
     void resolveSession(sessionId).then((outcome) => {
       if (outcome === "opened") openSession(tab);
-      else if (outcome === "unavailable") navigate("sessions");
+      // A discovered session whose source is gone opens as its record, as the
+      // palette does; anything else has no record to show.
+      else if (outcome === "unavailable") {
+        if (isAutoImportedSessionId(sessionId)) openRecordInLedger(sessionId);
+        else navigate("sessions");
+      }
     });
   }
 
