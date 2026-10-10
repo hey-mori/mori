@@ -18,6 +18,7 @@ import { formatArchiveBytes, type KeptArchive } from "../../lib/session/sessionA
 import { estimateCleanup, type CleanupPolicyInput } from "../../lib/session/retentionRisk";
 import { keepSessionArchive, loadKeptArchive, removeSessionArchive } from "./sessionArchiveActions";
 import { loadCleanupPolicy } from "./retentionActions";
+import { keepEach, totalBytes } from "../../lib/session/keepEach";
 
 function day(iso: string): string {
   const date = new Date(iso);
@@ -195,17 +196,7 @@ export function KeepDialog({
               <p className="session-archive-lead">
                 {title ? `「${title}」의` : "이 세션의"} 원본 대화를 지금 시점 그대로 Mori에 보관합니다.
               </p>
-              <ul className="session-archive-facts">
-                <li>크기: {sizeBytes ? `약 ${formatArchiveBytes(sizeBytes)}` : "보관할 때 확인합니다"}</li>
-                <li>
-                  담기는 것: 메시지, 붙여 넣거나 읽은 이미지, 도구 실행과 그 결과 전부. 도구가 읽거나 출력한
-                  비밀번호, 키, 내부 주소가 그대로 들어 있을 수 있습니다.
-                </li>
-                <li>담기지 않는 것: 하위 에이전트 대화, 따로 저장된 큰 도구 결과 파일, 보관 뒤에 이어진 대화</li>
-                <li>보관 위치: Mori 저장 폴더 안 (archives). 따로 백업되지는 않습니다.</li>
-                <li>원본이 지워진 뒤에도 Mori에서 열고 찾을 수 있습니다. 에이전트가 이어서 쓸 수 있는 세션은 아닙니다.</li>
-                <li>언제든 지울 수 있고, 지워도 에이전트의 원본에는 영향이 없습니다.</li>
-              </ul>
+              <KeepFacts sizeBytes={sizeBytes} />
             </>
           )}
           {phase === "failed" ? (
@@ -286,6 +277,115 @@ function RemoveDialog({ kept, onClose, onRemove }: { kept: KeptArchive; onClose:
           <Button variant="secondary" disabled={phase === "removing"} onClick={() => void remove()}>
             보관한 원본 지우기
           </Button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+/** What keeping an original means, said the same way for one or several. */
+export function KeepFacts({ sizeBytes }: { sizeBytes?: number }) {
+  return (
+    <ul className="session-archive-facts">
+      <li>크기: {sizeBytes ? `약 ${formatArchiveBytes(sizeBytes)}` : "보관할 때 확인합니다"}</li>
+      <li>
+        담기는 것: 메시지, 붙여 넣거나 읽은 이미지, 도구 실행과 그 결과 전부. 도구가 읽거나 출력한
+        비밀번호, 키, 내부 주소가 그대로 들어 있을 수 있습니다.
+      </li>
+      <li>담기지 않는 것: 하위 에이전트 대화, 따로 저장된 큰 도구 결과 파일, 보관 뒤에 이어진 대화</li>
+      <li>보관 위치: Mori 저장 폴더 안 (archives). 따로 백업되지는 않습니다.</li>
+      <li>원본이 지워진 뒤에도 Mori에서 열고 찾을 수 있습니다. 에이전트가 이어서 쓸 수 있는 세션은 아닙니다.</li>
+      <li>언제든 지울 수 있고, 지워도 에이전트의 원본에는 영향이 없습니다.</li>
+    </ul>
+  );
+}
+
+/**
+ * Keep several originals the user chose, in one confirmed step. Each is kept
+ * in turn; one that fails is named and the rest are still kept.
+ */
+export function KeepManyDialog({
+  items,
+  onClose,
+  onKeep,
+}: {
+  items: ReadonlyArray<{ sessionId: string; title: string; sizeBytes?: number }>;
+  onClose: () => void;
+  onKeep: (sessionId: string) => Promise<unknown>;
+}) {
+  const [phase, setPhase] = useState<"asking" | "keeping" | "done">("asking");
+  const [progress, setProgress] = useState(0);
+  const [failed, setFailed] = useState<string[]>([]);
+  const busy = useRef(false);
+  const ref = useModal(onClose, () => busy.current);
+  const total = totalBytes(items.map((item) => item.sizeBytes));
+  const keep = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setPhase("keeping");
+    try {
+      const outcomes = await keepEach(
+        items.map((item) => item.sessionId),
+        onKeep,
+        (done) => setProgress(done),
+      );
+      setFailed(outcomes.filter((outcome) => !outcome.kept).map((outcome) => outcome.sessionId));
+    } finally {
+      busy.current = false;
+      setPhase("done");
+    }
+  };
+  const titleOf = (sessionId: string) => items.find((item) => item.sessionId === sessionId)?.title ?? sessionId;
+  const keptCount = items.length - failed.length;
+  return (
+    <div className="settings-sheet-layer" role="presentation">
+      <div className="settings-sheet-scrim" onClick={() => !busy.current && onClose()} aria-hidden="true" />
+      <div ref={ref} className="project-modal session-archive-modal" role="dialog" aria-modal="true" aria-label="원본 보관" tabIndex={-1}>
+        <header className="settings-sheet-head">
+          <div className="settings-sheet-title">
+            <strong>원본 {items.length}개 보관</strong>
+          </div>
+          <button type="button" className="settings-sheet-close" onClick={() => !busy.current && onClose()} aria-label="닫기">
+            <X size={16} aria-hidden="true" />
+          </button>
+        </header>
+        <div className="project-modal-body">
+          {phase === "done" ? (
+            <>
+              <p className="session-archive-done" role="status">
+                {keptCount > 0 ? `${keptCount}개를 보관했습니다.` : "보관하지 못했습니다."}
+                {failed.length > 0 ? ` ${failed.length}개는 보관하지 못했습니다. 원본이 없거나 저장 공간이 부족할 수 있습니다.` : ""}
+              </p>
+              {failed.length > 0 ? (
+                <ul className="session-archive-facts">
+                  {failed.map((sessionId) => (
+                    <li key={sessionId}>{titleOf(sessionId)}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p className="session-archive-lead">고른 대화 {items.length}개의 원본을 지금 시점 그대로 Mori에 보관합니다.</p>
+              <KeepFacts sizeBytes={total} />
+            </>
+          )}
+        </div>
+        <footer className="project-modal-foot">
+          {phase === "done" ? (
+            <Button variant="primary" onClick={onClose}>
+              닫기
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" disabled={phase === "keeping"} onClick={onClose}>
+                취소
+              </Button>
+              <Button variant="primary" disabled={phase === "keeping"} onClick={() => void keep()}>
+                {phase === "keeping" ? `보관하는 중… ${progress}/${items.length}` : `${items.length}개 보관`}
+              </Button>
+            </>
+          )}
         </footer>
       </div>
     </div>

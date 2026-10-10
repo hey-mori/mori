@@ -41,6 +41,11 @@ export type RetentionSourceInput = {
   imported: boolean;
   /** Where the original was found, to check it is still there and to keep it. */
   sourcePath?: string;
+  /** What helps decide whether to keep it, as observed: the agent's working
+   *  folder, how many messages (only when counted whole) and PRs it names. */
+  projectLabel?: string;
+  messageCount?: number;
+  prCount?: number;
 };
 
 export type CleanupEstimate =
