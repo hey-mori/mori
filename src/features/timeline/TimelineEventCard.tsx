@@ -17,9 +17,16 @@ import {
 } from "../../components/ui/BaseActionMenu";
 
 /** Below this width an accurate (short-duration) card has no room for its
- *  icon + label, so it renders as a bare tone tick; the detail is in the hover
- *  preview. */
+ *  icon + label, so it renders as a bare tone tick and prints its title beside
+ *  the tick when the lane has room (layout.labelRoom); the detail is in the
+ *  hover preview. */
 const NARROW_CARD_WIDTH = 30;
+
+/** A label beside a tick: the reader's leading tool glyph (the lane already
+ *  names the kind of work) is dropped; the title itself is unchanged. */
+export function labelText(title: string): string {
+  return title.replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, "");
+}
 
 export function TimelineEventCard({
   event,
@@ -97,6 +104,11 @@ export function TimelineEventCard({
         aria-label={vm.ariaLabel}
         data-preview={`${vm.timeLabel} · ${sourceMark.label}\n${vm.title}\n${event.summary}`}
       >
+        {layout.width < NARROW_CARD_WIDTH && layout.labelRoom > 0 ? (
+          <span className="event-card-label" style={{ left: `${layout.width + 4}px`, maxWidth: `${layout.labelRoom}px` }}>
+            {labelText(vm.title)}
+          </span>
+        ) : null}
         <span className="event-card-row">
           <span
             className={`event-card-source-mark tone-${vm.tone} mark-${sourceMark.kind}`}
