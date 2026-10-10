@@ -41,6 +41,8 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import { useDiscloseEvent } from "../../app/useDisclosedView";
+import type { TimelineEvent } from "../../domain/types";
 import {
   isDemoSessionId,
   mergeDemoSessionSummaries,
@@ -646,17 +648,18 @@ export function WorkbenchView() {
   // placed session under that filter. This powers the cross-session digest:
   // "copy every decision across these sessions" leaves the board as markdown.
   const boardNeedle = search.trim().toLowerCase();
+  const disclose = useDiscloseEvent();
   const boardFiltering = lens !== "all" || boardNeedle.length > 0;
   const digestSessions = useMemo(
     () =>
       placedSessions.map(({ meta }) => ({
         title: meta.title,
         source: meta.sourceLabel ? shortProjectLabel(meta.sourceLabel) : "수동 세션",
-        events: filterEvents(loadConversation(repository, meta.sessionId), boardNeedle, lens).map(
+        events: filterEvents(loadConversation(repository, meta.sessionId, disclose), boardNeedle, lens).map(
           (event) => ({ title: event.title, summary: event.summary }),
         ),
       })),
-    [placedSessions, repository, boardNeedle, lens],
+    [placedSessions, repository, boardNeedle, lens, disclose],
   );
   const digestCount = digestTotal(digestSessions);
 
@@ -1390,9 +1393,10 @@ function WorkbenchFocus({
   onClose: () => void;
 }) {
   const dialogRef = useDialogFocus<HTMLDivElement>();
+  const disclose = useDiscloseEvent();
   const events = useMemo(
-    () => loadConversation(repository, meta.sessionId),
-    [repository, meta.sessionId],
+    () => loadConversation(repository, meta.sessionId, disclose),
+    [repository, meta.sessionId, disclose],
   );
   const needle = search.trim().toLowerCase();
   const matched = useMemo(
@@ -1726,9 +1730,10 @@ function SessionPanel({
 }) {
   const collapsed = panel.collapsed ?? false;
   const [menuOpen, setMenuOpen] = useState(false);
+  const disclose = useDiscloseEvent();
   const events = useMemo(
-    () => (meta ? loadConversation(repository, meta.sessionId) : []),
-    [repository, meta],
+    () => (meta ? loadConversation(repository, meta.sessionId, disclose) : []),
+    [repository, meta, disclose],
   );
   const needle = search.trim().toLowerCase();
   const matched = useMemo(
@@ -2513,6 +2518,9 @@ const DEMO_ACTOR_LABEL: Record<string, string> = {
 function loadConversation(
   repository: ReturnType<typeof createBrowserDraftRepository>,
   sessionId: string,
+  /** The request disclosure rule: a request hidden at 숨김 reads "숨긴 요청"
+   *  here too, in the panels, the board search and the copied digest. */
+  disclose: (event: TimelineEvent) => TimelineEvent,
 ): ConversationEvent[] {
   // Demo sessions carry their timeline as blueprint beats, not imported records,
   // so read them from the same builder Home and the session view use. Without
@@ -2541,6 +2549,7 @@ function loadConversation(
       .slice()
       .sort((a, b) => (a.start ?? "").localeCompare(b.start ?? ""))
       .slice(0, 80)
+      .map(disclose)
       .map((event) => ({
         id: event.id,
         actor: event.actor ?? event.type,

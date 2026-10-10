@@ -327,7 +327,7 @@ export function deriveActivityKind(args: {
   // discussion merely mentions ("memory", "report", "test") must not reclassify
   // a real chat turn — that mislabeled a memory-focused conversation as memory
   // events. Fuzzy text heuristics apply only to events with no conversational
-  // actor (connector / demo events where actor is unset).
+  // actor (connector events other than submitted prompts, and demo events).
   if (args.event.actor === "user" || args.event.actor === "assistant") {
     return "conversation";
   }

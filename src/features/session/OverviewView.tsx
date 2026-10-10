@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { discloseEventForView, resolveDisclosureLevel } from "../../lib/disclosure";
 import { readableAgentText } from "../../lib/session/agentText";
 import { ArrowRight, ListPlus, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
@@ -101,6 +102,14 @@ export function OverviewView() {
     }
     return latestRequest ?? latestEvent;
   }, [view.events]);
+  // The resume line is a request's title: it follows the disclosure level.
+  const disclosureDefault = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
+  const disclosureOverride = useSessionStore((state) =>
+    lastRequest ? state.requestDisclosureOverrides[lastRequest.id] : undefined,
+  );
+  const shownLastRequest = lastRequest
+    ? discloseEventForView(lastRequest, resolveDisclosureLevel(disclosureOverride, disclosureDefault))
+    : null;
 
   function resumeFromLastRequest() {
     if (!lastRequest) return;
@@ -193,7 +202,7 @@ export function OverviewView() {
               title="활동에서 이 지점 열기"
             >
               <span className="overview-resume-label">마지막으로 진행한 작업</span>
-              <span className="overview-resume-title">{readableAgentText(lastRequest.title)}</span>
+              <span className="overview-resume-title">{readableAgentText(shownLastRequest?.title ?? "")}</span>
               <span className="overview-resume-meta">
                 {formatSidebarRelative(lastRequest.start)}
                 <ArrowRight size={14} aria-hidden="true" />

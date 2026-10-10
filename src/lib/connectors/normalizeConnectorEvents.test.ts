@@ -50,6 +50,16 @@ describe("normalizeConnectorEventBatch", () => {
     expect(kinds.has("codexTranscript")).toBe(true);
   });
 
+  it("marks a submitted prompt as the user's own request, and nothing else", () => {
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events: [event({ id: "p" }), event({ id: "r", kind: "assistant_message", summary: "Done.", occurredAt: "2026-05-14T10:01:00Z" })],
+      applyRedaction: false,
+    });
+    expect(candidate.events.map((evt) => evt.actor)).toEqual(["user", undefined]);
+  });
+
   it("uses the earliest occurredAt as the source capturedAt", () => {
     const events = [
       event({ id: "later", occurredAt: "2026-05-14T11:00:00Z" }),
