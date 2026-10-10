@@ -18,6 +18,7 @@ import {
   buildTimelineEventCardViewModel,
   buildTrustGlyph,
   formatFileActivityDiff,
+  labelText,
   readableEventSummary,
   type TimelineCardFileActivity,
 } from "./lib/timelineCards";
@@ -151,7 +152,7 @@ function ToolRunRow({ run }: { run: Extract<StreamRow, { kind: "toolRun" }> }) {
         <div className="timeline-chrono-toolrun is-single">
           <span className="timeline-chrono-time">{timeLabel}</span>
           <Wrench size={13} aria-hidden="true" />
-          <span className="timeline-chrono-toolrun-label">{oneLine(first.event.title, 90)}</span>
+          <span className="timeline-chrono-toolrun-label">{oneLine(labelText(first.event.title), 90)}</span>
         </div>
       </li>
     );
@@ -182,7 +183,7 @@ function ToolRunRow({ run }: { run: Extract<StreamRow, { kind: "toolRun" }> }) {
           {run.events.map((toolEvent) => (
             <li key={toolEvent.id}>
               <span className="timeline-chrono-time">{formatTime(toolEvent.event.start)}</span>
-              <span className="timeline-chrono-toolrun-item">{oneLine(toolEvent.event.title, 100)}</span>
+              <span className="timeline-chrono-toolrun-item">{oneLine(labelText(toolEvent.event.title), 100)}</span>
             </li>
           ))}
         </ul>
