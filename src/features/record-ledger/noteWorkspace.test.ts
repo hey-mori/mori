@@ -28,6 +28,12 @@ function confirmed(schemaId: string, title: string): MoriRecord {
 }
 
 describe("deriveNoteTitle", () => {
+  it("names a note from a quoted heading, and keeps a heading that starts with a quote", () => {
+    expect(deriveNoteTitle("> ## 결정\n> 본문")).toBe("결정");
+    expect(deriveNoteTitle(">> 중첩 인용")).toBe("중첩 인용");
+    expect(deriveNoteTitle("# > 인용 제목")).toBe("인용 제목");
+  });
+
   it("uses the first non-empty line", () => {
     expect(deriveNoteTitle("\n\n점심 먹고 러닝\n다음 줄")).toBe("점심 먹고 러닝");
   });
