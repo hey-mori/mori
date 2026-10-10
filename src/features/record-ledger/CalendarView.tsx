@@ -17,6 +17,10 @@ import { CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNow } from "../../lib/time/useNow";
 import { useAppStore } from "../../app/store";
 import { useRecordLedger } from "./useRecordLedger";
+import { useSessionResolver } from "../session/useSessionResolver";
+import { loadAutoImportMetas } from "../../lib/session/autoImportMetaStore";
+import { autoImportedSessionId } from "../../lib/session/autoImportSessions";
+import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { ledgerVisibleRecords } from "./recordPresentation";
 import { LedgerCalendarView } from "./LedgerCalendarView";
 import { CalendarAgendaRail } from "./CalendarAgendaRail";
@@ -33,6 +37,25 @@ export function CalendarView() {
   const navigate = useAppStore((state) => state.navigate);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const now = useNow();
+  const openSession = useAppStore((state) => state.openSession);
+  const setSessionReturn = useAppStore((state) => state.setSessionReturn);
+  const resolveSession = useSessionResolver();
+  // The folder each discovered session ran in (its descriptor), read again
+  // when the records change, so sessions discovered later find theirs.
+  const folderOf = useMemo(() => {
+    const byId = new Map(
+      loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), shortProjectLabel(meta.projectPath || meta.projectName)]),
+    );
+    return (sessionId: string) => byId.get(sessionId) || null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ledger.records]);
+  const openSessionFromCalendar = (sessionId: string) => {
+    setSessionReturn(null);
+    void resolveSession(sessionId).then((outcome) => {
+      if (outcome === "opened") openSession("flow");
+      else if (outcome === "unavailable") navigate("sessions");
+    });
+  };
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [cursor, setCursor] = useState(() => ({ year: now.getFullYear(), month: now.getMonth() }));
   const [trayOpen, setTrayOpen] = useState(false);
@@ -148,7 +171,9 @@ export function CalendarView() {
         selectedDate={selectedDate}
         onSelectDate={selectDate}
         onSelectRecord={openRecordInLedger}
-        onOpenSessions={() => navigate("sessions")}
+        onOpenSession={openSessionFromCalendar}
+        contexts={ledger.contexts}
+        folderOf={folderOf}
         now={now}
       />
 

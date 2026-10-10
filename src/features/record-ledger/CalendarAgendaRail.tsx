@@ -9,9 +9,11 @@
  * Row anatomy matches the 기록 list on purpose, so a record looks the same
  * wherever it is met.
  */
-import { forwardRef } from "react";
-import { Radio } from "lucide-react";
-import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { forwardRef, useState } from "react";
+import { ChevronDown, ChevronRight, Radio } from "lucide-react";
+import type { KernelContext, MoriRecord } from "../../lib/record-kernel/kernelTypes";
+import { readableAgentText } from "../../lib/session/agentText";
+import { groupDaySessions, sessionTime } from "./calendarDaySessions";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { dayLabel } from "./calendarGrouping";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
@@ -26,7 +28,10 @@ export const CalendarAgendaRail = forwardRef<
     selectedDate: string | null;
     onSelectDate: (date: string) => void;
     onSelectRecord: (recordId: string) => void;
-    onOpenSessions: () => void;
+    onOpenSession: (sessionId: string) => void;
+    contexts: readonly KernelContext[];
+    /** The folder a session ran in, for sessions no project was confirmed for. */
+    folderOf: (sessionId: string) => string | null;
     now: Date;
   }
 >(function CalendarAgendaRail(
@@ -38,11 +43,23 @@ export const CalendarAgendaRail = forwardRef<
     selectedDate,
     onSelectDate,
     onSelectRecord,
-    onOpenSessions,
+    onOpenSession,
+    contexts,
+    folderOf,
     now,
   },
   ref,
 ) {
+  // Days whose sessions are unfolded. A day's sessions start folded so a busy
+  // day does not bury what was written that day.
+  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(() => new Set());
+  const toggle = (date: string) =>
+    setUnfolded((current) => {
+      const next = new Set(current);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
   const days = [...byDate.entries()]
     .filter(([date]) => date.startsWith(monthPrefix))
     .sort((a, b) => b[0].localeCompare(a[0]));
@@ -96,12 +113,45 @@ export const CalendarAgendaRail = forwardRef<
                   </button>
                 ))}
                 {sessions.length > 0 ? (
-                  <button type="button" className="cal-day-row" onClick={onOpenSessions}>
-                    <span className="cal-day-session-icon" aria-hidden="true">
-                      <Radio size={11} />
-                    </span>
-                    <span className="cal-day-title">세션 {sessions.length}건</span>
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="cal-day-row"
+                      aria-expanded={unfolded.has(date)}
+                      onClick={() => toggle(date)}
+                    >
+                      <span className="cal-day-session-icon" aria-hidden="true">
+                        <Radio size={11} />
+                      </span>
+                      <span className="cal-day-title">세션 {sessions.length}건</span>
+                      <span className="cal-day-kind" aria-hidden="true">
+                        {unfolded.has(date) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                      </span>
+                    </button>
+                    {unfolded.has(date)
+                      ? groupDaySessions(sessions, contexts, folderOf).map((group) => (
+                          <div key={group.key || "none"} className="cal-day-sessions">
+                            <p className="cal-day-group">
+                              {group.label}
+                              {group.kind === "folder" ? <span> 폴더</span> : null} <span>{group.sessions.length}</span>
+                            </p>
+                            {group.sessions.map((session) => (
+                              <button
+                                key={session.id}
+                                type="button"
+                                className="cal-day-row"
+                                onClick={() => onOpenSession(session.id)}
+                              >
+                                <span className="cal-day-time">{clock(sessionTime(session))}</span>
+                                <span className="cal-day-title">
+                                  {readableAgentText(session.title) || "제목 없음"}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        ))
+                      : null}
+                  </>
                 ) : null}
               </section>
             );
@@ -111,3 +161,10 @@ export const CalendarAgendaRail = forwardRef<
     </aside>
   );
 });
+
+function clock(iso: string | undefined): string {
+  // A bare day claims no time of day.
+  if (!iso || /^\d{4}-\d{2}-\d{2}$/.test(iso) || Number.isNaN(Date.parse(iso))) return "";
+  const date = new Date(iso);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}

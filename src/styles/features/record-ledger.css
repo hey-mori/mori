@@ -1549,6 +1549,32 @@
   color: var(--muted-2);
 }
 
+/* A day's sessions, unfolded: grouped under their reviewed project, each a
+   quiet row with its start time. Indented under the "세션 N건" row they belong to. */
+.cal-day-sessions {
+  padding-left: 12px;
+}
+
+.cal-day-group {
+  margin: 6px 0 2px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.cal-day-group span {
+  font-weight: 500;
+  color: var(--muted-2);
+}
+
+.cal-day-time {
+  flex-shrink: 0;
+  min-width: 36px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-2);
+}
+
 .cal-pane {
   flex: 1;
   display: flex;
