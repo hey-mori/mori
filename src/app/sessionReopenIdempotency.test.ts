@@ -518,7 +518,8 @@ describe("release review · what an answered prompt must keep", () => {
     });
     const history = repository.loadSessionAnalysisHistory(a)!.history;
     expect(history.currentRunId).toBe("run-2");
-    expect(events.some((event) => event.id === prompt.id)).toBe(true);
+    expect(events[1]!.id).toBe(prompt.id);
+    expect(events[1]!.summary).not.toBe(prompt.summary);
   });
 
   it("an uncited answered prompt still takes its new id", async () => {

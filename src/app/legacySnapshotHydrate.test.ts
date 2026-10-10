@@ -63,4 +63,13 @@ describe("launch with a legacy SQLite snapshot", () => {
     expect(repository.listSessionImports(sessionId)[0]!.events).toHaveLength(2);
     expect(useSessionStore.getState().source).toBe("desktop-sqlite");
   });
+
+  it("switching to a session with stored imports does not replace them either", async () => {
+    const sessionId = mockSession.session.id;
+    repository.putStoredSessionDraft({ project: mockSession.project, session: mockSession.session, savedAt: "2026-10-01T00:00:00Z", adapter: "browser-local-storage" });
+    const stored = repository.addSessionImport(sessionId, { source: mockSession.sources[0]!, events: mockSession.events.slice(0, 3) });
+    snapshotEvents = mockSession.events.slice(0, 1);
+    expect(await useSessionStore.getState().loadDesktopSession(sessionId)).toBe(true);
+    expect(repository.listSessionImports(sessionId).map((entry) => entry.events.map((event) => event.id))).toEqual([stored.events.map((event) => event.id)]);
+  });
 });

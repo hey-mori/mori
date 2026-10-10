@@ -2363,6 +2363,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
     if (get().divergedSourceSessionId) set({ divergedSourceSessionId: null });
     const repository = getRepository();
+    // A legacy snapshot never replaces imports stored here (see hydrate): the
+    // stored session opens as it is.
+    if (repository.listSessionImports(sessionId).length > 0) return get().loadBrowserSession(sessionId);
     let loaded;
     try {
       loaded = await service.loadSessionFromDesktop(sessionId);
@@ -2902,7 +2905,8 @@ async function citedEventIds(
   let accepted: StoredAcceptedProjectMemory[] | null;
   try {
     const result = await new AcceptedMemoryRepository({ repository }).listAllAcceptedProjectMemories();
-    accepted = result.fellBack ? null : result.data;
+    // A desktop save that fell back left its memory in app storage: count it too.
+    accepted = result.fellBack ? null : [...result.data, ...repository.listAllAcceptedProjectMemories()];
   } catch {
     accepted = null;
   }

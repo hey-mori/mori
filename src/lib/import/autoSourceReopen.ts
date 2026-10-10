@@ -138,8 +138,11 @@ export function planSourceReopen(
       stored.turnIndex === fresh.turnIndex &&
       stored.connectorEventId !== undefined &&
       stored.connectorEventId === fresh.connectorEventId;
+    // (Not "and no longer waiting": a reply can itself read as a tool turn
+    // with no tool name. A turn truly still waiting with this start has this
+    // id and never gets here.)
     const waiting = stored.actor === "user" || (stored.actor === "tool" && !stored.toolName);
-    if (sameTurnKey && !waiting && stored.start === fresh.start) {
+    if (sameTurnKey && stored.start === fresh.start) {
       if (!stored.userModified && CONTENT_FIELDS.some((field) => !same(stored[field], fresh[field]))) {
         return { kind: "keep", reason: "diverged", importIds: [existing.id] };
       }

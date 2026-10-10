@@ -120,7 +120,7 @@ Five stores hold session meaning, and they are not interchangeable:
 | Session import | `durable_documents` `session_import` | the normalized turns of a transcript | is the target |
 | Analysis and its run history | `analysis`, `analysis_history` | issues, decisions, next actions, the adopted run and earlier runs, with the user's review state | yes |
 | Session memory body | `memory_body` | the adopted run's issues, decisions and next actions, projected | yes |
-| Accepted project memory | SQLite `consolidated_memories` (never app storage) | reviewed cross-session memory | yes (`evidenceRefs`) |
+| Accepted project memory | SQLite `consolidated_memories` (app storage only when a SQLite save failed) | reviewed cross-session memory | yes (`evidenceRefs`) |
 | Record kernel | `kernel_records`, `kernel_objects` | records, contexts, sources, source links, revisions | no (passages use message locators) |
 
 The legacy SQLite session snapshot (`sessions` and related tables) is read-only: nothing in the
@@ -130,18 +130,23 @@ current build writes one.
 dated by its reply. A storage-folder restore copies ids as they are; re-reading an unchanged
 transcript yields the same ids.
 
-**The one place an id changes.** Reopening a session whose last stored turn was a prompt still
+**The one place a reopen changes an id.** Reopening a session whose last stored turn was a prompt still
 waiting for its reply, once the reply is in: the turn's time, and so its id, changes. The adopted
 analysis and the memory body follow the rename. Accepted project memory and analysis runs that are
 not adopted cannot, so a turn they cite keeps its id and takes the reply's text and time; later
 reads know it by its turn key (`connectorEventId`) and time. When accepted memory cannot be read
 from SQLite, nothing is renamed.
 
+**Ids the user changes.** Merging two events removes the absorbed event's id and splitting one
+mints new ids; only the adopted analysis follows. Accepted memory or an earlier run citing the
+old id then no longer resolves. This is user-initiated and not yet guarded.
+
 **Failure found 2026-10-10.** The reopen guard read accepted memory from app storage, where
 desktop never writes it, so on desktop a cited prompt was renamed and the memory's evidence
 silently stopped resolving (the memory drawer drops a ref it cannot find). Reproduced in an
 isolated release runtime and fixed; it did not depend on a restore. Also fixed: a launch with a
-legacy snapshot replaced the current session's stored imports with the snapshot's older ones.
+legacy snapshot, or switching to a session that has one, replaced the session's stored imports
+with the snapshot's older ones.
 
 **Verified (isolated release runtime, synthetic profile):** a reviewed decision, a resolved issue,
 a completed next action, accepted memory citing an answered prompt, a hand-filed project and a kept

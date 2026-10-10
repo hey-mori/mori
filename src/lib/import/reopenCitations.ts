@@ -7,8 +7,8 @@
  * cites the old id cannot, so such an event keeps its id:
  *
  * - accepted project memory evidence. On desktop it lives in SQLite
- *   (`AcceptedMemoryRepository`), never in app storage, so it must be read
- *   from there;
+ *   (`AcceptedMemoryRepository`), so it must be read from there (plus any a
+ *   failed SQLite save left in app storage);
  * - analysis runs other than the adopted one. Only the adopted run is
  *   remapped, and adopting an older run later must not land on an event
  *   that no longer exists.
@@ -23,11 +23,12 @@ import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 
 /** Event ids one analysis run cites. */
 export function eventIdsCitedByAnalysis(analysis: AnalysisResult): string[] {
+  // Stored runs come from older builds too: a missing list cites nothing.
   return [
-    ...analysis.issues.flatMap((issue) => issue.sourceEventIds),
-    ...analysis.decisions.flatMap((decision) => decision.sourceEventIds),
-    ...analysis.nextActions.flatMap((action) => action.relatedEventIds),
-    ...analysis.relationships.flatMap((relationship) => [relationship.fromId, relationship.toId]),
+    ...(analysis.issues ?? []).flatMap((issue) => issue.sourceEventIds ?? []),
+    ...(analysis.decisions ?? []).flatMap((decision) => decision.sourceEventIds ?? []),
+    ...(analysis.nextActions ?? []).flatMap((action) => action.relatedEventIds ?? []),
+    ...(analysis.relationships ?? []).flatMap((relationship) => [relationship.fromId, relationship.toId]),
   ];
 }
 
