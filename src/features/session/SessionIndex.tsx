@@ -188,7 +188,22 @@ export function SessionIndex({
   );
 
   const isProjectMode = groupMode === "project";
-  const visibleLost = term ? lostRows.filter((record) => record.title.toLowerCase().includes(term)) : lostRows;
+  const visibleLost = useMemo(
+    () => (term ? lostRows.filter((record) => record.title.toLowerCase().includes(term)) : lostRows),
+    [lostRows, term],
+  );
+  const lostLookAlike = useMemo(
+    () =>
+      lookAlikeHints(
+        visibleLost.map((record) => ({
+          id: record.id,
+          title: record.title || "제목 없음",
+          startedAt: record.occurredStart,
+          at: record.occurredEnd,
+        })),
+      ),
+    [visibleLost],
+  );
   const workingCount = visibleLive.filter((row) => row.working).length;
 
   return (
@@ -345,6 +360,9 @@ export function SessionIndex({
                       >
                         <span className="session-index-row-title">
                           <span className="session-index-row-name">{record.title || "제목 없음"}</span>
+                          {lostLookAlike.has(record.id) ? (
+                            <span className="session-index-row-hint">{lostLookAlike.get(record.id)}</span>
+                          ) : null}
                         </span>
                         {at ? <span className="session-index-row-meta">{formatClaudeRelativeKo(at)}</span> : null}
                       </button>
