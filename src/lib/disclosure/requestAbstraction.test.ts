@@ -51,3 +51,12 @@ describe("buildRequestAbstraction", () => {
     expect(result.abstract).toBe("사용자가 검토를 요청함");
   });
 });
+
+describe("projecting an intent line again", () => {
+  it("keeps it, so two surfaces never name one request differently", () => {
+    for (const line of ["사용자가 질문함", "사용자가 수정·디버깅을 요청함", "사용자가 작업을 요청함"]) {
+      expect(buildRequestAbstraction(line).abstract).toBe(line);
+    }
+  });
+});
+

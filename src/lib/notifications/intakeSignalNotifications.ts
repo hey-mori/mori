@@ -16,7 +16,8 @@ import type { PromotedSignal } from "./signalPolicy";
 import type { CompanionNotification } from "./notification";
 import type { IntakeRequestRow } from "../live-intake/intakeTypes";
 import type { ConflictFinding } from "../live-intake/buildConflictSignals";
-import { HIDDEN_REQUEST_TITLE } from "../disclosure/eventDisclosure";
+import { requestTitleForView } from "../disclosure/eventDisclosure";
+import type { DisclosureLevel } from "../disclosure/disclosureLevel";
 
 const COPY: Record<
   string,
@@ -73,9 +74,9 @@ export function buildConflictNotification(finding: ConflictFinding): CompanionNo
 export function buildIntakeSignalNotification(
   signal: PromotedSignal,
   row: IntakeRequestRow,
-  /** At 숨김 the request's text is withheld: this message can reach an OS
-   *  banner, a lock screen or a shared screen. */
-  hideRequest = false,
+  /** The request disclosure level: this message can reach an OS banner, a
+   *  lock screen or a shared screen. */
+  level: DisclosureLevel = "raw",
 ): CompanionNotification | null {
   const copy = COPY[signal.reason];
   // A reason with no copy is not a notification. Returning null rather than
@@ -88,7 +89,7 @@ export function buildIntakeSignalNotification(
     kind: "live_follow_update",
     severity: copy.severity,
     title: copy.title(row),
-    message: `${hideRequest ? HIDDEN_REQUEST_TITLE : row.title}${steps}`,
+    message: `${requestTitleForView(row.title, level)}${steps}`,
     // Observed, not inferred: every intake signal is a parse of the agent's own
     // transcript. This is the same claim the policy checked before allowing an
     // OS notification, restated where the user can see it.

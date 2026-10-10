@@ -50,6 +50,7 @@ const DISCLOSURE_OPTIONS: { id: DisclosureLevel; label: string }[] = [
 
 export function EventInspector({
   selectedEvent,
+  storedEvent,
   session,
   onOpenReviewItem,
   canWrite = false,
@@ -57,6 +58,8 @@ export function EventInspector({
   onClose,
 }: {
   selectedEvent: TimelineEvent;
+  /** The event as stored, when `selectedEvent` is a disclosed copy. */
+  storedEvent?: TimelineEvent;
   session: MockSession;
   /** Deep-link a linked issue / decision / next action into the Review surface. */
   onOpenReviewItem?: (selection: ReviewSelection) => void;
@@ -96,8 +99,10 @@ export function EventInspector({
     requestDisclosureDefault,
   );
   const abstractionEntry = requestAbstractions[selectedEvent.id];
-  // Project the request from its full retained text when present, else summary.
-  const requestSource = fullRequest || selectedEvent.summary;
+  // Project the request from its full retained text when present, else the
+  // stored summary: the shown event may already be disclosed, and neither the
+  // projection nor a local-LLM abstraction may start from a disclosed copy.
+  const requestSource = fullRequest || (storedEvent ?? selectedEvent).summary;
   const requestProjection = projectEventRequestSummary(
     { actor: "user", summary: requestSource },
     effectiveDisclosureLevel,

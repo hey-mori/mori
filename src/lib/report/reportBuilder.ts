@@ -380,10 +380,13 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
     lines.push("");
   }
 
-  // The resume prompt quotes request titles verbatim, so at 숨김 it stays out
-  // of the report, and the report says so.
-  if (input.resumePromptOverride && type !== "clientSafe" && requestDisclosureLevel === "hidden") {
-    warnings.push("요청을 숨김으로 둔 상태라 요청 내용이 담긴 Resume 프롬프트는 넣지 않았습니다.");
+  // The resume prompt quotes request titles verbatim, so below 원문 it stays
+  // out of the report, and the report says so.
+  const anyRequestWithheld =
+    requestDisclosureLevel !== "raw" ||
+    view.events.some((event) => (requestDisclosureOverrides[event.id] ?? "raw") !== "raw");
+  if (input.resumePromptOverride && type !== "clientSafe" && anyRequestWithheld) {
+    warnings.push("요청 표시 수준이 원문이 아니라서 요청 내용이 담긴 Resume 프롬프트는 넣지 않았습니다.");
   } else if (input.resumePromptOverride && type !== "clientSafe") {
     lines.push("## Resume 프롬프트");
     lines.push("");
@@ -426,7 +429,7 @@ function renderTimelineLine(
   // Sessions imported before the boilerplate-aware titler stored the agent's
   // "continued from a previous conversation" preamble as the title; clean it at
   // render so an already-imported session reads right without a re-import.
-  // At 숨김 a request's own title is withheld from the report too.
+  // A request's own title follows the disclosure level in the report too.
   const shownTitle = discloseEventForView(event, requestDisclosureLevel).title;
   const title = isAgentBoilerplateTitle(shownTitle) ? "세션 이어가기" : shownTitle;
   if (privacy.clientSafe) {

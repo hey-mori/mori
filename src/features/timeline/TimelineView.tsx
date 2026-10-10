@@ -710,6 +710,7 @@ export function TimelineView({
         <EventInspector
           key={selectedItem.event.id}
           selectedEvent={selectedItem.event}
+          storedEvent={storedEvent(selectedItem.event.id)}
           session={view}
           onOpenReviewItem={openReviewItem}
           onClose={closeInspector}

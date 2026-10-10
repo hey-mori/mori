@@ -23,6 +23,7 @@ export {
   HIDDEN_SESSION_TITLE,
   recordTitleForView,
   sessionTitleForView,
+  requestTitleForView,
   isRequestTitledEvent,
   isUserRequestEvent,
   projectEventRequestSummary,

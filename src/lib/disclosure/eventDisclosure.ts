@@ -1,5 +1,6 @@
 import type { EventActor } from "../../domain/types";
 import { buildRequestAbstraction } from "./requestAbstraction";
+import { boilerplateLabel, isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
   projectDisclosure,
   type DisclosureLevel,
@@ -32,6 +33,11 @@ export function projectEventRequestSummary(
 ): DisclosureProjection {
   if (!isUserRequestEvent(event)) {
     return { level: "raw", text: event.summary, isWithheld: false, fallbackUsed: false };
+  }
+  // An agent notice imported as a user turn is not a request; below 원문 its
+  // text (which can carry the user's command arguments) is not shown.
+  if (level !== "raw" && isAgentBoilerplateTitle(event.summary)) {
+    return { level, text: "", isWithheld: true, fallbackUsed: false };
   }
   const abstraction = buildRequestAbstraction(event.summary);
   return projectDisclosure(
@@ -69,7 +75,7 @@ const SUMMARY_TITLE_CHARS = 60;
 /** A request's text as one disclosure level shows it, from the validated
  *  variants (`buildRequestAbstraction`): 요약 its first sentence, 요지 the
  *  content-free intent line. */
-function requestTextAtLevel(text: string, level: "summary" | "abstract", maxSummaryChars?: number): string {
+export function requestTextAtLevel(text: string, level: "summary" | "abstract", maxSummaryChars?: number): string {
   const abstraction = buildRequestAbstraction(text, maxSummaryChars ? { maxSummaryChars } : {});
   return projectDisclosure({ raw: text, summary: abstraction.summary, abstract: abstraction.abstract }, level).text;
 }
@@ -94,6 +100,17 @@ export function discloseEventForView<
   },
 >(event: T, level: DisclosureLevel): T {
   if (level === "raw" || !isRequestTitledEvent(event)) return event;
+  // An agent notice imported as a user turn (a slash-command caveat, an
+  // interruption, a task notification) is not a request to project: below
+  // 숨김 it reads as its label, and its text (which can carry the user's own
+  // command arguments) is left out.
+  const notice =
+    isAgentBoilerplateTitle(event.title) || (event.title === "세션 이어가기" && isAgentBoilerplateTitle(event.summary));
+  if (level !== "hidden" && notice) {
+    // Its fixed label ("요청 중단", "작업 알림", ...), never the command's name.
+    const label = boilerplateLabel(isAgentBoilerplateTitle(event.title) ? event.title : event.summary, { commandName: false });
+    return { ...event, title: label || "세션 이어가기", summary: "" };
+  }
   // An unanswered pasted ask keeps the ask as its summary too.
   const summaryIsTheAsk =
     isUserRequestEvent(event) || (Boolean(event.requestText?.trim()) && !event.responseText?.trim());
@@ -103,7 +120,7 @@ export function discloseEventForView<
   const ask = event.requestText?.trim() || event.title;
   return {
     ...event,
-    title: requestTextAtLevel(ask, level, SUMMARY_TITLE_CHARS) || event.title,
+    title: requestTextAtLevel(ask, level, SUMMARY_TITLE_CHARS) || HIDDEN_REQUEST_TITLE,
     summary: summaryIsTheAsk ? requestTextAtLevel(event.summary, level) : event.summary,
   };
 }
@@ -121,7 +138,7 @@ export const HIDDEN_SESSION_TITLE = "제목 숨김";
 export function sessionTitleForView(title: string, fromRequest: boolean | undefined, level: DisclosureLevel): string {
   if (!fromRequest || level === "raw" || !title.trim()) return title;
   if (level === "hidden") return HIDDEN_SESSION_TITLE;
-  return requestTextAtLevel(title, level, SUMMARY_TITLE_CHARS) || title;
+  return requestTextAtLevel(title, level, SUMMARY_TITLE_CHARS) || HIDDEN_SESSION_TITLE;
 }
 
 /** A session record's title as a derived view shows it (see `sessionTitleForView`). */
@@ -130,5 +147,14 @@ export function recordTitleForView(
   level: DisclosureLevel,
 ): string {
   return sessionTitleForView(record.title, record.properties?.titleFromRequest === true, level);
+}
+
+/** A live request's text as a title at a disclosure level: as written at 원문,
+ *  the level's projection at 요약 / 요지, "숨긴 요청" at 숨김. Live requests
+ *  have no per-request override. */
+export function requestTitleForView(text: string, level: DisclosureLevel): string {
+  if (level === "raw" || !text.trim()) return text;
+  if (level === "hidden") return HIDDEN_REQUEST_TITLE;
+  return requestTextAtLevel(text, level, SUMMARY_TITLE_CHARS) || HIDDEN_REQUEST_TITLE;
 }
 
