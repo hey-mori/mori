@@ -31,6 +31,12 @@ describe("normalizeSessionTitle", () => {
 });
 
 describe("applySessionRename", () => {
+  it("drops the first-request mark: the name is now the user's own", () => {
+    const next = applySessionRename({ ...session(), titleFromRequest: true }, "내 이름");
+    expect(next.title).toBe("내 이름");
+    expect(next.titleFromRequest).toBeUndefined();
+  });
+
   it("renames to a trimmed title", () => {
     const next = applySessionRename(session(), "  바뀐 제목 ");
     expect(next.title).toBe("바뀐 제목");

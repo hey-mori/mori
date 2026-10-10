@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   discloseEventForView,
   HIDDEN_REQUEST_TITLE,
+  HIDDEN_SESSION_TITLE,
+  recordTitleForView,
+  sessionTitleForView,
   isUserRequestEvent,
   projectEventRequestSummary,
 } from "./eventDisclosure";
@@ -124,3 +127,23 @@ describe("discloseEventForView", () => {
     expect(discloseEventForView(tool, "hidden")).toBe(tool);
   });
 });
+
+describe("sessionTitleForView", () => {
+  it("follows the level only for a title known to be the user's first request", () => {
+    const ask = "배포 스크립트 고쳐줘. 토큰은 abc123.";
+    expect(sessionTitleForView(ask, true, "raw")).toBe(ask);
+    expect(sessionTitleForView(ask, true, "summary")).toBe("배포 스크립트 고쳐줘.");
+    expect(sessionTitleForView(ask, true, "abstract")).toBe("사용자가 수정·디버깅을 요청함");
+    expect(sessionTitleForView(ask, true, "hidden")).toBe(HIDDEN_SESSION_TITLE);
+    for (const level of ["summary", "abstract", "hidden"] as const) {
+      expect(sessionTitleForView("Fix calendar time mismatch", false, level)).toBe("Fix calendar time mismatch");
+      expect(sessionTitleForView("Fix calendar time mismatch", undefined, level)).toBe("Fix calendar time mismatch");
+    }
+  });
+
+  it("reads a session record by its property", () => {
+    expect(recordTitleForView({ title: "배포 고쳐줘", properties: { titleFromRequest: true } }, "hidden")).toBe(HIDDEN_SESSION_TITLE);
+    expect(recordTitleForView({ title: "노트", properties: {} }, "hidden")).toBe("노트");
+  });
+});
+

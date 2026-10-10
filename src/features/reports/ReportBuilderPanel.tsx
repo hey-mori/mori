@@ -20,6 +20,7 @@ import { buildReportHtmlDocument } from "../../lib/report/reportHtml";
 import { renderReportMarkdownToHtml } from "../../lib/report/reportHtml";
 import { getFeatureControlProps, type FeatureId } from "../../app/featureStatus";
 import { useSessionStore } from "../../app/sessionStore";
+import { sessionTitleForView } from "../../lib/disclosure";
 
 // Format status is sourced from the feature registry so the panel can never
 // drift from `docs/feature-status.md` or the rest of the app.
@@ -136,6 +137,8 @@ export function ReportBuilderPanel({
   const requestDisclosureLevel = useSessionStore(
     (state) => state.analysisSettings.requestDisclosureLevel,
   );
+  // The file's title and name follow the level too: a download can be shared.
+  const shownSessionTitle = sessionTitleForView(view.session.title, view.session.titleFromRequest, requestDisclosureLevel);
   const requestDisclosureOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
 
   const payload = useMemo(
@@ -180,14 +183,14 @@ export function ReportBuilderPanel({
       // hand it to the browser / webview print dialog, where "PDF로 저장" writes
       // the file. Reuses the exact HTML export, so the PDF matches it.
       printReportDocument(
-        buildReportHtmlDocument({ markdown: payload.markdown, title: view.session.title }),
+        buildReportHtmlDocument({ markdown: payload.markdown, title: shownSessionTitle }),
       );
       return;
     }
     const isHtml = format === "html";
     const isText = format === "txt";
     const content = isHtml
-      ? buildReportHtmlDocument({ markdown: payload.markdown, title: view.session.title })
+      ? buildReportHtmlDocument({ markdown: payload.markdown, title: shownSessionTitle })
       : isText
         ? buildReportTextDocument(payload.markdown)
       : payload.markdown;
@@ -201,7 +204,7 @@ export function ReportBuilderPanel({
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${view.session.title.replace(/\s+/g, "_")}-${DEFAULT_REPORT_TYPE}${selectedFormat.ext}`;
+    anchor.download = `${shownSessionTitle.replace(/\s+/g, "_")}-${DEFAULT_REPORT_TYPE}${selectedFormat.ext}`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);

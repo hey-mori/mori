@@ -822,3 +822,11 @@ describe("repository identity stays out of the kernel record", () => {
     expect(input.contextIds).toEqual([]);
   });
 });
+
+describe("a record titled by the user's first request", () => {
+  it("carries the mark as an observed property", () => {
+    const marked = buildAgentSessionRecordInput(meta({ title: "배포 스크립트 고쳐줘", titleFromRequest: true }), []);
+    expect(marked.properties?.titleFromRequest).toBe(true);
+    expect(buildAgentSessionRecordInput(meta(), []).properties?.titleFromRequest).toBeUndefined();
+  });
+});

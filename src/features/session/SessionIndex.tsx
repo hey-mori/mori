@@ -34,6 +34,7 @@ import {
   sessionIsWorking,
   sessionShortLabel,
 } from "../live-session/liveFeed";
+import { useRecordTitle, useSessionTitle } from "../../app/useDisclosedView";
 
 /** A followed session counts as "live" while it is working or was touched this
  *  recently — so the list stays stable between turns instead of flickering, and
@@ -138,20 +139,27 @@ export function SessionIndex({
       live = false;
     };
   }, [dataResetNonce, sessionListNonce]);
+  // Titles as the request disclosure level shows them, before search,
+  // grouping and look-alike hints: none of them may work on hidden text.
+  const sessionTitle = useSessionTitle();
+  const recordTitle = useRecordTitle();
   const lostRows = useMemo(() => {
     const stored = new Set(summaries.map((summary) => summary.sessionId));
-    return lostSessionRecords(sessionRecords, stored, discovered).sort((a, b) =>
-      (b.occurredEnd ?? b.occurredStart ?? "").localeCompare(a.occurredEnd ?? a.occurredStart ?? ""),
-    );
-  }, [sessionRecords, summaries, discovered]);
+    return lostSessionRecords(sessionRecords, stored, discovered)
+      .sort((a, b) => (b.occurredEnd ?? b.occurredStart ?? "").localeCompare(a.occurredEnd ?? a.occurredStart ?? ""))
+      .map((record) => ({ ...record, title: recordTitle(record) }));
+  }, [sessionRecords, summaries, discovered, recordTitle]);
   // Rows are built only while the group is open, a page at a time: a long
   // history of cleaned-up transcripts must not weigh on the list.
   const [lostOpen, setLostOpen] = useState(false);
   const [lostShown, setLostShown] = useState(LOST_PAGE);
 
   const pastRows = useMemo<SidebarSessionRow[]>(
-    () => mergeDemoSessionSummaries(summaries).map(toSidebarRow),
-    [summaries],
+    () =>
+      mergeDemoSessionSummaries(summaries)
+        .map(toSidebarRow)
+        .map((row) => ({ ...row, title: sessionTitle(row.title, row.titleFromRequest) })),
+    [summaries, sessionTitle],
   );
   const filteredPast = useMemo(
     () => filterSidebarRows(pastRows, query),

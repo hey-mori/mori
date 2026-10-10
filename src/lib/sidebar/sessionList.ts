@@ -34,6 +34,8 @@ export type SidebarSessionRow = {
   startedAt?: string;
   /** Optional grouping label (Claude project path). */
   sourceLabel?: string;
+  /** True when the title is the user's first request (see `Session`). */
+  titleFromRequest?: boolean;
 };
 
 /** Recency-mode buckets. The keys are the only ones that drive the recency
@@ -76,6 +78,7 @@ export function toSidebarRow(summary: StoredSessionSummary): SidebarSessionRow {
     timestamp,
     startedAt: summary.startedAt || undefined,
     sourceLabel: summary.sourceLabel?.trim() || undefined,
+    ...(summary.titleFromRequest ? { titleFromRequest: true } : {}),
   };
 }
 

@@ -134,6 +134,8 @@ export type BuildCommandsInput = {
   currentView?: ViewKey;
   /** Hide the row for the currently-applied theme — picking it would be a no-op. */
   currentTheme?: ThemeId;
+  /** A session's title as the request disclosure level shows it. */
+  sessionTitle?: (title: string, fromRequest: boolean | undefined) => string;
 };
 
 /**
@@ -156,10 +158,14 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
   // typed query reaches the whole history. The renderer trims the *browse* list
   // (empty query) with `capBrowseCommands`; searching sees them all.
   // Same-titled sessions read apart by when they started (see lookAlikeHints).
+  const titleOf = (summary: StoredSessionSummary) => {
+    const title = summary.title?.trim() || "제목 없음";
+    return input.sessionTitle ? input.sessionTitle(title, summary.titleFromRequest) : title;
+  };
   const lookAlike = lookAlikeHints(
     input.sessions.map((summary) => ({
       id: summary.sessionId,
-      title: summary.title?.trim() || "제목 없음",
+      title: titleOf(summary),
       startedAt: summary.startedAt,
       at: sessionLastActiveAt(summary),
     })),
@@ -173,7 +179,7 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
     .map((summary) => ({
       id: `session:${summary.sessionId}`,
       group: "session",
-      label: summary.title?.trim() || "제목 없음",
+      label: titleOf(summary),
       // The distinguisher first, so a long checkout path cannot cut it off.
       hint: [lookAlike.get(summary.sessionId), summary.sourceLabel || summary.projectName].filter(Boolean).join(" · "),
       keywords: [summary.projectName, summary.sourceLabel ?? ""].filter(Boolean),

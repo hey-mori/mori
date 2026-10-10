@@ -33,6 +33,7 @@ import {
   type SessionRow,
   type SessionsBrowserFilters,
 } from "../../lib/workspace/sessionsBrowser";
+import { useShownSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * Workspace — the first-class "projects → sessions" browser.
@@ -48,6 +49,8 @@ import {
  */
 export function WorkspaceView() {
   const view = useSessionStore(selectSessionView);
+  // The session's title as the request disclosure level shows it.
+  const shownTitle = useShownSessionTitle(view.session);
   const mode = useSessionStore(selectSessionMode);
   const draft = useSessionStore((state) => state.draft);
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -109,7 +112,7 @@ export function WorkspaceView() {
       buildSessionsBrowserModel({
         active: {
           sessionId: activeSessionId,
-          title: view.session.title,
+          title: shownTitle,
           status: view.session.status,
           sourceLabel: view.session.sourceLabel?.trim() || null,
           startedAt: view.session.startedAt || null,
@@ -122,7 +125,7 @@ export function WorkspaceView() {
         ),
         filters,
       }),
-    [activeSessionId, view, mode, draft, repository, filters],
+    [activeSessionId, view, mode, draft, repository, filters, shownTitle],
   );
 
   const openSession = (

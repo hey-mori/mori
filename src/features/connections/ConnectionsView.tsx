@@ -62,6 +62,7 @@ import { isTauriRuntime } from "../../lib/desktop";
 import { ConversationViewer } from "./ConversationViewer";
 import { SourceControlCenter } from "./SourceControlCenter";
 import { WorkBundlePanel } from "../import/WorkBundlePanel";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 type SessionsState = {
   status: "idle" | "loading" | "ready" | "error";
@@ -712,6 +713,7 @@ function SessionCard({
   onImportIntoCurrentSession: () => void;
   onOpenViewer: () => void;
 }) {
+  const sessionTitle = useSessionTitle();
   const expanded = selection !== null;
   // Hook order stays stable across collapsed/expanded — stats only do real work
   // for the one expanded card whose detail has loaded.
@@ -732,7 +734,7 @@ function SessionCard({
         aria-expanded={expanded}
         onClick={onSelect}
       >
-        <span className="connections-session-card-title">{session.title}</span>
+        <span className="connections-session-card-title">{sessionTitle(session.title, session.titleFromRequest)}</span>
         <span className="connections-session-card-meta">
           <span className="connections-list-agent">
             <Sparkles size={11} aria-hidden="true" />

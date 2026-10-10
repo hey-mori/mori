@@ -101,6 +101,7 @@ export function agentSessionToStoredDraft(meta: AgentWorkSessionMeta): StoredSes
     id: sessionId,
     projectId,
     title: meta.title.trim() || "제목 없음",
+    ...(meta.titleFromRequest && meta.title.trim() ? { titleFromRequest: true } : {}),
     startedAt,
     endedAt,
     recordingMode: "summary",
@@ -139,6 +140,7 @@ export function agentSessionFingerprint(
     | "interaction"
     | "evidence"
     | "repository"
+    | "titleFromRequest"
   >,
 ): string {
   const stamp = meta.updatedAt || meta.startedAt || "";
@@ -152,7 +154,10 @@ export function agentSessionFingerprint(
   const repository = meta.repository
     ? `${meta.repository.conflict ? "!" : ""}${meta.repository.root}:${meta.repository.basis}`
     : "";
-  return `${stamp}|${meta.messageCount}|${meta.title}|${classes}|${evidenceSignature(meta.evidence)}|${repository}`;
+  // Whether the title is the user's first request reaches the stub and record
+  // the same way; added only when true, so other sessions fingerprint as before.
+  const fromRequest = meta.titleFromRequest ? "|request-title" : "";
+  return `${stamp}|${meta.messageCount}|${meta.title}|${classes}|${evidenceSignature(meta.evidence)}|${repository}${fromRequest}`;
 }
 
 /**

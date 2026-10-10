@@ -107,3 +107,28 @@ export function discloseEventForView<
     summary: summaryIsTheAsk ? requestTextAtLevel(event.summary, level) : event.summary,
   };
 }
+
+/** What a session title known to be the user's first request reads as at 숨김. */
+export const HIDDEN_SESSION_TITLE = "제목 숨김";
+
+/**
+ * A session's title as a derived view shows it. Only a title known to be the
+ * user's first request (`titleFromRequest`) follows the request disclosure
+ * level, the same way a request-titled event does: 요약 its first sentence,
+ * 요지 the intent line, 숨김 "제목 숨김". A title of the agent's own, a
+ * summary or a name the user gave stays as it is. Display only.
+ */
+export function sessionTitleForView(title: string, fromRequest: boolean | undefined, level: DisclosureLevel): string {
+  if (!fromRequest || level === "raw" || !title.trim()) return title;
+  if (level === "hidden") return HIDDEN_SESSION_TITLE;
+  return requestTextAtLevel(title, level, SUMMARY_TITLE_CHARS) || title;
+}
+
+/** A session record's title as a derived view shows it (see `sessionTitleForView`). */
+export function recordTitleForView(
+  record: { title: string; schemaId?: string; properties?: Record<string, unknown> },
+  level: DisclosureLevel,
+): string {
+  return sessionTitleForView(record.title, record.properties?.titleFromRequest === true, level);
+}
+

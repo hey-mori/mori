@@ -13,6 +13,7 @@ import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
   discloseEventForView,
   projectEventRequestSummary,
+  sessionTitleForView,
   resolveDisclosureLevel,
   type DisclosureLevel,
 } from "../disclosure";
@@ -214,7 +215,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   const lines: string[] = [];
-  lines.push(`# ${view.session.title} · ${typeDef.label}`);
+  lines.push(`# ${sessionTitleForView(view.session.title, view.session.titleFromRequest, requestDisclosureLevel)} · ${typeDef.label}`);
   lines.push("");
   lines.push(`- 대상: **${typeDef.audience}**`);
   lines.push(`- 생성 시각: ${formatStamp(generatedAt)}`);
