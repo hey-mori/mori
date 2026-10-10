@@ -94,22 +94,38 @@ not part of Mori's backup.
 
 ## 5. Operator acceptance
 
+Run it on a separate OS user account or an isolated trial home, never over the live folder.
+
 1. In 설정 › 저장소, note the storage folder; quit Mori.
 2. Copy the whole folder to another disk; keep a checksum list of its files.
-3. On a separate OS user account or an isolated trial home (never over the live folder), put a copy
-   of the backup at the storage location with no Mori app data present, and start Mori.
-4. Check: the 프로젝트 page lists the same sessions; a kept session opens from 보관한 원본 and
-   이 대화에서 찾기 works; a saved passage is found in 기록 and 원본 열기 says plainly when the
-   original is gone; an imported session opens from its import.
-5. Quit and confirm the backup on the other disk still matches its checksum list; the restored
-   folder itself changes once Mori runs. Opening the backup itself with a SQLite tool rewrites
-   `mori.sqlite-shm` (harmless, but it no longer matches), so inspect a copy instead.
+3. Put a copy of the backup at the storage location (or a different folder named in
+   `~/.mori/storage_location`) with no Mori app data present, and start Mori.
+4. Check: the 프로젝트 page lists the same sessions, and a session filed by hand is still 확정됨 in
+   its project; in 분석 › 정리 a confirmed decision, a resolved issue and a completed next action are
+   as they were, and a decision's 관련 Timeline 이벤트 is the turn it came from; a kept session
+   opens from 보관한 원본 and 이 대화에서 찾기 works; a saved passage is found in 기록 and 원본 열기
+   says plainly when the original is gone; an imported session opens from its import.
+5. Replace a kept session's transcript with a different conversation: the session keeps its title,
+   project search does not return the new file's words, and opening it says the file at the path is
+   another conversation. Remove it: the 현재 상황 row opens the copy's last reply, dated as the copy.
+6. Quit and relaunch twice: nothing above changes.
+7. Confirm the backup on the other disk still matches its checksum list; the restored folder itself
+   changes once Mori runs. Opening the backup itself with a SQLite tool rewrites `mori.sqlite-shm`
+   (harmless, but it no longer matches), so inspect a copy instead.
 
 Evidence for levels C and D (2026-10-10, synthetic profiles, release build of #221): after a
 storage-only restore, a project page listed the same sessions; a session filed by hand into a
 project other than its source folder stayed there and opened from its kept copy; search inside the
 archive, passage search and an imported session worked; kernel and document rows were
 content-identical before and after the restored launch.
+
+Evidence for the integrity program (2026-10-10, synthetic profiles, release build of main 6655a965):
+after a storage-only restore into another home with descriptors pointing at a home that does not
+exist, sessions opened from their originals at the new path; with the originals gone, the 현재 상황
+row opened the kept copy's last reply, labelled as the copy; with an original replaced by another
+conversation, project search found only the kept copy's words, under the session's own title; the
+identity graph (ids, references, review states) was unchanged by restore and restart, with no
+dangling reference.
 
 ## 6. Event identity and the references that hold meaning
 
@@ -138,8 +154,10 @@ reads know it by its turn key (`connectorEventId`) and time. When accepted memor
 from SQLite, nothing is renamed.
 
 **Ids the user changes.** Merging two events removes the absorbed event's id and splitting one
-mints new ids; only the adopted analysis follows. Accepted memory or an earlier run citing the
-old id then no longer resolves. This is user-initiated and not yet guarded.
+mints new ids; only the adopted analysis follows. Neither action is reachable from the current UI
+(`featureStatus.ts`); before either is wired, it needs the same citation guard as a reopen. A
+memory whose event evidence no longer resolves in the open session says so in its drawer instead
+of quietly showing less.
 
 **Failure found 2026-10-10.** The reopen guard read accepted memory from app storage, where
 desktop never writes it, so on desktop a cited prompt was renamed and the memory's evidence

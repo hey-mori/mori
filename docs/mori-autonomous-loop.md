@@ -150,6 +150,18 @@ Maintain this list as the project evolves. Capability-based names
 only · no phase numbers.
 
 **Completed (do not redo):**
+- Trustworthy recovery and referential integrity (2026-10-10, design
+  `docs/design/recoverable-storage.md` §6-§8): a desktop reopen no longer renames
+  an event that accepted memory (read from SQLite) or an unadopted analysis run
+  cites, and a cited prompt takes its reply under the same id; a legacy SQLite
+  snapshot never replaces stored imports (#224); pre-migration snapshots survive a
+  kill and restore refuses an unreadable file, keeps the database it replaces and
+  works on a damaged one (#226); opening, latest reply and project search share one
+  rule for the original, the kept copy or a stated failure, including a cut-short
+  original (#228); discovery does not re-describe a kept session from another
+  conversation (#229); the memory drawer says when evidence no longer resolves (#230);
+  session descriptors follow a transcript that moved, so a restore into another
+  home reads originals where they now are (#231).
 - Durable context (2026-10-09, design `docs/design/passage-capture.md`):
   기록으로 남기기 turns a transcript message or selection into a reviewed
   record with a retained excerpt source and a versioned locator (#193);
@@ -363,15 +375,16 @@ loop must not manufacture vague polish to avoid this:
    passage has no version, so a future pattern change reads old redacted passages
    as "could not verify"; archives exist for Claude Code transcripts only.
 5. Recovery follow-ups · open (see `docs/design/recoverable-storage.md`):
-   project search and the latest-reply open still read a replaced original rather
-   than the kept copy, and the latest-reply open has no kept-copy fallback when the
-   original is gone; the head-fingerprint identity assumes a transcript's first
-   line never changes; accepted project memory is still read from localStorage when a
-   discovered session opens, so after a storage-only restore a reopen can renumber
-   events that SQLite-held accepted memory cites; a folder chosen with 변경 is
-   read in full only after a restart; a restore on a device that still holds data merges rather than rolls
-   back; a cross-machine restore and launch-time cost with large stores are not
-   measured. Preferences and the API key are device-local by design.
+   a different OS user and a second machine are untested (no passwordless sudo
+   here); an original that exists but cannot be read is worded as missing; when two
+   sessions share one transcript path, project search reads it for the newest only;
+   a descriptor an older build rewrote from a replaced file is not repaired, and a
+   session with saved passages but no kept copy is not held; merge and split are
+   unwired and would need the reopen citation guard first; a snapshot restore and a
+   folder chosen with 변경 both take effect for reads only at the next launch;
+   launch-time cost with large stores is not measured; a same-device restore merges rather than rolls
+   back; adoption was not interrupted by a real kill (covered by unit tests and the
+   every-launch adoption). Preferences and the API key are device-local by design.
 
 Deferred · revisit when a concrete need appears:
 - Evidence / Import Review polish · audited; the Import Review view,
