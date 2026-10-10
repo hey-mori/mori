@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { readableAgentText } from "../../lib/session/agentText";
 import { ArrowRight, ListPlus, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -192,7 +193,7 @@ export function OverviewView() {
               title="활동에서 이 지점 열기"
             >
               <span className="overview-resume-label">마지막으로 진행한 작업</span>
-              <span className="overview-resume-title">{lastRequest.title}</span>
+              <span className="overview-resume-title">{readableAgentText(lastRequest.title)}</span>
               <span className="overview-resume-meta">
                 {formatSidebarRelative(lastRequest.start)}
                 <ArrowRight size={14} aria-hidden="true" />

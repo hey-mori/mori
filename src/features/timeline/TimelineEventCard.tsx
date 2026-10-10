@@ -2,7 +2,7 @@ import { useCallback, useState, type CSSProperties, type FocusEvent, type MouseE
 import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
 import { LABEL_OFFSET_PX, type LaidOutTimelineItem, type TimelineDensity } from "../../lib/timeline/collisionLayout";
-import { labelText } from "./lib/timelineCards";
+import { labelText, readableEventSummary } from "./lib/timelineCards";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { SourceKind, SourceRef, TimelineEvent } from "../../domain/types";
 import {
@@ -59,7 +59,7 @@ export function TimelineEventCard({
       (item): item is string => Boolean(item),
     ),
     title: vm.title,
-    summary: event.summary,
+    summary: readableEventSummary(event, vm.title),
   };
 
   const showHover = useCallback(
@@ -97,7 +97,7 @@ export function TimelineEventCard({
         type="button"
         aria-pressed={focusState === "selected"}
         aria-label={vm.ariaLabel}
-        data-preview={`${vm.timeLabel} · ${sourceMark.label}\n${vm.title}\n${event.summary}`}
+        data-preview={`${vm.timeLabel} · ${sourceMark.label}\n${vm.title}\n${readableEventSummary(event, vm.title)}`}
       >
         {layout.width < NARROW_CARD_WIDTH && layout.labelRoom > 0 ? (
           <span

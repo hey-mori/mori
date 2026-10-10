@@ -51,3 +51,19 @@ describe("sanitizeTitle", () => {
     expect(firstMeaningfulTitle(["This session is being continued from a previous conversation"])).toBe("");
   });
 });
+
+import { boilerplateLabel } from "./sanitizeTitle";
+
+describe("what an injected notice is", () => {
+  it("names a slash command, its output, a caveat, a continuation and a cancel", () => {
+    expect(boilerplateLabel("<command-name>/model</command-name> <command-message>model</command-message>")).toBe("/model 명령");
+    expect(boilerplateLabel("<local-command-stdout>Set model</local-command-stdout>")).toBe("명령 출력");
+    expect(boilerplateLabel("<local-command-caveat>Caveat: The messages below were generated</local-command-caveat>")).toBe("로컬 명령 안내");
+    expect(boilerplateLabel("This session is being continued from a previous conversation that ran out of context.")).toBe("세션 이어가기");
+    expect(boilerplateLabel("[Request interrupted by user]")).toBe("요청 중단");
+  });
+
+  it("is empty for a real request", () => {
+    expect(boilerplateLabel("CI 개선 계획을 세워줘")).toBe("");
+  });
+});

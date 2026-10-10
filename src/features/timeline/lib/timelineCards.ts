@@ -18,7 +18,8 @@
  * is the boundary for the cards rendered INSIDE the lanes.
  */
 import { eventTypeLabels } from "../../../domain/constants";
-import { isAgentBoilerplateTitle } from "../../../lib/import/sanitizeTitle";
+import { boilerplateLabel, isAgentBoilerplateTitle } from "../../../lib/import/sanitizeTitle";
+import { readableAgentText } from "../../../lib/session/agentText";
 import type { FileTouch, SourceRef, TimelineEvent, TrustLevel } from "../../../domain/types";
 import { formatTime, formatTimeRange, minutesBetween } from "../../../lib/formatting/time";
 import { getTrustDisplay } from "../../../lib/evidence/trust";
@@ -97,7 +98,8 @@ export type TimelineEventCardViewModel = {
   timeLabel: string;
   /** Whether the time label is a range or a single time. */
   hasTimeRange: boolean;
-  /** Card title (matches `event.title`). */
+  /** Card title: `event.title` as a person reads it (CLI wrapper tags
+   *  dropped, an injected notice named for what it is). */
   title: string;
   /** Trust glyph (icon + label + tone + tooltip). */
   trust: TimelineCardTrustGlyph;
@@ -180,7 +182,15 @@ export function buildTimelineEventCardViewModel(
   // Sessions imported before the boilerplate-aware titler stored the agent's
   // "continued from a previous conversation" preamble as the title; clean it at
   // render so an already-imported session reads right without a re-import.
-  const displayTitle = isAgentBoilerplateTitle(event.title) ? "세션 이어가기" : event.title;
+  // A notice the agent CLI injected reads as what it is (a slash command, its
+  // output, a continuation); older imports stored "세션 이어가기" for all of
+  // them, so the notice in the summary decides. Display only.
+  const notice = isAgentBoilerplateTitle(event.title)
+    ? boilerplateLabel(event.title)
+    : event.title === "세션 이어가기" && isAgentBoilerplateTitle(event.summary)
+      ? boilerplateLabel(event.summary)
+      : "";
+  const displayTitle = notice || readableAgentText(event.title) || event.title;
   // A request opener (a user ask) is the anchor of its work unit; name it first
   // so the signal is not visual-only (the swimlane marks it with a filled dot).
   const requestPrefix = event.openedByUser ? "요청 · " : "";
@@ -208,6 +218,27 @@ export function buildTimelineEventCardViewModel(
     buttonTitle,
     event,
   };
+}
+
+/**
+ * `event.summary` as a person reads it in a preview or a list row, given the
+ * title shown beside it: "" when it only repeats that title or is the injected
+ * notice the title already names. Kept off the card view model on purpose:
+ * the card face never carries prose.
+ */
+export function readableEventSummary(event: TimelineEvent, shownTitle: string): string {
+  if (isAgentBoilerplateTitle(event.summary)) return "";
+  const summary = readableAgentText(event.summary);
+  return sameText(summary, shownTitle) ? "" : summary;
+}
+
+/** Whether a summary only repeats its title (ignoring spacing and a trailing
+ *  ellipsis or period). */
+function sameText(summary: string, title: string): boolean {
+  const norm = (text: string) => text.replace(/\s+/g, " ").replace(/[.…]+$/, "").trim();
+  const a = norm(summary);
+  const b = norm(title);
+  return !a || a === b || (b.length >= 24 && a.startsWith(b));
 }
 
 /** Compact diffstat string for the card chip / hover, e.g. "+12 -3". Empty when
