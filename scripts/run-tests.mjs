@@ -57,11 +57,11 @@
 import { spawn, spawnSync } from "node:child_process";
 import { constants as osConstants, tmpdir } from "node:os";
 import {
+  accessSync,
   closeSync,
   constants as fsConstants,
   fstatSync,
   ftruncateSync,
-  lstatSync,
   mkdirSync,
   openSync,
   realpathSync,
@@ -241,11 +241,12 @@ export function refuseVitestArgs(args) {
 // ── The heavy-job lock ──────────────────────────────────────────────────────
 
 /** A system tool by absolute path, so nothing earlier on PATH (npm puts
- *  node_modules/.bin first) can stand in for it. */
+ *  node_modules/.bin first) can stand in for it. Executable files only, the
+ *  same test as scripts/check.sh's `-x`. */
 function sysBin(name) {
   for (const dir of ["/usr/bin", "/bin", "/usr/local/bin"]) {
     try {
-      statSync(join(dir, name));
+      accessSync(join(dir, name), fsConstants.X_OK);
       return join(dir, name);
     } catch {
       /* try the next */
@@ -856,7 +857,8 @@ function writeReportFile(file, report) {
     const fd = openReport(target, fsConstants.O_WRONLY | fsConstants.O_CREAT);
     try {
       ftruncateSync(fd, 0);
-      writeSync(fd, `${JSON.stringify({ runs }, null, 2)}\n`, 0);
+      const bytes = Buffer.from(`${JSON.stringify({ runs }, null, 2)}\n`);
+      for (let at = 0; at < bytes.length; ) at += writeSync(fd, bytes, at, bytes.length - at, at);
     } finally {
       closeSync(fd);
     }
@@ -997,8 +999,8 @@ async function runStep(args) {
     async (lock) => {
       const { code, report } = await runLimited(command, rest, {
         timeoutS: seconds,
-      graceS,
-      sampleMs,
+        graceS,
+        sampleMs,
         onStart: (pgid) => lock.adopt(pgid),
         env: process.env,
         label: process.env.MORI_STEP_LABEL || basename(command),

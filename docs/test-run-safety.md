@@ -118,7 +118,7 @@ is expected to take about 10-20 s (not yet measured). It judges by process
 group, never by scanning the machine,
 uses sleep durations unique to the run, and uses private lock files, never
 the real heavy lock (the gate runs it with fd 9 closed). Its 61 checks (on
-Linux with flock; 53 without) cover:
+Linux with flock; 53 on Linux without it, 52 on macOS) cover:
 - the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
@@ -164,8 +164,9 @@ One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
   the free lock on the inherited description. Exclusion still holds, but the
   lock then stays with whoever owns that description. Inside a gate that is
   the gate. Outside one it takes a deliberate forgery (a shell that opens the
-  lock file on fd 9 and sets the variable), and that shell then keeps the lock
-  until it exits, so every later job fails with 75 until then.
+  lock file on fd 9 and sets the variable), and that shell, the covered
+  wrapper and its inner holder then keep the lock until they have all exited,
+  so every later job fails with 75 until then.
 - **Lifetime.** The lock lives as long as the job: the gate's ends when the
   gate, the wrappers it started and their inner-lock holders have exited. The
   gate runs its other steps, and the self-check, with `9>&-`, and the wrappers
@@ -206,8 +207,10 @@ each run it prints:
 - the group's peak RSS sum, the largest single process, and the most
   processes at once;
 - the number of samples and failed samples;
-- zombies (exited, not yet reaped) left in the group, which are listed
-  separately and never counted as leftovers.
+- the number of zombies (exited, not yet reaped) left in the group, which
+  are never counted as leftovers on Linux. Without `/proc` (macOS) the
+  fallback check cannot tell a zombie apart, so a zombie there can fail a
+  passing run with 70; that errs toward failure.
 
 `MORI_TEST_REPORT_FILE` writes the same report as JSON. It must be a regular
 file directly in `/tmp`: it is opened without following symlinks and without
@@ -289,13 +292,18 @@ been measured yet: see section 7.
 - Ctrl-C reaches the run (the wrapper forwards it). Ctrl-Z suspends only the
   wrapper; the run keeps going in its own group, and the lock stays held for
   as long as the wrapper stays suspended.
-- If the lock's holder process dies while the wrapper lives, the lock is lost
-  without notice for the rest of that run. If the wrapper and its watchdog die
+- If the holder's bash script is killed while the wrapper lives, the lock is
+  lost without notice for the rest of that run. (Killing only its `flock`
+  parent does not release it: the bash child keeps the lock descriptor.) If the wrapper and its watchdog die
   together, the holder lets go after grace + 30 s even if the run continues.
   Both need a kill from outside; only a cgroup would close them.
 - Between a group emptying and the next signal to it, its pgid could in
   theory be reused by an unrelated process. That needs the pid counter to wrap
   around within seconds; it is not handled.
+- The self-check has no wall-clock limit of its own; its drills bound each
+  wait, and a drill subprocess that overstays 60 s is killed, though its own
+  children are then left to end by themselves (they hold only a private
+  lock). It runs while the gate holds the machine lock.
 - `npm run check:release` runs `npm test` under the lock but its
   `npm run build` without it (the gate's build is locked).
 - The directory-lock fallback (no `flock`, as on macOS) has a small window in
