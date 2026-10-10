@@ -11,7 +11,6 @@
  * item without a time is listed apart. What happened on the days between a
  * session's first and last activity is not known here and is not claimed.
  */
-import type { SessionEvidence } from "../trace/sources/ai/sessionEvidence";
 
 export type ChronologySessionInput = {
   id: string;
@@ -21,14 +20,18 @@ export type ChronologySessionInput = {
   end?: string;
   /** Messages in the transcript, when counted completely. */
   messages?: number;
-  evidence?: SessionEvidence;
+  /** PRs the transcript mentions (from the session record's evidence). */
+  prs?: readonly { repository: string; number: number; url: string; firstObservedAt: string }[];
+  /** The session this transcript continues in, when the source says so. */
+  continuesIn?: string;
 };
 
 export type ChronologyRecordInput = {
   id: string;
   title: string;
   schemaId: string;
-  /** When the record happened, else when it was captured (ISO). */
+  /** When the record happened, else when it was captured: an instant, or a
+   *  bare `YYYY-MM-DD` day (no time of day is then claimed). */
   at?: string;
 };
 
@@ -45,8 +48,7 @@ export type ChronologySession = {
   messages: number | null;
   /** PRs the transcript mentions, most recently first seen first. */
   prs: { repository: string; number: number; url: string }[];
-  branches: string[];
-  continuedIn: string | null;
+  continuesIn: string | null;
 };
 
 export type ChronologyRecord = {
@@ -55,6 +57,8 @@ export type ChronologyRecord = {
   title: string;
   schemaId: string;
   at: string;
+  /** The record has a day but no time of day. */
+  dateOnly: boolean;
 };
 
 export type ChronologyItem = ChronologySession | ChronologyRecord;
@@ -80,10 +84,22 @@ export type ProjectChronology = {
   prs: number;
 };
 
-const valid = (iso: string | undefined): iso is string => Boolean(iso) && !Number.isNaN(Date.parse(iso!));
+const DAY_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-/** The local calendar date of an instant, `YYYY-MM-DD`. */
+/** Milliseconds for ordering; a bare day counts as its local midnight. */
+function timeOf(iso: string): number {
+  if (DAY_ONLY.test(iso)) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y!, m! - 1, d!).getTime();
+  }
+  return Date.parse(iso);
+}
+
+const valid = (iso: string | undefined): iso is string => Boolean(iso) && !Number.isNaN(timeOf(iso!));
+
+/** The local calendar date of an instant, `YYYY-MM-DD`; a bare day as it is. */
 export function localDay(iso: string): string {
+  if (DAY_ONLY.test(iso)) return iso;
   const date = new Date(iso);
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -101,15 +117,15 @@ export function buildProjectChronology(input: {
   dayOf?: (iso: string) => string;
 }): ProjectChronology {
   const dayOf = input.dayOf ?? localDay;
-  const dated: { day: string; at: string; item: ChronologyItem }[] = [];
+  const dated: { day: string; at: string; ms: number; item: ChronologyItem }[] = [];
   const undated: ChronologyItem[] = [];
   const prKeys = new Set<string>();
 
   for (const session of input.sessions) {
     const start = valid(session.start) ? session.start : null;
-    const end = valid(session.end) && start && Date.parse(session.end!) >= Date.parse(start) ? session.end! : null;
-    const prs = [...(session.evidence?.prs ?? [])]
-      .sort((a, b) => b.firstObservedAt.localeCompare(a.firstObservedAt) || b.number - a.number)
+    const end = valid(session.end) && start && timeOf(session.end!) >= timeOf(start) ? session.end! : null;
+    const prs = [...(session.prs ?? [])]
+      .sort((a, b) => (timeOf(b.firstObservedAt) || 0) - (timeOf(a.firstObservedAt) || 0) || b.number - a.number)
       .map((pr) => ({ repository: pr.repository, number: pr.number, url: pr.url }));
     for (const pr of prs) prKeys.add(`${pr.repository}#${pr.number}`);
     const item: ChronologySession = {
@@ -118,24 +134,24 @@ export function buildProjectChronology(input: {
       title: session.title,
       start: start ?? "",
       end,
-      minutes: start && end ? Math.floor((Date.parse(end) - Date.parse(start)) / 60_000) : null,
+      minutes: start && end ? Math.floor((timeOf(end) - timeOf(start)) / 60_000) : null,
       days: start && end ? dayNumber(dayOf(end)) - dayNumber(dayOf(start)) + 1 : 1,
       messages: typeof session.messages === "number" ? session.messages : null,
       prs,
-      branches: [...new Set((session.evidence?.branches ?? []).map((branch) => branch.name))],
-      continuedIn: session.evidence?.continuedInSessionId ?? null,
+      continuesIn: session.continuesIn ?? null,
     };
     const last = end ?? start;
-    if (last) dated.push({ day: dayOf(last), at: last, item });
+    if (last) dated.push({ day: dayOf(last), at: last, ms: timeOf(last), item });
     else undated.push(item);
   }
   for (const record of input.records) {
-    const item: ChronologyRecord = { kind: "record", id: record.id, title: record.title, schemaId: record.schemaId, at: record.at ?? "" };
-    if (valid(record.at)) dated.push({ day: dayOf(record.at!), at: record.at!, item });
+    const at = record.at ?? "";
+    const item: ChronologyRecord = { kind: "record", id: record.id, title: record.title, schemaId: record.schemaId, at, dateOnly: DAY_ONLY.test(at) };
+    if (valid(record.at)) dated.push({ day: dayOf(at), at, ms: timeOf(at), item });
     else undated.push(item);
   }
 
-  dated.sort((a, b) => b.at.localeCompare(a.at) || a.item.id.localeCompare(b.item.id));
+  dated.sort((a, b) => b.ms - a.ms || a.item.id.localeCompare(b.item.id));
   const days: ChronologyDay[] = [];
   for (const entry of dated) {
     const last = days[days.length - 1];
@@ -154,7 +170,7 @@ export function buildProjectChronology(input: {
             // The earliest activity, which may be a session's start, not its last day.
             first: dated.reduce((earliest, entry) => {
               const from = entry.item.kind === "session" && entry.item.start ? entry.item.start : entry.at;
-              return from < earliest ? from : earliest;
+              return timeOf(from) < timeOf(earliest) ? from : earliest;
             }, dated[0]!.at),
             last: dated[0]!.at,
           }

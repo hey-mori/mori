@@ -2924,7 +2924,8 @@
   cursor: pointer;
 }
 
-.project-chrono-more:hover {
+.project-chrono-more:hover,
+.project-chrono-more:focus-visible {
   background: var(--panel-soft);
 }
 

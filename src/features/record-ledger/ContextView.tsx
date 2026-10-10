@@ -15,7 +15,7 @@
  */
 import { ProjectChronologySection } from "./ProjectChronologySection";
 import { buildProjectChronology } from "../../lib/project/projectChronology";
-import type { SessionEvidence } from "../../lib/trace/sources/ai/sessionEvidence";
+import { readSessionEvidence } from "../../lib/record-kernel/agentSessionEvidence";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArchiveRestore,
@@ -44,7 +44,7 @@ import { buildProjectSearchInventory } from "../../lib/session/projectSearch";
 import { useProjectSearchStore } from "../../app/projectSearchStore";
 import { ProjectTranscriptSearch } from "./ProjectTranscriptSearch";
 import { loadConnectedProjects } from "../../lib/projects/projectConnection";
-import { kindColorClass, ledgerVisibleRecords } from "./recordPresentation";
+import { ledgerVisibleRecords } from "./recordPresentation";
 import { archivedRoots, contextPath, contextTreeOrder, inArchivedSubtree } from "./contextTree";
 import { ProjectTreeRow, type ProjectTreeNode } from "./ProjectTreeRow";
 import { ProjectCreateModal } from "./ProjectCreateModal";
@@ -333,26 +333,28 @@ export function ContextView() {
     () => (activeGroup ? groupRecordsBySection(activeGroup.records) : []),
     [activeGroup],
   );
-  // 흐름: a project counts only its confirmed sessions; a folder group (no
-  // Mori project) shows the sessions it groups, and says so.
+  // 흐름: a project's confirmed sessions (its descendants' included, the same
+  // set project search reads) and its records. Not shown for a folder group:
+  // there it would only repeat the 세션 list.
   const chronologyInput = useMemo(() => {
-    if (!activeGroup) return null;
-    const counted = activeContext
-      ? activeGroup.sessions.filter((session) => activeGroup.inclusion[session.sessionId]?.project === "member")
-      : activeGroup.sessions;
-    const kernelById = new Map(records.map((record) => [record.id, record]));
+    if (!activeGroup || !activeContext || searchInventory?.kind !== "ok") return null;
+    const visible = new Map(ledgerVisibleRecords(records).map((record) => [record.id, record]));
+    const summaryById = new Map(summaries.map((summary) => [summary.sessionId, summary]));
     const chronology = buildProjectChronology({
-      sessions: counted.map((session) => {
-        const record = kernelById.get(session.sessionId);
-        const evidence = record?.properties?.sessionEvidence as SessionEvidence | undefined;
+      sessions: searchInventory.entries.map((entry) => {
+        const record = visible.get(entry.sessionId);
+        const evidence = readSessionEvidence(record?.properties?.sessionEvidence);
         const steps = record?.properties?.stepCount;
         return {
-          id: session.sessionId,
-          title: session.title,
-          start: record?.occurredStart ?? session.startedAt,
-          end: record?.occurredEnd ?? (record ? undefined : session.savedAt),
+          id: entry.sessionId,
+          title: summaryById.get(entry.sessionId)?.title ?? entry.title,
+          // The transcript's own first and last activity. A session with no
+          // record has no observed end: its Mori save time is not activity.
+          start: record?.occurredStart ?? summaryById.get(entry.sessionId)?.startedAt,
+          end: record?.occurredEnd,
           messages: typeof steps === "number" ? steps : undefined,
-          evidence: evidence && Array.isArray(evidence.prs) ? evidence : undefined,
+          prs: evidence?.prs,
+          continuesIn: evidence?.continuesIn,
         };
       }),
       records: activeGroup.records.map((record) => ({
@@ -362,8 +364,8 @@ export function ContextView() {
         at: record.occurredStart ?? record.capturedAt,
       })),
     });
-    return { chronology, leftOut: activeGroup.sessions.length - counted.length };
-  }, [activeGroup, activeContext, records]);
+    return { chronology };
+  }, [activeGroup, activeContext, searchInventory, records, summaries]);
 
   // 이어가기 reads the page's own session list, so what the page shows and what
   // the pack can cite never disagree. Records come in at EVERY status (the page
@@ -742,9 +744,10 @@ export function ContextView() {
 
               {chronologyInput ? (
                 <ProjectChronologySection
+                  key={activeGroup?.id ?? ""}
                   chronology={chronologyInput.chronology}
-                  scope={activeContext ? "project" : "folder"}
-                  leftOut={chronologyInput.leftOut}
+                  leftOut={unconfirmedInGroup}
+                  kindLabel={(schemaId) => registry.get(schemaId)?.name ?? "기록"}
                   onOpenSession={openSessionById}
                   onOpenRecord={openRecordInLedger}
                 />

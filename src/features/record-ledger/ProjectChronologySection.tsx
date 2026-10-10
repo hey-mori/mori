@@ -14,29 +14,18 @@ import { kindColorClass } from "./recordPresentation";
 /** Days shown before the rest fold behind a disclosure. */
 const DAYS_SHOWN = 7;
 
-const RECORD_KIND: Record<string, string> = {
-  note: "노트",
-  decision: "결정",
-  task: "할 일",
-  insight: "인사이트",
-  knowledge: "지식",
-  "source-document": "자료",
-  qa: "질문",
-  event: "일정",
-};
-
 export function ProjectChronologySection({
   chronology,
-  scope,
   leftOut,
+  kindLabel,
   onOpenSession,
   onOpenRecord,
 }: {
   chronology: ProjectChronology;
-  /** `project`: confirmed sessions of a project. `folder`: sessions grouped by folder. */
-  scope: "project" | "folder";
-  /** Sessions in the group not counted here (suggested, not yet confirmed). */
+  /** Sessions the page groups here that are not confirmed members. */
   leftOut: number;
+  /** A record's kind, from the schema registry. */
+  kindLabel: (schemaId: string) => string;
   onOpenSession: (sessionId: string) => void;
   onOpenRecord: (recordId: string) => void;
 }) {
@@ -46,9 +35,9 @@ export function ProjectChronologySection({
   const hidden = chronology.days.length - days.length;
   const summary = [
     chronology.span ? spanLabel(chronology.span.first, chronology.span.last) : null,
-    chronology.sessions > 0 ? `세션 ${chronology.sessions}` : null,
-    chronology.records > 0 ? `기록 ${chronology.records}` : null,
-    leftOut > 0 ? `확정 전 ${leftOut}개 제외` : null,
+    chronology.sessions > 0 ? `세션 ${chronology.sessions}개` : null,
+    chronology.records > 0 ? `기록 ${chronology.records}개` : null,
+    leftOut > 0 ? `확정 전 세션 ${leftOut}개 제외` : null,
   ].filter(Boolean);
 
   return (
@@ -56,10 +45,10 @@ export function ProjectChronologySection({
       <p className="ctx-section-label">
         흐름
         <InfoHint label="흐름 설명">
-          {scope === "project" ? "확정된 세션과 이 프로젝트의 기록을" : "이 폴더의 세션과 기록을"} 날짜별로
-          모았습니다. 세션은 대화 파일에 남은 마지막 활동의 날짜에 놓이고, 여러 날에 걸친 세션은 시작한 날을 함께
-          적습니다. 그 사이 어느 날 무엇을 했는지는 여기서 알 수 없습니다. PR은 대화에 등장한 것이며 만들거나
-          병합했다는 뜻이 아닙니다.
+          확정된 세션(하위 프로젝트 포함)과 이 프로젝트의 기록을 날짜별로 모았습니다. 세션은 대화 파일에 남은 마지막
+          활동의 날짜에 놓이고, 여러 날에 걸친 세션은 시작한 날을 함께 적습니다. 그 사이 어느 날 무엇을 했는지는 여기서
+          알 수 없습니다. 기록은 활동 날짜, 없으면 만든 날짜에 놓입니다. PR은 대화에 등장한 것이며 만들거나 병합했다는
+          뜻이 아닙니다.
         </InfoHint>
       </p>
       {summary.length > 0 ? <p className="project-chrono-summary">{summary.join(" · ")}</p> : null}
@@ -72,24 +61,24 @@ export function ProjectChronologySection({
           <ul className="project-chrono-items">
             {day.items.map((item) => (
               <li key={`${item.kind}-${item.id}`}>
-                <ChronologyRow item={item} onOpenSession={onOpenSession} onOpenRecord={onOpenRecord} />
+                <ChronologyRow item={item} kindLabel={kindLabel} onOpenSession={onOpenSession} onOpenRecord={onOpenRecord} />
               </li>
             ))}
           </ul>
         </div>
       ))}
-      {hidden > 0 ? (
-        <button type="button" className="project-chrono-more" onClick={() => setShowAll(true)}>
-          이전 {hidden}일 더 보기
+      {hidden > 0 || showAll ? (
+        <button type="button" className="project-chrono-more" onClick={() => setShowAll((value) => !value)}>
+          {showAll ? "최근 날짜만 보기" : `이전 ${hidden}일 더 보기`}
         </button>
       ) : null}
       {chronology.undated.length > 0 ? (
         <details className="project-chrono-undated">
-          <summary>시간이 없는 항목 {chronology.undated.length}개</summary>
+          <summary>날짜 없는 항목 {chronology.undated.length}개</summary>
           <ul className="project-chrono-items">
             {chronology.undated.map((item) => (
               <li key={`${item.kind}-${item.id}`}>
-                <ChronologyRow item={item} onOpenSession={onOpenSession} onOpenRecord={onOpenRecord} />
+                <ChronologyRow item={item} kindLabel={kindLabel} onOpenSession={onOpenSession} onOpenRecord={onOpenRecord} />
               </li>
             ))}
           </ul>
@@ -101,20 +90,22 @@ export function ProjectChronologySection({
 
 function ChronologyRow({
   item,
+  kindLabel,
   onOpenSession,
   onOpenRecord,
 }: {
   item: ChronologyItem;
+  kindLabel: (schemaId: string) => string;
   onOpenSession: (sessionId: string) => void;
   onOpenRecord: (recordId: string) => void;
 }) {
   if (item.kind === "record") {
     return (
       <button type="button" className="project-chrono-row" onClick={() => onOpenRecord(item.id)}>
-        <span className="project-chrono-time">{item.at ? clock(item.at) : ""}</span>
+        <span className="project-chrono-time">{item.at && !item.dateOnly ? clock(item.at) : ""}</span>
         <span className={`note-item-dot ${kindColorClass(item.schemaId)}`} aria-hidden="true" />
         <span className="project-chrono-title">{item.title || "제목 없음"}</span>
-        <span className="project-chrono-meta">{RECORD_KIND[item.schemaId] ?? "기록"}</span>
+        <span className="project-chrono-meta">{kindLabel(item.schemaId)}</span>
       </button>
     );
   }
@@ -163,6 +154,8 @@ function duration(minutes: number): string {
 }
 
 function clock(iso: string): string {
+  // A bare day claims no time of day.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
   const date = new Date(iso);
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
@@ -172,12 +165,15 @@ const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 function dayLabel(day: string): string {
   const [y, m, d] = day.split("-").map(Number);
   const date = new Date(y!, m! - 1, d!);
-  return `${m}월 ${d}일 (${WEEKDAY[date.getDay()]})`;
+  const year = y === new Date().getFullYear() ? "" : `${y}년 `;
+  return `${year}${m}월 ${d}일 (${WEEKDAY[date.getDay()]})`;
 }
 
 function spanLabel(first: string, last: string): string {
   const a = new Date(first);
   const b = new Date(last);
-  const label = (date: Date) => `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  const thisYear = new Date().getFullYear();
+  const label = (date: Date) =>
+    `${date.getFullYear() === thisYear ? "" : `${date.getFullYear()}년 `}${date.getMonth() + 1}월 ${date.getDate()}일`;
   return label(a) === label(b) ? label(a) : `${label(a)} – ${label(b)}`;
 }
