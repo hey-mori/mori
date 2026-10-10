@@ -1727,60 +1727,71 @@ fn truncate(input: &str, max: usize) -> String {
 /// "[32m✓[39m". CSI (`ESC [ … final`), OSC (`ESC ] … BEL` or `ESC \\`), and
 /// any other two-byte escape are dropped; everything else is kept as is.
 fn strip_ansi(input: &str) -> String {
-    if !input.contains('\u{1b}') {
+    const ESC: char = '\u{1b}';
+    if !input.contains(ESC) {
         return input.to_string();
     }
+    let chars: Vec<char> = input.chars().collect();
     let mut out = String::with_capacity(input.len());
-    let mut chars = input.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c != '\u{1b}' {
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if c != ESC {
             out.push(c);
+            i += 1;
             continue;
         }
-        match chars.peek().copied() {
+        i += 1;
+        match chars.get(i).copied() {
             Some('[') => {
-                chars.next();
                 // Parameter and intermediate bytes (0x20..=0x3F), then one
                 // final byte (0x40..=0x7E). Anything else ends a malformed
                 // sequence without eating the text after it.
-                while let Some(&next) = chars.peek() {
+                i += 1;
+                while let Some(&next) = chars.get(i) {
                     if (' '..='?').contains(&next) {
-                        chars.next();
+                        i += 1;
                     } else {
                         if ('@'..='~').contains(&next) {
-                            chars.next();
+                            i += 1;
                         }
                         break;
                     }
                 }
             }
             Some(']') | Some('P') | Some('_') | Some('^') => {
-                chars.next();
-                // A string sequence (OSC, DCS, APC, PM) ends at BEL or ST. An
-                // unterminated one ends at the line break, which is kept.
-                while let Some(&next) = chars.peek() {
+                // A string sequence (OSC, DCS, APC, PM) ends at BEL or ST
+                // (ESC \\). An unterminated one ends before a line break or
+                // the next escape, which are then read as usual.
+                i += 1;
+                while let Some(&next) = chars.get(i) {
+                    if next == '\u{7}' {
+                        i += 1;
+                        break;
+                    }
+                    if next == ESC {
+                        if chars.get(i + 1) == Some(&'\\') {
+                            i += 2;
+                        }
+                        break;
+                    }
                     if next == '\n' {
                         break;
                     }
-                    chars.next();
-                    if next == '\u{7}' {
-                        break;
-                    }
-                    if next == '\u{1b}' && chars.peek() == Some(&'\\') {
-                        chars.next();
-                        break;
-                    }
+                    i += 1;
                 }
             }
-            Some('(') | Some(')') | Some('*') | Some('+') => {
-                // Character set selection: ESC ( B and the like.
-                chars.next();
-                if chars.peek().is_some_and(|next| next.is_ascii_graphic()) {
-                    chars.next();
+            Some('(') | Some(')') | Some('*') | Some('+') | Some('#') | Some('%') => {
+                // Character set and line attributes: ESC ( B, ESC # 8 and the like.
+                i += 1;
+                if chars.get(i).is_some_and(|next| next.is_ascii_graphic()) {
+                    i += 1;
                 }
             }
-            Some(next) if ('@'..='~').contains(&next) => {
-                chars.next();
+            // Two-byte escapes: ESC 7 / ESC 8 (save, restore cursor), ESC = and
+            // the like, and the C1 forms.
+            Some(next) if ('0'..='~').contains(&next) => {
+                i += 1;
             }
             // A lone ESC before a line break or ordinary text: drop only it.
             _ => {}
@@ -2529,6 +2540,8 @@ mod tests {
         assert_eq!(strip_ansi("\u{1b}[3\n한글 줄 끝 next"), "\n한글 줄 끝 next");
         assert_eq!(strip_ansi("a\u{1b}]0;title\nline2"), "a\nline2");
         assert_eq!(strip_ansi("x\u{1b}\n한"), "x\n한");
+        assert_eq!(strip_ansi("\u{1b}7saved\u{1b}8 ok \u{1b}=\u{1b}>x \u{1b}#8y"), "saved ok x y");
+        assert_eq!(strip_ansi("\u{1b}]0;t\u{1b}[32mgreen\nnext"), "green\nnext");
         let cursor_only = serde_json::json!({ "type": "tool_result", "content": "\u{1b}[?25l\u{1b}[?25h" });
         assert_eq!(render_content_block(&cursor_only).unwrap(), "↳ (도구 결과 없음)");
     }

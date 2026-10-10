@@ -65,11 +65,12 @@ const TOOL_RESULT_TEXT = /^\s*↳\s*\(?\s*도구\s*(결과|오류)/;
 function onlyToolResultRendering(stored: TimelineEvent, fresh: TimelineEvent): boolean {
   if (stored.actor !== "tool" || stored.toolName || fresh.actor !== "tool" || fresh.toolName) return false;
   if (!TOOL_RESULT_TEXT.test(stored.summary) || !TOOL_RESULT_TEXT.test(fresh.summary)) return false;
-  return CONTENT_FIELDS.every((field) => field === "title" || field === "summary" || same(stored[field], fresh[field]));
+  // The summary only: such a turn's title is a fixed label that never moves.
+  return CONTENT_FIELDS.every((field) => field === "summary" || same(stored[field], fresh[field]));
 }
 
-/** The text fields a reader-rendering refresh takes from the read. */
-const RENDERED_FIELDS = ["title", "summary"] as const;
+/** The text field a reader-rendering refresh takes from the read. */
+const RENDERED_FIELDS = ["summary"] as const;
 
 /** `stored` with `fields` taken from `fresh`. Every other field (notes, links,
  *  relationships, artifacts, extra source references, edits) stays. */
