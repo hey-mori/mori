@@ -55,7 +55,7 @@ Mark each step pass or fail; a fail names what you saw.
 1. 대시보드: the tile and table say 폴더, not 프로젝트.
 2. Tool rows in a session read as 도구; an empty result is not shown as 나; a
    screenshot result reads "(이미지 N개)"; no colour codes like `[32m`.
-3. Set 설정 → 내 요청 표시 수준 to 숨김: hovering a request
+3. Set 설정 → 개인정보 → 내 요청 표시 수준 to 숨김: hovering a request
    in the timeline shows no request text. At 요약 or 요지 it shows that level's
    text (요약 is the first sentence), never the full original.
 

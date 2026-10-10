@@ -50,13 +50,11 @@ Grade-one work, in recommended order.
 1. **Distinguish look-alike sessions.** Several real sessions share one title
    (scripted runs). Show the first differing word of the prompt or the start
    time beside duplicates in lists, never a guessed label.
-2. **Record list snippets.** A passage kept from a markdown reply shows "##" in
-   the 기록 list and body; render the snippet as text.
-3. **Session list and lost sources.** A session whose transcript is gone is
+2. **Session list and lost sources.** A session whose transcript is gone is
    absent from the 세션 list but present in the calendar; make the 세션 list
    show it with the same "원본 대화를 열 수 없습니다" state (#251 covers the
    record).
-4. **Reuse at the start of work.** Extend the project continuation pack
+3. **Reuse at the start of work.** Extend the project continuation pack
    (#144, `projectContinuation.ts`) rather than duplicating it: surface its
    active decisions where work starts. Where exactly (a session view, the
    project page) is an IA question, so the placement needs an owner call; the
