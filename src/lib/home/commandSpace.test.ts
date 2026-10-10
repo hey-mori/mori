@@ -293,3 +293,19 @@ describe("buildModeGuide", () => {
     expect(guide.features[0]?.target).toEqual({ type: "palette" });
   });
 });
+
+describe("look-alike sessions on Home", () => {
+  it("tells same-titled shown sessions apart by when they started", () => {
+    const sessions = [
+      session({ sessionId: "a", title: "Nightly run", startedAt: "2026-10-09T05:02:00Z", savedAt: "2026-10-09T05:02:00Z" }),
+      session({ sessionId: "b", title: "Nightly run", startedAt: "2026-10-09T06:30:00Z", savedAt: "2026-10-09T06:30:00Z" }),
+      session({ sessionId: "c", title: "다른 일", startedAt: "2026-10-09T07:00:00Z", savedAt: "2026-10-09T07:00:00Z" }),
+    ];
+    const rows = buildCommandSpaceResults({ modeId: "find", query: "", sessions }).rows;
+    const hintOf = (id: string) => rows.find((row) => row.id === `session:${id}`)?.hint;
+    expect(hintOf("a")).toBe("mori · 14:02 시작");
+    expect(hintOf("b")).toBe("mori · 15:30 시작");
+    expect(hintOf("c")).toBe("mori");
+  });
+});
+

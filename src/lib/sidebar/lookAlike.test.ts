@@ -36,6 +36,15 @@ describe("lookAlikeHints", () => {
     expect(minute.get("b")).toBe("14:02:40 시작");
   });
 
+  it("writes a start just after midnight as 00, not 24", () => {
+    const hints = lookAlikeHints([
+      { id: "a", title: "같은 제목", startedAt: "2026-10-08T15:05:00Z" },
+      { id: "b", title: "같은 제목", startedAt: "2026-10-08T16:30:00Z" },
+    ]);
+    expect(hints.get("a")).toBe("00:05 시작");
+    expect(hints.get("b")).toBe("01:30 시작");
+  });
+
   it("leaves the date out for a surface that shows it already", () => {
     const hints = lookAlikeHints(
       [

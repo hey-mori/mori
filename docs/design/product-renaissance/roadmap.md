@@ -47,9 +47,10 @@ real transcript stays the operator's call.
 
 Grade-one work, in recommended order.
 
-1. **Distinguish look-alike sessions.** Several real sessions share one title
-   (scripted runs). Show the first differing word of the prompt or the start
-   time beside duplicates in lists, never a guessed label.
+1. **Distinguish look-alike sessions.** Done in #261: same-titled sessions in
+   the 세션 list, the palette, the project page and Home show when they
+   started, never a guessed label. The first differing word of the prompt was
+   not used: it would show request text where 숨김 hides it.
 2. **Session list and lost sources.** A session whose transcript is gone is
    absent from the 세션 list but present in the calendar; make the 세션 list
    show it with the same "원본 대화를 열 수 없습니다" state (#251 covers the

@@ -193,17 +193,18 @@ export function SessionIndex({
     () => (term ? lostRows.filter((record) => record.title.toLowerCase().includes(term)) : lostRows),
     [lostRows, term],
   );
+  // Built only while the group is open, over the page on screen.
   const lostLookAlike = useMemo(
     () =>
       lookAlikeHints(
-        visibleLost.map((record) => ({
+        (lostOpen ? visibleLost.slice(0, lostShown) : []).map((record) => ({
           id: record.id,
           title: record.title || "제목 없음",
           startedAt: record.occurredStart,
           at: record.occurredEnd,
         })),
       ),
-    [visibleLost],
+    [visibleLost, lostOpen, lostShown],
   );
   const workingCount = visibleLive.filter((row) => row.working).length;
 

@@ -2,6 +2,7 @@ import type { ViewKey } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 import { sessionLastActiveAt } from "../session/sessionActivity";
 import { expandSemanticTerms } from "../project-memory/semanticTerms";
+import { lookAlikeHints } from "../sidebar/lookAlike";
 
 /**
  * Mori Command Space: pure result derivation.
@@ -140,9 +141,9 @@ export function buildCommandSpaceResults(input: {
   const projectRows = hasQuery
     ? matchProjects(input.sessions, matchTokens).slice(0, PROJECT_LIMIT)
     : [];
-  const sessionRows = matchSessions(input.sessions, matchTokens).slice(
-    0,
-    hasQuery ? SESSION_LIMIT_QUERY : SESSION_LIMIT_RECENT,
+  const sessionRows = withLookAlikeHints(
+    matchSessions(input.sessions, matchTokens).slice(0, hasQuery ? SESSION_LIMIT_QUERY : SESSION_LIMIT_RECENT),
+    input.sessions,
   );
 
   const context = [...projectRows, ...sessionRows];
@@ -432,6 +433,29 @@ function matchProjects(
       hint: project.key !== project.label ? project.key : undefined,
       projectKey: project.key,
     }));
+}
+
+/** Same-titled sessions among the shown rows read apart by when they started. */
+function withLookAlikeHints(
+  rows: CommandSpaceRow[],
+  sessions: ReadonlyArray<StoredSessionSummary>,
+): CommandSpaceRow[] {
+  const byId = new Map(sessions.map((session) => [session.sessionId, session]));
+  const hints = lookAlikeHints(
+    rows.map((row) => {
+      const session = row.kind === "session" ? byId.get(row.sessionId) : undefined;
+      return {
+        id: row.id,
+        title: row.label,
+        startedAt: session?.startedAt,
+        at: session ? sessionLastActiveAt(session) : undefined,
+      };
+    }),
+  );
+  return rows.map((row) => {
+    const hint = hints.get(row.id);
+    return hint ? { ...row, hint: row.hint ? `${row.hint} · ${hint}` : hint } : row;
+  });
 }
 
 function toSessionRow(session: StoredSessionSummary): CommandSpaceRow {

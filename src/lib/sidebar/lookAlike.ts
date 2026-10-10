@@ -22,13 +22,13 @@ export type LookAlikeRow = {
 const SEOUL = "Asia/Seoul";
 const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: SEOUL, year: "numeric", month: "2-digit", day: "2-digit" });
 const dayLabel = new Intl.DateTimeFormat("ko-KR", { timeZone: SEOUL, month: "long", day: "numeric" });
-const minuteLabel = new Intl.DateTimeFormat("ko-KR", { timeZone: SEOUL, hour: "2-digit", minute: "2-digit", hour12: false });
+const minuteLabel = new Intl.DateTimeFormat("ko-KR", { timeZone: SEOUL, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const secondLabel = new Intl.DateTimeFormat("ko-KR", {
   timeZone: SEOUL,
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
-  hour12: false,
+  hourCycle: "h23",
 });
 
 function sameTitleKey(title: string): string {
@@ -74,8 +74,10 @@ export function lookAlikeHints(
       showDate ? `${dayLabel.format(date)} ${clock.format(date)}` : clock.format(date);
     // Collisions are judged with the day, shown or not.
     const byMinute = dated.map((entry) => `${dayKey.format(entry.date)} ${minuteLabel.format(entry.date)}`);
+    const perMinute = new Map<string, number>();
+    for (const when of byMinute) perMinute.set(when, (perMinute.get(when) ?? 0) + 1);
     for (const [index, entry] of dated.entries()) {
-      const collides = byMinute.filter((when) => when === byMinute[index]).length > 1;
+      const collides = (perMinute.get(byMinute[index]) ?? 0) > 1;
       const when = label(entry.date, collides ? secondLabel : minuteLabel);
       hints.set(entry.row.id, entry.isStart ? `${when} 시작` : when);
     }
