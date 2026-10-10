@@ -13,6 +13,7 @@ import {
   type SidebarGroupingMode,
   type SidebarSessionRow,
 } from "../../lib/sidebar/sessionList";
+import { lookAlikeHints } from "../../lib/sidebar/lookAlike";
 import {
   loadGroupingPreference,
   saveGroupingPreference,
@@ -121,6 +122,14 @@ export function SessionIndex({
   const pastGroups = useMemo(
     () => groupSidebarRows(filteredPast, Date.now(), groupMode),
     [filteredPast, groupMode],
+  );
+  // Same-titled sessions in the visible list read apart by when they started.
+  const lookAlike = useMemo(
+    () =>
+      lookAlikeHints(
+        filteredPast.map((row) => ({ id: row.sessionId, title: row.title, startedAt: row.startedAt, at: row.timestamp })),
+      ),
+    [filteredPast],
   );
 
   const term = query.trim().toLowerCase();
@@ -256,6 +265,9 @@ export function SessionIndex({
                       >
                         <span className="session-index-row-title">
                           <span className="session-index-row-name">{row.title}</span>
+                          {lookAlike.has(row.sessionId) ? (
+                            <span className="session-index-row-hint">{lookAlike.get(row.sessionId)}</span>
+                          ) : null}
                         </span>
                         {meta ? (
                           <span className="session-index-row-meta">{meta}</span>

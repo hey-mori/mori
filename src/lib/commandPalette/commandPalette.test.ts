@@ -37,6 +37,20 @@ describe("buildCommands", () => {
     expect(nav.map((c) => c.id)).not.toContain("nav-consolidation");
   });
 
+  it("tells same-titled sessions apart by when they started, and leaves unique ones alone", () => {
+    const cmds = buildCommands({
+      sessions: [
+        summary({ sessionId: "a", title: "Nightly run", startedAt: "2026-10-09T05:02:00Z", projectName: "mori" }),
+        summary({ sessionId: "b", title: "Nightly run", startedAt: "2026-10-09T06:30:00Z", projectName: "mori" }),
+        summary({ sessionId: "c", title: "다른 일", startedAt: "2026-10-09T07:00:00Z", projectName: "mori" }),
+      ],
+    });
+    const hintOf = (id: string) => cmds.find((c) => c.id === `session:${id}`)?.hint;
+    expect(hintOf("a")).toBe("mori · 14:02 시작");
+    expect(hintOf("b")).toBe("mori · 15:30 시작");
+    expect(hintOf("c")).toBe("mori");
+  });
+
   it("drops the current view from the navigate list to avoid no-op rows", () => {
     const cmds = buildCommands({ sessions: [], currentView: "home" });
     expect(cmds.find((c) => c.id === "nav-home")).toBeUndefined();
