@@ -2309,6 +2309,10 @@ kbd {
   text-shadow: 0 0 2px var(--panel), 0 0 2px var(--panel), 0 0 3px var(--panel);
 }
 
+.event-card-label.is-left {
+  text-align: right;
+}
+
 .event-card.is-request .event-card-label {
   color: var(--color-text-primary, #172033);
   font-weight: 650;

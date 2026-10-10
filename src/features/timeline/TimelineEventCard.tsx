@@ -1,7 +1,12 @@
 import { useCallback, useState, type CSSProperties, type FocusEvent, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
-import { LABEL_OFFSET_PX, type LaidOutTimelineItem, type TimelineDensity } from "../../lib/timeline/collisionLayout";
+import {
+  LABEL_OFFSET_PX,
+  NARROW_CARD_WIDTH,
+  type LaidOutTimelineItem,
+  type TimelineDensity,
+} from "../../lib/timeline/collisionLayout";
 import { hoverEventSummary, labelText } from "./lib/timelineCards";
 import { useSessionStore } from "../../app/sessionStore";
 import { resolveDisclosureLevel } from "../../lib/disclosure";
@@ -19,11 +24,6 @@ import {
   type BaseMenuItemSpec,
 } from "../../components/ui/BaseActionMenu";
 
-/** Below this width an accurate (short-duration) card has no room for its
- *  icon + label, so it renders as a bare tone tick and prints its title beside
- *  the tick when the lane has room (layout.labelRoom); the detail is in the
- *  hover preview. */
-const NARROW_CARD_WIDTH = 30;
 
 export function TimelineEventCard({
   event,
@@ -112,6 +112,16 @@ export function TimelineEventCard({
             className="event-card-label"
             aria-hidden="true"
             style={{ left: `${layout.width - 1 + LABEL_OFFSET_PX}px`, maxWidth: `${layout.labelRoom}px` }}
+          >
+            {labelText(vm.title)}
+          </span>
+        ) : layout.width < NARROW_CARD_WIDTH && layout.labelLeftRoom > 0 ? (
+          // No room to the right (the lane's last tick, often where the
+          // session ended): the title reads to the left of the tick instead.
+          <span
+            className="event-card-label is-left"
+            aria-hidden="true"
+            style={{ right: `${layout.width - 1 + LABEL_OFFSET_PX}px`, maxWidth: `${layout.labelLeftRoom}px` }}
           >
             {labelText(vm.title)}
           </span>

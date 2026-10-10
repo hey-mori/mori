@@ -30,6 +30,12 @@ export type LaidOutTimelineItem = {
    * stay exact while the timeline can still be read. 0 when there is no room.
    */
   labelRoom: number;
+  /**
+   * Free space to the LEFT of the item for its title, used only when there is
+   * no room to the right (the last item before the content edge, or one
+   * crowded by its successor). 0 otherwise. See `labelSides`.
+   */
+  labelLeftRoom: number;
   height: number;
   laneTop: number;
   laneHeight: number;
@@ -138,7 +144,15 @@ export function computeTimelineLayout(
     const hasItems = placements.length > 0;
     const rowCount = hasItems ? 1 : 0;
     const thisLaneHeight = baseLaneHeight;
-    const rooms = labelRooms(placements, contentLeftPx + contentWidthPx);
+    const rooms = labelSides(
+      placements.map((placement) => ({
+        x: placement.x,
+        width: placement.width,
+        printsLabel: placement.item.kind === "event" && placement.width < NARROW_CARD_WIDTH,
+      })),
+      contentLeftPx,
+      contentLeftPx + contentWidthPx,
+    );
     for (const [index, placement] of placements.entries()) {
       const y = laneTop + LANE_VERTICAL_PADDING;
       placed.push({
@@ -150,7 +164,8 @@ export function computeTimelineLayout(
         x: placement.x,
         y,
         width: placement.width,
-        labelRoom: rooms[index]!,
+        labelRoom: rooms.right[index]!,
+        labelLeftRoom: rooms.left[index]!,
         height: cardHeight,
         laneTop,
         laneHeight: thisLaneHeight,
@@ -255,6 +270,57 @@ export function labelRooms(placements: readonly { x: number; width: number }[], 
     coveredTo = Math.max(coveredTo, end);
   }
   return rooms;
+}
+
+/** Below this width a card has no room for its icon and title, so it draws as
+ *  a tick and prints its title beside it (see `labelSides`). */
+export const NARROW_CARD_WIDTH = 30;
+
+/**
+ * Label rooms on both sides. An item with no room to its right (the last one
+ * before the content edge, typically where the session ended) prints its
+ * title to its left instead, in space no earlier item or label uses. When the
+ * previous item's right label would fill that space, the gap is shared, so
+ * both titles stay readable. Items never move.
+ */
+export function labelSides(
+  placements: readonly { x: number; width: number; printsLabel?: boolean }[],
+  contentLeftPx: number,
+  contentRightPx: number,
+): { right: number[]; left: number[] } {
+  // Only an item that prints its title beside it (a narrow event card) owns
+  // label room; a wide card or a bundle never claims or shares any.
+  const prints = (index: number) => placements[index]!.printsLabel !== false;
+  const right = labelRooms(placements, contentRightPx).map((room, index) => (prints(index) ? room : 0));
+  const left = new Array<number>(placements.length).fill(0);
+  const order = placements.map((_, index) => index).sort((a, b) => placements[a]!.x - placements[b]!.x);
+  let coveredTo = contentLeftPx;
+  for (let k = 0; k < order.length; k += 1) {
+    const index = order[k]!;
+    const item = placements[index]!;
+    const coveredBefore = coveredTo;
+    coveredTo = Math.max(coveredTo, item.x + item.width);
+    if (!prints(index) || right[index]! > 0 || coveredBefore > item.x) continue;
+    const prevIndex = k > 0 ? order[k - 1]! : null;
+    const prevRight = prevIndex === null ? 0 : right[prevIndex]!;
+    // Where the free space starts: after every earlier item, and after the
+    // previous item's own right label when it has one.
+    const prev = prevIndex === null ? null : placements[prevIndex]!;
+    const occupied = prev && prevRight > 0 ? Math.max(coveredBefore, prev.x + prev.width + LABEL_OFFSET_PX + prevRight) : coveredBefore;
+    const free = item.x - occupied - LABEL_GAP_PX - LABEL_OFFSET_PX;
+    if (free >= LABEL_ROOM_MIN) {
+      left[index] = Math.min(LABEL_ROOM_MAX, free);
+      continue;
+    }
+    if (!prev || prevRight <= 0) continue;
+    // Share the gap with the previous item's label.
+    const gap = item.x - Math.max(coveredBefore, prev.x + prev.width);
+    const half = Math.floor((gap - 2 * LABEL_OFFSET_PX - LABEL_GAP_PX) / 2);
+    if (half < LABEL_ROOM_MIN) continue;
+    right[prevIndex!] = Math.min(prevRight, half);
+    left[index] = Math.min(LABEL_ROOM_MAX, half);
+  }
+  return { right, left };
 }
 
 /**
