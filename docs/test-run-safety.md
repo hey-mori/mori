@@ -76,13 +76,14 @@ These rules are also in `CLAUDE.md`.
 
 ## 3. What the repository enforces
 
-All test scripts go through `scripts/run-tests.mjs`. `scripts/check.sh` calls
-the same scripts, so local runs and CI share one definition of "verified": the
-same files and assertions, only bounded.
+All test scripts go through `scripts/run-tests.mjs`. `scripts/check.sh` runs
+the same command as `npm test` (`node scripts/run-tests.mjs suite`, called
+directly for the lock's sake, section 3), so local runs and CI share one
+definition of "verified": the same files and assertions, only bounded.
 
 | Limit | Default | Override |
 |---|---|---|
-| Discovery | `src/**/*.{test,spec}.*` (pinned in `vite.config.ts`, same 409 files as before) | n/a |
+| Discovery | `src/**/*.{test,spec}.*`, pinned per project in `vite.config.ts` (unit: every such file but the connector smoke tests; smoke: those 4). Not in the root `test` block: a project that extends it would concatenate both lists, which once made the smoke project run every unit file a second time. | n/a |
 | Arguments | an allowlist, normalised as Vitest's parser does (two dashes, `=` values, short clusters such as `-ur=/`; three or more dashes refused); anything else refused (exit 2). Test paths must be under `src/`; `--config` only `vite.config.ts`; `--reporter` only built-in names; `-u` only after the test paths. `vite.config.ts` also refuses every spelling of `--root`. | n/a |
 | Vitest workers | 2, passed as `--maxWorkers` and read by `vite.config.ts` (also the default for direct calls). An inherited `VITEST_MAX_WORKERS` is removed: Vitest applies it to every project after the config, which would un-serialise the smoke tests. | `MORI_TEST_MAX_WORKERS` |
 | V8 heap per Node process | 2048 MB | `MORI_TEST_HEAP_MB` |
@@ -114,11 +115,11 @@ How the wrapper bounds a run:
 
 `npm run test:safety` (and the gate's "test safeguards" step) proves the limits
 without running a single test. It uses sleeps and one 64 MiB allocation, and
-is expected to take about 10-20 s (not yet measured). It judges by process
+uses about 1 s of CPU (measured in a scope). It judges by process
 group, never by scanning the machine,
 uses sleep durations unique to the run, and uses private lock files, never
-the real heavy lock (the gate runs it with fd 9 closed). Its 65 checks (on
-Linux with flock; 55 on Linux without it, 54 on macOS) cover:
+the real heavy lock (the gate runs it with fd 9 closed). Its 66 checks (on
+Linux with flock; 56 on Linux without it, 55 on macOS) cover:
 - the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
@@ -149,8 +150,8 @@ One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
   `$SHELL` is.
 - **The gate** (`scripts/check.sh`) locks the file on fd 9 for its whole life
   and exports `MORI_HEAVY_LOCK_FD=9`. It finds flock the same way the
-  wrappers do (absolute system paths only), so both always agree on flock
-  versus the directory lock.
+  wrappers do (absolute system paths only), so both always agree on whether
+  there is a lock at all.
 - **Node passes no extra descriptors to its children** (measured on Node 24:
   a child gets only its stdio). Only a wrapper the gate's shell starts
   directly with `node` has fd 9, so the gate runs
@@ -185,14 +186,11 @@ One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
   still ends up holding it, later jobs fail with 75 rather than overlapping it.
   That is safe, but someone has to look: `fuser /tmp/mori-heavy.lock` shows
   the holder, read-only.
-- **Without flock** (macOS), a directory lock `/tmp/mori-heavy.lock.d` is
-  used, and a wrapper inside the gate checks that the lock's recorded owner is
-  one of its ancestors. A wrapper never takes over a gate's directory lock. A
-  small takeover race between two wrappers remains, and a stale lock is judged
-  by its owner's pid alone, so a recycled pid can keep it busy. None of this
-  applies on the NUC, which has flock.
-- **Native Windows** has no machine-wide lock (no flock, no reliable process
-  ancestry): runs there are bounded but not mutually excluded.
+- **Without flock** (stock macOS, native Windows) there is no machine-wide
+  lock: runs are bounded but not kept apart, and the wrapper and the gate say
+  so. Those are personal machines, not shared ones. (An earlier directory-lock
+  fallback was removed: it could not be verified here and had races of its
+  own.)
 - **Transitional.** Exclusion holds only among runs of this code. Worktrees on
   older branches use no lock or older lock names, which do not exclude this
   one.
@@ -244,7 +242,7 @@ A failed sample is counted and never changes the run's result.
 | Code | Meaning |
 |---|---|
 | as reported by the run | the run finished on its own |
-| 128 + n | the run itself was killed by signal n (an out-of-memory kill gives 137, like a timeout kill: the report's "timed out" field tells them apart) |
+| 128 + n | the run itself was killed by signal n. An out-of-memory kill gives 137, like a timeout kill: without a scope, the report's "timed out" field tells them apart; in a scope (`OOMPolicy=kill`) the wrapper dies too, and `scripts/scoped.sh` says the scope ended by a signal before its summary |
 | 1 | the wrapper failed, or could not start the command |
 | 124 | timed out and ended by SIGTERM |
 | 137 | timed out and needed SIGKILL |
@@ -277,21 +275,18 @@ The Rust pass runs alone, with `cargo -j 2` (each rustc can use 1–2 GB) and
 process's JavaScript heap. Native memory (buffers, the compiler, child
 processes) comes on top, and there are about 1 + workers Node processes. The
 2048 MB default is a guard against one runaway process, not a figure anyone
-has shown to be safe for the machine. Whole-run memory protection belongs to
-the cgroup proposal (section 6): `MemoryMax`, measured against a real run's
-observed figures, is where a safe total can be set and enforced.
+has shown to be safe for the machine. Whole-run memory protection is the
+scope's `MemoryMax` (`scripts/scoped.sh`, section 6).
 
-**The defaults are candidates, not measurements.** 2 workers and 900 s were
-chosen for safety. The last full run took 17 s at the old default of 8 workers,
-with the smoke tests skipped on this machine. Where the smoke tests run, the
-config's own comment puts them at about 230 s on a loaded machine. Either way
-the run is expected to stay well inside 900 s at 2 workers, but that has not
-been measured yet: see section 7.
+**The defaults were chosen for safety and then measured.** A full Vitest run
+at 2 workers takes well under the 900 s limit on the NUC (section 7), with
+the smoke tests skipped on this machine. Where the smoke tests run, the
+config's own comment puts them at about 230 s on a loaded machine.
 
 ## 5. What this does not cover
 
 - A process that leaves its group on purpose (`setsid`, a daemon) escapes
-  group signals. Only a cgroup contains it.
+  group signals. Only a scope (`scripts/scoped.sh`) contains it.
 - `npm run test:watch` remains plain, interactive Vitest. It is for a person
   at a terminal, never for an agent. It now inherits the config's 2-worker
   default, which makes watch mode slower; raise `MORI_TEST_MAX_WORKERS` in
@@ -304,7 +299,7 @@ been measured yet: see section 7.
   parent does not release it: the bash child keeps the lock descriptor.) If
   the wrapper and its watchdog die together, the holder lets go after
   grace + 30 s even if the run continues.
-  Both need a kill from outside; only a cgroup would close them.
+  Both need a kill from outside; a scope keeps such a run inside its limits.
 - Between a group emptying and the next signal to it, its pgid could in
   theory be reused by an unrelated process. That needs the pid counter to wrap
   around within seconds; it is not handled.
@@ -314,8 +309,12 @@ been measured yet: see section 7.
   lock). It runs while the gate holds the machine lock.
 - `npm run check:release` runs `npm test` under the lock but its
   `npm run build` without it (the gate's build is locked).
-- The directory-lock fallback (no `flock`, as on macOS) has a small window in
-  which two runs can both take over a stale lock.
+- `limited` exists for the gate's own build and Rust steps. It checks the
+  command's shape (`npm run build`, or `bash -c "cd src-tauri && cargo ..."`),
+  not everything after `cargo`; it bounds a step, it is not a sandbox.
+- Ceilings are per scope, not shared. Two scopes could together exceed what
+  the machine has; the heavy-job lock and `scoped.sh`'s free-memory check are
+  what keep that from happening.
 - Windows: the process-group drills are skipped and a timeout ends the tree
   with `taskkill`; there is no watchdog there.
 - `limited` runs only the gate's own steps (`npm run build` and the Rust pass's
@@ -380,14 +379,20 @@ What each part does:
   enabling the cpu controller for the scope touches only that slice, never
   `app.slice`, where the sessions run. A dash in a slice name nests it
   (`mori-heavy.slice` lands under `mori.slice`), hence the plain name.
+- **Enough memory first.** It starts only with at least the memory ceiling
+  plus 1 GiB available (`MemAvailable`); otherwise it exits 75 without
+  starting anything: try later, stop nothing.
 - **Verified from inside before the command starts.** The script checks that
   it runs in exactly `mori.slice/<unit>.scope` and reads back `memory.max`,
-  `memory.swap.max`, `cpu.max` and `pids.max`. Any mismatch, or a scope that
+  `memory.swap.max`, `cpu.max`, `pids.max` and `memory.oom.group`. Any mismatch, or a scope that
   could not be made, means the command does not run (exit 3): never an
   unrestricted heavy run.
 - **Measured from inside at the end.** It prints the scope's `memory.peak`
-  (exact for the whole run, page cache included), `memory.swap.peak`,
-  `pids.peak`, `oom_kill` and CPU time, which the sampling cannot give.
+  (exact for the whole run, page cache included), `memory.swap.peak`, how
+  often `memory.max` was reached, `pids.peak`, `oom_kill` and CPU time, which
+  the sampling cannot give. If an out-of-memory kill ends the whole scope,
+  that summary cannot print; the script then says the scope ended by a
+  signal before its summary.
 - **Leftovers.** Processes still in the scope after the command (a `setsid`
   daemon included) are stopped with `systemctl --user stop <that unit>`: only
   that exact scope, never anything else. A command that exited 0 then fails
@@ -396,7 +401,10 @@ What each part does:
   scope keeps its limits until its last process ends.
 - **Knobs:** `MORI_SCOPE_MEMORY_GB` (1-4, default 3), `MORI_SCOPE_CPU_PCT`
   (50-400, default 200), `MORI_SCOPE_TASKS` (64-512, default 256). Never raise
-  them to get a failing run through.
+  them to get a failing run through. If a cold Rust build needs more, first
+  lower its parallelism (`MORI_CARGO_JOBS=1`); 4 GiB is a deliberate choice
+  for a machine with enough memory free, recorded with the evidence, never a
+  retry after an out-of-memory kill.
 - **Scope of effect.** Transient (`--collect`), no root, no system or WSL
   setting, no persistent unit, nothing outside its own processes.
 - **Not done:** a cap on `user@1000.service` or the whole user slice, because
@@ -409,30 +417,47 @@ refuses to run.
 
 ## 7. Verification status of this change
 
-Verified (2026-10-10, without running the test suite):
-- An earlier version of `npm run test:safety` passed all 52 of its checks
-  (after three rounds of read-only review), and no process or lock was left
-  behind. **The current version, with the heavy-job lock (fresh-first, inner
-  lock, the inner holder keeping the gate's descriptor), the observation and
-  the leftover rule, has only been checked statically** (`node --check`, `bash -n`,
-  `git diff --check`, read-only review). Its 61 checks have not been run.
-- One approved real Vitest run (stage 2, before the heavy-job lock): one file,
-  9 tests passed, exit 0, 0.8 s, no leftover processes, lock released. Worker
-  count and whole-tree memory were not measured (a sampling mistake, since
-  replaced by the wrapper's own observation).
-- `vite.config.ts` evaluates in plain Node: `include` is pinned to `src/`,
-  workers default to 2, and `--root /` throws.
-- A static glob shows the pinned `include` selects the same 409 files as
-  Vitest's default.
+Measured on the NUC on 2026-10-10 (Node 24.20, Vitest 4.1.6, cargo 1.98.1).
+Logs are kept outside the repository with the operator's evidence.
 
-Not yet verified (each needs operator approval):
-- the self-check of the current version;
-- the heavy-job lock under contention and inside a gate, with small idle
-  processes, including fd 9 reaching the wrappers through `npm` and `sh`;
-- the observation on a real run, and the worker cap with several small test
-  files;
-- a full `npm test` (duration at 2 workers, observed memory, the smoke tests
-  under the group timeout);
-- the full gate with the new limits;
-- the Rust pass at `-j 2`;
-- the cgroup proposal.
+- **Self-check:** 65 of 65 checks passed, inside a scope (scope
+  `memory.peak` 133 MiB, 41 tasks at most). Its first run on the previous
+  version failed one check (60 of 61), and that failure found a real defect:
+  Node passes no extra descriptors to its children, so the gate's `npm test`
+  step could never have used the gate's lock and would have failed with 75.
+  The gate now calls the wrapper directly (section 3).
+- **The heavy-job lock, real lock file, harmless processes:** with an idle
+  holder on `/tmp/mori-heavy.lock`, a standalone wrapper failed with 75 in
+  139 ms, the gate in 6 ms and `npm test` in 174 ms, and none of them started
+  a test. A wrapper started by a stand-in gate (the gate's own lock preamble)
+  ran under the gate's lock. A wrapper SIGKILLed while its run ignored SIGTERM
+  (grace 3 s): the run's group stayed alive about 3 s, the lock stayed held
+  throughout, and it was free about 56 ms after the group was gone.
+- **Observation:** on 30 test files (227 tests, 2.4 s) an independent `/proc`
+  sampler found the same process group as the wrapper reported and the same
+  peak of 4 processes (Vitest, esbuild and 2 workers; 20 worker processes over
+  the run). The RSS sums were 324 and 338 MiB (different sample instants)
+  while the scope's exact `memory.peak` was 210 MiB: the sum over-counts, as
+  section 3 says.
+- **Worker cap:** at most 2 workers at once over those 30 files.
+- **Full `npm test`, in a scope:** 807 test files passed and 7 skipped, 8105
+  tests passed and 11 skipped (the skips are environment-gated live and smoke
+  tests), the harness passed. Vitest took 74 s; scope `memory.peak` 532 MiB,
+  65 tasks at most, no OOM kill, no swap.
+- **Full gate (`scripts/check.sh --full`), in a scope:** every pass ran and
+  passed: typecheck, the self-check, the tests, stylelint, prose, commit
+  guards, the production build, the unused-file inventory, and the Rust pass
+  (`cargo check` and `cargo test` at `-j 2`: 389 and 4 tests passed, 5
+  ignored). The Rust pass ran on a warm build cache. The scope's
+  `memory.peak` reached its 3 GiB ceiling with no OOM kill and no swap: that
+  figure counts page cache, which the kernel reclaims at the limit, so a warm
+  cargo build reading its target directory fills it. `scripts/scoped.sh` now
+  also reports how often the limit was reached.
+- **Mistakes during verification, recorded:** `--version` was let through and
+  under `vitest run` it ran the whole suite once, bounded by the wrapper but
+  outside a scope (8105 tests, 70 s, RSS sum peak 576 MiB). It is now refused.
+
+Not verified:
+- a cold Rust build inside the 3 GiB scope;
+- macOS and Windows behaviour (no machine was available);
+- an OOM kill inside a scope (deliberately not provoked).

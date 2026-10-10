@@ -62,16 +62,13 @@ import {
   constants as fsConstants,
   fstatSync,
   ftruncateSync,
-  mkdirSync,
   openSync,
   realpathSync,
   readdirSync,
   readFileSync,
   readlinkSync,
-  renameSync,
   rmSync,
   statSync,
-  writeFileSync,
   writeSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -200,9 +197,12 @@ export function refuseVitestArgs(args) {
     for (let n = 0; n < names.length; n += 1) {
       const raw = names[n];
       const isLast = n === names.length - 1;
-      const long = raw.length === 1 ? ALLOWED_SHORT.get(raw) : camel(raw.startsWith("no-") ? raw.slice(3) : raw);
+      const negated = raw.length > 1 && raw.startsWith("no-");
+      const long = raw.length === 1 ? ALLOWED_SHORT.get(raw) : camel(negated ? raw.slice(3) : raw);
       const kind = long ? ALLOWED_LONG.get(long) : undefined;
       if (!long || !kind) return `${arg} is not an allowed option (see docs/test-run-safety.md)`;
+      // `--no-x` is a plain off switch: never with an option that takes a value.
+      if (negated && kind !== "flag" && kind !== "optional") return `${arg}: only a flag can be negated`;
       if (!isLast && kind !== "flag") return `${arg}: ${raw} takes a value and cannot sit inside a cluster`;
       if (!isLast || kind === "flag") continue;
       const next = index + 1 < args.length && !args[index + 1].startsWith("-") ? args[index + 1] : undefined;
@@ -305,42 +305,21 @@ export function coveredByGate(path, env = process.env) {
     if (probe.status !== 0) return { ok: false, reason: `${path} is held by another process` };
     return { ok: true, fd, how: `descriptor ${fd} verified` };
   }
-  // Without flock (macOS): the gate's directory lock must be an ancestor's.
-  const owner = Number(env.MORI_HEAVY_LOCK_OWNER);
-  let recorded = NaN;
-  try {
-    recorded = Number(readFileSync(join(`${path}.d`, "pid"), "utf8").trim());
-  } catch {
-    return { ok: false, reason: "no directory lock" };
-  }
-  if (!Number.isInteger(owner) || owner !== recorded || !isAncestor(owner)) {
-    return { ok: false, reason: "the directory lock is not held by an ancestor" };
-  }
-  return { ok: true, how: `ancestor ${owner} holds the directory lock` };
-}
-
-function isAncestor(pid) {
-  const ps = sysBin("ps") ?? "ps";
-  let current = process.ppid;
-  for (let hops = 0; hops < 64 && current > 1; hops += 1) {
-    if (current === pid) return true;
-    const out = spawnSync(ps, ["-o", "ppid=", "-p", String(current)], { encoding: "utf8" });
-    current = Number((out.stdout ?? "").trim());
-    if (!Number.isInteger(current)) return false;
-  }
-  return false;
+  return { ok: false, reason: "no flock on this machine" };
 }
 
 /**
  * The heavy-job lock. Taken afresh when free. When it is held, a job inside
  * the gate that holds it (verified, see coveredByGate) runs under the gate's
  * lock instead, and takes a private inner lock so two such jobs never
- * overlap each other either. Anything else fails: exit 75. Native Windows has
- * no machine-wide lock (no flock, no reliable process ancestry).
+ * overlap each other either. Anything else fails: exit 75. Without flock
+ * (native Windows, stock macOS) there is no machine-wide lock: runs there are
+ * bounded but not kept apart, and say so. Those are not shared machines.
  */
 export async function acquireHeavyLock(path = HEAVY_LOCK, env = process.env, holdS = 60) {
-  if (!POSIX) {
-    return { ok: true, path, unlocked: "no machine-wide lock on Windows", adopt: () => {}, release: async () => {} };
+  if (!FLOCK) {
+    const unlocked = POSIX ? "no flock here, so no machine-wide lock" : "no machine-wide lock on Windows";
+    return { ok: true, path, unlocked, adopt: () => {}, release: async () => {} };
   }
   const own = await acquireLockAt(path, holdS);
   if (own.ok) return own;
@@ -361,7 +340,7 @@ export async function acquireHeavyLock(path = HEAVY_LOCK, env = process.env, hol
  * says "done" at the end. If the wrapper dies instead (its pipe closes), the
  * holder keeps the lock until that group is gone, at most `holdS` seconds,
  * so a new job never overlaps a run that is still being ended. Without flock
- * (macOS), a directory lock records the owner's pid and start time.
+ * it holds nothing.
  */
 export async function acquireLockAt(path, holdS = 60, keepFd = null) {
   if (FLOCK) {
@@ -421,74 +400,7 @@ export async function acquireLockAt(path, holdS = 60, keepFd = null) {
         }),
     };
   }
-  return directoryLock(`${path}.d`);
-}
-
-function directoryLock(path) {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      mkdirSync(path);
-      writeFileSync(join(path, "pid"), String(process.pid));
-      writeFileSync(join(path, "started"), startTime(process.pid) || "unknown");
-      return { ok: true, path, adopt: () => {}, release: async () => rmSync(path, { recursive: true, force: true }) };
-    } catch (error) {
-      if (error.code !== "EEXIST") throw new Error(`cannot create the lock ${path}: ${error.message}`);
-    }
-    let pid = "";
-    let started = null;
-    try {
-      pid = readFileSync(join(path, "pid"), "utf8").trim();
-    } catch {
-      /* being written right now */
-    }
-    try {
-      started = readFileSync(join(path, "started"), "utf8").trim();
-    } catch {
-      /* a gate's lock has no start time */
-    }
-    let young = false;
-    try {
-      young = Date.now() - statSync(path).mtimeMs < 30_000;
-    } catch {
-      /* removed meanwhile */
-    }
-    // Never taken over: a lock being written, a gate's lock (no start time
-    // recorded; the gate removes it on exit), or an owner alive with the same
-    // start time. Only a wrapper's lock whose owner is provably gone is stale.
-    if (pid === "" && young) return { ok: false, path };
-    if (started === null) return { ok: false, path };
-    if (pid && pidAlive(Number(pid)) && (started === "unknown" || startTime(Number(pid)) === started)) {
-      return { ok: false, path };
-    }
-    // Stale: move it aside atomically; only one contender wins the rename.
-    try {
-      renameSync(path, `${path}.stale-${process.pid}`);
-      rmSync(`${path}.stale-${process.pid}`, { recursive: true, force: true });
-    } catch {
-      /* another contender took it over first */
-    }
-  }
-  return { ok: false, path };
-}
-
-function startTime(pid) {
-  try {
-    // Field 22 of /proc/<pid>/stat: start time in clock ticks since boot.
-    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
-    return stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19] ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function pidAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error.code === "EPERM";
-  }
+  return { ok: true, path, adopt: () => {}, release: async () => {} };
 }
 
 // ── Observing the run's process group ───────────────────────────────────────
@@ -1063,6 +975,7 @@ async function selfCheck() {
     ["-u", "src/lib/timeline/labelRooms.test.ts"],
     ["--update=src/lib/timeline/labelRooms.test.ts"],
     ["--reporter=basic"],
+    ["--no-config", "vite.config.ts"],
     // Under `vitest run` these do not print and exit: they run every test.
     ["--version"],
     ["-v"],
@@ -1086,7 +999,6 @@ async function selfCheck() {
   const privateLock = (tag) => join(POSIX ? "/tmp" : tmpdir(), `mori-selfcheck-${tag}-${process.pid}.lock`);
   const cleanLock = (path) => {
     rmSync(path, { force: true });
-    rmSync(`${path}.d`, { recursive: true, force: true });
   };
 
   if (!POSIX) {

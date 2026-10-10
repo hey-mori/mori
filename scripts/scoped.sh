@@ -15,13 +15,18 @@
 #   MORI_SCOPE_CPU_PCT    50-400, default 200 CPUQuota
 #   MORI_SCOPE_TASKS      64-512, default 256 TasksMax
 #
+# It starts only with at least the memory ceiling plus 1 GiB available, since
+# the ceiling is per job, not shared with anything else on the machine.
+#
 # Exit codes: the command's own; 2 bad usage; 3 the scope could not be made or
-# its limits were not in force (the command did not run); 70 the command
-# exited 0 but left processes in the scope (that scope is then stopped).
+# its limits were not in force (the command did not run); 75 not enough memory
+# available right now (the command did not run; try later, stop nothing); 70
+# the command exited 0 but left processes in the scope (that scope is then
+# stopped).
 set -euo pipefail
 
 within() { # name value min max
-  if [[ ! "$2" =~ ^[0-9]+$ ]] || (( $2 < $3 || $2 > $4 )); then
+  if [[ ! "$2" =~ ^[1-9][0-9]*$ ]] || (( $2 < $3 || $2 > $4 )); then
     echo "scoped: $1 must be an integer from $3 to $4" >&2
     exit 2
   fi
@@ -39,6 +44,12 @@ fi
 if ! command -v systemd-run >/dev/null 2>&1 || [[ -z "${XDG_RUNTIME_DIR:-}" ]]; then
   echo "scoped: no systemd user manager here; refusing to run unrestricted" >&2
   exit 3
+fi
+
+available_kb="$(sed -n 's/^MemAvailable: *\([0-9]*\) kB$/\1/p' /proc/meminfo)"
+if [[ -z "$available_kb" ]] || (( available_kb < (mem_gb + 1) * 1048576 )); then
+  echo "scoped: $(( ${available_kb:-0} / 1024 )) MiB available, $(( (mem_gb + 1) * 1024 )) MiB needed; not starting (try later, stop nothing)" >&2
+  exit 75
 fi
 
 unit="mori-job-$(date +%Y%m%d-%H%M%S)-$$"
@@ -60,17 +71,23 @@ refuse() { echo "scoped: $1; the command was not run" >&2; exit 3; }
 [[ "$(cat "$d/memory.swap.max" 2>/dev/null)" == 0 ]] || refuse "memory.swap.max is not in force"
 [[ "$(cat "$d/cpu.max" 2>/dev/null)" == "$MORI_SCOPE_EXPECT_CPU" ]] || refuse "cpu.max is not in force"
 [[ "$(cat "$d/pids.max" 2>/dev/null)" == "$MORI_SCOPE_EXPECT_TASKS" ]] || refuse "pids.max is not in force"
+[[ "$(cat "$d/memory.oom.group" 2>/dev/null)" == 1 ]] || refuse "memory.oom.group (OOMPolicy=kill) is not in force"
 echo started > "$MORI_SCOPE_MARKER"
 echo "[scoped] $MORI_SCOPE_UNIT: memory.max $(( MORI_SCOPE_EXPECT_MEM / 1048576 )) MiB, swap 0, cpu.max $MORI_SCOPE_EXPECT_CPU, pids.max $MORI_SCOPE_EXPECT_TASKS" >&2
 code=0
 "$@" || code=$?
 oom=$(sed -n "s/^oom_kill //p" "$d/memory.events")
+atmax=$(sed -n "s/^max //p" "$d/memory.events")
 cpu=$(sed -n "s/^usage_usec //p" "$d/cpu.stat")
-echo "[scoped] $MORI_SCOPE_UNIT: exit $code · memory.peak $(( $(cat "$d/memory.peak") / 1048576 )) MiB (page cache included) · swap.peak $(( $(cat "$d/memory.swap.peak") / 1048576 )) MiB · pids.peak $(cat "$d/pids.peak") · oom_kill ${oom:-0} · cpu $(( ${cpu:-0} / 1000000 )) s" >&2
+echo summary >> "$MORI_SCOPE_MARKER"
+echo "[scoped] $MORI_SCOPE_UNIT: exit $code · memory.peak $(( $(cat "$d/memory.peak") / 1048576 )) MiB (page cache included) · swap.peak $(( $(cat "$d/memory.swap.peak") / 1048576 )) MiB · reached memory.max ${atmax:-0} time(s) · pids.peak $(cat "$d/pids.peak") · oom_kill ${oom:-0} · cpu $(( ${cpu:-0} / 1000000 )) s" >&2
 exit "$code"
 '
 
 code=0
+# A signal to this script must not skip the leftover pass below; `:` (not '')
+# leaves the children's own handling of the signal as it is.
+trap ':' INT HUP TERM
 systemd-run --user --scope --quiet --collect --slice=mori.slice --unit="$unit" \
   -p MemoryMax="${mem_gb}G" -p MemorySwapMax=0 -p CPUQuota="${cpu_pct}%" \
   -p TasksMax="$tasks" -p OOMPolicy=kill -p TimeoutStopSec=15 \
@@ -81,9 +98,16 @@ if [[ ! -s "$marker" ]]; then
   exit 3
 fi
 
+if (( code >= 128 )) && ! grep -q summary "$marker"; then
+  echo "[scoped] $unit: the command and the scope's own shell ended by signal $(( code - 128 )) before the summary; with OOMPolicy=kill this can be an out-of-memory kill of the whole scope" >&2
+fi
+
 # Anything still in this scope outlived the command. Only this exact scope is
 # looked at and stopped, never anything else.
-cg="$(systemctl --user show -p ControlGroup --value "$unit.scope" 2>/dev/null || true)"
+if ! cg="$(systemctl --user show -p ControlGroup --value "$unit.scope" 2>/dev/null)"; then
+  echo "[scoped] warning: could not ask systemd about $unit.scope; leftovers were not checked" >&2
+  cg=""
+fi
 left=""
 if [[ "$cg" == */mori.slice/"$unit".scope ]]; then
   for _ in 1 2 3 4 5 6 7 8 9 10; do

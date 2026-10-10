@@ -43,15 +43,15 @@ cd "$(dirname "$0")/.."
 # so never through npm), and MORI_HEAVY_LOCK_FD names it as a hint only:
 # scripts/run-tests.mjs verifies the descriptor is this lock file and that
 # flock succeeds on that very descriptor before running under it, so a stray
-# or forged variable can never let two jobs overlap. Without flock (macOS) a
-# directory lock is used, and the wrappers check that its owner is an ancestor.
+# or forged variable can never let two jobs overlap. Without flock (stock
+# macOS) there is no machine-wide lock; such a machine is not shared.
 heavy_busy() {
   echo "another heavy Mori job holds $1: jobs never overlap on this machine; wait for it, do not stop it" >&2
   exit 75
 }
 HEAVY_LOCK="/tmp/mori-heavy.lock"
 # The same lookup as scripts/run-tests.mjs (absolute system paths only), so
-# the gate and the wrappers always agree on flock versus the directory lock.
+# the gate and the wrappers always agree on whether there is a lock at all.
 FLOCK=""
 for dir in /usr/bin /bin /usr/local/bin; do
   if [[ -x "$dir/flock" ]]; then FLOCK="$dir/flock"; break; fi
@@ -65,18 +65,10 @@ if [[ -n "$FLOCK" ]]; then
   exec 9>>"$HEAVY_LOCK"
   "$FLOCK" -n 9 || heavy_busy "$HEAVY_LOCK"
   export MORI_HEAVY_LOCK_FD=9
-  unset MORI_HEAVY_LOCK_OWNER
 else
-  lockdir="$HEAVY_LOCK.d"
-  if ! mkdir "$lockdir" 2>/dev/null; then
-    holder="$(cat "$lockdir/pid" 2>/dev/null || true)"
-    if [[ -z "$holder" ]] || kill -0 "$holder" 2>/dev/null; then heavy_busy "$lockdir"; fi
-    rm -rf "$lockdir"
-    mkdir "$lockdir" 2>/dev/null || heavy_busy "$lockdir"
-  fi
-  echo "$$" > "$lockdir/pid"
-  trap 'rm -rf "$lockdir"' EXIT
-  export MORI_HEAVY_LOCK_OWNER=$$
+  # Stock macOS has no flock. Such a machine is not shared, so the gate runs
+  # bounded but without a machine-wide lock, and says so.
+  echo "· no flock on this machine: no machine-wide heavy-job lock" >&2
   unset MORI_HEAVY_LOCK_FD
 fi
 
