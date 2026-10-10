@@ -19,6 +19,7 @@ import { useRecordProvenance } from "./useRecordProvenance";
 import { SavedPassage, savedPassageOf } from "./SavedPassage";
 import { SessionRecordFacts } from "./SessionRecordFacts";
 import { useSessionStore } from "../../app/sessionStore";
+import { useRecordTitle } from "../../app/useDisclosedView";
 
 export function DocumentEditor({
   record,
@@ -122,6 +123,7 @@ function RecordDocument({
   now: Date;
 }) {
   const { source, link, revisions, relations, loading: provenanceLoading } = useRecordProvenance(record.id, record.updatedAt);
+  const recordTitle = useRecordTitle();
   // A record kept from a conversation shows that passage as its evidence, not
   // behind a 원문 toggle: it is the reason the record exists. Provenance
   // reloads after every edit; the passage already shown stays until the new
@@ -200,7 +202,7 @@ function RecordDocument({
           type="button"
           className="doc-bar-act is-discard"
           onClick={() => {
-            onDiscarded(record.id, record.title);
+            onDiscarded(record.id, recordTitle(record));
             void ledger.discardRecords([record.id]);
           }}
         >
@@ -226,7 +228,7 @@ function RecordDocument({
             size="sm"
             icon={X}
             onClick={() => {
-              onDiscarded(record.id, record.title);
+              onDiscarded(record.id, recordTitle(record));
               void ledger.setStatus(record, "discarded");
             }}
           >
@@ -237,7 +239,12 @@ function RecordDocument({
 
       <div className="doc-editor-main">
         <div className="doc-title">
-          <InlineEditable value={record.title} ariaLabel="제목 편집" onSave={(next) => onUpdate({ title: next })} />
+          <InlineEditable
+            value={record.title}
+            display={recordTitle(record)}
+            ariaLabel="제목 편집"
+            onSave={(next) => onUpdate({ title: next })}
+          />
         </div>
         <div className="doc-meta">
           <ActivityDateEditor record={record} onUpdate={onUpdate} />

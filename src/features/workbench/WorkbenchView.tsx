@@ -65,6 +65,7 @@ import {
   buildWorkbenchAttention,
   type WorkbenchAttentionItem,
 } from "../../lib/workbench/attention";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * Workbench — the session-axis surface of the four-tab IA.
@@ -193,9 +194,16 @@ export function WorkbenchView() {
     saveDensity(density);
   }, [density]);
 
+  // Session titles as the request disclosure level shows them, for every
+  // panel, picker, search and digest here.
+  const sessionTitle = useSessionTitle();
   const storedSessions = useMemo(
-    () => mergeDemoSessionSummaries(repository.listStoredSessionsWithMetrics()),
-    [repository],
+    () =>
+      mergeDemoSessionSummaries(repository.listStoredSessionsWithMetrics()).map((session) => ({
+        ...session,
+        title: sessionTitle(session.title, session.titleFromRequest),
+      })),
+    [repository, sessionTitle],
   );
 
   const browserModel = useMemo(
@@ -203,7 +211,7 @@ export function WorkbenchView() {
       buildSessionsBrowserModel({
         active: {
           sessionId: activeSessionId,
-          title: view.session.title,
+          title: sessionTitle(view.session.title, view.session.titleFromRequest),
           status: view.session.status,
           sourceLabel: view.session.sourceLabel?.trim() || null,
           startedAt: view.session.startedAt || null,
@@ -214,7 +222,7 @@ export function WorkbenchView() {
         storedSessions,
         filters: { query: "", origin: "all", sort: "recent" },
       }),
-    [activeSessionId, draft, mode, storedSessions, view],
+    [activeSessionId, draft, mode, storedSessions, view, sessionTitle],
   );
 
   const sessions = useMemo(

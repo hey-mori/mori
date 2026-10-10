@@ -132,6 +132,9 @@ export type ClaudeCodeSessionMeta = {
   sourceId?: string;
   /** Best-effort title — the first user message, truncated. */
   title: string;
+  /** True when `title` is distilled from the first user message: the user's own
+   *  words, which the request disclosure level governs. Absent on older reads. */
+  titleFromRequest?: boolean;
   /** Token usage aggregated from the session's assistant messages. */
   tokenUsage?: ClaudeTokenUsage;
   /** What the transcript holds, from a complete read only. Absent on older reads. */

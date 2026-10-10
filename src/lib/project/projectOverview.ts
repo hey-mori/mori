@@ -27,6 +27,8 @@ export type ProjectSessionRow = {
   timestamp: string;
   /** When the session started, if known: tells same-titled rows apart. */
   startedAt?: string;
+  /** True when the title is the user's first request (see `Session`). */
+  titleFromRequest?: boolean;
   status: StoredSessionSummary["status"];
   eventCount?: number;
   sourceCount?: number;
@@ -166,6 +168,7 @@ function toRow(
     title: summary.title?.trim() || "제목 없음",
     timestamp: sessionLastActiveAt(summary),
     startedAt: summary.startedAt || undefined,
+    ...(summary.titleFromRequest ? { titleFromRequest: true } : {}),
     status: summary.status,
     eventCount: summary.eventCount,
     sourceCount: insight?.sourceCount,

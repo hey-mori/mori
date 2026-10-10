@@ -22,6 +22,7 @@ function summary(partial: Partial<StoredSessionSummary>): StoredSessionSummary {
     tokenTotal: partial.tokenTotal,
     tokenInput: partial.tokenInput,
     tokenOutput: partial.tokenOutput,
+    titleFromRequest: partial.titleFromRequest,
   };
 }
 
@@ -49,6 +50,14 @@ describe("buildCommands", () => {
     expect(hintOf("a")).toBe("14:02 시작 · mori");
     expect(hintOf("b")).toBe("15:30 시작 · mori");
     expect(hintOf("c")).toBe("mori");
+  });
+
+  it("shows a session title as the disclosure rule given reads it", () => {
+    const cmds = buildCommands({
+      sessions: [summary({ sessionId: "r", title: "배포 고쳐줘", titleFromRequest: true })],
+      sessionTitle: (title, fromRequest) => (fromRequest ? "제목 숨김" : title),
+    });
+    expect(cmds.find((c) => c.id === "session:r")?.label).toBe("제목 숨김");
   });
 
   it("drops the current view from the navigate list to avoid no-op rows", () => {

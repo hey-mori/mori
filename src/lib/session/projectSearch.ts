@@ -82,6 +82,8 @@ export function buildProjectSearchInventory(input: {
   records: readonly MoriRecord[];
   descriptorOf: (sessionId: string) => SourceDescriptor | null;
   sessionOf?: (sessionId: string) => { title?: string; lastActiveAt?: string } | null;
+  /** A record's title as the request disclosure level shows it. */
+  titleOf?: (record: MoriRecord) => string;
 }): ProjectSearchInventory {
   const scope = resolveProjectScope(input.projectId, input.contexts);
   if (scope.kind !== "ok") return { kind: "unavailable" };
@@ -96,7 +98,7 @@ export function buildProjectSearchInventory(input: {
     entries.push({
       sessionId: record.id,
       contextId: state.context.id,
-      title: session?.title?.trim() || record.title.trim() || "제목 없음",
+      title: session?.title?.trim() || (input.titleOf ? input.titleOf(record) : record.title).trim() || "제목 없음",
       agentName: descriptor?.agentName || "에이전트",
       lastActiveAt: session?.lastActiveAt || record.occurredEnd || record.occurredStart || record.capturedAt,
       sourcePath: descriptor?.sourcePath ?? null,

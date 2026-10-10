@@ -17,6 +17,7 @@ import { groupDaySessions } from "./calendarDaySessions";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { continuesFrom, dayLabel, timeOnDay } from "./calendarGrouping";
 import { kindColorClass, schemaLabel } from "./recordPresentation";
+import { useRecordTitle } from "../../app/useDisclosedView";
 
 export const CalendarAgendaRail = forwardRef<
   HTMLDivElement,
@@ -56,6 +57,8 @@ export const CalendarAgendaRail = forwardRef<
 ) {
   // Days whose sessions are unfolded. A day's sessions start folded so a busy
   // day does not bury what was written that day.
+  // Session titles as the request disclosure level shows them.
+  const recordTitle = useRecordTitle();
   const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(
     () => new Set(unfoldDate ? [unfoldDate] : []),
   );
@@ -152,7 +155,7 @@ export const CalendarAgendaRail = forwardRef<
                               >
                                 <span className="cal-day-time">{clock(timeOnDay(session, date))}</span>
                                 <span className="cal-day-title">
-                                  {readableAgentText(session.title) || "제목 없음"}
+                                  {readableAgentText(recordTitle(session)) || "제목 없음"}
                                 </span>
                                 {startedOn ? <span className="cal-day-kind">{startedLabel(startedOn)}</span> : null}
                               </button>

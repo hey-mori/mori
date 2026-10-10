@@ -43,6 +43,7 @@ import {
   schemaLabel,
 } from "../../features/record-ledger/recordPresentation";
 import { formatDate } from "../../lib/formatting/time";
+import { useRecordTitle, useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * Command palette — the keyboard-first front door to every navigation,
@@ -94,6 +95,14 @@ export function CommandPalette({
   const [recordNote, setRecordNote] = useState<string | null>(null);
   const [recordError, setRecordError] = useState(false);
   const contextsRef = useRef<KernelContext[]>([]);
+  // Session titles as the request disclosure level shows them. The record
+  // search reads the latest rule through a ref, like the contexts.
+  const sessionTitle = useSessionTitle();
+  const recordTitle = useRecordTitle();
+  const recordTitleRef = useRef(recordTitle);
+  useEffect(() => {
+    recordTitleRef.current = recordTitle;
+  }, [recordTitle]);
   // Saved passage texts by record, read once per open: a record whose body
   // was rewritten is still found by the passage it was saved from. Held as
   // the read itself, so a query typed before it lands still waits for it.
@@ -173,11 +182,11 @@ export function CommandPalette({
             .slice(0, Math.max(0, 8 - found.length));
           if (cancelled) return;
           const entries = [
-            ...found.map((record) => recordToEntry(record, registry, contextsRef.current)),
+            ...found.map((record) => recordToEntry(record, registry, contextsRef.current, [], recordTitleRef.current)),
             // Text search matches whole words; a body holding the query inside
             // a longer word was missed by it but is still the record's own text.
             ...extra.map((record) => {
-              const entry = recordToEntry(record, registry, contextsRef.current);
+              const entry = recordToEntry(record, registry, contextsRef.current, [], recordTitleRef.current);
               return recordTextHolds(record, text) ? entry : viaSavedPassage(entry);
             }),
           ];
@@ -204,8 +213,8 @@ export function CommandPalette({
   const sessions = useMemo(() => (open ? safeListSessions() : []), [open]);
 
   const commands = useMemo(
-    () => buildCommands({ sessions, currentView, currentTheme }),
-    [sessions, currentView, currentTheme],
+    () => buildCommands({ sessions, currentView, currentTheme, sessionTitle }),
+    [sessions, currentView, currentTheme, sessionTitle],
   );
   // A typed query searches the whole command set (every session included); an
   // empty query shows a short browse menu so opening the palette stays calm.

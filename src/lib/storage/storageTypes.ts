@@ -51,6 +51,8 @@ export type StoredSessionSummary = {
    *  `Session.sourceRepository`). Undefined when nothing establishes one. */
   sourceRepository?: string;
   sourceRepositoryBasis?: string;
+  /** True when the title is the user's first request (see `Session`). */
+  titleFromRequest?: boolean;
   /**
   /**
    * Reconstructed timeline-event count for the session, derived once from its

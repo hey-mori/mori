@@ -105,6 +105,9 @@ export type AgentWorkSessionMeta = {
    *  kept session whose file now has another one is another conversation. */
   sourceId?: string;
   title: string;
+  /** True when `title` is the user's first request (no title of the agent's
+   *  own): the request disclosure level then governs it. */
+  titleFromRequest?: boolean;
   tokenUsage?: ClaudeTokenUsage;
   connectorId?: string;
   connectorFamily?: string;
@@ -371,6 +374,7 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     messageCountComplete: session.messageCountComplete,
     ...(session.sourceId ? { sourceId: session.sourceId } : {}),
     title: session.title,
+    ...(session.titleFromRequest ? { titleFromRequest: true } : {}),
     tokenUsage: session.tokenUsage,
     activityClass: activityClassOf(session.activityClass),
     interaction: claudeInteraction(session.entrypoint),
@@ -436,11 +440,19 @@ function mapCodexMeta(session: CodexSessionMeta): AgentWorkSessionMeta {
     updatedAt: session.updatedAt,
     messageCount: session.messageCount,
     title: session.title,
+    ...(session.titleFromRequest ? { titleFromRequest: true } : {}),
     activityClass: activityClassOf(session.activityClass),
     interaction: codexInteraction(session.source),
     evidence: session.evidence ?? undefined,
     repository: session.repository ?? undefined,
   };
+}
+
+/** Antigravity and Cline title a session by its first human message, else a
+ *  generated "<Agent> session <id>" name; an unreadable file reads "⚠ …". */
+function titleIsFirstMessage(title: string, fallbackPrefix: string): boolean {
+  const trimmed = title.trim();
+  return Boolean(trimmed) && !trimmed.startsWith(fallbackPrefix) && !trimmed.startsWith("⚠");
 }
 
 function mapAntigravityMeta(session: AntigravitySessionMeta): AgentWorkSessionMeta {
@@ -458,6 +470,7 @@ function mapAntigravityMeta(session: AntigravitySessionMeta): AgentWorkSessionMe
     updatedAt: session.updatedAt,
     messageCount: session.messageCount,
     title: session.title,
+    ...(titleIsFirstMessage(session.title, "Antigravity session ") ? { titleFromRequest: true } : {}),
   };
 }
 
@@ -512,6 +525,7 @@ function mapClineMeta(session: ClineSessionMeta): AgentWorkSessionMeta {
     updatedAt: session.updatedAt,
     messageCount: session.messageCount,
     title: session.title,
+    ...(titleIsFirstMessage(session.title, "Cline session ") ? { titleFromRequest: true } : {}),
   };
 }
 

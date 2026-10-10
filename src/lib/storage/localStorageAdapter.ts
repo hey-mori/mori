@@ -182,6 +182,7 @@ export class BrowserDraftRepository implements DraftRepository {
               sourceRepositoryBasis: draft.session.sourceRepositoryBasis,
             }
           : {}),
+        ...(draft.session.titleFromRequest ? { titleFromRequest: true } : {}),
         ...(draft.session.createdBy ? { createdBy: draft.session.createdBy } : {}),
         ...(draft.session.visibility ? { visibility: draft.session.visibility } : {}),
         ...(metrics.eventCount !== undefined ? { eventCount: metrics.eventCount } : {}),

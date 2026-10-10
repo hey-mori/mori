@@ -33,6 +33,7 @@ import {
   type PassageDraftRefusal,
 } from "../../lib/capture/passageCapture";
 import { loadKeptPassages } from "./passageCaptureActions";
+import { useShownSessionTitle } from "../../app/useDisclosedView";
 
 /** Why a message could not be kept, in the words the viewer shows. */
 const CAPTURE_REFUSAL: Record<PassageDraftRefusal, string> = {
@@ -242,7 +243,8 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
   };
 
   // 기록으로 남기기: a preview for one message, or why it cannot be kept.
-  const sessionTitle = useSessionStore((store) => store.draft?.session.title ?? "");
+  // Shown as the request disclosure level shows it (display only).
+  const sessionTitle = useShownSessionTitle(useSessionStore((store) => store.draft?.session ?? null));
   const [captureDraft, setCaptureDraft] = useState<PassageDraft | null>(null);
   // What was already kept from this session, so a message read again says so
   // and leads to its record. Read again after each capture preview closes.

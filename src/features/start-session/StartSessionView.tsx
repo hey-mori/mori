@@ -74,6 +74,7 @@ import {
 } from "../../lib/trace/sources/ai/agentRegistry";
 import { DetectedConversationsModal } from "./DetectedConversationsModal";
 import { ProjectFormModal, type ProjectFormValues } from "../project/ProjectFormModal";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * 새 세션 — create one session, the way you'd provision one real thing.
@@ -269,10 +270,15 @@ export function StartSessionView() {
     setMethod((current) => (current === next ? null : next));
   }
 
+  const requestLevel = useSessionStore((state) => state.analysisSettings.requestDisclosureLevel);
+  const shownTitle = useSessionTitle();
   function pickDetected(meta: AgentWorkSessionMeta) {
     setSelectedDetected(meta);
-    // Auto-fill the session name from the conversation's own title; still editable.
-    setSessionTitle(meta.title?.trim() ?? "");
+    // Auto-fill the session name from the conversation's own title; still
+    // editable. A title that is the user's first request is not written into
+    // the field below 원문: left empty, the import still names the session by
+    // it, and keeps it marked.
+    setSessionTitle(meta.titleFromRequest && requestLevel !== "raw" ? "" : meta.title?.trim() ?? "");
     // File the import under the project this folder was last linked to. If the
     // folder has no remembered link, fall back to a project whose label matches
     // the folder name; otherwise default to creating a new project prefilled
@@ -372,6 +378,10 @@ export function StartSessionView() {
         importAndOpenAsNewSession({
           candidate,
           title: sessionTitle.trim() || detail.title,
+          // Still the source's own words only when the user kept them.
+          titleFromRequest:
+            detail.titleFromRequest === true &&
+            (!sessionTitle.trim() || sessionTitle.trim() === (selectedDetected?.title ?? detail.title).trim()),
           startedAt,
           endedAt,
           projectLabel: resolvedProject,
@@ -398,12 +408,15 @@ export function StartSessionView() {
           sessionId: view.session.id,
           capturedAt,
         });
-        const title = sessionTitle.trim() || candidate.events[0]?.title || "가져온 대화";
+        // A paste the user did not name is titled by its first turn, which is
+        // usually their request: the import marks it so.
+        const named = sessionTitle.trim();
         // A pasted transcript carries no per-message timestamps, so the capture
         // time stands in for both ends of the window.
         importAndOpenAsNewSession({
           candidate,
-          title,
+          title: named,
+          titleFromRequest: false,
           startedAt: capturedAt,
           endedAt: capturedAt,
           projectLabel: projectName || undefined,
@@ -420,7 +433,9 @@ export function StartSessionView() {
     ? sessionTitle.trim()
     : method === "records" && !selectedDetected
       ? "대화 선택 필요"
-      : "무제 Mori 세션";
+      : method === "records" && selectedDetected
+        ? shownTitle(selectedDetected.title, selectedDetected.titleFromRequest)
+        : "무제 Mori 세션";
 
   const createTitle = canCreate
     ? undefined
@@ -512,7 +527,7 @@ export function StartSessionView() {
                       <History size={16} />
                     </span>
                     <span className="records-chosen-main">
-                      <strong>{selectedDetected.title}</strong>
+                      <strong>{shownTitle(selectedDetected.title, selectedDetected.titleFromRequest)}</strong>
                       <span>
                         {shortProjectLabel(selectedDetected.projectName)} · 메시지{" "}
                         {selectedDetected.messageCount} ·{" "}

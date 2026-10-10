@@ -75,6 +75,7 @@ export function buildAgentSessionRecordInput(
   // Source classifications and structural Git observations, never prose (see
   // `agentSessionEvidence.ts`). Absent when the reader does not report them.
   if (meta.activityClass) properties.activityClass = meta.activityClass;
+  if (meta.titleFromRequest && meta.title.trim()) properties.titleFromRequest = true;
   if (meta.interaction) properties.interaction = meta.interaction;
   const evidence = recordedSessionEvidence(meta.evidence, meta.sessionId);
   if (evidence) properties.sessionEvidence = evidence;
@@ -123,6 +124,7 @@ export type ObservedFields = {
   activityClass: RecordPropertyValue | undefined;
   interaction: RecordPropertyValue | undefined;
   sessionEvidence: RecordPropertyValue | undefined;
+  titleFromRequest: RecordPropertyValue | undefined;
 };
 
 function observedFields(record: Pick<
@@ -144,6 +146,7 @@ function observedFields(record: Pick<
     activityClass: record.properties?.activityClass,
     interaction: record.properties?.interaction,
     sessionEvidence: record.properties?.sessionEvidence,
+    titleFromRequest: record.properties?.titleFromRequest,
   };
 }
 
@@ -178,7 +181,7 @@ function isPartialRescanOf(incoming: unknown, stored: unknown): boolean {
 }
 
 /** The observed fields that live in `properties`, merged key by key. */
-const PROPERTY_KEYS = ["agentId", "stepCount", "activityClass", "interaction", "sessionEvidence"] as const;
+const PROPERTY_KEYS = ["agentId", "stepCount", "activityClass", "interaction", "sessionEvidence", "titleFromRequest"] as const;
 
 export function planAgentSessionRediscovery(
   written: ObservedFields,
@@ -212,7 +215,15 @@ export function planAgentSessionRediscovery(
 
   const properties = { ...current.properties };
   let propertiesChanged = false;
+  // A title the user wrote is their own: the first-request mark belongs to the
+  // observed title only, so it is neither taken nor kept beside theirs.
+  const userTitled = !same(now.title, written.title);
+  if (userTitled && properties.titleFromRequest !== undefined) {
+    delete properties.titleFromRequest;
+    propertiesChanged = true;
+  }
   for (const key of PROPERTY_KEYS) {
+    if (key === "titleFromRequest" && userTitled) continue;
     if (!takes(key)) continue;
     if (next[key] === undefined) delete properties[key];
     else properties[key] = next[key];
@@ -232,6 +243,7 @@ const OBSERVED_KEYS = [
   "activityClass",
   "interaction",
   "sessionEvidence",
+  "titleFromRequest",
 ] as const;
 
 /**

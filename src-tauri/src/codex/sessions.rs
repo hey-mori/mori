@@ -27,6 +27,8 @@ pub struct CodexSessionMeta {
     pub updated_at: String,
     pub message_count: usize,
     pub title: String,
+    /// True when `title` is the first user message (no thread or meta title).
+    pub title_from_request: bool,
     pub originator: String,
     /// `session_meta.source` (`exec` for a scripted `codex exec` run, `cli`,
     /// `vscode`, ...), "" when the source does not say.
@@ -51,6 +53,8 @@ pub struct CodexSessionDetail {
     pub updated_at: String,
     pub message_count: usize,
     pub title: String,
+    /// True when `title` is the first user message (no thread or meta title).
+    pub title_from_request: bool,
     pub originator: String,
     /// `session_meta.source` (`exec` for a scripted `codex exec` run, `cli`,
     /// `vscode`, ...), "" when the source does not say.
@@ -133,6 +137,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<CodexSessionMeta>, Str
                     updated_at: detail.updated_at,
                     message_count: detail.message_count,
                     title: detail.title,
+                    title_from_request: detail.title_from_request,
                     originator: detail.originator,
                     source: detail.source,
                     activity_class: detail.activity_class,
@@ -168,6 +173,7 @@ fn unreadable_codex_meta(path: &Path, reason: &str, modified: SystemTime) -> Cod
         updated_at: when,
         message_count: 0,
         title: format!("⚠ 읽을 수 없는 세션 · {reason}"),
+        title_from_request: false,
         originator: "Codex".to_string(),
         source: String::new(),
         activity_class: "unknown".to_string(),
@@ -329,6 +335,9 @@ fn parse_session_file(
         project_path = "Codex".to_string();
     }
     let index_title = thread_titles.get(&session_id).map(String::as_str).unwrap_or("");
+    let title_from_request = index_title.trim().is_empty()
+        && meta_title.trim().is_empty()
+        && !first_user_title.trim().is_empty();
     let title = first_nonempty_string(&[
         index_title,
         meta_title.as_str(),
@@ -347,6 +356,7 @@ fn parse_session_file(
         updated_at,
         message_count,
         title,
+        title_from_request,
         originator,
         source,
         activity_class: if message_count > 0 { "conversation" } else { "empty" }.to_string(),
@@ -569,6 +579,7 @@ mod tests {
 
         let sessions = list_sessions_at(temp.path()).unwrap();
         assert_eq!(sessions[0].title, "Inspect repository and environment");
+        assert!(sessions[0].title_from_request);
     }
 
     #[test]
@@ -592,6 +603,7 @@ mod tests {
 
         let sessions = list_sessions_at(&root).unwrap();
         assert_eq!(sessions[0].title, "Full-page UX redesign");
+        assert!(!sessions[0].title_from_request);
 
         let detail = read_session_at(&root, path.to_string_lossy().as_ref()).unwrap();
         assert_eq!(detail.title, "Full-page UX redesign");

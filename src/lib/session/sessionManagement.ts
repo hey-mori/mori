@@ -23,5 +23,7 @@ export function normalizeSessionTitle(title: string): string | null {
 export function applySessionRename(session: Session, title: string): Session {
   const next = normalizeSessionTitle(title);
   if (next === null || next === session.title) return session;
-  return { ...session, title: next };
+  // The user's own name for it now, not the request it began with.
+  const { titleFromRequest: _fromRequest, ...rest } = session;
+  return { ...rest, title: next };
 }

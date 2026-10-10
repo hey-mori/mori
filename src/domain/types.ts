@@ -164,6 +164,9 @@ export type Session = {
   /** How `sourceRepository` is known: `session-record`, `git-worktree`, or
    *  `git-checkout`. */
   sourceRepositoryBasis?: string;
+  /** True when `title` is the user's first request as discovery found it; a
+   *  rename clears it. The request disclosure level then governs the title. */
+  titleFromRequest?: boolean;
    /**
    * Optional actor id who created the session. Reserved for a future
    * multi-user workroom model (a Project containing sessions from multiple

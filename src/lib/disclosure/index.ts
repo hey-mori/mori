@@ -20,6 +20,9 @@ export {
 export {
   discloseEventForView,
   HIDDEN_REQUEST_TITLE,
+  HIDDEN_SESSION_TITLE,
+  recordTitleForView,
+  sessionTitleForView,
   requestTitleForView,
   isRequestTitledEvent,
   isUserRequestEvent,

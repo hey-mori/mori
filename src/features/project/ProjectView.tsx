@@ -60,6 +60,7 @@ import {
 import { useProjectSynthesis } from "./useProjectSynthesis";
 import { spanLabel } from "../../lib/session/workContext";
 import { lookAlikeHints } from "../../lib/sidebar/lookAlike";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /**
  * Project workspace — the unit-of-work page.
@@ -198,9 +199,16 @@ export function ProjectView() {
   // Sessions in display order, plus the timestamps and synthesis the overview
   // band and the synthesis section share. Computed before the early return so
   // the hooks stay unconditional.
+  // Titles as the request disclosure level shows them, for the list, the
+  // synthesis and the summary alike.
+  const sessionTitle = useSessionTitle();
   const sessionRows = useMemo(
-    () => (overview ? overview.groups.flatMap((group) => group.rows) : []),
-    [overview],
+    () =>
+      (overview ? overview.groups.flatMap((group) => group.rows) : []).map((row) => ({
+        ...row,
+        title: sessionTitle(row.title, row.titleFromRequest),
+      })),
+    [overview, sessionTitle],
   );
   const sessionTimestamps = useMemo(
     () => sessionRows.map((row) => row.timestamp),

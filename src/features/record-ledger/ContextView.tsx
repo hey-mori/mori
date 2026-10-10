@@ -60,6 +60,7 @@ import { confirmedLiveScopeFor } from "./confirmedLiveScope";
 import { BaseOverflowMenu } from "../../components/ui/BaseActionMenu";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import { sessionLastActiveAt } from "../../lib/session/sessionActivity";
+import { useRecordTitle, useSessionTitle } from "../../app/useDisclosedView";
 
 /** What the rail has selected. A project the user just made holds nothing yet,
  *  so selection keys on the CONTEXT, never on a group that may not exist. */
@@ -87,7 +88,15 @@ export function ContextView() {
   const findInProject = useAppStore((state) => state.findInProject);
   const openSession = useAppStore((state) => state.openSession);
   const resolveSession = useSessionResolver();
-  const [summaries] = useState(() => safeSummaries());
+  const [storedSummaries] = useState(() => safeSummaries());
+  // Session titles as the request disclosure level shows them, for every list,
+  // chronology and search on this page.
+  const sessionTitle = useSessionTitle();
+  const recordTitle = useRecordTitle();
+  const summaries = useMemo(
+    () => storedSummaries.map((summary) => ({ ...summary, title: sessionTitle(summary.title, summary.titleFromRequest) })),
+    [storedSummaries, sessionTitle],
+  );
   const [connections] = useState(() => loadConnectedProjects());
 
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -295,8 +304,9 @@ export function ContextView() {
         const summary = summaryById.get(sessionId);
         return summary ? { title: summary.title, lastActiveAt: sessionLastActiveAt(summary) } : null;
       },
+      titleOf: recordTitle,
     });
-  }, [activeContext, contexts, records, summaries]);
+  }, [activeContext, contexts, records, summaries, recordTitle]);
   const restrictProjectSearch = useProjectSearchStore((state) => state.restrict);
   const stopProjectSearch = useProjectSearchStore((state) => state.stop);
   const closeProjectSearch = useProjectSearchStore((state) => state.close);
@@ -355,7 +365,8 @@ export function ContextView() {
         const steps = record?.properties?.stepCount;
         return {
           id: entry.sessionId,
-          title: summaryById.get(entry.sessionId)?.title ?? entry.title,
+          // The inventory's title is already the shown one.
+          title: summaryById.get(entry.sessionId)?.title ?? (record ? recordTitle(record) : entry.title),
           // The transcript's own first and last activity. A session with no
           // record has no observed end: its Mori save time is not activity.
           start: record?.occurredStart ?? summaryById.get(entry.sessionId)?.startedAt,
@@ -367,13 +378,13 @@ export function ContextView() {
       }),
       records: activeGroup.records.map((record) => ({
         id: record.id,
-        title: record.title,
+        title: recordTitle(record),
         schemaId: record.schemaId,
         at: record.occurredStart ?? record.capturedAt,
       })),
     });
     return { chronology };
-  }, [activeGroup, activeContext, searchInventory, records, summaries]);
+  }, [activeGroup, activeContext, searchInventory, records, summaries, recordTitle, sessionTitle]);
 
   // 이어가기 reads the page's own session list, so what the page shows and what
   // the pack can cite never disagree. Records come in at EVERY status (the page

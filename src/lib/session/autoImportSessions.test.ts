@@ -240,3 +240,14 @@ describe("carryForwardRepository · a partial rescan after restart", () => {
     expect(carryForwardRepository(meta({ id: "wt", repository: other, evidence: ev(false) }), previous).repository).toEqual(other);
   });
 });
+
+describe("a title that is the user's first request", () => {
+  it("is marked on the stub, and changes the fingerprint only when true", () => {
+    const fromRequest = meta({ id: "r", title: "배포 스크립트 고쳐줘", titleFromRequest: true });
+    expect(agentSessionToStoredDraft(fromRequest).session.titleFromRequest).toBe(true);
+    expect(agentSessionToStoredDraft(meta({ id: "a", title: "Fix deploy" })).session.titleFromRequest).toBeUndefined();
+    const plain = meta({ id: "p", title: "Fix deploy" });
+    expect(agentSessionFingerprint({ ...plain, titleFromRequest: undefined })).toBe(agentSessionFingerprint(plain));
+    expect(agentSessionFingerprint({ ...plain, titleFromRequest: true })).not.toBe(agentSessionFingerprint(plain));
+  });
+});

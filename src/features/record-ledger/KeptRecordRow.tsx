@@ -19,6 +19,7 @@ import type { RecordLedger } from "./useRecordLedger";
 import { ActivityDateEditor } from "./recordEditing";
 import { ContextPicker } from "./ContextPicker";
 import { kindColorClass, retypeTargets, schemaLabel } from "./recordPresentation";
+import { useRecordTitle } from "../../app/useDisclosedView";
 
 export function KeptRecordRow({
   record,
@@ -38,6 +39,7 @@ export function KeptRecordRow({
   onRevealSpan: (span: { start: number; end: number }) => void;
   onDiscarded: (recordId: string, title: string) => void;
 }) {
+  const recordTitle = useRecordTitle();
   const kinds = useMemo(() => retypeTargets(ledger.registry), [ledger.registry]);
 
   // The record's body is the slice of the note it was kept from, so locating it
@@ -115,7 +117,7 @@ export function KeptRecordRow({
               className="note-foot-discard"
               onClick={() => {
                 void ledger.discardRecords([record.id]);
-                onDiscarded(record.id, record.title);
+                onDiscarded(record.id, recordTitle(record));
               }}
             >
               <Trash2 size={12} aria-hidden="true" />

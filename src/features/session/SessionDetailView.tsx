@@ -38,6 +38,7 @@ import { SessionArchiveControl } from "./SessionArchiveControl";
 import { RetainedSourceNotice } from "./RetainedSourceNotice";
 import { sessionCrumbs, sessionReturnLink } from "./sessionProjectIdentity";
 import { useSessionProjectIdentity } from "./useSessionProjectIdentity";
+import { useShownSessionTitle } from "../../app/useDisclosedView";
 
 const TimelineView = lazy(() =>
   import("../timeline/TimelineView").then((m) => ({ default: m.TimelineView })),
@@ -147,6 +148,11 @@ function SessionTitleInline() {
       }),
     [draft, demoSession, analysisStatus],
   );
+  // The title as the request disclosure level shows it (a demo session has
+  // no first-request title).
+  const shownTitle = useShownSessionTitle(
+    draft ? { title: context.sessionTitle, titleFromRequest: draft.session.titleFromRequest } : { title: context.sessionTitle },
+  );
   // The agent's working folder is observed source, not the user's project.
   const { lead, trailingSource } = sessionCrumbs(identity, context.projectLabel ?? null);
   // The way back to where this session was opened from: a project page
@@ -219,9 +225,9 @@ function SessionTitleInline() {
       {lead ? <ChevronRight size={11} className="session-detail-crumb-sep" aria-hidden="true" /> : null}
       <span
         className="session-detail-crumb is-current"
-        title={context.sessionTitle}
+        title={shownTitle}
       >
-        {context.sessionTitle}
+        {shownTitle}
       </span>
       {trailingSource ? (
         <button

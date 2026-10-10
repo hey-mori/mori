@@ -23,6 +23,7 @@ import {
 import { HomeFocalCard, type HomeCarryEntry } from "./HomeFocalCard";
 import { HomeResumeList } from "./HomeResumeList";
 import { HomeDecisions, type HomeDecisionItem } from "./HomeDecisions";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 /** How many extra "이어갈 다른 작업" rows to surface beside the memory rail. */
 const HOME_OTHER_LIMIT = 4;
@@ -67,6 +68,7 @@ export function HomeContinuationView() {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const activeSessionId = view.session.id;
 
+  const sessionTitle = useSessionTitle();
   const { overview, sessionCount, decisions } = useMemo(() => {
     let realSessions: ReturnType<typeof loadStoredSessionSummaries>;
     try {
@@ -74,7 +76,11 @@ export function HomeContinuationView() {
     } catch {
       realSessions = [];
     }
-    const storedSessions = mergeDemoSessionSummaries(realSessions);
+    // Titles as the request disclosure level shows them.
+    const storedSessions = mergeDemoSessionSummaries(realSessions).map((summary) => ({
+      ...summary,
+      title: sessionTitle(summary.title, summary.titleFromRequest),
+    }));
     const sessionMetrics = gatherSessionMetrics(storedSessions, repository);
     const built = buildHomeOverview({
       storedSessions,
@@ -87,7 +93,7 @@ export function HomeContinuationView() {
     return { overview: built, sessionCount: storedSessions.length, decisions: recentDecisions };
     // `initialized` re-reads storage after hydrate; `mode` covers demo↔real.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repository, mode, initialized]);
+  }, [repository, mode, initialized, sessionTitle]);
 
   const focal = overview.currentSessions[0] ?? null;
   const others = overview.recentSessions

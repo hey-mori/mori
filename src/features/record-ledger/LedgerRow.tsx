@@ -8,6 +8,7 @@ import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
 import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { displayTime, schemaLabel, statusBadge } from "./recordPresentation";
+import { useRecordTitle } from "../../app/useDisclosedView";
 
 export function LedgerRow({
   record,
@@ -24,6 +25,7 @@ export function LedgerRow({
   showTime?: boolean;
 }) {
   const badge = statusBadge(record.status);
+  const recordTitle = useRecordTitle();
   const time = displayTime(record);
   return (
     <li>
@@ -34,7 +36,7 @@ export function LedgerRow({
       >
         <div className="ledger-row-head">
           <span className="ledger-row-kind">{schemaLabel(record, registry)}</span>
-          <span className="ledger-row-title">{record.title}</span>
+          <span className="ledger-row-title">{recordTitle(record)}</span>
           {badge ? <BaseStatusBadge tone={badge.tone}>{badge.label}</BaseStatusBadge> : null}
         </div>
         {showTime ? (

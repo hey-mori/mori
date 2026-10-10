@@ -25,6 +25,7 @@ import type { SchemaRegistry } from "../../lib/record-kernel/schemaRegistry";
 import { useRecordProvenance } from "./useRecordProvenance";
 import { ActivityDateEditor, InlineEditable, revertPatch } from "./recordEditing";
 import { displayProperties, originLabel, schemaLabel, sourceKindLabel, statusBadge } from "./recordPresentation";
+import { useRecordTitle } from "../../app/useDisclosedView";
 
 const REVISION_LABEL: Record<string, string> = {
   create: "만듦",
@@ -56,6 +57,7 @@ export function RecordInspector({
 }) {
   // Re-fetch history when the record changes (an edit adds a revision).
   const { source, revisions, relations, loading } = useRecordProvenance(record.id, record.updatedAt);
+  const recordTitle = useRecordTitle();
   const [showRaw, setShowRaw] = useState(false);
 
   const badge = statusBadge(record.status);
@@ -102,6 +104,7 @@ export function RecordInspector({
       title={
         <InlineEditable
           value={record.title}
+          display={recordTitle(record)}
           ariaLabel="제목 편집"
           onSave={(next) => onUpdate({ title: next })}
         />
