@@ -52,9 +52,12 @@ export function buildAgentSessionRecordInput(
   contexts: readonly KernelContext[],
 ): CreateRecordInput {
   const occurredStart = meta.startedAt || undefined;
-  const updatedAt = meta.updatedAt || undefined;
+  // When the conversation itself last moved (Claude Code: the last user or
+  // assistant record), else the source's last activity. Bookkeeping written
+  // while nobody talks must not stretch a session onto a day nobody worked.
+  const lastMove = meta.lastMessageAt || meta.updatedAt || undefined;
   const occurredEnd =
-    occurredStart && updatedAt && updatedAt >= occurredStart ? updatedAt : undefined;
+    occurredStart && lastMove && Date.parse(lastMove) >= Date.parse(occurredStart) ? lastMove : undefined;
 
   const agentLabel = (meta.agentName || meta.agentId || "에이전트").trim();
   // A count read from only the head of a long transcript is a lower bound, so it

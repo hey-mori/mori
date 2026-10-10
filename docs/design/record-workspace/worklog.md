@@ -1045,5 +1045,9 @@ focused next step, not rushed:
 - Owner decision D4: such a session now also sits on its last-activity day, ordered and timed there
   by that activity and marked "M월 D일 시작", as the chronology writes it. Days in between show
   nothing: listing every active day would invent work on quiet days.
-- Only agent sessions; a one-day session and every other record are unchanged. The month total
-  counts records, not placements.
+- Only agent sessions with source-observed times; a one-day session, a start the user set and every
+  other record are unchanged. The month total counts records, not placements; a day's "세션 N건"
+  includes a session continuing there.
+- "Last activity" is now the conversation's own last move where Claude Code records it (the last
+  user or assistant record), not idle-time bookkeeping, so a session is not placed on a day nobody
+  worked. The project chronology reads the same field and follows.

@@ -177,6 +177,14 @@ describe("a session active across days (D4)", () => {
     expect(continuesFrom(multi, day(multi.occurredStart!))).toBeNull();
   });
 
+  it("takes a bare last day as it is, and never pairs an observed end with a start the user set", () => {
+    const bare = session("bare", atLocal(2026, 10, 7, 9), "2026-10-09");
+    expect(lastActivityDay(bare)).toBe("2026-10-09");
+    const userSet = { ...session("user", "2026-10-01", atLocal(2026, 10, 9, 10)), timeBasis: "user-provided" as const };
+    expect(lastActivityDay(userSet)).toBeNull();
+    expect([...recordsByDate([userSet]).keys()]).toEqual(["2026-10-01"]);
+  });
+
   it("leaves a one-day session and every other kind of record alone", () => {
     const sameDay = session("same", atLocal(2026, 10, 9, 9), atLocal(2026, 10, 9, 18));
     expect([...recordsByDate([sameDay]).keys()]).toEqual([day(sameDay.occurredStart!)]);

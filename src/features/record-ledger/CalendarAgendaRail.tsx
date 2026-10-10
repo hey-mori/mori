@@ -141,7 +141,9 @@ export const CalendarAgendaRail = forwardRef<
                               {group.label}
                               {group.kind === "folder" ? <span> 폴더</span> : null} <span>{group.sessions.length}</span>
                             </p>
-                            {group.sessions.map((session) => (
+                            {group.sessions.map((session) => {
+                              const startedOn = continuesFrom(session, date);
+                              return (
                               <button
                                 key={session.id}
                                 type="button"
@@ -152,11 +154,10 @@ export const CalendarAgendaRail = forwardRef<
                                 <span className="cal-day-title">
                                   {readableAgentText(session.title) || "제목 없음"}
                                 </span>
-                                {continuesFrom(session, date) ? (
-                                  <span className="cal-day-kind">{startedLabel(continuesFrom(session, date)!)}</span>
-                                ) : null}
+                                {startedOn ? <span className="cal-day-kind">{startedLabel(startedOn)}</span> : null}
                               </button>
-                            ))}
+                              );
+                            })}
                           </div>
                         ))
                       : null}

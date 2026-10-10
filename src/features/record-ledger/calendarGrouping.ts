@@ -68,7 +68,9 @@ export function groupByActivityDay(records: MoriRecord[]): CalendarDayGroup[] {
  */
 export function lastActivityDay(record: MoriRecord): string | null {
   if (record.schemaId !== "agent-session" || !record.occurredStart || !record.occurredEnd) return null;
-  if (isDateUndecided(record)) return null;
+  // Both ends observed from the source: a start the user set is a day of
+  // their choosing, not paired with an observed end.
+  if (record.timeBasis !== "source-observed") return null;
   const start = activityDay(record.occurredStart);
   const end = activityDay(record.occurredEnd);
   return end > start ? end : null;

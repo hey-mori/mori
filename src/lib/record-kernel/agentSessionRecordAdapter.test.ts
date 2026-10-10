@@ -55,6 +55,12 @@ describe("buildAgentSessionRecordInput", () => {
     expect(input.timeBasis).toBe("source-observed");
     expect(input.occurredStart).toBe("2026-07-16T09:00:00.000Z");
     expect(input.occurredEnd).toBe("2026-07-16T10:30:00.000Z");
+    // The conversation's own last move wins over later idle-time bookkeeping.
+    const quiet = buildAgentSessionRecordInput(
+      meta({ updatedAt: "2026-07-19T08:00:00.000Z", lastMessageAt: "2026-07-16T10:30:00.000Z" }),
+      [],
+    );
+    expect(quiet.occurredEnd).toBe("2026-07-16T10:30:00.000Z");
     expect(input.properties).toEqual({ agentId: "claude", stepCount: 12 });
     expect(input.body).toContain("메시지 12개");
   });
