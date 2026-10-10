@@ -874,7 +874,7 @@
 }
 
 /* A message something was already kept from: a quiet link to that record,
-   always visible (unlike the hover-only capture action beside it). */
+   at full strength (the capture action beside it stays dim until hovered). */
 .session-window-kept {
   display: inline-flex;
   align-items: center;
@@ -891,6 +891,11 @@
 
 .session-window-kept:hover {
   text-decoration: underline;
+}
+
+.session-window-kept:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 1px;
 }
 
 .session-window-capture.is-after-kept {

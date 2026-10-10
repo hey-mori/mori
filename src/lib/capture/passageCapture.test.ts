@@ -256,9 +256,16 @@ describe("what was already kept from a session", () => {
     expect(kept.get(messagePlace(message().record!))?.map((entry) => entry.title)).toEqual(["부분", "전체"]);
   });
 
-  it("leaves out discarded records and other sessions", async () => {
+  it("leaves out discarded or archived records, other sessions and malformed locators", async () => {
     const plan = planPassageCommit(await draftOf(), { schemaId: "note", title: "t", body: "", contextId: null, redact: false }, registry, NOW);
     expect(keptPassagesByMessage("auto-claude-other", [plan.source], [plan.link], [plan.created.record]).size).toBe(0);
+    // A session id that is a prefix of another never picks up its passages.
+    expect(keptPassagesByMessage("auto-claude-ab", [plan.source], [plan.link], [plan.created.record]).size).toBe(0);
+    expect(
+      keptPassagesByMessage("auto-claude-abc", [plan.source], [plan.link], [{ ...plan.created.record, status: "archived" }]).size,
+    ).toBe(0);
+    const malformed = { ...plan.source, locator: "mori:session/auto-claude-abc#nothing" };
+    expect(keptPassagesByMessage("auto-claude-abc", [malformed], [plan.link], [plan.created.record]).size).toBe(0);
     expect(
       keptPassagesByMessage("auto-claude-abc", [plan.source], [plan.link], [{ ...plan.created.record, status: "discarded" }]).size,
     ).toBe(0);

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { labelText } from "../../lib/session/agentText";
 import { BookmarkCheck, BookmarkPlus, ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
@@ -262,6 +262,12 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
     };
   }, [state.sessionId, keptRevision]);
   const openRecordInLedger = useAppStore((store) => store.openRecordInLedger);
+  // Stable, so a re-render while the preview is open (the marks arriving)
+  // never re-runs the dialog's focus effect and pulls focus out of it.
+  const closeCapture = useCallback(() => {
+    setCaptureDraft(null);
+    setKeptRevision((value) => value + 1);
+  }, []);
   const [captureRefusal, setCaptureRefusal] = useState<string | null>(null);
   const capturePassage = (message: ClaudeMessage, selection: MessageSelection) => {
     setCaptureRefusal(null);
@@ -310,10 +316,7 @@ function SessionWindowConversation({ state }: { state: LoadedState }) {
         <PassageCaptureModal
           draft={captureDraft}
           sessionTitle={sessionTitle}
-          onClose={() => {
-            setCaptureDraft(null);
-            setKeptRevision((value) => value + 1);
-          }}
+          onClose={closeCapture}
         />
       ) : null}
       {captureRefusal ? (
@@ -538,6 +541,7 @@ function WindowMessage({
           <button
             type="button"
             className="session-window-kept"
+            aria-label={kept.length > 1 ? `남긴 기록 ${kept.length}개 중 최근 기록 열기` : "남긴 기록 열기"}
             title={`남긴 기록 열기: ${kept.map((entry) => entry.title || "제목 없음").join(", ")}`}
             onClick={() => onOpenKept(kept[0]!.recordId)}
           >
