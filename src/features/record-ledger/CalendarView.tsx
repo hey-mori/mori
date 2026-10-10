@@ -17,6 +17,9 @@ import { CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNow } from "../../lib/time/useNow";
 import { useAppStore } from "../../app/store";
 import { useRecordLedger } from "./useRecordLedger";
+import { useSessionResolver } from "../session/useSessionResolver";
+import { loadAutoImportMetas } from "../../lib/session/autoImportMetaStore";
+import { autoImportedSessionId } from "../../lib/session/autoImportSessions";
 import { ledgerVisibleRecords } from "./recordPresentation";
 import { LedgerCalendarView } from "./LedgerCalendarView";
 import { CalendarAgendaRail } from "./CalendarAgendaRail";
@@ -33,6 +36,23 @@ export function CalendarView() {
   const navigate = useAppStore((state) => state.navigate);
   const openRecordInLedger = useAppStore((state) => state.openRecordInLedger);
   const now = useNow();
+  const openSession = useAppStore((state) => state.openSession);
+  const setSessionReturn = useAppStore((state) => state.setSessionReturn);
+  const resolveSession = useSessionResolver();
+  // The folder each discovered session ran in (its descriptor), read once.
+  const folderOf = useMemo(() => {
+    const byId = new Map(
+      loadAutoImportMetas().map((meta) => [autoImportedSessionId(meta), folderName(meta.projectPath || meta.projectName)]),
+    );
+    return (sessionId: string) => byId.get(sessionId) || null;
+  }, []);
+  const openSessionFromCalendar = (sessionId: string) => {
+    setSessionReturn(null);
+    void resolveSession(sessionId).then((outcome) => {
+      if (outcome === "opened") openSession("flow");
+      else if (outcome === "unavailable") navigate("sessions");
+    });
+  };
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [cursor, setCursor] = useState(() => ({ year: now.getFullYear(), month: now.getMonth() }));
   const [trayOpen, setTrayOpen] = useState(false);
@@ -148,7 +168,9 @@ export function CalendarView() {
         selectedDate={selectedDate}
         onSelectDate={selectDate}
         onSelectRecord={openRecordInLedger}
-        onOpenSessions={() => navigate("sessions")}
+        onOpenSession={openSessionFromCalendar}
+        contexts={ledger.contexts}
+        folderOf={folderOf}
         now={now}
       />
 
@@ -234,4 +256,9 @@ export function CalendarView() {
       </div>
     </div>
   );
+}
+
+/** The last segment of a folder path ("/home/u/dev/infra" → "infra"). */
+function folderName(path: string | undefined): string {
+  return (path ?? "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? "";
 }
