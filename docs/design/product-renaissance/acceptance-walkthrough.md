@@ -1,8 +1,9 @@
 # Product Renaissance · operator acceptance walkthrough
 
 A pass the operator runs on a real machine to accept or reject the program.
-The agent verified each step in an isolated profile; this walkthrough is what
-turns that into operator evidence. About 20 minutes.
+The agent verified these steps in an isolated profile, except where noted (2.2
+and 2.4 in the browser build, 6.3 by unit tests only); this walkthrough is
+what turns that into operator evidence. About 20 minutes.
 
 **Before you start.** Use a build of `main` at or after the program's last
 merge. To keep your real profile untouched, run it the way the trials did:
@@ -12,7 +13,9 @@ are read, never written). Nothing below archives or copies a transcript.
 Mark each step pass or fail; a fail names what you saw.
 
 ## 1 · A long session reads as a timeline
-1. Open a session with a few hundred events (세션 → pick one → 활동 → 타임라인).
+1. Open a session with a few hundred events that shows the tab bar (세션 →
+   pick one → 활동 → 타임라인). A transcript over 8 MB opens as the reader
+   ("최근 대화 일부 표시 중") without tabs; pick another for this step.
 2. Without zooming, the 대화 and 명령 lanes print readable titles beside their
    ticks. No `<command-name>` or similar markup appears anywhere.
 3. A session with only a handful of turns opens at 100% with every card on
@@ -52,8 +55,9 @@ Mark each step pass or fail; a fail names what you saw.
 1. 대시보드: the tile and table say 폴더, not 프로젝트.
 2. Tool rows in a session read as 도구; an empty result is not shown as 나; a
    screenshot result reads "(이미지 N개)"; no colour codes like `[32m`.
-3. Hovering a request in the timeline at a withheld disclosure level shows no
-   request body.
+3. Set 설정 → 내 요청 표시 수준 to 숨김: hovering a request
+   in the timeline shows no request text. At 요약 or 요지 it shows that level's
+   text (요약 is the first sentence), never the full original.
 
 ## Record the result
 Write the date, the build, and pass or fail per step in the program ledger

@@ -13,8 +13,8 @@ screenshots live outside the repository in
 
 ## Evidence levels
 
-Every claim below names its level. None of this program reached operator or
-production level; those are the walkthrough's job.
+Each change below names the level it was verified at. None of this program
+reached operator or production level; those are the walkthrough's job.
 
 | Level | Meaning here |
 |---|---|
@@ -42,9 +42,11 @@ were decorative; Home was a command canvas (owner decision, kept).
   previous title rather than overlapping it; only label-printing ticks claim
   room. Synthetic + real-source runtime.
 - #236, #242: transport markup (command tags, stdout wrappers, paste markers,
-  system reminders) is cleaned for display on every surface that shows agent
-  text, with named notices (명령, 명령 출력, 세션 이어가기, 요청 중단). Unit +
-  real-source runtime.
+  system reminders) is cleaned for display on the session timeline, inspector,
+  원본 list, calendar, project page and live feed, with named notices (for
+  example "/model 명령", 명령 출력, 세션 이어가기, 요청 중단). Not yet: the
+  분석 흐름 conversation cards (`turnCard.ts` takes the raw title) and the
+  minimap's aria-label. Unit + real-source runtime.
 
 ### C · timeline interaction
 - #244: arrow keys keep the selection on screen and move focus with it; a lane
@@ -64,13 +66,14 @@ were decorative; Home was a command canvas (owner decision, kept).
   an invented clock, PRs the sessions mention. Real-source runtime.
 
 ### E · cross-surface continuity
-- #240, #241: a calendar day unfolds its sessions, grouped by reviewed project
-  (through `membershipState`), then 프로젝트 확인 필요, then folder, then none.
+- #241 (issue #240): a calendar day unfolds its sessions, grouped by reviewed
+  project (through `membershipState`), then 프로젝트 확인 필요, then folder,
+  then none. Real-source runtime.
 - #245: a session opened from a calendar day shows "← 캘린더 M월 D일" and
   returns to that day, selected and unfolded. Real-source runtime.
 - #251: a session whose transcript is gone (nothing imported or kept) opened
-  from the calendar, a project page or Home dropped the user on the live feed
-  with no word. It now opens as its record, which says 원본 대화를 열 수
+  from the calendar, a project page or Home (discovered sessions) dropped the
+  user on the live feed with no word. It now opens as its record, which says 원본 대화를 열 수
   없습니다 and shows the recorded period and the PRs it mentioned. Found with
   the real lost transcript below. Real-source runtime.
 
@@ -82,25 +85,28 @@ were decorative; Home was a command canvas (owner decision, kept).
 
 ### G · functional and visual maturity
 - #246: the timeline hover preview follows request disclosure (bodies only; see
-  the roadmap for titles).
+  the roadmap for titles). Unit.
 - #247: an empty tool result no longer reads as the user's turn (it could even
   become a session title), an image-only result reads as an image result, and
   terminal escape codes are stripped from tool output. Stored imports made by
   older builds refresh such turns in place instead of diverging. Unit +
-  synthetic + real-source runtime.
+  real-source runtime.
 - #250: the dashboard groups by source folder but called each group a project;
-  its copy now says 폴더.
+  its copy now says 폴더, and empty created projects no longer show as rows.
+  Unit (copy only) + real-source screenshots of the old labels.
+- #254: a record kept from a markdown reply no longer shows "##" in the 기록
+  list. Unit + synthetic runtime.
 
 ### H · reliability and acceptance
 See [`acceptance-walkthrough.md`](acceptance-walkthrough.md). Measurements
-taken on the real-source trial during this program:
+taken during this program:
 
-| What | Measured |
-|---|---|
-| OCI session (215 events), open to 활동 | opens at 800%, labels readable without zooming |
-| Arrow key step, selection to on-screen | every step lands inside the scroller (x=639 of 482-964, browser) |
-| Calendar month, real profile copy | 43 records, one day with 37 sessions, unfolded in one row |
-| Stored imports with tool-result turns affected by #247 | 0 in the trial profile (checked read-only) |
+| What | Where | Measured |
+|---|---|---|
+| OCI session (215 events), open to 활동 | real-source runtime | opens at 800%, labels readable without zooming |
+| Arrow key step, selection to on-screen | browser, demo data | every step lands inside the scroller (x=639 of 482-964) |
+| Calendar month of the profile copy | real-source runtime | 43 records; one day's 37 sessions, once a single "세션 37건" row, now unfold grouped |
+| Stored imports with tool-result turns affected by #247 | trial database, read-only | 0 |
 
 ### I · synthesis
 The roadmap, the docs reconciliation (timeline UX, project-aggregate spec) and
@@ -113,14 +119,16 @@ this record.
   folders.
 - No surface invents a time: date-only records show no clock; sessions are
   placed by observed activity; "진행" is no longer claimed for a past event.
-- Read-only views stayed read-only. The only writes added are the user's own
-  capture actions that already existed.
+- Read-only views stayed read-only. Two writes changed: the user's own capture
+  actions, which already existed, and one automatic refresh (#247): on reopen
+  a stored tool-result turn rendered by an older build takes the new rendering
+  of the same transcript text instead of freezing the import as diverged.
 - Source content is treated as data: markup is rendered as text or removed,
   never executed.
 - No trial profile was deleted; no transcript tree was linked or copied.
 - **Lost source, reported.** The real transcript `-home-isaac-dev-infra/efca9454…`
-  (24.8 MB), past Claude Code's 30-day cleanup on 2026-10-09 and kept only on
-  operator approval, was no longer on disk on 2026-10-10 (its folder was
+  (24.8 MB), past Claude Code's 30-day cleanup on 2026-10-09 and to be copied
+  only on operator approval, was no longer on disk on 2026-10-10 (its folder was
   modified that day; 13 other transcripts remain). No copy was taken, as
   agreed. Its session record survives (read-only check); since #251 it opens
   as that record and says the original cannot be opened.

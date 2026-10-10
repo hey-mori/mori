@@ -122,8 +122,8 @@ Behavior:
 ## Category controls
 
 - The Timeline toolbar is deliberately spare: a reading-mode switch
-  (타임라인 · 원본), one search field, the category filter, and on the
-  타임라인 a zoom stepper (− · percent · +). The old session/day/week range
+  (타임라인 · 원본), one search field, the category filter, the live-follow
+  control, and on the 타임라인 a zoom stepper (− · percent · +). The old session/day/week range
   control and the density switch were removed: the range is always the whole
   session and the density is fixed (`TimelineHeader.tsx`).
 - The canonical lane set is eight always-visible lanes: 대화, 명령, 코드·파일,
@@ -143,8 +143,8 @@ Behavior:
   session opens at `defaultZoomFor(eventCount)` (about 24 events per screen,
   1x to 8x), fixed when it first shows events so a refresh never rescales it
   under the reader. At 1x the whole span fits the visible pane.
-- Active filters are visible on the toolbar via a `Filter · N` count
-  badge. The popover's `Clear` button resets them.
+- Active filters show on the toolbar as "필터 · N"; the popover can clear
+  them.
 
 ## Reading a dense session (2026-10-10)
 
@@ -218,8 +218,8 @@ rules:
   occupies the middle, and the footer slot always sits at the bottom ·
   whether or not the footer contains content. Cards never visually jitter
   when a neighbour has different optional metadata.
-- **Constant card height per density.** Event cards and bundle cards share
-  the same height per density mode (`68px` comfortable, `54px` compact).
+- **Constant card height.** Event cards and bundle cards share one height
+  (the density is fixed at `compact`, 56px; `DENSITY_CARD_HEIGHT`).
   Lane rows therefore stay the same height regardless of the lane's
   event/bundle mix.
 - **Uniform lane height, empty lanes included.** Every lane renders at one
@@ -461,24 +461,15 @@ The registry is the single source of truth for which Timeline / Inspector
 controls are real today vs. planned. Components read from it; no string
 literal `"planned"` lives inside JSX.
 
-| Implemented | Planned |
-|---|---|
-| Density (Comfortable / Compact) | Day view, Week view |
-| Category filter (popover) | Zoom in / Zoom out |
-| Active lanes only toggle | Session end + final report writeback |
-| Event search (toolbar input) | Sidebar collapse |
-| Flow trace (inspector) | Edit event, Split, Merge, Create issue, Add note |
-| Copy summary (inspector) | Save event memo |
-| Export report | · |
-
-The toolbar carries a single dashed line confirming that `Day / Week /
-Zoom` are Planned. The inspector carries an explicit `Planned actions`
-row instead of mixing planned buttons into the live row.
+As of 2026-10-10 the toolbar shows only real controls: reading mode, search,
+category filter, live follow and zoom (see Category controls). The range and
+density controls and the Active-lanes-only toggle were removed rather than
+shown disabled. The registry still governs planned inspector actions, which
+sit in their own row instead of being mixed into the live one.
 
 ## Known limitations
 
-- The bottom mini-map shows event dots but does not yet drive horizontal
-  viewport navigation; the viewport indicator stays decorative.
+- The bottom mini-map's brush pans and zooms the canvas.
 - Cross-lane workflow bundles are prepared in the type model but not yet
   generated automatically.
 - Inline bundle expansion is intentionally deferred.
@@ -487,9 +478,6 @@ row instead of mixing planned buttons into the live row.
 - Manual relationship edits, event split/merge, manual issue creation,
   and Quick Pass re-runs from Flow Focus are all visible as disabled
   buttons.
-- Active-lanes-only is a per-session UI toggle; the hidden-lane preference
-  does not persist across reload yet.
-- The timeline is per-session today. A project-level aggregate timeline (all
-  sessions in a project merged onto one swimlane / flow) is planned, so a user
-  can read a whole project's activity over time rather than one session at a
-  time.
+- The timeline is per-session. A project's whole activity over time reads on
+  the project page's 흐름 chronology (#239); an aggregate swimlane of all its
+  sessions on one axis remains planned.
