@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { labelText } from "../../lib/session/agentText";
 import { BookmarkPlus, ChevronDown, ChevronsDown, ChevronUp, FileWarning, Loader2, RotateCw, Search, X } from "lucide-react";
 import { useSessionStore } from "../../app/sessionStore";
 import { Button } from "../../components/ui/Button";
@@ -478,8 +479,11 @@ function WindowMessage({
   }, [focusSeq]);
   const kind = messageKind(message);
   const limit = kind === "tool" ? TOOL_CLIP_CHARS : CLIP_CHARS;
-  const long = message.content.length > limit;
-  const text = open || !long ? message.content : `${message.content.slice(0, limit)}…`;
+  // A tool row is already labelled 도구: the reader's leading tool glyph is
+  // dropped from what it shows (the transcript itself is unchanged).
+  const shown = kind === "tool" ? labelText(message.content) : message.content;
+  const long = shown.length > limit;
+  const text = open || !long ? shown : `${shown.slice(0, limit)}…`;
   return (
     <li
       className={`session-window-message is-${kind}${focus ? " is-search-focus" : ""}`}
