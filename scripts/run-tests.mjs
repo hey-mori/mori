@@ -127,8 +127,9 @@ const MODE_WORDS = new Set(["watch", "dev", "related", "bench", "list", "init", 
 /** Reporters built into Vitest; a reporter can otherwise be any module path. */
 const BUILT_IN_REPORTERS = new Set([
   "default",
-  "basic",
   "verbose",
+  "minimal",
+  "agent",
   "dot",
   "json",
   "junit",
@@ -184,6 +185,9 @@ export function refuseVitestArgs(args) {
       if (!isLast && kind !== "flag") return `${arg}: ${raw} takes a value and cannot sit inside a cluster`;
       if (!isLast || kind === "flag") continue;
       const next = index + 1 < args.length && !args[index + 1].startsWith("-") ? args[index + 1] : undefined;
+      if (kind === "update" && inlineValue !== undefined && !["all", "new", "none"].includes(inlineValue)) {
+        return `${arg}: the update type is all, new or none`;
+      }
       if (kind === "update") {
         // Vitest's `--update [type]` takes the next word as its value, which
         // would turn a test path into an update type and update every snapshot.
@@ -566,9 +570,12 @@ async function runStep(args) {
     return EXIT_REFUSED;
   }
   const [command, ...rest] = args.slice(2);
-  // A gate step (the build, cargo), never a way around the test entry point.
-  if ([command, ...rest].some((part) => /vitest/.test(part))) {
-    process.stderr.write("[run-tests] refused: run tests through `node scripts/run-tests.mjs vitest`, not `limited`\n");
+  // Only the gate's own steps: the production build and the Rust pass. Never
+  // a way around the test entry point.
+  const isBuild = command === "npm" && rest.length === 2 && rest[0] === "run" && rest[1] === "build";
+  const isRust = command === "bash" && rest.length === 2 && rest[0] === "-c" && rest[1].startsWith("cd src-tauri && cargo ");
+  if (!isBuild && !isRust) {
+    process.stderr.write("[run-tests] refused: limited runs only the gate's build and Rust pass\n");
     return EXIT_REFUSED;
   }
   const { graceS } = limits();
@@ -628,6 +635,8 @@ async function selfCheck() {
     ["--config", "src/other.config.ts"],
     ["--reporter=/tmp/r.mjs"],
     ["-u", "src/lib/timeline/labelRooms.test.ts"],
+    ["--update=src/lib/timeline/labelRooms.test.ts"],
+    ["--reporter=basic"],
   ];
   for (const args of refused) check(`refuses ${args.join(" ")}`, refuseVitestArgs(args) !== null);
   const accepted = [

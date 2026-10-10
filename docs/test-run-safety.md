@@ -114,7 +114,7 @@ How the wrapper bounds a run:
 `npm run test:safety` (and the gate's "test safeguards" step) proves the limits
 without running a single test. It uses sleeps only and takes about 10 s. It
 judges by process group, never by scanning the machine, and uses sleep
-durations unique to the run. Its 50 checks cover:
+durations unique to the run. Its 52 checks cover:
 - the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
@@ -169,8 +169,10 @@ been measured yet: see section 7.
   which two runs can both take over a stale lock.
 - Windows: the process-group drills are skipped and a timeout ends the tree
   with `taskkill`; there is no watchdog there.
-- `limited` is for the gate's own steps and refuses anything mentioning
-  `vitest`; it applies no lock or heap cap.
+- `limited` runs only the gate's own steps (`npm run build` and the Rust pass's
+  `cd src-tauri && cargo ...`); it applies no lock or heap cap.
+- On Windows the shell joins arguments unquoted, so a test name with spaces
+  breaks there.
 - Typecheck, stylelint and the unused-file inventory have no limits of their
   own. A gate's build or Rust pass can overlap another session's test run,
   because the gate and test locks are separate.
@@ -235,7 +237,7 @@ Still to verify before adoption:
 ## 7. Verification status of this change
 
 Verified (2026-10-10, without running the test suite):
-- `npm run test:safety` passed all 50 checks (after two rounds of read-only
+- `npm run test:safety` passed all 52 checks (after two rounds of read-only
   review fixes), and no process or lock was left behind.
 - `vite.config.ts` evaluates in plain Node: `include` is pinned to `src/`,
   workers default to 2, and `--root /` throws.
