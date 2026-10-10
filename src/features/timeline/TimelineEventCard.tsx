@@ -1,7 +1,8 @@
 import { useCallback, useState, type CSSProperties, type FocusEvent, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
-import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
+import { LABEL_OFFSET_PX, type LaidOutTimelineItem, type TimelineDensity } from "../../lib/timeline/collisionLayout";
+import { labelText } from "./lib/timelineCards";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { SourceKind, SourceRef, TimelineEvent } from "../../domain/types";
 import {
@@ -17,8 +18,9 @@ import {
 } from "../../components/ui/BaseActionMenu";
 
 /** Below this width an accurate (short-duration) card has no room for its
- *  icon + label, so it renders as a bare tone tick; the detail is in the hover
- *  preview. */
+ *  icon + label, so it renders as a bare tone tick and prints its title beside
+ *  the tick when the lane has room (layout.labelRoom); the detail is in the
+ *  hover preview. */
 const NARROW_CARD_WIDTH = 30;
 
 export function TimelineEventCard({
@@ -97,6 +99,15 @@ export function TimelineEventCard({
         aria-label={vm.ariaLabel}
         data-preview={`${vm.timeLabel} · ${sourceMark.label}\n${vm.title}\n${event.summary}`}
       >
+        {layout.width < NARROW_CARD_WIDTH && layout.labelRoom > 0 ? (
+          <span
+            className="event-card-label"
+            aria-hidden="true"
+            style={{ left: `${layout.width - 1 + LABEL_OFFSET_PX}px`, maxWidth: `${layout.labelRoom}px` }}
+          >
+            {labelText(vm.title)}
+          </span>
+        ) : null}
         <span className="event-card-row">
           <span
             className={`event-card-source-mark tone-${vm.tone} mark-${sourceMark.kind}`}

@@ -23,6 +23,13 @@ export type LaidOutTimelineItem = {
   x: number;
   y: number;
   width: number;
+  /**
+   * Free space to the right of the item, up to the next item in its lane (or
+   * the content edge), capped at LABEL_ROOM_MAX. A card too narrow for text
+   * prints its title here, beside its honest-width tick, so time and duration
+   * stay exact while the timeline can still be read. 0 when there is no room.
+   */
+  labelRoom: number;
   height: number;
   laneTop: number;
   laneHeight: number;
@@ -62,11 +69,9 @@ const DENSITY_CARD_HEIGHT: Record<TimelineDensity, number> = {
   dense: 28,
 };
 
-// Duration-aware card width. A card's width is the pixel span of its
-// [start, end] on the time scale, clamped to a per-density readable range.
-// A 5-minute event therefore renders near `*Min` (a compact cardlet) while a
-// 45-minute event stretches toward `*Max` — width now signals real duration
-// instead of every event looking identically heavy.
+// Per-density widths. Event cards are drawn at their honest pixel span (see
+// computeItemWidth), so `eventMin` is only the frame's minimum content width;
+// a card too narrow for text prints its title beside it (labelRoom).
 const DENSITY_WIDTH_BOUNDS: Record<
   TimelineDensity,
   { eventMin: number; eventMax: number; bundleMin: number; bundleMax: number }
@@ -133,7 +138,8 @@ export function computeTimelineLayout(
     const hasItems = placements.length > 0;
     const rowCount = hasItems ? 1 : 0;
     const thisLaneHeight = baseLaneHeight;
-    for (const placement of placements) {
+    const rooms = labelRooms(placements, contentLeftPx + contentWidthPx);
+    for (const [index, placement] of placements.entries()) {
       const y = laneTop + LANE_VERTICAL_PADDING;
       placed.push({
         itemId: placement.item.id,
@@ -144,6 +150,7 @@ export function computeTimelineLayout(
         x: placement.x,
         y,
         width: placement.width,
+        labelRoom: rooms[index]!,
         height: cardHeight,
         laneTop,
         laneHeight: thisLaneHeight,
@@ -217,6 +224,37 @@ function layoutLaneRow(
   });
 
   return initial.map((placement) => ({ ...placement, rowIndex: 0 }));
+}
+
+/** Where a printed label starts, right of its tick (card border included). */
+export const LABEL_OFFSET_PX = 5;
+/** Gap kept between a printed label and the next item in the lane. */
+const LABEL_GAP_PX = 6;
+/** A label narrower than this would show only an ellipsis: none is printed. */
+export const LABEL_ROOM_MIN = 44;
+/** Labels stop growing here, so one sparse lane does not print a paragraph. */
+export const LABEL_ROOM_MAX = 220;
+
+/**
+ * Label room per placement (same order): from where the label starts to the
+ * next item in the lane (by x), or the content edge. None when an earlier,
+ * wider item still covers the tick, so a label is never printed over another
+ * card. Never moves or resizes an item.
+ */
+export function labelRooms(placements: readonly { x: number; width: number }[], contentRightPx: number): number[] {
+  const order = placements.map((_, index) => index).sort((a, b) => placements[a]!.x - placements[b]!.x);
+  const rooms = new Array<number>(placements.length).fill(0);
+  let coveredTo = -Infinity;
+  for (let k = 0; k < order.length; k += 1) {
+    const item = placements[order[k]!]!;
+    const end = item.x + item.width;
+    const next = k + 1 < order.length ? placements[order[k + 1]!]! : null;
+    const limit = next ? next.x : contentRightPx;
+    const room = Math.min(LABEL_ROOM_MAX, limit - end - LABEL_OFFSET_PX - LABEL_GAP_PX);
+    rooms[order[k]!] = coveredTo <= end && room >= LABEL_ROOM_MIN ? room : 0;
+    coveredTo = Math.max(coveredTo, end);
+  }
+  return rooms;
 }
 
 /**

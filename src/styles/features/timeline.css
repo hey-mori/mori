@@ -2290,6 +2290,34 @@ kbd {
   display: none;
 }
 
+/* The title of a tick-width card, printed beside the tick in the free space
+   up to the next item of its lane. Not a box: the tick keeps the honest
+   position and duration; the text only makes the lane readable. Part of the
+   card's button, so it clicks and hovers like the card. */
+.event-card-label {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  overflow: hidden;
+  color: var(--color-text-secondary, #3a4256);
+  font-size: 11.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* A halo in the panel colour, so a connector line crossing the lane does
+     not strike through the text. */
+  text-shadow: 0 0 2px var(--panel), 0 0 2px var(--panel), 0 0 3px var(--panel);
+}
+
+.event-card.is-request .event-card-label {
+  color: var(--color-text-primary, #172033);
+  font-weight: 650;
+}
+
+.event-card.focus-selected .event-card-label {
+  color: var(--purple);
+}
+
 .event-card-source-mark {
   display: inline-flex;
   align-items: center;

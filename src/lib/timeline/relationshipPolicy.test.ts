@@ -17,6 +17,7 @@ function laidOutItem(overrides: Partial<LaidOutTimelineItem> & { itemId: string 
     x: overrides.x ?? 0,
     y: overrides.y ?? 0,
     width: overrides.width ?? 180,
+    labelRoom: overrides.labelRoom ?? 0,
     height: overrides.height ?? 68,
     laneTop: overrides.laneTop ?? 0,
     laneHeight: overrides.laneHeight ?? 80,
