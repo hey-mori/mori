@@ -62,13 +62,26 @@ export function isRequestTitledEvent(event: {
   return event.openedByUser === true || event.actor === "user" || Boolean(event.requestText?.trim());
 }
 
+/** The longest title the 요약 level gives a request (its first sentence, cut
+ *  here): shorter than the raw title, so it never shows more than the level. */
+const SUMMARY_TITLE_CHARS = 60;
+
+/** A request's text as one disclosure level shows it, from the validated
+ *  variants (`buildRequestAbstraction`): 요약 its first sentence, 요지 the
+ *  content-free intent line. */
+function requestTextAtLevel(text: string, level: "summary" | "abstract", maxSummaryChars?: number): string {
+  const abstraction = buildRequestAbstraction(text, maxSummaryChars ? { maxSummaryChars } : {});
+  return projectDisclosure({ raw: text, summary: abstraction.summary, abstract: abstraction.abstract }, level).text;
+}
+
 /**
- * The event as a derived view shows it at a disclosure level. Only 숨김
- * changes anything here: a request-titled event reads "숨긴 요청", and a
- * lone request's own text (its summary) is left out. 요약 and 요지 keep the
- * title for navigation; their body projection is `projectEventRequestSummary`.
- * The retained `requestText` stays: the inspector gates it itself and offers
- * the per-request reveal. Display only: never pass the result to a write.
+ * The event as a derived view shows it at a disclosure level. A
+ * request-titled event's title follows the level: 요약 its first sentence
+ * (shorter than the raw title), 요지 the intent line ("사용자가 수정·디버깅을
+ * 요청함"), 숨김 "숨긴 요청". A lone request's own text (its summary) follows
+ * the same way, and is left out at 숨김. Agent replies stay as they are. The
+ * retained `requestText` stays: the inspector gates it itself and offers the
+ * per-request reveal. Display only: never pass the result to a write.
  */
 export function discloseEventForView<
   T extends {
@@ -80,12 +93,17 @@ export function discloseEventForView<
     summary: string;
   },
 >(event: T, level: DisclosureLevel): T {
-  if (level !== "hidden" || !isRequestTitledEvent(event)) return event;
+  if (level === "raw" || !isRequestTitledEvent(event)) return event;
   // An unanswered pasted ask keeps the ask as its summary too.
-  const unanswered = Boolean(event.requestText?.trim()) && !event.responseText?.trim();
+  const summaryIsTheAsk =
+    isUserRequestEvent(event) || (Boolean(event.requestText?.trim()) && !event.responseText?.trim());
+  if (level === "hidden") {
+    return { ...event, title: HIDDEN_REQUEST_TITLE, summary: summaryIsTheAsk ? "" : event.summary };
+  }
+  const ask = event.requestText?.trim() || event.title;
   return {
     ...event,
-    title: HIDDEN_REQUEST_TITLE,
-    summary: isUserRequestEvent(event) || unanswered ? "" : event.summary,
+    title: requestTextAtLevel(ask, level, SUMMARY_TITLE_CHARS) || event.title,
+    summary: summaryIsTheAsk ? requestTextAtLevel(event.summary, level) : event.summary,
   };
 }
