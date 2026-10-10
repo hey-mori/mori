@@ -134,6 +134,11 @@ every session and every subagent; the reasons and limits are in
 - Only one heavy Mori job (a test run, the harness, the gate or one of its
   steps) runs at a time on the machine. A second one fails with exit 75:
   wait, never stop the other one.
+- On the shared NUC, run the full suite and the gate inside a transient
+  scope: `scripts/scoped.sh npm test`, `scripts/scoped.sh scripts/check.sh
+  --full`. It refuses to start the command unless the memory, swap, CPU and
+  task ceilings are in force. Start them only with at least 4 GiB available
+  and no memory pressure; never raise the ceilings to get a run through.
 - When a test fails or an agent stalls, check read-only (`ps`) for processes
   it left behind. Never stop a process you did not start; report a stuck one
   to the operator.

@@ -117,8 +117,8 @@ without running a single test. It uses sleeps and one 64 MiB allocation, and
 is expected to take about 10-20 s (not yet measured). It judges by process
 group, never by scanning the machine,
 uses sleep durations unique to the run, and uses private lock files, never
-the real heavy lock (the gate runs it with fd 9 closed). Its 61 checks (on
-Linux with flock; 53 on Linux without it, 52 on macOS) cover:
+the real heavy lock (the gate runs it with fd 9 closed). Its 65 checks (on
+Linux with flock; 55 on Linux without it, 54 on macOS) cover:
 - the argument allowlist, including the alias spellings above;
 - a run that overstays its limit and has a background child;
 - a run that ignores SIGTERM;
@@ -128,11 +128,12 @@ Linux with flock; 53 on Linux without it, 52 on macOS) cover:
 - Ctrl-C (SIGINT) to a wrapper holding a lock: exit 130, nothing left
   running, the lock free again;
 - the gate-lock verification: a genuine inherited descriptor is used and the
-  gate's lock is still held after the probe; the descriptor survives a shell
-  command started by npm (`npm exec --offline -c`, the closest offline
-  stand-in for `npm test`); two jobs inside one gate do not overlap (inner lock); a wrong
-  descriptor and a forged descriptor to a lock held elsewhere are refused; a
-  second job gets 75; the lock is free after release.
+  gate's lock is still held after the probe; a wrapper reached through npm is
+  not covered and fails closed; a run the wrapper starts does not inherit the
+  gate's descriptor, and the inner holder does; two jobs inside one gate do
+  not overlap (inner lock); a wrong descriptor and a forged descriptor to a
+  lock held elsewhere are refused; a second job gets 75; the lock is free
+  after release.
 
 ### The heavy-job lock: ownership and lifetime
 
@@ -150,6 +151,12 @@ One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
   and exports `MORI_HEAVY_LOCK_FD=9`. It finds flock the same way the
   wrappers do (absolute system paths only), so both always agree on flock
   versus the directory lock.
+- **Node passes no extra descriptors to its children** (measured on Node 24:
+  a child gets only its stdio). Only a wrapper the gate's shell starts
+  directly with `node` has fd 9, so the gate runs
+  `node scripts/run-tests.mjs suite`, the same command as `npm test`, rather
+  than `npm test` itself. Reached through npm, a wrapper inside the gate is
+  not covered and fails with 75: closed, never open.
 - **Inside the gate**, a wrapper first tries to take the lock afresh, which
   fails because the gate holds it. Only then does it consider the gate's
   descriptor, and it does not trust the variable. It checks that fd 9 is this
@@ -168,11 +175,11 @@ One lock, `/tmp/mori-heavy.lock`, covers every heavy Mori job on the machine.
   wrapper and its inner holder then keep the lock until they have all exited,
   so every later job fails with 75 until then.
 - **Lifetime.** The lock lives as long as the job: the gate's ends when the
-  gate, the wrappers it started and their inner-lock holders have exited. The
-  gate runs its other steps, and the self-check, with `9>&-`, and the wrappers
-  start their runs, watchdogs and holder scripts with that descriptor closed.
-  The one exception is deliberate: an inner holder's `flock` process keeps the
-  gate's descriptor while it holds the inner lock, so if the gate ends (for
+  gate, the wrappers it started and their inner-lock holders have exited.
+  Runs and watchdogs never get the descriptor (see above), and the gate runs
+  its shell steps and the self-check with `9>&-`. The one exception is
+  deliberate: the inner holder is handed the gate's descriptor explicitly and
+  keeps it while it holds the inner lock, so if the gate ends (for
   example because a wrapper inside it was killed) while a run is still being
   ended, the gate's lock lasts until that holder lets go. If something else
   still ends up holding it, later jobs fail with 75 rather than overlapping it.
@@ -325,7 +332,7 @@ been measured yet: see section 7.
   Mori from the rest of the NUC, and the NUC's overall resource isolation is
   not solved by them.
 
-## 6. systemd and cgroup: findings and proposal (nothing applied)
+## 6. systemd and cgroup: findings and the scoped runner
 
 Read-only findings on the NUC (2026-10-10):
 - systemd 259 runs as PID 1 (`/etc/wsl.conf`: `systemd=true`). The system
@@ -350,35 +357,55 @@ Read-only findings on the NUC (2026-10-10):
   `user@1000.service/app.slice`. Services outside the user slice are
   untouched by anything done in a user scope.
 
-**Proposal.** Run each test or gate in its own transient user scope, opt-in
-through an environment flag, and only after operator approval:
+**Adopted, opt-in: `scripts/scoped.sh`.** It runs one heavy command in its
+own transient user scope:
 
-    systemd-run --user --scope --collect --unit=mori-test-$$ \
-      -p MemoryMax=3G -p MemorySwapMax=0 -p OOMPolicy=kill \
-      -p CPUQuota=200% -p CPUWeight=50 -p TasksMax=512 \
-      -- node scripts/run-tests.mjs vitest
+    scripts/scoped.sh npm test
+    scripts/scoped.sh scripts/check.sh --full
+
+which amounts to
+
+    systemd-run --user --scope --collect --slice=mori.slice \
+      --unit=mori-job-<time>-<pid> \
+      -p MemoryMax=3G -p MemorySwapMax=0 -p CPUQuota=200% -p TasksMax=256 \
+      -p OOMPolicy=kill -p TimeoutStopSec=15 -- <command>
 
 What each part does:
 - **MemoryMax with MemorySwapMax=0** is a real total memory ceiling for the
   run and everything it spawns, without pushing into the full swap. The kernel
   OOM-kills inside the scope only, and `OOMPolicy=kill` ends the whole scope.
-- **CPUQuota=200%** (2 of 8 cores) and a low **CPUWeight** keep the run
-  yielding to other sessions.
-- **TasksMax** bounds process counts.
-- **Cleanup on timeout.** `systemctl --user stop mori-test-…scope`, or writing
-  to its `cgroup.kill`, ends every process in the cgroup, including ones that
-  `setsid`. The heavy-job lock and the wrapper's timeouts stay as they are.
-- **Scope of effect.** The scope is transient (`--collect`), needs no root,
-  changes no system or WSL settings, and affects nothing outside its own
-  processes.
-- **Not recommended:** a cap on `user@1000.service` itself, because it would
-  squeeze every Claude session at once.
+- **CPUQuota=200%** (2 of 8 cores) keeps the run yielding to other sessions.
+  **TasksMax** bounds process counts.
+- **Its own slice.** `mori.slice` sits directly under the user manager, so
+  enabling the cpu controller for the scope touches only that slice, never
+  `app.slice`, where the sessions run. A dash in a slice name nests it
+  (`mori-heavy.slice` lands under `mori.slice`), hence the plain name.
+- **Verified from inside before the command starts.** The script checks that
+  it runs in exactly `mori.slice/<unit>.scope` and reads back `memory.max`,
+  `memory.swap.max`, `cpu.max` and `pids.max`. Any mismatch, or a scope that
+  could not be made, means the command does not run (exit 3): never an
+  unrestricted heavy run.
+- **Measured from inside at the end.** It prints the scope's `memory.peak`
+  (exact for the whole run, page cache included), `memory.swap.peak`,
+  `pids.peak`, `oom_kill` and CPU time, which the sampling cannot give.
+- **Leftovers.** Processes still in the scope after the command (a `setsid`
+  daemon included) are stopped with `systemctl --user stop <that unit>`: only
+  that exact scope, never anything else. A command that exited 0 then fails
+  with 70.
+- **Containment does not depend on the script.** If the script dies, the
+  scope keeps its limits until its last process ends.
+- **Knobs:** `MORI_SCOPE_MEMORY_GB` (1-4, default 3), `MORI_SCOPE_CPU_PCT`
+  (50-400, default 200), `MORI_SCOPE_TASKS` (64-512, default 256). Never raise
+  them to get a failing run through.
+- **Scope of effect.** Transient (`--collect`), no root, no system or WSL
+  setting, no persistent unit, nothing outside its own processes.
+- **Not done:** a cap on `user@1000.service` or the whole user slice, because
+  it would squeeze every Claude session at once.
 
-Still to verify before adoption:
-- that `RuntimeMaxSec` is honoured for scopes on this systemd;
-- that `systemd-run --user` works from every context sessions run in
-  (`XDG_RUNTIME_DIR` and the D-Bus session bus must be present);
-- the right `MemoryMax`, measured from a real run under the wrapper.
+The repository's own limits (workers, heap, wall clock, process group,
+watchdog, heavy-job lock) stay in force inside the scope. They also cover
+macOS and machines without a systemd user manager, where `scoped.sh`
+refuses to run.
 
 ## 7. Verification status of this change
 
@@ -386,8 +413,8 @@ Verified (2026-10-10, without running the test suite):
 - An earlier version of `npm run test:safety` passed all 52 of its checks
   (after three rounds of read-only review), and no process or lock was left
   behind. **The current version, with the heavy-job lock (fresh-first, inner
-  lock, closed fd 9 in children), the observation and the leftover rule, has
-  only been checked statically** (`node --check`, `bash -n`,
+  lock, the inner holder keeping the gate's descriptor), the observation and
+  the leftover rule, has only been checked statically** (`node --check`, `bash -n`,
   `git diff --check`, read-only review). Its 61 checks have not been run.
 - One approved real Vitest run (stage 2, before the heavy-job lock): one file,
   9 tests passed, exit 0, 0.8 s, no leftover processes, lock released. Worker
