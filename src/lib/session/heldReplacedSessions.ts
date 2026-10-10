@@ -46,7 +46,9 @@ export function holdReplacedSessions(
       // What describes the session stays; where its file lives now comes
       // from the listing (a restore into another home moves every path), so
       // the shared source rule reads that file and finds the kept copy.
-      out.push({ ...held, filePath: meta.filePath, sourceFilePath: meta.sourceFilePath, projectPath: meta.projectPath });
+      out.push(
+        listedOnce(discovered, id) ? { ...held, filePath: meta.filePath, sourceFilePath: meta.sourceFilePath } : held,
+      );
     }
   }
   return out;
@@ -66,9 +68,12 @@ export function fingerprintChanged(
 
 /**
  * Listed sessions whose file is no longer where their stored descriptor says,
- * as the descriptor to store: the stored one with the listed location (or the
- * listed meta when nothing is stored). Paths are where a file is, not what
- * the session is, so this never changes a title or what is counted as new.
+ * as the descriptor to store: the stored one with the listed location. A
+ * session with no stored descriptor is left to the ordinary diff. Paths are
+ * where a file is, not what the session is, so this never changes a title, a
+ * project or what is counted as new. A session id listed more than once (one
+ * transcript under two project folders) is never moved: which file is the
+ * session's cannot be told from the listing.
  */
 export function movedSessions(
   discovered: readonly AgentWorkSessionMeta[],
@@ -76,10 +81,17 @@ export function movedSessions(
 ): AgentWorkSessionMeta[] {
   const out: AgentWorkSessionMeta[] = [];
   for (const meta of discovered) {
-    const was = stored.get(autoImportedSessionId(meta));
-    if (!was) continue;
+    const id = autoImportedSessionId(meta);
+    const was = stored.get(id);
+    if (!was || !listedOnce(discovered, id)) continue;
     if (was.filePath === meta.filePath && was.sourceFilePath === meta.sourceFilePath) continue;
-    out.push({ ...was, filePath: meta.filePath, sourceFilePath: meta.sourceFilePath, projectPath: meta.projectPath });
+    out.push({ ...was, filePath: meta.filePath, sourceFilePath: meta.sourceFilePath });
   }
   return out;
+}
+
+function listedOnce(discovered: readonly AgentWorkSessionMeta[], id: string): boolean {
+  let seen = 0;
+  for (const meta of discovered) if (autoImportedSessionId(meta) === id && ++seen > 1) return false;
+  return true;
 }

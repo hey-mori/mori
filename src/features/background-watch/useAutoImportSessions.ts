@@ -185,7 +185,7 @@ export function useAutoImportSessions(): void {
           // moved projects folder) is the same session: its descriptor follows
           // the file quietly, so it is read where it is. The change fingerprint
           // does not cover paths, so this is not counted as an update.
-          const moved = movedSessions(recent, stored);
+          const moved = movedSessions(discovered, stored);
           if (moved.length > 0) upsertAutoImportMetas(moved);
 
           const diff = diffDiscoveredSessions(recent, seenRef.current);

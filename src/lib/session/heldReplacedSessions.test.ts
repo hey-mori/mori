@@ -73,6 +73,15 @@ describe("a session whose file moved", () => {
     expect(moved).toMatchObject({ filePath: "/new-home/x/s1.jsonl", sourceFilePath: "/new-home/x/s1.jsonl", messageCount: 4 });
   });
 
+  it("never moves a session id listed twice, nor changes its project", () => {
+    const was = meta("payments ledger import design", "src-kept", { filePath: "/p/a/s1.jsonl", sourceFilePath: "/p/a/s1.jsonl", projectPath: "/home/u/dev/a" });
+    const a = meta("payments ledger import design", "src-kept", { filePath: "/p/a/s1.jsonl", sourceFilePath: "/p/a/s1.jsonl", projectPath: "/home/u/dev/a" });
+    const b = meta("a copy elsewhere", "src-kept", { filePath: "/p/b/s1.jsonl", sourceFilePath: "/p/b/s1.jsonl", projectPath: "/home/u/dev/b" });
+    expect(movedSessions([a, b], storedAs(was))).toEqual([]);
+    const [moved] = movedSessions([{ ...b, projectPath: "/home/u/dev/b" }], storedAs(was));
+    expect(moved).toMatchObject({ filePath: "/p/b/s1.jsonl", projectPath: "/home/u/dev/a" });
+  });
+
   it("is nothing when the file is where it was or nothing is stored", () => {
     const here = meta("t", "src-kept");
     expect(movedSessions([here], storedAs(here))).toEqual([]);
