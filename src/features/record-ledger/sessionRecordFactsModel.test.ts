@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
-import { sessionRecordFacts } from "./sessionRecordFacts";
+import { sessionRecordFacts } from "./sessionRecordFactsModel";
 
 const record = (extra: Partial<MoriRecord>): MoriRecord => ({ id: "auto-claude-x", schemaId: "agent-session", title: "t", properties: {}, ...extra }) as MoriRecord;
 
