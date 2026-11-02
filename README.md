@@ -65,7 +65,7 @@ Highlights (the verified, maintained inventory is
   review gate unchanged)
 - Tauri bundling produces `Mori.app` / `.dmg` (unsigned until the
   signing workstream lands); the repository verification gate is
-  `scripts/check.sh --full`. Remote CI is manual-only; see
+  `scripts/check.sh --full`, which CI also runs; see
   [docs/git-workflow.md](docs/git-workflow.md#9-verification).
 
 ## Tech Stack

@@ -35,7 +35,8 @@ record. Agents, the autonomous loop included, never commit straight to
 `main`; that doc's §6 allows only a non-executing documentation fix or the
 repair of an already-broken `main`, and those are owner calls. `main` is
 protected by convention and the documented verification gate rather than a
-hard rule. Remote CI is manual-only at present.
+hard rule. Remote CI runs on GitHub-hosted runners for every push and pull
+request, as a clean-checkout signal beside the local gate.
 
 Before opening an issue or a branch, run `git fetch --prune` and check open
 pull requests and related issues (`gh pr list`, `gh issue list`), so two
@@ -109,8 +110,8 @@ commits either way.
 - `git status --short`
 
 The script includes the Rust pass when `src-tauri/` changed. Record which
-checks actually ran; a manual-only remote workflow is not a substitute for
-the local result.
+checks actually ran; a remote CI run is not a substitute for the local
+result.
 
 ## Test runs on a shared machine · non-negotiable
 
