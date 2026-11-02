@@ -1,6 +1,6 @@
 # Browser Repeat-Run Reliability
 
-Issue: [#132](https://github.com/swarea/mori/issues/132)
+Issue: [#132](https://github.com/hey-mori/mori/issues/132)
 
 ## Scope And Baseline
 

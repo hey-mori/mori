@@ -198,14 +198,14 @@ test or publish the installer.
 
 ## S. Mori Git
 
-Issue: [#122](https://github.com/swarea/mori/issues/122).
+Issue: [#122](https://github.com/hey-mori/mori/issues/122).
 Work branch: `feat/browser-live-source`. Integration follows the repository's
 merge-commit policy. Final commit/merge identities are in the linked PR and the
 completion report, since this document cannot embed its own final commit id.
 
 ## T. Extension Git
 
-Issue: [#8](https://github.com/swarea/mori-browser-extension/issues/8).
+Issue: [#8](https://github.com/hey-mori/mori-browser-extension/issues/8).
 Work branch: `feat/browser-live-source`, kept separate from Mori commits.
 The companion PR carries its validation and final merge identity.
 

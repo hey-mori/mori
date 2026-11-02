@@ -13,7 +13,7 @@ outside this transport.
 ## First Chrome E2E Finding
 
 The first real Chrome smoke used Chrome 152.0.7977.83, the unpacked
-`swarea/mori-browser-extension`, and the debug helper at:
+`hey-mori/mori-browser-extension`, and the debug helper at:
 
 ```text
 C:\dev\mori-browser-native-host-dev\src-tauri\target\debug\mori-browser-native-host.exe
@@ -68,7 +68,7 @@ successful automated smoke used the Chrome DevTools Protocol
 ## Reproducible Chrome Smoke Harness
 
 The follow-up reproducible development smoke is owned by
-`swarea/mori-browser-extension` rather than Mori. Mori owns the native helper,
+`hey-mori/mori-browser-extension` rather than Mori. Mori owns the native helper,
 local IPC relay, and Browser observation ingress. The extension repository owns
 Google Chrome launch, unpacked extension loading, runtime extension id
 discovery, popup capture toggling, and browser event driving.

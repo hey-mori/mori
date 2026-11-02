@@ -301,7 +301,7 @@ can be mirrored), and the privacy policy (W22). Recommended as a
 the app; keeps this repo's validation contract clean); the brand
 identity reference governs its design. No accounts, no analytics
 beyond privacy-respecting page counts, no cloud features implied.
-*Status:* **started 2026-07-12.** `swarea/mori-web` (private) is
+*Status:* **started 2026-07-12.** `hey-mori/mori-web` (private) is
 scaffolded and pushed: an Astro static site with landing / changelog /
 privacy-draft pages, Korean-first copy, honest unreleased states, the
 brand-token subset hand-synced from this repo, and

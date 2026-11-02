@@ -3,7 +3,7 @@
 This folder records the current Native Messaging install model for the Mori
 Browser receiver.
 
-The production Browser extension still lives in `swarea/mori-browser-extension`.
+The production Browser extension still lives in `hey-mori/mori-browser-extension`.
 This folder does not connect the extension transport client yet, add reconnect
 behavior, offline queueing, or production persistence.
 

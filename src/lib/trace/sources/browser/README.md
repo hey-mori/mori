@@ -1,7 +1,7 @@
 # Browser Trace Boundary
 
 Browser work in Mori owns the source-local Context and Trace semantics. The
-Chromium runtime shell now lives in `swarea/mori-browser-extension`.
+Chromium runtime shell now lives in `hey-mori/mori-browser-extension`.
 
 This source is not connected to production transport, persistence path, session
 import path, Core interpretation, Identity, Account, Workspace, Park, Resume,
@@ -32,9 +32,9 @@ The first implemented slice is deliberately tiny:
 
 Repository boundary:
 
-- `swarea/mori` owns Browser Context, Browser Trace, Trace projection, and Core
+- `hey-mori/mori` owns Browser Context, Browser Trace, Trace projection, and Core
   integration.
-- `swarea/mori-browser-extension` owns Chromium/WebExtension APIs, permissions,
+- `hey-mori/mori-browser-extension` owns Chromium/WebExtension APIs, permissions,
   explicit opt-in, browser-side privacy filtering, extension lifecycle, debug
   state, and a future transport client.
 - The wire shape is a small versioned observation envelope, not Mori's internal
