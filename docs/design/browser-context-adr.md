@@ -425,9 +425,9 @@ model can be connected to a real browser lifecycle without changing Trace core.
 
 Repository ownership:
 
-- `swarea/mori` owns Browser Context semantics, Browser Trace semantics,
+- `hey-mori/mori` owns Browser Context semantics, Browser Trace semantics,
   `TraceEvent` projection, architecture guards, and Core integration.
-- `swarea/mori-browser-extension` owns the Chromium/WebExtension runtime,
+- `hey-mori/mori-browser-extension` owns the Chromium/WebExtension runtime,
   manifest, permissions, explicit opt-in, browser-side privacy filtering,
   service-worker lifecycle, popup/debug state, packaging, release, and a future
   transport client.
@@ -435,7 +435,7 @@ Repository ownership:
   `version`, `source`, `kind`, `observedAt`, and `payload`.
 - The extension emits Browser observations, not Mori `TraceEvent` objects.
 
-Extracted shell in `swarea/mori-browser-extension`:
+Extracted shell in `hey-mori/mori-browser-extension`:
 
 - `manifest.json`
 - `src/background.js`
@@ -607,7 +607,7 @@ Fixture drift:
 
 - The two repositories intentionally duplicate v1 fixtures for now.
 - Longer-term drift checks can be a CI job that compares fixtures from
-  `swarea/mori-browser-extension`, a release artifact check, JSON Schema, or a
+  `hey-mori/mori-browser-extension`, a release artifact check, JSON Schema, or a
   small protocol package if the contract grows.
 - Do not introduce `mori-protocol` while the wire contract is this small.
 
