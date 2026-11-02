@@ -1,6 +1,6 @@
 import { InfoHint } from "../../components/ui/InfoHint";
 import type { MoriRecord } from "../../lib/record-kernel/kernelTypes";
-import { sessionRecordFacts } from "./sessionRecordFacts";
+import { sessionRecordFacts } from "./sessionRecordFactsModel";
 
 const PRS_SHOWN = 8;
 
