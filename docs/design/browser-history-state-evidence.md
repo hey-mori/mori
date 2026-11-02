@@ -1,8 +1,8 @@
 # Browser History State Evidence
 
 Status: receiver implemented for issue
-[#128](https://github.com/swarea/mori/issues/128). Companion sender:
-[`swarea/mori-browser-extension#10`](https://github.com/swarea/mori-browser-extension/issues/10).
+[#128](https://github.com/hey-mori/mori/issues/128). Companion sender:
+[`hey-mori/mori-browser-extension#10`](https://github.com/hey-mori/mori-browser-extension/issues/10).
 
 ## Boundary
 

@@ -589,7 +589,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     status: "partial",
     captureMode: "browserNativeMessaging",
     userActionRequired:
-      "별도 swarea/mori-browser-extension 설치 후 캡처를 직접 켭니다. 기본값은 꺼짐입니다.",
+      "별도 hey-mori/mori-browser-extension 설치 후 캡처를 직접 켭니다. 기본값은 꺼짐입니다.",
     canCreateSource: false,
     canCreateEvents: true,
     canEnterImportReview: false,

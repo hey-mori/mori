@@ -121,7 +121,7 @@ The first Browser source-local MVP is under `src/lib/trace/sources/browser/`.
 It models runtime/window/tab/resource context observations and projects tab
 activation plus navigation committed observations into `TraceEvent` metadata.
 
-The Chromium runtime shell lives in the separate `swarea/mori-browser-extension`
+The Chromium runtime shell lives in the separate `hey-mori/mori-browser-extension`
 repository. It owns browser APIs, permissions, explicit opt-in, browser-side
 privacy filtering, extension lifecycle, debug state, and a future transport
 client. Mori owns the v1 Browser observation ingress contract and converts those
