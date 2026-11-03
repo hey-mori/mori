@@ -1,12 +1,14 @@
 # Mori Brand Identity Reference
 
+> The AI-generated reference images this document pointed to were removed on 2026-11-03. See [docs/assets/screenshots/README.md](../assets/screenshots/README.md) for why and where to find them in history.
+
 Design reference note for Mori's visual identity. This file interprets an
 external logo/brand concept board and translates it into durable guidance for
 the actual product · tokens, assets, shell, and screen polish. It is a
 *reference*, not a spec for pixel-copying the concept image.
 
 Reference image:
-[mori-logo-brand-concept-reference.png](../assets/screenshots/mori-logo-brand-concept-reference.png)
+`mori-logo-brand-concept-reference.png`
 
 ---
 
