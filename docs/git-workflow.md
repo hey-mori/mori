@@ -213,27 +213,25 @@ The script widens its own scope automatically: a change to a lockfile, a build
 config, `scripts/`, or a workflow forces the full pass, because those files can
 break an area the diff never mentions.
 
-**The remote CI is manual-only.** Hosted jobs were rejected before starting
-when this account's Actions allowance was spent, producing a red failure with
-zero steps. That happened from 2026-07-24, cleared, and returned on 2026-08-07.
-The Linux verification jobs now use a dedicated self-hosted runner; the macOS
-Rust job still uses a metered hosted runner. Automatic triggers remain disabled
-in the workflow, so no run is implied by a push or a pull request.
+**Remote CI runs on every push to `main` and every pull request**, on
+GitHub-hosted runners only. The Linux job runs `scripts/check.sh --full
+--no-rust`; the macOS job runs `cargo check` and `cargo test` when `src-tauri/`
+or a workflow changed, and on a hand-started run (`workflow_dispatch`). No job
+targets a self-hosted runner: a pull request from a fork can edit the workflow
+it runs, so any runner the repository can reach is reachable from a fork.
 
-So the gate is `scripts/check.sh`, run locally and recorded in the pull request
-under "How it was verified". A hand-started run (`workflow_dispatch`) adds a
-clean-checkout check when its jobs actually execute; inspect each job's steps
-and result, especially the hosted macOS job. It is worth asking for when a change touches
-dependencies, the toolchain, or the order stages run in. Those are the things a
-local run structurally cannot see, because it uses a working tree that already
-holds whatever earlier work left in it.
+The gate is still `scripts/check.sh`, run locally and recorded in the pull
+request under "How it was verified". CI adds a clean-checkout signal on top. It
+matters most when a change touches dependencies, the toolchain, or the order
+stages run in, which a local run structurally cannot see, because it uses a
+working tree that already holds whatever earlier work left in it.
 
 Section 3 requires a green local gate before merge. A dispatched CI run adds a
 clean-checkout signal; record its result separately rather than inferring it
 from the local run.
 
-The macOS Rust job stays behind `workflow_dispatch`. It is asked for when
-needed rather than run on every push.
+A hosted run that fails with zero steps executed is a refusal (billing or
+capacity), not a failure of the change. Re-run it rather than reading it as red.
 
 Stating a rule the tooling cannot enforce would make this document decorative.
 This section says what is actually true.
