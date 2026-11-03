@@ -1,6 +1,8 @@
 ﻿# Mori Product Screen Reference
 
-These screenshots are product and UX references for Mori. They are not all implemented. They define the intended product direction, information architecture, layout patterns, and future implementation milestones.
+> The AI-generated reference images this document pointed to were removed on 2026-11-03. See [docs/assets/screenshots/README.md](assets/screenshots/README.md) for why and where to find them in history.
+
+These references were AI-generated concept images, not screenshots of Mori. They are not all implemented. They define the intended product direction, information architecture, layout patterns, and future implementation milestones.
 
 ## Status Legend
 
@@ -11,31 +13,29 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ## Screen Index
 
-| Screen | Status | Reference | Prompt/spec |
+| Screen | Status | Reference (removed) | Prompt/spec |
 | --- | --- | --- | --- |
-| [Start Session / Session Setup](#start-session-session-setup) | Implemented · agent-first reframe (diverged from reference image) | [start-session-reference.png](assets/screenshots/start-session-reference.png) | [product-screen-prompts.md](product-screen-prompts.md) |
-| [Evidence Hub](#evidence-hub) | Implemented | [evidence-hub-reference.png](assets/screenshots/evidence-hub-reference.png) | [product-screen-prompts.md#1-evidence-hub](product-screen-prompts.md#1-evidence-hub) |
-| [AI Transcript Import](#ai-transcript-import) | Partial | [ai-transcript-import-reference.png](assets/screenshots/ai-transcript-import-reference.png) | [product-screen-prompts.md#2-ai-transcript-import](product-screen-prompts.md#2-ai-transcript-import) |
-| [Git Diff Import](#git-diff-import) | Partial | [git-diff-import-reference.png](assets/screenshots/git-diff-import-reference.png) | [product-screen-prompts.md#3-git-diff-import](product-screen-prompts.md#3-git-diff-import) |
-| [Import Review / Evidence Mapping](#import-review-evidence-mapping) | Partial | [import-review-evidence-mapping-reference.png](assets/screenshots/import-review-evidence-mapping-reference.png) | [product-screen-prompts.md#4-import-review--evidence-mapping](product-screen-prompts.md#4-import-review--evidence-mapping) |
-| [Narrative Timeline](#narrative-timeline) | Partial | [narrative-timeline-reference.png](assets/screenshots/narrative-timeline-reference.png) | [product-screen-prompts.md#5-narrative-timeline](product-screen-prompts.md#5-narrative-timeline) |
-| [Flow Focus / Trace View](#flow-focus-trace-view) | Partial | [flow-focus-trace-view-reference.png](assets/screenshots/flow-focus-trace-view-reference.png) | [product-screen-prompts.md#6-flow-focus--trace-view](product-screen-prompts.md#6-flow-focus--trace-view) |
-| [Review](#review) | Implemented | [review-reference.png](assets/screenshots/review-reference.png) | [product-screen-prompts.md#7-review](product-screen-prompts.md#7-review) |
-| [Resume & Reports](#resume-reports) | Implemented | [resume-reports-reference.png](assets/screenshots/resume-reports-reference.png) | [product-screen-prompts.md#8-resume--reports](product-screen-prompts.md#8-resume--reports) |
-| [End Session / Session Summary](#end-session-session-summary) | Planned | [end-session-summary-reference.png](assets/screenshots/end-session-summary-reference.png) | [product-screen-prompts.md#9-end-session--session-summary](product-screen-prompts.md#9-end-session--session-summary) |
-| [Project Memory](#project-memory) | Partial · cross-session aggregation Planned | [project-memory-reference.png](assets/screenshots/project-memory-reference.png) | [product-screen-prompts.md#10-project-memory](product-screen-prompts.md#10-project-memory) |
-| [Settings / Privacy / Local AI](#settings-privacy-local-ai) | Implemented | [settings-privacy-local-ai-reference.png](assets/screenshots/settings-privacy-local-ai-reference.png) | [product-screen-prompts.md#11-settings--privacy--local-ai](product-screen-prompts.md#11-settings--privacy--local-ai) |
-| [Connector Setup](#connector-setup) | Planned | [connector-setup-reference.png](assets/screenshots/connector-setup-reference.png) | [product-screen-prompts.md#12-connector-setup](product-screen-prompts.md#12-connector-setup) |
-| [Edit Event / Correction Panel](#edit-event-correction-panel) | Planned | [edit-event-correction-panel-reference.png](assets/screenshots/edit-event-correction-panel-reference.png) | [product-screen-prompts.md#13-edit-event--correction-panel](product-screen-prompts.md#13-edit-event--correction-panel) |
-| [Product Overview / Screen Map](#product-overview-screen-map) | Reference only | [product-overview-screen-map-reference.png](assets/screenshots/product-overview-screen-map-reference.png) | [product-screen-prompts.md#14-product-overview--screen-map](product-screen-prompts.md#14-product-overview--screen-map) |
+| [Start Session / Session Setup](#start-session-session-setup) | Implemented · agent-first reframe (diverged from reference image) | `start-session-reference.png` | [product-screen-prompts.md](product-screen-prompts.md) |
+| [Evidence Hub](#evidence-hub) | Implemented | `evidence-hub-reference.png` | [product-screen-prompts.md#1-evidence-hub](product-screen-prompts.md#1-evidence-hub) |
+| [AI Transcript Import](#ai-transcript-import) | Partial | `ai-transcript-import-reference.png` | [product-screen-prompts.md#2-ai-transcript-import](product-screen-prompts.md#2-ai-transcript-import) |
+| [Git Diff Import](#git-diff-import) | Partial | `git-diff-import-reference.png` | [product-screen-prompts.md#3-git-diff-import](product-screen-prompts.md#3-git-diff-import) |
+| [Import Review / Evidence Mapping](#import-review-evidence-mapping) | Partial | `import-review-evidence-mapping-reference.png` | [product-screen-prompts.md#4-import-review--evidence-mapping](product-screen-prompts.md#4-import-review--evidence-mapping) |
+| [Narrative Timeline](#narrative-timeline) | Partial | `narrative-timeline-reference.png` | [product-screen-prompts.md#5-narrative-timeline](product-screen-prompts.md#5-narrative-timeline) |
+| [Flow Focus / Trace View](#flow-focus-trace-view) | Partial | `flow-focus-trace-view-reference.png` | [product-screen-prompts.md#6-flow-focus--trace-view](product-screen-prompts.md#6-flow-focus--trace-view) |
+| [Review](#review) | Implemented | `review-reference.png` | [product-screen-prompts.md#7-review](product-screen-prompts.md#7-review) |
+| [Resume & Reports](#resume-reports) | Implemented | `resume-reports-reference.png` | [product-screen-prompts.md#8-resume--reports](product-screen-prompts.md#8-resume--reports) |
+| [End Session / Session Summary](#end-session-session-summary) | Planned | `end-session-summary-reference.png` | [product-screen-prompts.md#9-end-session--session-summary](product-screen-prompts.md#9-end-session--session-summary) |
+| [Project Memory](#project-memory) | Partial · cross-session aggregation Planned | `project-memory-reference.png` | [product-screen-prompts.md#10-project-memory](product-screen-prompts.md#10-project-memory) |
+| [Settings / Privacy / Local AI](#settings-privacy-local-ai) | Implemented | `settings-privacy-local-ai-reference.png` | [product-screen-prompts.md#11-settings--privacy--local-ai](product-screen-prompts.md#11-settings--privacy--local-ai) |
+| [Connector Setup](#connector-setup) | Planned | `connector-setup-reference.png` | [product-screen-prompts.md#12-connector-setup](product-screen-prompts.md#12-connector-setup) |
+| [Edit Event / Correction Panel](#edit-event-correction-panel) | Planned | `edit-event-correction-panel-reference.png` | [product-screen-prompts.md#13-edit-event--correction-panel](product-screen-prompts.md#13-edit-event--correction-panel) |
+| [Product Overview / Screen Map](#product-overview-screen-map) | Reference only | `product-overview-screen-map-reference.png` | [product-screen-prompts.md#14-product-overview--screen-map](product-screen-prompts.md#14-product-overview--screen-map) |
 
 ## Reference Screens
 
 <a id="start-session-session-setup"></a>
 
 ### Start Session / Session Setup
-
-![Start Session / Session Setup reference](assets/screenshots/start-session-reference.png)
 
 > The reference image predates the **agent-first reframe**. The live screen no
 > longer uses the source-tile grid / recording-mode cards / honesty strip shown
@@ -61,8 +61,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ### Evidence Hub
 
-![Evidence Hub reference](assets/screenshots/evidence-hub-reference.png)
-
 - **Status:** Implemented
 - **Product purpose:** Central source/evidence management for Mori.
 - **Primary user job:** Add, inspect, and understand the evidence Mori can use to reconstruct work.
@@ -78,8 +76,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 <a id="ai-transcript-import"></a>
 
 ### AI Transcript Import
-
-![AI Transcript Import reference](assets/screenshots/ai-transcript-import-reference.png)
 
 - **Status:** Partial
 - **Product purpose:** Paste AI chat transcripts into Mori as evidence.
@@ -97,8 +93,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ### Git Diff Import
 
-![Git Diff Import reference](assets/screenshots/git-diff-import-reference.png)
-
 - **Status:** Partial
 - **Product purpose:** Import code-change evidence from a selected Git diff.
 - **Primary user job:** Turn an explicit repo/range diff into verified file/code evidence.
@@ -114,8 +108,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 <a id="import-review-evidence-mapping"></a>
 
 ### Import Review / Evidence Mapping
-
-![Import Review / Evidence Mapping reference](assets/screenshots/import-review-evidence-mapping-reference.png)
 
 - **Status:** Partial · AI Transcript and Git Diff imports now flow through a
   three-column review-before-apply screen with Accept / Discard / Edit per
@@ -139,8 +131,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ### Narrative Timeline
 
-![Narrative Timeline reference](assets/screenshots/narrative-timeline-reference.png)
-
 - **Status:** Partial · Timeline layout contract, view model, session timing, control honesty, sticky behavior, and relationship policy are now implemented; cross-session aggregation, manual relationship edits, event split/merge, manual issue creation, inline bundle expansion, mini-map viewport navigation, Day / Week / Zoom controls, and event-correction persistence remain Planned.
 - **Product purpose:** Primary chronological reconstruction of how work happened.
 - **Primary user job:** Scan a session as structured lanes, inspect evidence, and understand major work moments.
@@ -161,8 +151,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ### Flow Focus / Trace View
 
-![Flow Focus / Trace View reference](assets/screenshots/flow-focus-trace-view-reference.png)
-
 - **Status:** Partial
 - **Product purpose:** Explain causes and outcomes around one selected event.
 - **Primary user job:** Understand why a decision/issue/event happened and what it affected.
@@ -178,8 +166,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 <a id="review"></a>
 
 ### Review
-
-![Review reference](assets/screenshots/review-reference.png)
 
 - **Status:** Implemented · 5 working tabs (Issue Garden, Decision Log, Next Actions, Unresolved, Suggestions) backed by `selectSessionView`, with a sticky right column that hosts both a per-item detail panel and a session-wide summary panel. Mutating controls now support issue status changes, issue/decision inline editing, decision confirmation/rejection, Next Action completion, and issue promotion to a linked Next Action; demo/read-only states disable those writes honestly.
 - **Product purpose:** Turn the session into actionable issues, decisions, and next actions.
@@ -197,8 +183,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ### Resume & Reports
 
-![Resume & Reports reference](assets/screenshots/resume-reports-reference.png)
-
 - **Status:** Implemented · Resume Prompt (with copy + origin badge), Session Summary metric strip, Open Issues / Recent Decisions / Next Actions / Resources cards, .mori v0 package export, and a live Report Builder panel that drives a real Markdown preview with type / section / format / privacy axes. PDF and HTML are visibly disabled with "Planned" labels. Robust redaction (PII masking, per-section diff) remains the next milestone · the privacy toggles only filter the sections they describe.
 - **Product purpose:** Continue work or generate privacy-aware reports from the current session.
 - **Primary user job:** Copy a resume prompt into the next AI session, or produce a shareable Markdown report from the session.
@@ -214,8 +198,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 <a id="end-session-session-summary"></a>
 
 ### End Session / Session Summary
-
-![End Session / Session Summary reference](assets/screenshots/end-session-summary-reference.png)
 
 - **Status:** Planned
 - **Product purpose:** Close a Mori session with saved state, highlights, and next options.
@@ -233,8 +215,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ### Project Memory
 
-![Project Memory reference](assets/screenshots/project-memory-reference.png)
-
 - **Status:** Partial · the page is now built around the reference layout (project hero with 6 stat tiles, decisions-over-time, recurring issues, key evidence, recent sessions list combining current + browser draft + SQLite, saved .mori packages, right summary panel with latest decision / unresolved risks / next recommended session / follow-up prompt with real clipboard copy). **Cross-session aggregation (multi-session decisions / issues / recurrence) is still Planned** · today the page counts only the active session's decisions / issues / sources, and lists saved sessions by metadata only. The data-scope note + scope caveat on the summary panel make this honest in the UI.
 - **Product purpose:** Long-term memory across sessions in one project.
 - **Primary user job:** See accumulated decisions, issues, evidence, reports, and a ready-to-paste follow-up prompt before starting the next session.
@@ -250,8 +230,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 <a id="settings-privacy-local-ai"></a>
 
 ### Settings / Privacy / Local AI
-
-![Settings / Privacy / Local AI reference](assets/screenshots/settings-privacy-local-ai-reference.png)
 
 - **Status:** Implemented · 5-tab workspace (로컬 AI / Privacy / Storage / Repositories / Connectors) with a status strip across the top and a sticky Trust Summary panel on the right. Local AI exposes 5 provider cards (Deterministic + Ollama Implemented; LM Studio / OpenAI-compatible / Cloud API Planned) with the real Ollama probe. Privacy renders as honest **status cards** (no fake toggles): four "Enforced" guarantees, two "Default on" report-level toggles, one "Planned" robust-redaction line. Storage surfaces Browser draft / Desktop SQLite / .mori v0 / Markdown / zip .mori with real state and the real SQLite init / refresh / persist controls when desktop runtime is present. Repositories preserves the verified Git diff workflow with summary badges (verified / stale / failed / unverified). Connectors shows all 11 registry-defined planned connectors with `Setup · Planned` + `Test · Planned` disabled buttons. The Connector Setup screen reference is intentionally folded into this tab; no separate Connector Setup page is built.
 - **Product purpose:** Single local-first control center for trust, privacy, analysis, storage, repositories, and planned connector boundaries.
@@ -269,8 +247,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ### Connector Setup
 
-![Connector Setup reference](assets/screenshots/connector-setup-reference.png)
-
 - **Status:** Planned · capture foundation Partial · a pure JSONL connector pipeline exists (`src/lib/connectors/`) plus Claude Code hook + Codex CLI wrapper *templates* and the connector event format docs. The full Connector Setup *screen* is still Planned; today the Settings → Connectors tab shows planned-connector cards with `Setup · Planned` / `Test · Planned` disabled buttons, and JSONL events flow in through the existing AI 대화 import tab.
 - **Product purpose:** Future opt-in connector setup and policy screen.
 - **Primary user job:** Choose and configure integrations only when the user explicitly wants them.
@@ -286,8 +262,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 <a id="edit-event-correction-panel"></a>
 
 ### Edit Event / Correction Panel
-
-![Edit Event / Correction Panel reference](assets/screenshots/edit-event-correction-panel-reference.png)
 
 - **Status:** Planned
 - **Product purpose:** Correct AI-inferred Timeline events.
@@ -305,8 +279,6 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ### Product Overview / Screen Map
 
-![Product Overview / Screen Map reference](assets/screenshots/product-overview-screen-map-reference.png)
-
 - **Status:** Reference only
 - **Product purpose:** Single reference image showing Mori as a coherent product system.
 - **Primary user job:** Orient future implementation tasks around the full app surface map.
@@ -323,11 +295,11 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 The repository also keeps earlier reference images that remain useful for visual comparison:
 
-- [Timeline Main earlier reference](assets/screenshots/timeline-main-reference.png)
-- [Flow Focus earlier reference](assets/screenshots/flow-focus-reference.png)
-- [Review / Issues & Decisions earlier reference](assets/screenshots/review-issues-decisions-reference.png)
-- [Resume Report earlier reference](assets/screenshots/resume-report-reference.png)
-- [Start Session reference](assets/screenshots/start-session-reference.png)
+- `Timeline Main earlier reference`
+- `Flow Focus earlier reference`
+- `Review / Issues & Decisions earlier reference`
+- `Resume Report earlier reference`
+- `Start Session reference`
 
 Use the screen-specific reference sections above as the planning source of truth, and use older references only for historical comparison unless a future task explicitly chooses them.
 
