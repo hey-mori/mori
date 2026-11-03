@@ -34,9 +34,9 @@ Non-trivial work goes issue → branch → PR → local verification → merge, 
 record. Agents, the autonomous loop included, never commit straight to
 `main`; that doc's §6 allows only a non-executing documentation fix or the
 repair of an already-broken `main`, and those are owner calls. `main` is
-protected by convention and the documented verification gate rather than a
-hard rule. Remote CI runs on GitHub-hosted runners for every push and pull
-request, as a clean-checkout signal beside the local gate.
+protected by a GitHub ruleset (pull request, merge commit, green CI) as well as
+the documented verification gate. Remote CI runs on GitHub-hosted runners for
+every push and pull request, as a clean-checkout signal beside the local gate.
 
 Before opening an issue or a branch, run `git fetch --prune` and check open
 pull requests and related issues (`gh pr list`, `gh issue list`), so two
