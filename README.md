@@ -15,7 +15,7 @@ you did, learned and decided, on your own machine.
 [Documentation](#documentation)
 
 ![status: pre-release](https://img.shields.io/badge/status-pre--release-6246f5)
-![license: not chosen yet](https://img.shields.io/badge/license-not%20chosen%20yet-1c1e22)
+[![license: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-1c1e22)](LICENSE)
 
 </div>
 
@@ -147,9 +147,12 @@ never in an issue.
 
 ## License
 
-No license has been chosen yet. Until a `LICENSE` file is added, the author
-keeps all rights. GitHub's terms let you view and fork this repository on
-GitHub; they grant no right to use, modify or distribute the code beyond that.
+The source code in this repository is licensed under the [Mozilla Public License 2.0](LICENSE)
+(`MPL-2.0`). Copyright 2026 Isaac Lee.
+
+- Third-party dependencies keep their own licences.
+- The licence grants no rights to the Mori names or logos as trademarks.
+- Contributions are accepted under the same licence.
 
 Claude Code, Codex, Cursor and the other tools named here are trademarks of
 their owners. Mori is not affiliated with or endorsed by them.

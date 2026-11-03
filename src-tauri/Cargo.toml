@@ -5,7 +5,7 @@ description = "Local-first AI work memory: evidence-linked timelines and reviewe
 authors = ["swarea"]
 # License intentionally unset until the source-posture decision lands
 # (docs/production-program.md, D1 / W21). Not published to crates.io.
-license = ""
+license = "MPL-2.0"
 repository = "https://github.com/hey-mori/mori"
 edition = "2021"
 default-run = "mori"
