@@ -122,10 +122,12 @@ was wrong and has been removed: it contradicted the first line of this document
 more isolation than a human contributor, not less. `docs/mori-autonomous-loop.md`
 §6 now carries the same branch-and-PR rule.
 
-`main` is still protected by convention rather than a hard branch-protection
-rule, because the repository is private on a plan where protection rules are not
-available. That is a platform limitation, not a preference: when the constraint
-lifts, turn protection on.
+`main` is protected twice. The pre-push hook and the verification gate guard a
+local clone. Since the repository became public on 2026-11-04, a GitHub ruleset
+on the default branch also forbids deleting it and non-fast-forward pushes, and
+requires every change to arrive through a pull request that merges with a merge
+commit and whose `scripts/check.sh --full` and `rust · changed?` CI jobs pass.
+It requires no approving review and has no bypass actors.
 
 ## 7. Language
 

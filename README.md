@@ -141,9 +141,11 @@ merge rules.
 
 Read [CLAUDE.md](CLAUDE.md) and [docs/git-workflow.md](docs/git-workflow.md)
 before changing code; they are the working rules for people and agents alike.
-Report vulnerabilities privately as described in the organization's
-[security policy](https://github.com/hey-mori/.github/blob/main/SECURITY.md),
-never in an issue.
+Report vulnerabilities privately with this repository's
+[report form](https://github.com/hey-mori/mori/security/advisories/new), never in
+an issue. The organization's
+[security policy](https://github.com/hey-mori/.github/blob/main/SECURITY.md)
+covers what to include and what happens next.
 
 ## License
 
