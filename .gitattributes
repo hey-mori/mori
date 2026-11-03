@@ -1,1 +1,9 @@
 *.sh text eol=lf
+
+# Git hooks and the other files that run through their shebang need the same
+# rule, or a CRLF checkout turns `bash` into `bash\r`.
+# scripts/check-line-endings.sh holds every executable file to it.
+/.githooks/** text eol=lf
+/connectors/local-capture/mori-local-capture.py text eol=lf
+/connectors/mori-cli/mori.py text eol=lf
+/scripts/build-backfill-dry-run.mjs text eol=lf

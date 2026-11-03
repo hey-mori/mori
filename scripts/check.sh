@@ -168,6 +168,7 @@ if [[ -n "$not_executable" ]]; then
   echo "$not_executable" >&2
   exit 1
 fi
+bash scripts/check-line-endings.sh 9>&-
 bash scripts/tests/commit-guards.test.sh 9>&-
 # The branch's own commits, against docs/commit-format.md. Older history is not
 # re-judged: published commits are never rewritten here.
