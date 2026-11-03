@@ -1,5 +1,7 @@
 # Account / Profile / Settings · Design References
 
+> The AI-generated reference images this document pointed to were removed on 2026-11-03. See [docs/assets/screenshots/README.md](assets/screenshots/README.md) for why and where to find them in history.
+
 Design **reference assets** for Mori's planned account, profile, and
 settings expansion. These are concept images, not production screenshots
 and not final copy. They guide layout, information architecture,
@@ -7,7 +9,7 @@ hierarchy, state treatment, and screen planning · nothing here is a
 commitment to ship a screen verbatim.
 
 Assets live in
-[`docs/assets/screenshots/account-profile-settings/`](assets/screenshots/account-profile-settings/).
+`docs/assets/screenshots/account-profile-settings/`.
 
 **Hard rule for all of this work:** none of these screens may weaken
 Mori's product principles (`docs/mori-project-goal.md` §6). Local

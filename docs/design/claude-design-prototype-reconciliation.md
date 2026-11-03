@@ -14,18 +14,20 @@ It lives on the author's machine (supplied from `~/Downloads/Mori/`); it is
 **not vendored** into this repo because its load-bearing concepts are
 already captured here:
 
-- The signature concept screenshots are already saved under
+- The signature concept screenshots were saved under
   `docs/assets/screenshots/` · `evidence-hub-reference.png`,
   `flow-focus-reference.png`, `narrative-timeline-reference.png`,
-  `project-memory-reference.png`, and the connector / import set.
+  `project-memory-reference.png`, and the connector / import set. They were
+  removed from the tree on 2026-11-03 and remain in Git history; see
+  [docs/assets/screenshots/README.md](../assets/screenshots/README.md).
 - The prototype's own analysis docs (Developer Handoff, Priority Map,
   Timeline Explorations, Integration Model) are design essays, not specs.
   Their durable conclusions already live in our design docs.
 
 Vendoring the ~550 KB of duplicate prototype JSX would add maintenance
 surface without adding signal. If a future pass needs a frame the
-screenshots do not capture, save that single frame to
-`docs/assets/screenshots/`, not the whole prototype.
+screenshots do not capture, describe it in words rather than committing an
+image of invented people or other products' logos.
 
 ## Audit verdict
 
