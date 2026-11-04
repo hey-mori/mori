@@ -305,8 +305,8 @@ beyond privacy-respecting page counts, no cloud features implied.
 scaffolded and pushed: an Astro static site with landing / changelog /
 privacy-draft pages, Korean-first copy, honest unreleased states, the
 brand-token subset hand-synced from this repo, and
-`src/config/site.ts` as the single rename point. Deploy, the public
-domain, org, and branding wait for the naming decision (D3). Repo-structure
+`src/config/site.ts` as the single source of product facts. Since
+2026-11-05 it deploys from `main` to mori.swarea.com (D3 resolved). Repo-structure
 patterns verified 2026-07: Supabase keeps www / docs inside the app
 monorepo; PostHog keeps a domain-named separate site repo
 (`posthog.com`); Zed and Cal.com keep the marketing site private even
@@ -403,19 +403,10 @@ icon-script reference fixed, knip runs in CI (all 2026-07-12); the
 unused-file inventory remains open.
 
 **W18 · Product identity and naming.**
-"Mori" is confirmed a **placeholder codename** (D3, 2026-07-12); the
-real name arrives via a naming sprint before the launch checkpoint
-(candidates, domain / npm / crate / trademark availability, and the
-`fjwood69/mori` collision becomes moot on rename). Until then: no
-public investment under the codename; private repos keep it. Org
-strategy at launch, both verified-common patterns: a product-named
-org (`supabase`, `obsidianmd`) created fresh under the final name, or
-the existing company-style org (swarea, like `zed-industries` /
-`meltylabs`) going public with product-named repos; GitHub transfers
-carry stars / issues / redirects either way, so the choice can wait
-for the name.
-*Answers:* landscape §1.2, §7.3. *Status:* direction decided; naming
-sprint pending, blocks W19 public domain and W20.
+Resolved 2026-11-04 (D3): the product is **Mori**. Its repositories are
+public under the `hey-mori` organization, under MPL-2.0, and the site is
+mori.swarea.com. Mori Lens and the Mori browser extension carry the
+name as members of the same family.
 
 ## 4. Suggested execution order
 
@@ -455,7 +446,7 @@ the program's recommendation is stated, not presumed.
 | - | -------- | ------ | -------------- |
 | **D1** | Source posture: open-source, closed-free with a public shell, or fair-source (FSL, auto-opens after 2 years); which license | W21, W19, W25 | **Leaning closed-free (user direction, 2026-07-12).** Viable and proven in this exact category: Conductor ships closed-free with only a public `conductor-releases` shell (updater feed + issues); Obsidian is the canonical model (private app + public releases / help / api repos where the community produces artifacts). Fair Source (Sentry's FSL: source-visible, non-compete, auto-converts to Apache-2.0 after 2 years) is the middle path if source visibility ever becomes a trust requirement. Full OSS remains the max-distribution option; not required. |
 | **D2** | Monetization: free, donation, paid tier, or team tier later | W19 copy, long-term shape | **Decided (2026-07-12): free for now.** Revisit a paid **team handoff** tier after G4 (Granola's proven step). |
-| **D3** | Naming: keep "Mori" or rename | W18, W19, W20 | **Decided in direction (2026-07-12): "Mori" is a placeholder codename; the real name comes later, before any public artifact.** Consequences: zero public investment under the mori name (no domains, no public org, no branding); private repos may keep the codename since GitHub renames / transfers redirect web + git and carry stars (caveat: a redirect dies permanently if the old name is ever reused). A naming sprint (candidates, domain / npm / crate / trademark checks) is a launch-checkpoint prerequisite. |
+| **D3** | Naming: keep "Mori" or rename | W18, W19, W20 | **Decided 2026-11-04: keep "Mori".** Repositories are public under `hey-mori` (MPL-2.0) and the site is mori.swarea.com. The 2026-07-12 position, a placeholder codename pending a naming sprint, is superseded. |
 | **D4** | Language strategy: Korean-only launch vs i18n extraction now | W23, W19 (site languages) | Korean-only launch + strings-module rule for new surfaces (W23 option a). |
 | **D5** | Browser-mode fate once SQLite is primary: demo / trial surface, or retired to a route | W5 design | Keep as an explicitly-labeled demo / trial surface (honest, zero-install trying), never described as a storage mode. |
 | **D6** | Launch shape: private beta first vs direct public launch | W25, launch checkpoint | Private beta (10–30 users from the Korean communities) between G2 and public launch. |
@@ -496,9 +487,8 @@ Named so they are managed, not discovered.
    Crystal, and Vibe Kanban stall. Mitigation: durability signals are
    the launch story (signed installer, updater, data safety, an
    explicit local-data guarantee), and the site says who maintains it.
-8. **Naming collision.** Unresolved, it degrades search and identity
-   from day one. Mitigation: D3 is resolved before any public
-   artifact (W18 blocks W19 / W20).
+8. **Naming collision.** Resolved with D3 (2026-11-04): the product
+   keeps the name Mori, published under the `hey-mori` organization.
 9. **Korean-only ceiling.** The Korean lane is open but small; the
    English market is where the category's users are. Mitigation: D4's
    strings-module rule keeps the door open without paying the
