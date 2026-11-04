@@ -1053,3 +1053,11 @@ focused next step, not rushed:
   worked. The project chronology reads the same field and follows. Known limit: a record takes
   the new end only when its session next changes; records of sessions that ended earlier keep
   their older end until then (correcting them all at once would be a data backfill, not done).
+
+## 2026-11-02 · Session facts logic no longer collides with its component on macOS
+
+- `SessionRecordFacts.tsx` (the component) and `sessionRecordFacts.ts` (its pure logic) differed only
+  in case. On a case-insensitive filesystem the component's import resolved to the logic file, and
+  the macOS CI build stopped at `tsc` (TS1149, TS1261, TS2693). Linux builds never saw it.
+- The logic moved to `sessionRecordFactsModel.ts`, as `noteExplorerModel.ts` does for its view, and
+  its test followed. No behaviour, data or copy changed.

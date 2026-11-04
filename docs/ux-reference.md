@@ -1,5 +1,7 @@
 # UX Reference
 
+> The AI-generated reference images this document pointed to were removed on 2026-11-03. See [docs/assets/screenshots/README.md](assets/screenshots/README.md) for why and where to find them in history.
+
 This document captures the visual direction and product intent behind the current Mori UI references.
 
 Visual tokens (background, surface, text, accents, statuses, shadows, radii,
@@ -51,8 +53,6 @@ project memory that accumulates over time.
 
 ## Start Mori / Session Setup
 
-![Start Mori / Session Setup](./assets/screenshots/start-session-reference.png)
-
 The Start Mori screen defines the recording boundary before any work memory is created.
 
 It should make these choices explicit:
@@ -67,8 +67,6 @@ It should make these choices explicit:
 The right summary panel reinforces what will be recorded, where it will be stored, and which local AI engine will be used. This is the trust-building moment before a session begins.
 
 ## Timeline Main View
-
-![Timeline Main View](./assets/screenshots/timeline-main-reference.png)
 
 The Timeline Main View is Mori's primary work-memory screen.
 
@@ -117,8 +115,6 @@ Current implementation notes:
 
 ## Flow Focus / Trace View
 
-![Flow Focus / Trace View](./assets/screenshots/flow-focus-reference.png)
-
 Flow Focus is Mori's signature interaction. It reduces timeline complexity by highlighting only the work flow related to a selected event.
 
 Key elements:
@@ -133,8 +129,6 @@ Key elements:
 The trace panel should make the AI-generated structure inspectable. Users need to understand why Mori thinks one event caused, supported, influenced, or produced another.
 
 ## Review (Issues & Decisions)
-
-![Issues & Decisions](./assets/screenshots/review-issues-decisions-reference.png)
 
 Issues & Decisions (now consolidated in the Review page) turns the session into actionable product memory.
 
@@ -158,8 +152,6 @@ The promoted action keeps the issue id and source event ids attached, and
 repeated promotion opens the existing action instead of creating a duplicate.
 
 ## Reports (Resume & Report)
-
-![Resume & Report](./assets/screenshots/resume-report-reference.png)
 
 Resume & Report (now consolidated in the Reports page) helps users continue the work or communicate what happened.
 

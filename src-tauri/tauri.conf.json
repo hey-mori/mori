@@ -28,7 +28,7 @@
     "active": true,
     "targets": ["nsis"],
     "category": "Productivity",
-    "copyright": "© 2026 swarea",
+    "copyright": "© 2026 Isaac Lee",
     "shortDescription": "Local-first AI work memory",
     "longDescription": "Turns AI coding sessions into evidence-linked timelines and reviewed project memory. All data stays on the user's machine.",
     "icon": [

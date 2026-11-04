@@ -3,7 +3,7 @@
 This folder records the current Native Messaging install model for the Mori
 Browser receiver.
 
-The production Browser extension still lives in `swarea/mori-browser-extension`.
+The production Browser extension still lives in `hey-mori/mori-browser-extension`.
 This folder does not connect the extension transport client yet, add reconnect
 behavior, offline queueing, or production persistence.
 
@@ -27,10 +27,13 @@ The host manifest follows the Chromium Native Messaging shape:
 }
 ```
 
-`allowed_origins` is generated from explicit extension ids. Development,
-Chrome Web Store, and Edge Add-ons ids must be configured separately when they
-are known. Do not commit a temporary unpacked extension id as a permanent Mori
-identifier.
+`allowed_origins` is generated from explicit extension ids. The unpacked
+extension carries a public key in its manifest that fixes its id at
+`nmkjbmmnefgglmkddfokahclckjkldek` in Chrome and Edge, and the installer
+registers that id by default (`scripts/prepare-browser-native-host-bundle.mjs`).
+A Chrome Web Store or Edge Add-ons id, which the stores assign, is added through
+`MORI_BROWSER_CHROME_EXTENSION_ID` or `MORI_BROWSER_EDGE_EXTENSION_ID` at build
+time and registered beside it.
 
 During local development, build the helper with Cargo and point the manifest at
 the debug executable:

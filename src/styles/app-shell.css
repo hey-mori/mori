@@ -33,6 +33,13 @@
   background: rgba(255, 255, 255, 0.92);
   border-right: 1px solid var(--line);
   backdrop-filter: blur(14px);
+  /* backdrop-filter makes the sidebar a stacking context, which traps the
+     만들기 menu's z-index inside it, so the sidebar as a whole must rank above
+     everything the workspace layers within the page (sticky headers and
+     toolbars go up to 60) and below the overlays (--z-overlay and up), or the
+     menu that opens beside the rail is covered. */
+  position: relative;
+  z-index: calc(var(--z-overlay) - 1);
 }
 
 .sidebar-nav {

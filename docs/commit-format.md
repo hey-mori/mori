@@ -69,6 +69,13 @@ apply to both.
   list after one blank line. Any other `Revert …` subject is an ordinary
   commit and needs a type.
 
+One trailer is allowed on any commit: a **DCO sign-off**, a final block of
+`Signed-off-by: Name <email>` lines after one blank line, which is where
+`git commit -s` puts it. Contributors from outside the organization need it on
+every commit; see "Licence and sign-off" in the organization's
+[CONTRIBUTING.md](https://github.com/hey-mori/.github/blob/main/CONTRIBUTING.md).
+A sign-off anywhere else is a non-bullet line and is rejected.
+
 ## Example
 
 ```

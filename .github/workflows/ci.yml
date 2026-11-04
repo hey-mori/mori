@@ -5,32 +5,21 @@
 # locally, so there is exactly one definition of "verified" and local and CI
 # cannot drift apart.
 #
-# TRIGGER STATE: manual only again, 2026-08-07.
-#
-# The automatic triggers were restored earlier the same day, on evidence that the
-# July billing rejection had cleared: a rejected run re-ran successfully and other
-# private repositories here were running CI normally. That was true when measured
-# and stopped being true within the hour. Runs are being rejected again -- jobs
-# fail in about two seconds with zero steps executed -- after a day of unusually
-# heavy use of this account's Actions allowance, macOS minutes included at their
-# 10x rate.
-#
-# So this follows what the restoring change itself asked for: say the date, take
-# the triggers back out, and do not leave a red check standing on main.
-#
-# The gate is `scripts/check.sh`, run locally and recorded in the pull request. A
-# hand-started run still works whenever the allowance does.
-#
-# TO RESTORE: uncomment `push` and `pull_request` once the account's Actions
-# billing is settled -- and check that a dispatched run actually executes steps
-# first, because a rejection looks like a failure and not like a refusal.
+# Every job runs on a GitHub-hosted runner. Pull requests from forks run here
+# with a read-only token and no secrets, on a fresh virtual machine that is
+# discarded afterwards, so no job may target a self-hosted runner: a fork can
+# change this file in its own pull request and choose any runner the
+# repository can reach.
 name: ci
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [main]
-  # pull_request:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -39,27 +28,8 @@ concurrency:
 jobs:
   verify:
     name: scripts/check.sh --full
-    # Self-hosted on purpose, 2026-09-09. The hosted-runner rejection described
-    # at the top of this file is what makes a dispatched run unreliable, and a
-    # self-hosted runner is not billed against the Actions allowance at all, so
-    # this job can run while the allowance is still settling.
-    #
-    # The runner is an OCI Ampere box, linux/arm64, registered to this
-    # repository only. Labels are `self-hosted, Linux, ARM64, oci-a1, mori` and
-    # all five are required, so a future x86 or non-Mori runner in the same
-    # account cannot pick this job up by accident.
-    #
-    # arm64 was checked before the move rather than assumed: package-lock.json
-    # carries the linux-arm64 build of every native dependency this job touches
-    # (esbuild, rollup, @tailwindcss/oxide, lightningcss, oxc, @tauri-apps/cli),
-    # and the connector smoke tests spawn only bash, python3 and git, which the
-    # host provides. The macOS and rust-changed jobs are untouched.
-    #
-    # TO REVERT: put `runs-on: ubuntu-latest` back. Nothing else in this job
-    # depends on the runner, and no other job depends on this one.
-    runs-on: [self-hosted, Linux, ARM64, oci-a1, mori]
-    # A hosted runner that hangs costs minutes; this one holds the only Mori
-    # runner there is, so bound it well under the 6h default.
+    runs-on: ubuntu-latest
+    # Bound a hung run well under the 6h default.
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -71,8 +41,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # --no-rust: the macOS job below runs cargo. This runner has no gtk/webkit,
-      # so it would fail on a missing system package rather than on the change.
+      # --no-rust: the macOS job below runs cargo. Ubuntu lacks the gtk/webkit
+      # packages wry builds against, so cargo would fail on a missing system
+      # package rather than on the change.
       - run: bash scripts/check.sh --full --no-rust
 
   # Whether the Rust side is involved at all, so the 10x macOS minutes below are
@@ -81,20 +52,7 @@ jobs:
   # it is back rather than newly invented.
   rust-changed:
     name: rust · changed?
-    # Same self-hosted OCI arm64 runner as `verify`, 2026-09-09, and for a
-    # sharper reason than saving minutes: while the hosted allowance is
-    # rejecting jobs this filter fails before it runs a step, and a failed
-    # `needs` skips the macOS job no matter what its `if` says. So the gate
-    # that decides whether the Rust side is involved has not been deciding
-    # anything. Moving it to a runner that is not billed puts it back in
-    # service.
-    #
-    # Nothing here needs a toolchain: checkout, then git and grep, all of
-    # which the host provides. There is one runner, so this job and `verify`
-    # take it in turn rather than in parallel; this one is seconds long.
-    #
-    # TO REVERT: put `runs-on: ubuntu-latest` back.
-    runs-on: [self-hosted, Linux, ARM64, oci-a1, mori]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       changed: ${{ steps.filter.outputs.changed }}
@@ -149,8 +107,10 @@ jobs:
         working-directory: .
       - run: npm run build
         working-directory: .
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: src-tauri
       - run: cargo check --locked

@@ -1,6 +1,6 @@
 # Browser Evidence History
 
-Status: implemented and verified on 2026-09-13. Issue [#124](https://github.com/swarea/mori/issues/124).
+Status: implemented and verified on 2026-09-13. Issue [#124](https://github.com/hey-mori/mori/issues/124).
 
 ## A. Starting Baseline
 

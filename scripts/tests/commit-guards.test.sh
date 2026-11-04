@@ -53,11 +53,45 @@ expect reject "a blank line between bullets (9dfbe9a1)" $'test: add probes\n\n- 
 expect reject "a trailer after the bullets (03e02ae0)" $'test: measure a thing\n\n- Record timing\n\nRefs: #132'
 expect reject "a wrapped bullet continuation" $'fix: do a thing\n\n- Change one thing that wraps\n  onto a second line'
 
+# A DCO sign-off, the one trailer allowed
+expect accept "a sign-off block after the bullets" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One <someone@example.com>'
+expect accept "a subject-only commit with a sign-off" $'fix: do a thing\n\nSigned-off-by: Some One <someone@example.com>'
+expect accept "two sign-offs in the final block" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One <someone@example.com>\nSigned-off-by: Other Person <other@example.com>'
+expect reject "a sign-off with no blank line before it" $'fix: do a thing\n\n- Change one thing\nSigned-off-by: Some One <someone@example.com>'
+expect reject "a sign-off between bullets" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One <someone@example.com>\n\n- Change another thing'
+expect reject "a sign-off without an email address" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One'
+expect reject "Co-Authored-By beside a sign-off" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One <someone@example.com>\nCo-Authored-By: Someone <x@example.com>'
+
 # Attribution and decoration
 expect reject "Co-Authored-By" $'fix: do a thing\n\n- Change one thing\n\nCo-Authored-By: Someone <x@example.com>'
 expect reject "a Generated-with line" $'fix: do a thing\n\n- Generated with a tool'
 expect reject "AI tool attribution" $'fix: do a thing\n\n- Written by Claude Code'
 expect reject "an em dash" $'fix: do a thing\n\n- Change one thing \xe2\x80\x94 and another'
+
+# The emoji rule once used grep -P, which needs a UTF-8 locale and which the
+# BSD grep on macOS lacks. Both failures were silent and let every emoji
+# through, so run the cases under each condition.
+real_grep="$(command -v grep)"
+no_p_grep="$(mktemp -d)"
+printf '#!/usr/bin/env bash\nfor a in "$@"; do case "$a" in -*P*) echo "grep: invalid option -- P" >&2; exit 2 ;; esac; done\nexec "%s" "$@"\n' "$real_grep" >"$no_p_grep/grep"
+chmod +x "$no_p_grep/grep"
+saved_path="$PATH"
+saved_lc_all="${LC_ALL-}"
+for setting in "UTF-8 locale" "C locale" "a grep without -P"; do
+  case "$setting" in
+    "UTF-8 locale") export LC_ALL=C.UTF-8 PATH="$saved_path" ;;
+    "C locale") export LC_ALL=C PATH="$saved_path" ;;
+    "a grep without -P") export LC_ALL=C.UTF-8 PATH="$no_p_grep:$saved_path" ;;
+  esac
+  expect reject "a rocket, U+1F680, with $setting" $'docs: add a note \xf0\x9f\x9a\x80'
+  expect reject "a check mark button, U+2705, with $setting" $'docs: add a note \xe2\x9c\x85'
+  expect reject "a potted plant, U+1FAB4, with $setting" $'docs: add a note \xf0\x9f\xaa\xb4'
+  expect accept "Korean, an arrow, a middle dot and an en dash, with $setting" \
+    $'docs: note the 3\xe2\x80\x937 range \xc2\xb7 \xe2\x86\x92 \xed\x95\x9c\xea\xb8\x80'
+done
+export PATH="$saved_path"
+if [ -n "$saved_lc_all" ]; then export LC_ALL="$saved_lc_all"; else unset LC_ALL; fi
+rm -rf "$no_p_grep"
 
 # Merge commits are git- or GitHub-written and exempt from shape rules
 expect accept "a GitHub PR merge" $'Merge pull request #137 from swarea/fix/storage-intake-test-clock\n\nfix: pin intake backend test stores to the fixture clock'

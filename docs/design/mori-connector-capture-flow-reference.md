@@ -1,7 +1,9 @@
 # Mori Connector / Capture Flow · Design Reference
 
+> The AI-generated reference images this document pointed to were removed on 2026-11-03. See [docs/assets/screenshots/README.md](../assets/screenshots/README.md) for why and where to find them in history.
+
 Eight UI concept images (saved under
-[`docs/assets/screenshots/connector-capture-flow/`](../assets/screenshots/connector-capture-flow/))
+`docs/assets/screenshots/connector-capture-flow/`)
 explore a connector-centric capture workflow and a more data-dense,
 table-first visual language than Mori ships today. They are **direction
 references, not final screens**. This document records what each image is,

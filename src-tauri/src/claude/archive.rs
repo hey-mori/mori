@@ -67,6 +67,28 @@ pub(crate) fn read_root_for(session_path: &str) -> Result<PathBuf, String> {
 
 const COPY_CHUNK: usize = 1 << 20;
 
+/// `fs::canonicalize` for a path that may not exist yet: resolve the nearest
+/// existing ancestor and append the rest. Comparing a raw path with a
+/// canonical one misses a parent reached through a symlink, such as macOS's
+/// `/var` -> `/private/var`, and an archive folder that is not created yet
+/// would then slip past the inside-the-agent-directory refusal.
+fn canonicalize_through_existing(path: &Path) -> PathBuf {
+    let mut existing = path;
+    let mut rest = Vec::new();
+    loop {
+        if let Ok(resolved) = fs::canonicalize(existing) {
+            return rest.iter().rev().fold(resolved, |acc, part| acc.join(part));
+        }
+        match (existing.parent(), existing.file_name()) {
+            (Some(parent), Some(name)) => {
+                rest.push(name.to_os_string());
+                existing = parent;
+            }
+            _ => return path.to_path_buf(),
+        }
+    }
+}
+
 pub(crate) fn archive_session_at(projects_root: &Path, archive_dir: &Path, session_path: &str) -> Result<SessionArchive, String> {
     let requested = PathBuf::from(session_path.trim());
     let link = fs::symlink_metadata(&requested)
@@ -77,8 +99,8 @@ pub(crate) fn archive_session_at(projects_root: &Path, archive_dir: &Path, sessi
     let canonical = resolve_session_path(projects_root, session_path.trim())?;
     // Never write into the agent's own directory, even through a storage
     // override that points inside it: its cleanup would delete the copy.
-    if let (Ok(root), Ok(archives)) = (fs::canonicalize(projects_root), fs::canonicalize(archive_dir).or_else(|_| Ok::<_, std::io::Error>(archive_dir.to_path_buf()))) {
-        if archives.starts_with(&root) {
+    if let Ok(root) = fs::canonicalize(projects_root) {
+        if canonicalize_through_existing(archive_dir).starts_with(&root) {
             return Err("Refused: the archive folder is inside the agent's projects directory.".to_string());
         }
     }
@@ -412,6 +434,18 @@ mod tests {
         let (_dir2, projects2, _archives2, path2) = setup(&line(0));
         let inside = projects2.join("archives");
         assert!(archive_session_at(&projects2, &inside, &path2).unwrap_err().contains("inside the agent"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn refuses_a_not_yet_created_archive_folder_inside_the_agent_directory_through_a_symlink() {
+        let (dir, projects, _archives, path) = setup(&line(0));
+        let alias = dir.path().join("alias");
+        std::os::unix::fs::symlink(dir.path(), &alias).unwrap();
+        let inside = alias.join("projects").join("archives").join("claude-code");
+        assert!(!inside.exists());
+        assert!(archive_session_at(&projects, &inside, &path).unwrap_err().contains("inside the agent"));
+        assert!(!projects.join("archives").exists(), "nothing written on refusal");
     }
 
     #[test]
