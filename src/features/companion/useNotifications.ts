@@ -12,7 +12,6 @@ import {
   loadStoredSessionSummaries,
   useSessionStore,
 } from "../../app/sessionStore";
-import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import type {
   StoredMoriPackageDraft,
@@ -129,13 +128,7 @@ export function useNotifications(): {
   // real activity stream ("이 세션이 정리됐습니다 · 프로젝트 · 2시간 전").
   const sessionTitle = useSessionTitle();
   const sessionFeedNotifications = useMemo<CompanionNotification[]>(
-    () =>
-      buildSessionFeedNotifications(
-        mergeDemoSessionSummaries(summaries).map((summary) => ({
-          ...summary,
-          title: sessionTitle(summary.title, summary.titleFromRequest),
-        })),
-      ),
+    () => sessionFeedFor(summaries, sessionTitle),
     [summaries, sessionTitle],
   );
 
@@ -233,4 +226,22 @@ function safeListDrafts(): StoredMoriPackageDraft[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * The cross-session feed for the user's own stored sessions. The demo sessions
+ * shown on a fresh install are a preview, not activity, so they raise no
+ * notification: merged in, they greeted a new user with 17 unread items about
+ * work that never happened.
+ */
+export function sessionFeedFor(
+  summaries: StoredSessionSummary[],
+  titleFor: (title: string, fromRequest: boolean | undefined) => string,
+): CompanionNotification[] {
+  return buildSessionFeedNotifications(
+    summaries.map((summary) => ({
+      ...summary,
+      title: titleFor(summary.title, summary.titleFromRequest),
+    })),
+  );
 }
