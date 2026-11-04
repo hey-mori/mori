@@ -31,3 +31,22 @@ What stays here:
 
 - `mori-icon-size-preview.png`: a rendering of Mori's own app icons at each
   packaged size, generated from the brand mark by `scripts/generate-icons.cjs`.
+
+## Product screenshots
+
+These are screenshots of Mori itself, used in the README. They were taken on
+2026-11-04 from the browser build (`npm run dev`) at 1440×900, driven by
+Playwright in headless Chromium. The browser build runs the same interface as
+the desktop app, with the browser store instead of SQLite.
+
+- `mori-home.png` shows the built-in demo data (the
+  "데모 미리보기" mode a fresh install opens in). Its projects and sessions are
+  invented.
+- `mori-records.png` shows three records typed into the record composer, with
+  invented content.
+- `mori-session-review.png` shows a session created from a pasted transcript
+  written for the screenshot, about an invented demo shop, analysed by the
+  rule-based engine, with no model involved.
+
+No real session, file, path or person appears in them. Retake them when the
+screens they show change.

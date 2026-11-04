@@ -40,6 +40,20 @@ nothing off the machine unless you grant it per provider.
 > describes the target; [the project goal](docs/mori-project-goal.md) separates
 > what is implemented from what is planned.
 
+## A look at it
+
+<p align="center">
+  <img src="docs/assets/screenshots/mori-session-review.png" alt="A session imported from a pasted transcript, with the issue, decision and next action the rule-based analysis found, each linked to its evidence" width="860">
+</p>
+
+| | |
+| --- | --- |
+| <img src="docs/assets/screenshots/mori-home.png" alt="Home in demo preview, with the search bar and quick actions" width="420"> | <img src="docs/assets/screenshots/mori-records.png" alt="The record ledger with three records written today" width="420"> |
+
+Screenshots from the browser build (`npm run dev`) with the built-in demo data
+and records and a session created from an invented sample transcript; see
+[how they were made](docs/assets/screenshots/README.md#product-screenshots).
+
 ## What works today
 
 - **기록 (records).** A ledger of records with a timeline, a calendar and
@@ -122,7 +136,8 @@ merge rules.
   updater.
 - The quality of LLM-backed analysis is not measured by the test suite. The
   rule-based engine is the floor that always works.
-- There is no first-run onboarding yet.
+- First-run guidance is a single welcome dialog. Detecting and connecting an
+  agent in one step works only in the desktop app.
 
 ## Documentation
 
