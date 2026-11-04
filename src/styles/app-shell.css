@@ -33,6 +33,11 @@
   background: rgba(255, 255, 255, 0.92);
   border-right: 1px solid var(--line);
   backdrop-filter: blur(14px);
+  /* backdrop-filter makes the sidebar a stacking context, which traps the
+     만들기 menu's z-index inside it. Without its own order the workspace,
+     painted later, covers the menu that opens beside the rail. */
+  position: relative;
+  z-index: 2;
 }
 
 .sidebar-nav {
