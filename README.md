@@ -67,9 +67,8 @@ The full, maintained inventory, including partial features, is in
 | macOS | The Rust side compiles and its tests pass in CI. No package is built or verified. |
 | Linux | Compiles and passes the test suites on a development host with the WebKitGTK packages. Not a target. |
 
-The browser extension that feeds Mori page context lives in
-[mori-browser-extension](https://github.com/hey-mori/mori-browser-extension).
-Its native messaging host ships with the Windows installer.
+The browser extension's native messaging host is built and bundled with Mori
+on Windows; see [Related projects](#related-projects).
 
 ## Privacy
 
@@ -137,10 +136,24 @@ merge rules.
 - [Desktop shell](docs/desktop-shell.md)
 - [Git workflow](docs/git-workflow.md) and [commit format](docs/commit-format.md)
 
+## Related projects
+
+| Repository | What it is | Relationship to Mori |
+| --- | --- | --- |
+| [mori-lens](https://github.com/hey-mori/mori-lens) | A reading assistant: rest the pointer on text in any app and see it explained in your language | A separate product with its own binary. No shared code, database or runtime dependency |
+| [mori-browser-extension](https://github.com/hey-mori/mori-browser-extension) | An opt-in Chromium extension that reports the active page | Sends page activity to Mori through Native Messaging; does nothing without Mori |
+| [mori-web](https://github.com/hey-mori/mori-web) | The product website | Not deployed yet |
+
 ## Contributing and security
 
-Read [CLAUDE.md](CLAUDE.md) and [docs/git-workflow.md](docs/git-workflow.md)
-before changing code; they are the working rules for people and agents alike.
+Start with the organization's
+[contributing guide](https://github.com/hey-mori/.github/blob/main/CONTRIBUTING.md),
+which covers how a change lands and the sign-off (`git commit -s`) required on
+commits from outside the organization. In this repository,
+[docs/git-workflow.md](docs/git-workflow.md) and
+[docs/commit-format.md](docs/commit-format.md) are the detailed rules, and
+[CLAUDE.md](CLAUDE.md) adds what coding agents working here must follow.
+
 Report vulnerabilities privately with this repository's
 [report form](https://github.com/hey-mori/mori/security/advisories/new), never in
 an issue. The organization's
