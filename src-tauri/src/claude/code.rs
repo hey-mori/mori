@@ -2057,10 +2057,10 @@ mod tests {
     fn is_titleable_rejects_banners_prompts_paths_and_urls() {
         // Real garbage-title patterns seen in desktop sessions.
         assert!(!is_titleable_user_text(".   ____          _            __ _ _")); // ASCII banner
-        assert!(!is_titleable_user_text("PS C:\\Users\\Admin> ssh bogyu@host"));
+        assert!(!is_titleable_user_text("PS C:\\Users\\Admin> ssh user@host"));
         assert!(!is_titleable_user_text("C:\\dev\\mori> npm run build"));
         assert!(!is_titleable_user_text("@C:\\Users\\Admin\\Downloads\\notes.txt"));
-        assert!(!is_titleable_user_text("http://bi-eis-dev.100.88.168.115/ni"));
+        assert!(!is_titleable_user_text("http://app-dev.100.64.0.10/ni"));
         assert!(!is_titleable_user_text("↳ 도구 결과: ok"));
         assert!(!is_titleable_user_text("This session is being continued from a previous conversation"));
         // Real prompts survive.
