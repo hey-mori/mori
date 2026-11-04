@@ -32,6 +32,7 @@ import {
 } from "../../lib/review-workspace/reviewWorkspace";
 import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
+import { nextActionsWorthShowing, summaryBesideTitle } from "./reviewRepeats";
 
 type ReviewColumn = "issue" | "decision" | "nextAction";
 
@@ -82,6 +83,13 @@ export function ReviewView() {
   const [selection, setSelection] = useState<ReviewSelection | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeColumns, setActiveColumns] = useState<ReviewColumn[]>([]);
+  // A next action that only restates its issue is left to the issue card. The
+  // selected one stays, so promoting an issue always lands on a visible card.
+  const selectedActionId = selection?.kind === "nextAction" ? selection.nextActionId : undefined;
+  const boardNextActions = useMemo(
+    () => nextActionsWorthShowing(view.nextActions, view.issues, selectedActionId),
+    [view.nextActions, view.issues, selectedActionId],
+  );
 
   // Consume a one-shot deep-link from another surface (e.g. the Timeline event
   // inspector "create issue"): focus the requested item and clear the request.
@@ -139,8 +147,8 @@ export function ReviewView() {
   const visibleNextActions = useMemo(() => {
     const showColumn = activeColumns.length === 0 || activeColumns.includes("nextAction");
     if (!showColumn) return [];
-    return view.nextActions.filter((action) => matchesQuery(action.title));
-  }, [view.nextActions, activeColumns, matchesQuery]);
+    return boardNextActions.filter((action) => matchesQuery(action.title));
+  }, [boardNextActions, activeColumns, matchesQuery]);
 
   const sortedIssues = useMemo(() => sortIssues(visibleIssues), [visibleIssues]);
   const sortedDecisions = useMemo(() => sortDecisions(visibleDecisions), [visibleDecisions]);
@@ -156,7 +164,7 @@ export function ReviewView() {
   }
 
   const totalReviewItems =
-    view.issues.length + view.decisions.length + view.nextActions.length;
+    view.issues.length + view.decisions.length + boardNextActions.length;
   const toolbar =
     totalReviewItems > 0 ? (
       <ReviewToolbar
@@ -176,7 +184,7 @@ export function ReviewView() {
         }}
         totalIssueCount={view.issues.length}
         totalDecisionCount={view.decisions.length}
-        totalNextActionCount={view.nextActions.length}
+        totalNextActionCount={boardNextActions.length}
       />
     ) : null;
 
@@ -211,8 +219,8 @@ export function ReviewView() {
   const openIssueCount = view.issues.length - resolvedIssueCount;
   const confirmedDecisionCount = view.decisions.filter((decision) => decision.confirmed).length;
   const unconfirmedDecisionCount = view.decisions.length - confirmedDecisionCount;
-  const completedActionCount = view.nextActions.filter(isNextActionCompleted).length;
-  const pendingActionCount = view.nextActions.length - completedActionCount;
+  const completedActionCount = boardNextActions.filter(isNextActionCompleted).length;
+  const pendingActionCount = boardNextActions.length - completedActionCount;
   const board = (
     <section className="review-issue-board">
       <div className="review-issue-board-columns review-board-columns">
@@ -271,7 +279,7 @@ export function ReviewView() {
           <ReviewBoardColumn
             label="다음 액션"
             tone="green"
-            count={view.nextActions.length}
+            count={boardNextActions.length}
             progress={`${pendingActionCount} 대기 · ${completedActionCount} 완료`}
           >
             {sortedNextActions.length === 0 ? (
@@ -705,7 +713,7 @@ function IssueBoardCard({
   return (
     <ReviewBoardCard
       title={issue.title}
-      summary={compactText(issue.description)}
+      summary={summaryBesideTitle(issue.title, compactText(issue.description))}
       meta={[
         priorityLabel(issue.priority),
         statusLabel(issue.status),
@@ -761,7 +769,7 @@ function DecisionBoardCard({
   return (
     <ReviewBoardCard
       title={decision.title}
-      summary={compactText(decision.decision || decision.rationale)}
+      summary={summaryBesideTitle(decision.title, compactText(decision.decision || decision.rationale))}
       meta={[
         priorityLabel(decision.importance),
         decision.confirmed ? "확정됨" : "확인 필요",
