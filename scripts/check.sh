@@ -180,6 +180,8 @@ done
 policy_failed=0
 if [[ -n "$policy_base" ]]; then
   for sha in $(git rev-list "$policy_base..HEAD"); do
+    # A bot's commit (Dependabot's, for one) carries the message GitHub writes for it, which the format cannot ask it to change, so it is skipped.
+    [[ "$(git log -1 --format=%ae "$sha")" == *"[bot]@users.noreply.github.com" ]] && continue
     if ! git log -1 --format=%B "$sha" | bash scripts/validate-commit-message.sh --stdin; then
       echo "  in $(git log -1 --format='%h %s' "$sha")" >&2
       policy_failed=1
