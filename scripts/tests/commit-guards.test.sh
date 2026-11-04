@@ -53,6 +53,15 @@ expect reject "a blank line between bullets (9dfbe9a1)" $'test: add probes\n\n- 
 expect reject "a trailer after the bullets (03e02ae0)" $'test: measure a thing\n\n- Record timing\n\nRefs: #132'
 expect reject "a wrapped bullet continuation" $'fix: do a thing\n\n- Change one thing that wraps\n  onto a second line'
 
+# A DCO sign-off, the one trailer allowed
+expect accept "a sign-off block after the bullets" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One <someone@example.com>'
+expect accept "a subject-only commit with a sign-off" $'fix: do a thing\n\nSigned-off-by: Some One <someone@example.com>'
+expect accept "two sign-offs in the final block" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One <someone@example.com>\nSigned-off-by: Other Person <other@example.com>'
+expect reject "a sign-off with no blank line before it" $'fix: do a thing\n\n- Change one thing\nSigned-off-by: Some One <someone@example.com>'
+expect reject "a sign-off between bullets" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One <someone@example.com>\n\n- Change another thing'
+expect reject "a sign-off without an email address" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One'
+expect reject "Co-Authored-By beside a sign-off" $'fix: do a thing\n\n- Change one thing\n\nSigned-off-by: Some One <someone@example.com>\nCo-Authored-By: Someone <x@example.com>'
+
 # Attribution and decoration
 expect reject "Co-Authored-By" $'fix: do a thing\n\n- Change one thing\n\nCo-Authored-By: Someone <x@example.com>'
 expect reject "a Generated-with line" $'fix: do a thing\n\n- Generated with a tool'
