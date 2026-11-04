@@ -47,7 +47,6 @@ import {
 } from "../../lib/session/startSessionEngineOptions";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { loadStoredSessionSummaries } from "../../app/sessionStore";
-import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { normalizeAiTranscript, type AiTranscriptPlatform } from "../../lib/import";
 import type { LlmProvider, SourceOption } from "../../domain/types";
@@ -58,6 +57,7 @@ import {
 import { useAppStore } from "../../app/store";
 import { useProjectStore } from "../../app/projectStore";
 import { projectDisplayName, type UserProject } from "../../lib/projects/userProjects";
+import { projectChoices } from "./projectChoices";
 import {
   formatClaudeRelativeKo,
 } from "../../lib/claude/claudeTauri";
@@ -1005,28 +1005,18 @@ function engineSummaryLabel(engine: StartSessionEngineOption): string {
 
 /** Distinct existing project keys, derived from stored/demo sessions + user-created projects. */
 function gatherExistingProjects(userProjects: UserProject[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const project of userProjects) {
-    const key = project.key.trim();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(key);
-  }
-  for (const summary of safeListSessions()) {
-    const label = (summary.sourceLabel ?? "").trim();
-    if (!label || seen.has(label)) continue;
-    seen.add(label);
-    out.push(label);
-  }
-  return out;
+  return projectChoices(userProjects, safeListSessions());
 }
 
+
+// The user's own sessions only. The demo sessions are shown while there are no
+// real ones, so merging them here offered a demo project, "ng-gw", as the
+// default for the very first real session, which then filed real work under it.
 function safeListSessions() {
   try {
-    return mergeDemoSessionSummaries(loadStoredSessionSummaries());
+    return loadStoredSessionSummaries();
   } catch {
-    return mergeDemoSessionSummaries([]);
+    return [];
   }
 }
 
