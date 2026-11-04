@@ -77,7 +77,7 @@ The full, maintained inventory, including partial features, is in
 
 | Platform | State |
 | --- | --- |
-| Windows | Development and packaging target. `tauri build` produces an NSIS installer. It is **unsigned and not published**. |
+| Windows | Development and packaging target. The `package` workflow builds an NSIS installer on a hosted runner; installing it, uninstalling it and its browser native host registration were checked on Windows 11. It is **unsigned and not published**. |
 | macOS | The Rust side compiles and its tests pass in CI. No package is built or verified. |
 | Linux | Compiles and passes the test suites on a development host with the WebKitGTK packages. Not a target. |
 
