@@ -31,6 +31,8 @@ export type CleanupPolicyInput = {
 export type RetentionSourceInput = {
   sessionId: string;
   title: string;
+  /** The title is the first request's text, shown by the disclosure rule. */
+  titleFromRequest?: boolean;
   /** The original transcript's last change (file time) when discovered. */
   modifiedAt?: string;
   bytes?: number;
@@ -41,6 +43,11 @@ export type RetentionSourceInput = {
   imported: boolean;
   /** Where the original was found, to check it is still there and to keep it. */
   sourcePath?: string;
+  /** What helps decide whether to keep it, as observed: the agent's working
+   *  folder, how many messages (only when counted whole) and PRs it names. */
+  projectLabel?: string;
+  messageCount?: number;
+  prCount?: number;
 };
 
 export type CleanupEstimate =

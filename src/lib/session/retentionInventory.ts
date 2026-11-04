@@ -82,6 +82,7 @@ export function retentionSources(inputs: RetentionInventoryInputs): RetentionSou
       return {
         sessionId,
         title: meta.title || meta.projectName || "제목 없는 대화",
+        titleFromRequest: meta.title && meta.titleFromRequest ? true : undefined,
         // Metas stored before the file time was kept: the last activity is
         // the closest stand-in (never later than the file's own change).
         modifiedAt: meta.modifiedAt ?? meta.updatedAt,
@@ -91,6 +92,11 @@ export function retentionSources(inputs: RetentionInventoryInputs): RetentionSou
         archive: kept ? { archivedAt: kept.source.capturedAt, bytes: kept.locator.bytes } : null,
         imported: inputs.importedSessionIds.has(sessionId),
         sourcePath: meta.sourceFilePath,
+        projectLabel: meta.projectPath || meta.projectName || undefined,
+        // A count read from only the head of a long transcript is a lower
+        // bound: not shown as the session's length.
+        messageCount: meta.messageCountComplete !== false && meta.messageCount > 0 ? meta.messageCount : undefined,
+        prCount: meta.evidence?.complete ? meta.evidence.prs.length || undefined : undefined,
       };
     });
 }

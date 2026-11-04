@@ -18,9 +18,12 @@ import {
   retentionAttention,
   type RetentionAssessment,
 } from "../../lib/session/retentionRisk";
-import { KeepDialog } from "./SessionArchiveControl";
+import { KeepDialog, KeepManyDialog } from "./SessionArchiveControl";
+import { totalBytes } from "../../lib/session/keepEach";
+import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { keepSessionArchive } from "./sessionArchiveActions";
 import { loadRetentionView, type RetentionView } from "./retentionActions";
+import { useSessionTitle } from "../../app/useDisclosedView";
 
 export function RetentionStatus({
   onOpen,
@@ -102,15 +105,39 @@ function RetentionDialog({
   onOpen: (sessionId: string) => void;
   onKept: () => void;
 }) {
+  const shownTitle = useSessionTitle();
+  const titleOf = (a: RetentionAssessment) => shownTitle(a.title, a.titleFromRequest);
   const [keeping, setKeeping] = useState<RetentionAssessment | null>(null);
+  // Conversations the user picked to keep together; only those with a found
+  // original can be picked.
+  const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
+  const [keepingMany, setKeepingMany] = useState(false);
+  const pickable = attention.filter((a) => Boolean(a.sourcePath));
+  const pickedItems = pickable.filter((a) => picked.has(a.sessionId));
+  // A pick whose conversation left the list (kept, or no longer at risk) is
+  // dropped, so it never comes back already checked.
+  useEffect(() => {
+    setPicked((current) => {
+      const live = new Set(attention.filter((a) => Boolean(a.sourcePath)).map((a) => a.sessionId));
+      const next = new Set([...current].filter((id) => live.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [attention]);
+  const togglePick = (sessionId: string) =>
+    setPicked((current) => {
+      const next = new Set(current);
+      if (next.has(sessionId)) next.delete(sessionId);
+      else next.add(sessionId);
+      return next;
+    });
   const ref = useRef<HTMLDivElement>(null);
-  const latest = useRef({ onClose, keeping });
-  latest.current = { onClose, keeping };
+  const latest = useRef({ onClose, subDialogOpen: false });
+  latest.current = { onClose, subDialogOpen: keeping !== null || keepingMany };
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKey = (event: KeyboardEvent) => {
       // The keep dialog on top handles its own keys.
-      if (latest.current.keeping) return;
+      if (latest.current.subDialogOpen) return;
       if (event.key === "Escape") {
         latest.current.onClose();
         return;
@@ -167,12 +194,22 @@ function RetentionDialog({
             <ul className="retention-list">
               {attention.map((a) => (
                 <li key={a.sessionId} className="retention-row">
+                  {a.sourcePath ? (
+                    <input
+                      type="checkbox"
+                      className="retention-row-pick"
+                      checked={picked.has(a.sessionId)}
+                      onChange={() => togglePick(a.sessionId)}
+                      aria-label={`${titleOf(a)} 보관할 대화로 고르기`}
+                    />
+                  ) : null}
                   <div className="retention-row-text">
-                    <strong>{a.title}</strong>
+                    <strong>{titleOf(a)}</strong>
                     <span>
                       {cleanupPhrase(a.cleanup)} · {keptPhrase(a)}
                       {a.bytes ? ` · ${formatArchiveBytes(a.bytes)}` : ""}
                     </span>
+                    {decisionSignals(a) ? <span className="retention-row-signals">{decisionSignals(a)}</span> : null}
                   </div>
                   <div className="retention-row-actions">
                     <Button variant="ghost" size="sm" onClick={() => onOpen(a.sessionId)}>
@@ -186,6 +223,19 @@ function RetentionDialog({
               ))}
             </ul>
           )}
+          {pickedItems.length > 0 ? (
+            <div className="retention-pick-bar">
+              <span>
+                고른 대화 {pickedItems.length}개
+                {totalBytes(pickedItems.map((item) => item.bytes)) !== undefined
+                  ? ` · 약 ${formatArchiveBytes(totalBytes(pickedItems.map((item) => item.bytes))!)}`
+                  : ""}
+              </span>
+              <Button variant="primary" size="sm" onClick={() => setKeepingMany(true)}>
+                {pickedItems.length}개 보관
+              </Button>
+            </div>
+          ) : null}
           {lost.length > 0 ? (
             <details className="retention-lost">
               <summary>원본을 찾을 수 없는 대화 {lost.length}개</summary>
@@ -193,7 +243,7 @@ function RetentionDialog({
                 {lost.map((a) => (
                   <li key={a.sessionId} className="retention-row">
                     <div className="retention-row-text">
-                      <strong>{a.title}</strong>
+                      <strong>{titleOf(a)}</strong>
                       <span>{keptPhrase(a)}</span>
                     </div>
                   </li>
@@ -203,9 +253,26 @@ function RetentionDialog({
           ) : null}
         </div>
       </div>
+      {keepingMany ? (
+        <KeepManyDialog
+          items={pickedItems.map((item) => ({ sessionId: item.sessionId, title: titleOf(item), sizeBytes: item.bytes }))}
+          onClose={() => setKeepingMany(false)}
+          onDone={(failed) => {
+            // What failed stays picked, to try again; cancelling keeps every pick.
+            setPicked(new Set(failed));
+            onKept();
+          }}
+          fallbackFocus={() => ref.current}
+          onKeep={async (sessionId) => {
+            const item = pickable.find((candidate) => candidate.sessionId === sessionId);
+            if (!item?.sourcePath) throw new Error("no source path");
+            await keepSessionArchive(item.sessionId, item.sourcePath);
+          }}
+        />
+      ) : null}
       {keeping ? (
         <KeepDialog
-          title={keeping.title}
+          title={titleOf(keeping)}
           sizeBytes={keeping.bytes}
           onClose={() => {
             setKeeping(null);
@@ -219,4 +286,15 @@ function RetentionDialog({
       ) : null}
     </div>
   );
+}
+
+/** What helps decide, as observed: where it ran, how long, PRs it names. */
+function decisionSignals(a: RetentionAssessment): string {
+  return [
+    a.projectLabel ? shortProjectLabel(a.projectLabel) : null,
+    a.messageCount ? `메시지 ${a.messageCount}개` : null,
+    a.prCount ? `PR ${a.prCount}개` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
