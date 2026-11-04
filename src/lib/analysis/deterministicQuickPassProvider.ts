@@ -26,7 +26,7 @@ const ISSUE_PATTERNS: Array<{ regex: RegExp; priority: Priority }> = [
   { regex: /(error|fail(?:ed)?|broken|crash)/i, priority: "high" },
   { regex: /(과도|too\s+much|overkill)/i, priority: "medium" },
   { regex: /(필요\s*(?:한|함)?|need(?:s|ed)?|required|missing)/i, priority: "medium" },
-  { regex: /(미정|undecided|unclear|unresolved)/i, priority: "medium" },
+  { regex: /(미정|undecided|unclear|unresolved|open\s+question)/i, priority: "medium" },
   { regex: /(todo|fixme)/i, priority: "low" },
   { regex: /(fix\b)/i, priority: "medium" },
 ];
@@ -39,7 +39,9 @@ const DECISION_PATTERNS: RegExp[] = [
   /(우선|priority\s+is|prefer)/i,
   /default(?:s)?\s+to/i,
   /(choose|chose|chosen)/i,
-  /(decid(?:e|ed|ing)|agreed\s+on)/i,
+  // "decision" is spelled decis-, so decid- alone missed the plainest marker,
+  // an English turn that starts "Decision: ...".
+  /(decid(?:e|ed|ing)|\bdecision\b|agreed\s+on)/i,
 ];
 
 /**
