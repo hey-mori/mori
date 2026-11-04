@@ -20,7 +20,7 @@ export function comparable(text: string | undefined): string {
     .replace(/[*`]/g, "")
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/(\.\.\.|…|[.!?。])+$/u, "")
+    .replace(/[.!?。…]+$/u, "")
     .trim()
     .toLowerCase();
 }
