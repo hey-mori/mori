@@ -4,6 +4,11 @@ import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+// hey-mori/mori-browser-extension pins its unpacked id with a public key in its
+// manifest, so every build registers that id. A Store id, once one exists, is
+// added through the environment and registered beside it.
+const UNPACKED_EXTENSION_ID = "nmkjbmmnefgglmkddfokahclckjkldek";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..");
 const tauriRoot = join(repoRoot, "src-tauri");
@@ -46,11 +51,6 @@ function readRustHostTriple() {
   if (!match) throw new Error("rustc -vV did not report a host target triple.");
   return match[1];
 }
-
-// hey-mori/mori-browser-extension pins its unpacked id with a public key in its
-// manifest, so every build registers that id. A Store id, once one exists, is
-// added through the environment and registered beside it.
-const UNPACKED_EXTENSION_ID = "nmkjbmmnefgglmkddfokahclckjkldek";
 
 function buildNsisDefines() {
   const chromeId = readExtensionId("MORI_BROWSER_CHROME_EXTENSION_ID") || UNPACKED_EXTENSION_ID;
