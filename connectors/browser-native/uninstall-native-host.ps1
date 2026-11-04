@@ -50,4 +50,11 @@ if ($RemoveManifest) {
     Remove-Item -LiteralPath $manifestPath -Force
     Write-Host "Removed $manifestPath"
   }
+  # Remove the folder once it is empty, so the uninstaller can remove the
+  # install directory instead of leaving an empty NativeMessagingHosts behind.
+  $manifestDir = Split-Path -Parent $manifestPath
+  if ((Test-Path -LiteralPath $manifestDir) -and -not (Get-ChildItem -LiteralPath $manifestDir -Force)) {
+    Remove-Item -LiteralPath $manifestDir -Force
+    Write-Host "Removed $manifestDir"
+  }
 }
