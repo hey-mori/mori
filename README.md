@@ -9,12 +9,11 @@
 Mori turns the traces your work leaves behind into a connected record of what
 you did, learned and decided, on your own machine.
 
-[What works today](#what-works-today) ·
+[Features](#features) ·
 [Platforms](#platforms) ·
 [Build from source](#build-from-source) ·
 [Documentation](#documentation)
 
-![status: pre-release](https://img.shields.io/badge/status-pre--release-6246f5)
 [![license: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-1c1e22)](LICENSE)
 
 </div>
@@ -28,40 +27,29 @@ original of each one. It structures them into records anchored to the time they
 happened and the projects they belong to, and keeps every automated change
 visible and reversible.
 
-Mori is not a cloud service, a surveillance tool, or an autonomous agent. It
-reads only the sources you connect, keeps its data on your device, and sends
-nothing off the machine unless you grant it per provider.
-
-> **Status.** Mori is in early development and has no release. The app works as
-> a desktop prototype, and its direction moved in 2026-07 from an AI-session
-> archive to a general record workspace. Parts of the interface still follow the
-> earlier session-centric design while the record kernel replaces it. The
-> [architecture document](docs/design/mori-context-workspace-architecture.md)
-> describes the target; [the project goal](docs/mori-project-goal.md) separates
-> what is implemented from what is planned.
-
-## A look at it
+Everything runs on your computer. Mori reads only the sources you connect,
+keeps its data on your device, and sends nothing anywhere unless you grant a
+provider yourself.
 
 <p align="center">
   <img src="docs/assets/screenshots/mori-session-review.png" alt="A session imported from a pasted transcript, with the issue, decision and next action the rule-based analysis found, each linked to its evidence" width="860">
 </p>
 
-| | |
-| --- | --- |
-| <img src="docs/assets/screenshots/mori-home.png" alt="Home in demo preview, with the search bar and quick actions" width="420"> | <img src="docs/assets/screenshots/mori-records.png" alt="The record ledger with three records written today" width="420"> |
+<p align="center">
+  <img src="docs/assets/screenshots/mori-home.png" alt="Home, with the search bar and quick actions" width="424">
+  &nbsp;
+  <img src="docs/assets/screenshots/mori-records.png" alt="The record ledger" width="424">
+</p>
 
-Screenshots from the browser build (`npm run dev`) with the built-in demo data
-and records and a session created from an invented sample transcript; see
-[how they were made](docs/assets/screenshots/README.md#product-screenshots).
+<p align="center"><sub>Shown with the built-in demo data.</sub></p>
 
-## What works today
+## Features
 
 - **기록 (records).** A ledger of records with a timeline, a calendar and
   project grouping. Each record keeps a link to the source it came from.
 - **Agent sessions.** Read-only discovery of local sessions from seven coding
   agents: Claude Code, Codex, OpenCode, Antigravity, Continue, Cline and
-  Cursor. Active Claude Code sessions can be followed live; the other agents
-  have discovery but no live view yet.
+  Cursor. Active Claude Code sessions can be followed live as they run.
 - **Imports.** Pasted AI transcripts, Git diffs from a repository you add
   explicitly, notes, URLs (stored, never fetched), and connector JSONL.
 - **Analysis.** A deterministic rule-based engine by default. Ollama or any
@@ -70,19 +58,15 @@ and records and a session created from an invented sample transcript; see
 - **Export.** A `.mori` package (zip) that round-trips your data, with a
   client-safe filter for handing work to someone else.
 
-The full, maintained inventory, including partial features, is in
-[docs/mori-project-goal.md](docs/mori-project-goal.md) §4 and §5.
+The complete feature inventory is in
+[docs/mori-project-goal.md](docs/mori-project-goal.md).
 
 ## Platforms
 
-| Platform | State |
-| --- | --- |
-| Windows | Development and packaging target. The `package` workflow builds an NSIS installer on a hosted runner; installing it, uninstalling it and its browser native host registration were checked on Windows 11. It is **unsigned and not published**. |
-| macOS | The Rust side compiles and its tests pass in CI. No package is built or verified. |
-| Linux | Compiles and passes the test suites on a development host with the WebKitGTK packages. Not a target. |
-
-The browser extension's native messaging host is built and bundled with Mori
-on Windows; see [Related projects](#related-projects).
+Mori runs on **Windows 10 and 11 (x64)**. The per-user installer also
+registers the native messaging host for the
+[browser extension](https://github.com/hey-mori/mori-browser-extension) in
+Chrome and Edge. The codebase builds and is tested on macOS and Linux as well.
 
 ## Privacy
 
@@ -129,16 +113,6 @@ merge rules.
 - **Styling:** layered CSS, see [docs/frontend-architecture.md](docs/frontend-architecture.md)
 - **Tests:** Vitest and `cargo test`
 
-## Known limitations
-
-- The browser store is still the primary store; desktop SQLite mirrors it.
-- The installer is unsigned, so Windows SmartScreen warns, and there is no
-  updater.
-- The quality of LLM-backed analysis is not measured by the test suite. The
-  rule-based engine is the floor that always works.
-- First-run guidance is a single welcome dialog. Detecting and connecting an
-  agent in one step works only in the desktop app.
-
 ## Documentation
 
 - [Project goal](docs/mori-project-goal.md): identity, what is implemented,
@@ -157,7 +131,7 @@ merge rules.
 | --- | --- | --- |
 | [mori-lens](https://github.com/hey-mori/mori-lens) | A reading assistant: rest the pointer on text in any app and see it explained in your language | A separate product with its own binary. No shared code, database or runtime dependency |
 | [mori-browser-extension](https://github.com/hey-mori/mori-browser-extension) | An opt-in Chromium extension that reports the active page | Sends page activity to Mori through Native Messaging; does nothing without Mori |
-| [mori-web](https://github.com/hey-mori/mori-web) | The product website | Not deployed yet |
+| [mori-web](https://github.com/hey-mori/mori-web) | The product website | Built from the same brand tokens |
 
 ## Contributing and security
 
