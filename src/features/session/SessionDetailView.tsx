@@ -39,6 +39,7 @@ import { RetainedSourceNotice } from "./RetainedSourceNotice";
 import { sessionCrumbs, sessionReturnLink } from "./sessionProjectIdentity";
 import { useSessionProjectIdentity } from "./useSessionProjectIdentity";
 import { useShownSessionTitle } from "../../app/useDisclosedView";
+import { nextActionsWorthShowing } from "../review/reviewRepeats";
 
 const TimelineView = lazy(() =>
   import("../timeline/TimelineView").then((m) => ({ default: m.TimelineView })),
@@ -286,7 +287,11 @@ function SessionTabBar({
     const sources = mode === "demo" ? view.sources.length : imports.length;
     const openIssues = view.issues.filter((issue) => issue.status !== "resolved").length;
     const unconfirmedDecisions = view.decisions.filter((d) => !d.confirmed).length;
-    const pendingNextActions = view.nextActions.filter((a) => !isNextActionCompleted(a)).length;
+    // Counted as the review board shows them, without actions that only
+    // restate their issue, so the badge and the board agree.
+    const pendingNextActions = nextActionsWorthShowing(view.nextActions, view.issues).filter(
+      (a) => !isNextActionCompleted(a),
+    ).length;
     const reviewCount = openIssues + unconfirmedDecisions + pendingNextActions;
     return {
       overview: null,
