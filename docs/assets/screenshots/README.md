@@ -36,8 +36,8 @@ What stays here:
 
 These are screenshots of Mori itself, used in the README. They were taken on
 2026-11-05 from the browser build (`npm run dev`) in a 1280×800 window at 2×
-pixel density, driven by Playwright in headless Chromium, and cropped below the
-content. The browser build runs the same interface as
+pixel density, driven by Playwright in headless Chromium. Each shows the whole
+window, uncropped. The browser build runs the same interface as
 the desktop app, with the browser store instead of SQLite.
 
 - `mori-home.png` shows the built-in demo data (the
