@@ -40,12 +40,12 @@ pixel density, driven by Playwright in headless Chromium. Each shows the whole
 window, uncropped. The browser build runs the same interface as
 the desktop app, with the browser store instead of SQLite.
 
-- `mori-home.png` shows the built-in demo data (the
+- `home.png` shows the built-in demo data (the
   "데모 미리보기" mode a fresh install opens in). Its projects and sessions are
   invented.
-- `mori-records.png` shows three records typed into the record composer, with
+- `records.png` shows three records typed into the record composer, with
   invented content.
-- `mori-session-review.png` shows a session created from a pasted transcript
+- `session-review.png` shows a session created from a pasted transcript
   written for the screenshot, about an invented demo shop, analysed by the
   rule-based engine, with no model involved.
 
