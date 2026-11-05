@@ -31,11 +31,11 @@ Everything runs on your computer. Mori reads only the sources you connect,
 keeps its data on your device, and sends nothing anywhere unless you grant a
 provider yourself.
 
-![A session imported from a pasted transcript: the rule-based analysis sorts it into issues and decisions, each linked to the turn it came from](docs/assets/screenshots/mori-session-review.png)
+![Home, where every connected session and project is one search away](docs/assets/screenshots/home.png)
 
-![Home, where every connected session and project is one search away](docs/assets/screenshots/mori-home.png)
+![A session imported from a pasted transcript: the rule-based analysis sorts it into issues and decisions, each linked to the turn it came from](docs/assets/screenshots/session-review.png)
 
-![The record ledger, with notes written in the record composer](docs/assets/screenshots/mori-records.png)
+![The record ledger, with notes written in the record composer](docs/assets/screenshots/records.png)
 
 <sub>Shown with the built-in demo data and invented examples.</sub>
 
